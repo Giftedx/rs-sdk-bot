@@ -238,6 +238,31 @@ export function itemSpellEffect(
     return xpAfter > xpBefore ? 'cast' : 'invalid';
 }
 
+// Wields the pack's best elemental staff for the spell's runes, so the spell costs no runes the staff gives.
+export async function equipItemSpellStaff(s: Session, recipe: ItemMagicRecipe, members: boolean, over: () => boolean = () => false) {
+    if (typeof s.bot?.equipItem !== 'function') return;
+    const state = () => s.sdk.getState();
+    const inv = () => s.sdk.getInventory();
+    const spellRunes: number[] = [];
+    for (const [idStr, rawCount] of Object.entries(recipe.inputs)) {
+        const id = Number(idStr);
+        const used = rawCount - (id === recipe.target ? 1 : 0);
+        for (let k = 0; k < used; k++) spellRunes.push(id);
+    }
+    const eq = (state()?.equipment ?? []) as readonly { id: number; slot: number }[];
+    const staff = bestElementalStaffForRunes([...inv(), ...eq.filter(e => e.slot === 3).map(e => ({ id: e.id, count: 1 }))], readSkillLevels(s.sdk), {
+        runeIds: spellRunes,
+        members,
+    }).current;
+    if (staff && !eq.some(e => e.slot === 3 && e.id === staff.item.id)) {
+        const held = inv().find(i => i.id === staff.item.id);
+        if (held) {
+            await s.bot.equipItem(held);
+            await waitUntil(s, () => over() || (state()?.equipment ?? []).some(e => e.slot === 3 && e.id === staff.item.id), { timeoutTicks: 4 });
+        }
+    }
+}
+
 export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { count: number; cap: number; members?: boolean; stop?: () => boolean }) {
     if (!Number.isSafeInteger(o.count) || o.count < 1 || o.count > 10000 || !Number.isSafeInteger(o.cap) || o.cap < 1 || o.cap > 100000) {
         throw Error('invalid finite magic limits');
@@ -264,26 +289,7 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
     }
     const life = watchProductionLife(s, o.stop);
     const over = () => ended || life.stopped() || s.tick() - start >= o.cap;
-    if (typeof s.bot?.equipItem === 'function') {
-        const spellRunes: number[] = [];
-        for (const [idStr, rawCount] of Object.entries(recipe.inputs)) {
-            const id = Number(idStr);
-            const used = rawCount - (id === recipe.target ? 1 : 0);
-            for (let k = 0; k < used; k++) spellRunes.push(id);
-        }
-        const eq = (state()?.equipment ?? []) as readonly { id: number; slot: number }[];
-        const staff = bestElementalStaffForRunes([...inv(), ...eq.filter(e => e.slot === 3).map(e => ({ id: e.id, count: 1 }))], readSkillLevels(s.sdk), {
-            runeIds: spellRunes,
-            members: o.members ?? false,
-        }).current;
-        if (staff && !eq.some(e => e.slot === 3 && e.id === staff.item.id)) {
-            const held = inv().find(i => i.id === staff.item.id);
-            if (held) {
-                await s.bot.equipItem(held);
-                await waitUntil(s, () => over() || (state()?.equipment ?? []).some(e => e.slot === 3 && e.id === staff.item.id), { timeoutTicks: 4 });
-            }
-        }
-    }
+    await equipItemSpellStaff(s, recipe, o.members ?? false, over);
     while (casts < o.count) {
         if (over()) {
             stop = ended ? 'session ended' : life.stopped() ? 'stopped' : 'cap';
@@ -324,6 +330,199 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
         if (gap > 0 && casts < o.count && !over()) await waitTicks(s, Math.min(gap, Math.max(1, o.cap - (s.tick() - start))));
     }
     return { ok: casts === o.count, stop, casts, ticks: s.tick() - start, magicXp: xp() - xp0, product: recipe.product, produced: casts * recipe.output };
+}
+
+// ---- Bank staging for spells cast from the pack ----
+
+const SPELL_RUNE_IDS: ReadonlySet<number> = new Set([554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566]);
+
+// The client item type decides stackability. Without it the runes and coins stack and other
+// spell inputs (rings, amulets, ores, bones) take one slot each.
+export function spellInputStackable(client: unknown, id: number): boolean {
+    const objType = (client as { objType?: (id: number) => { stackable?: unknown } | undefined } | undefined)?.objType;
+    if (typeof objType === 'function') {
+        try {
+            const value = objType.call(client, id)?.stackable;
+            if (typeof value === 'boolean') return value;
+        } catch { /* fall back to the rune list */ }
+    }
+    return SPELL_RUNE_IDS.has(id) || id === 995;
+}
+
+const stackCount = (items: readonly { id: number; count: number }[], id: number) => items.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+
+export function spellCastsHeld(perCast: Record<number, number>, pack: readonly { id: number; count: number }[]): number {
+    let n = Infinity;
+    for (const [id, each] of Object.entries(perCast)) if (each > 0) n = Math.min(n, Math.floor(stackCount(pack, Number(id)) / each));
+    return Number.isFinite(n) ? n : 0;
+}
+
+// The most whole casts, up to maximum, that the pack and the bank hold together and whose
+// withdrawals fit the free pack slots.
+export function stagedSpellCasts(
+    perCast: Record<number, number>,
+    maximum: number,
+    pack: readonly { id: number; count: number }[],
+    bank: readonly { id: number; count: number }[],
+    freeSlots: number,
+    stackable: (id: number) => boolean,
+): number {
+    const fits = (n: number) => {
+        let slots = 0;
+        for (const [key, each] of Object.entries(perCast)) {
+            const id = Number(key);
+            const held = stackCount(pack, id);
+            const need = each * n;
+            if (held + stackCount(bank, id) < need) return false;
+            const take = Math.max(0, need - held);
+            if (take > 0) slots += stackable(id) ? (held > 0 ? 0 : 1) : take;
+        }
+        return slots <= freeSlots;
+    };
+    let lower = 0;
+    let upper = Math.max(0, Math.floor(maximum));
+    while (lower < upper) {
+        const n = Math.ceil((lower + upper) / 2);
+        if (fits(n)) lower = n;
+        else upper = n - 1;
+    }
+    return lower;
+}
+
+// Opens a bank in reach, banks the named products, and withdraws whole casts of the inputs.
+// Returns 0 casts without a bank in reach, so the caller keeps its pack-only result.
+export async function stageSpellInputs(
+    s: Session,
+    perCast: Record<number, number>,
+    maximum: number,
+    o: { deposit?: readonly number[]; stop?: () => boolean; settleTicks?: number } = {},
+): Promise<{ casts: number; banked: boolean }> {
+    const inv = () => s.sdk.getInventory();
+    const observe = s.bankObservation?.bind(s);
+    if (!observe || o.stop?.() || maximum < 1 || typeof s.bot?.openBank !== 'function') return { casts: 0, banked: false };
+    // The engine refuses a bank booth click while the last spell's delay runs, and the SDK then
+    // waits its whole timeout: the trace of bench extra:magic-enchant-banked has the last cast at
+    // t=86 and "OpLoc ok=false delayed=true" at t=88. Wait out the delay, then close any modal
+    // (a level-up message) as the bank trip runner does before each open.
+    const state = () => s.sdk.getState();
+    if ((o.settleTicks ?? 0) > 0) await waitTicks(s, o.settleTicks!);
+    await s.sdk.sendCloseModal();
+    const generation = observe()?.generation ?? 0;
+    const opened = await s.bot.openBank().catch((e: unknown) => ({ success: false, message: String(e) }));
+    const fresh = !!opened?.success && await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (observe()?.generation ?? 0) > generation, { timeoutTicks: 15 });
+    if (!fresh) {
+        const st = state() as { player?: { worldX: number; worldZ: number }; dialog?: unknown; interface?: unknown; nearbyLocs?: { name?: string; distance?: number }[]; gameMessages?: { text: string }[] } | undefined;
+        console.log('SPELL_STAGE ' + JSON.stringify({
+            opened: false,
+            message: (opened as { message?: string } | undefined)?.message ?? '',
+            bankOpen: !!s.sdk.getState()?.bank?.isOpen,
+            at: st?.player ? [st.player.worldX, st.player.worldZ] : null,
+            dialog: st?.dialog ?? null,
+            interface: st?.interface ?? null,
+            booths: (st?.nearbyLocs ?? []).filter(l => /bank/i.test(l.name ?? '')).map(l => [l.name, l.distance]).slice(0, 3),
+            messages: (st?.gameMessages ?? []).slice(-3).map(m => m.text),
+            tick: s.tick(),
+        }));
+        return { casts: 0, banked: false };
+    }
+    try {
+        for (const id of o.deposit ?? []) {
+            const row = inv().find(i => i.id === id);
+            if (row) await depositObserved(s, row);
+        }
+        const bank = observe()?.items ?? [];
+        const free = Math.max(0, 28 - inv().length);
+        const n = stagedSpellCasts(perCast, maximum, inv(), bank, free, id => spellInputStackable(s.client, id));
+        console.log('SPELL_STAGE ' + JSON.stringify({ opened: true, maximum, casts: n, free, bank: Object.fromEntries(Object.keys(perCast).map(id => [id, stackCount(bank, Number(id))])), tick: s.tick() }));
+        for (const [key, each] of Object.entries(perCast)) {
+            const id = Number(key);
+            const before = stackCount(inv(), id);
+            const want = n * each - before;
+            if (want < 1) continue;
+            const row = (s.sdk.getState()?.bank?.items ?? []).find(i => i.id === id);
+            if (!row || !(await s.bot.withdrawItem(row, want, { asNote: false })).success || !await waitUntil(s, () => stackCount(inv(), id) >= before + want, { timeoutTicks: 10 })) {
+                throw Error(`spell stage: withdraw ${want}x${id} failed`);
+            }
+        }
+        return { casts: n, banked: true };
+    } finally {
+        await s.bot.closeBank();
+        await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+    }
+}
+
+// Item spells (enchant, alchemy, superheat) with inputs staged from a bank in reach, one pack
+// at a time. A run that casts and then empties the bank stock ends ok with stop=supplies.
+export async function runItemMagicBanked(s: Session, recipe: ItemMagicRecipe, o: { count: number; cap: number; members?: boolean; stop?: () => boolean }) {
+    if (!Number.isSafeInteger(o.count) || o.count < 1 || o.count > 10000 || !Number.isSafeInteger(o.cap) || o.cap < 1 || o.cap > 100000) {
+        throw Error('invalid finite magic limits');
+    }
+    const counts = () => {
+        const r: Record<number, number> = {};
+        for (const i of s.sdk.getInventory()) r[i.id] = (r[i.id] ?? 0) + i.count;
+        return Object.entries(r).map(([id, count]) => ({ id: Number(id), count }));
+    };
+    const xp = () => s.sdk.getSkillXp('Magic') ?? 0;
+    const start = s.tick();
+    const xp0 = xp();
+    let casts = 0;
+    let stages = 0;
+    let stop = 'target';
+    while (casts < o.count) {
+        const left = o.cap - (s.tick() - start);
+        if (left < 1) {
+            stop = 'cap';
+            break;
+        }
+        if (o.stop?.()) {
+            stop = 'stopped';
+            break;
+        }
+        // A pack staff pays its runes, so wield it before the costs decide what to stage.
+        await equipItemSpellStaff(s, recipe, o.members ?? false, () => !!o.stop?.());
+        const perCast = itemSpellCosts(recipe, s.sdk.getState()?.equipment ?? [], o.members ?? false);
+        let held = spellCastsHeld(perCast, counts());
+        if (held < 1) {
+            stages++;
+            const settleTicks = casts > 0 ? spellDelay(recipe.name) + 1 : 0;
+            held = (await stageSpellInputs(s, perCast, o.count - casts, { deposit: [recipe.product], stop: o.stop, settleTicks })).casts;
+            if (held < 1) {
+                stop = 'supplies';
+                break;
+            }
+        }
+        const r = await runItemMagic(s, recipe, { count: Math.min(held, o.count - casts), cap: Math.max(1, o.cap - (s.tick() - start)), members: o.members, stop: o.stop });
+        casts += r.casts;
+        // runItemMagic keeps stop=target only when it cast its count; a pack that ran short after
+        // some casts stages again, and every other stop (cap, stopped, session ended) ends the run.
+        if (r.stop === 'supplies' && r.casts > 0) continue;
+        if (r.stop !== 'target') {
+            stop = r.stop;
+            break;
+        }
+    }
+    return {
+        ok: casts === o.count || (casts > 0 && stop === 'supplies'),
+        stop,
+        casts,
+        stages,
+        ticks: s.tick() - start,
+        magicXp: xp() - xp0,
+        product: recipe.product,
+        produced: casts * recipe.output,
+    };
+}
+
+// Stages the runes of `casts` teleports from a bank in reach when the pack holds fewer.
+export async function stageTeleportRunes(s: Session, t: NativeTeleport, casts: number, members = false, stop?: () => boolean) {
+    const perCast = Object.fromEntries(
+        Object.entries(t.runes)
+            .map(([id, n]) => [id, elementalRuneCost(Number(id), n, s.sdk.getEquipment(), members)])
+            .filter(([, n]) => Number(n) > 0),
+    ) as Record<number, number>;
+    const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+    if (spellCastsHeld(perCast, pack) >= casts) return { casts, banked: false };
+    return stageSpellInputs(s, perCast, casts, { stop });
 }
 
 // ---- Standard Teleports (microbot-magic-teleport.ts) ----
@@ -2663,7 +2862,7 @@ export async function runMagicCli(
             if (!botName || !mode) throw Error('account and mode required');
             const recipe = itemMagicRecipe(mode, target);
             s = await openBot(botName, { onStop: async () => { stopped = true; } });
-            const result = await runItemMagic(s, recipe, {
+            const result = await runItemMagicBanked(s, recipe, {
                 count: Number(count ?? 1),
                 cap: Number(cap ?? 200),
                 members: env.MEMBERS === '1',
@@ -2685,6 +2884,7 @@ export async function runMagicCli(
             const t = nativeTeleport(name);
             const combo = env.COMBO_ALCH ? itemMagicRecipe(env.COMBO_ALCH, env.ALCH_ITEM) : undefined;
             s = await openBot(botName, { onStop: async () => { stopped = true; } });
+            await stageTeleportRunes(s, t, Number(casts ?? 1), env.MEMBERS === '1', () => magicStopRequested(botName, stopped));
             const r = await runTeleportMagic(s, t, {
                 casts: Number(casts ?? 1),
                 cap: Number(cap ?? 1200),

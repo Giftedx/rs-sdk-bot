@@ -677,9 +677,11 @@ export function evaluateBestGearUpgrade(params: {
     const skill = (params.trainingSkill ?? activity.skill)?.toLowerCase();
     const isWoodcutting = skill === 'woodcutting';
     const isMining = skill === 'mining';
+    // A weapon changes XP only where the spell hits a target: enchanting, alchemy, superheat,
+    // teleports and bones (bank-artisan magic) gain nothing from a staff.
     const isCombat = activity.family === 'combat'
         || skill === 'attack' || skill === 'strength' || skill === 'defence'
-        || skill === 'ranged' || skill === 'magic';
+        || skill === 'ranged' || (skill === 'magic' && activity.family === 'pvp');
 
     if (!isWoodcutting && !isMining && !isCombat) return null;
 

@@ -377,15 +377,16 @@ export async function runArtisan(
             case 'magic': {
                 const {
                     chargeInventory, itemMagicRecipe, nativeTeleport, orbOptions, orbRecipes,
-                    runAlch, runBonesBank, runEarthProduction, runItemMagic, runMagicBankTrips,
-                    runOrbTrips, runTeleportMagic,
+                    runAlch, runBonesBank, runEarthProduction, runItemMagicBanked, runMagicBankTrips,
+                    runOrbTrips, runTeleportMagic, stageTeleportRunes,
                 } = await import('./magic');
                 if (cfg.method === 'items') {
                     const recipe = itemMagicRecipe(cfg.args[0]!, cfg.args[1] === '-' ? undefined : cfg.args[1]);
-                    const r = await runItemMagic(s, recipe, { count: Number(cfg.args[2] ?? 1), cap: Number(cfg.args[3] ?? 200), members: setting('MEMBERS') === '1', stop: halted });
-                    return { ok: r.ok, summary: `casts=${r.casts}`, ticks: r.ticks, produced: r.produced, failure: r.ok ? undefined : r.stop };
+                    const r = await runItemMagicBanked(s, recipe, { count: Number(cfg.args[2] ?? 1), cap: Number(cfg.args[3] ?? 200), members: setting('MEMBERS') === '1', stop: halted });
+                    return { ok: r.ok, summary: `casts=${r.casts} stages=${r.stages} stop=${r.stop}`, ticks: r.ticks, produced: r.produced, failure: r.ok ? undefined : r.stop };
                 }
                 if (cfg.method === 'teleport') {
+                    await stageTeleportRunes(s, nativeTeleport(cfg.args[0]!), Number(cfg.args[1] ?? 1), setting('MEMBERS') === '1', halted);
                     const r = await runTeleportMagic(s, nativeTeleport(cfg.args[0]!), {
                         casts: Number(cfg.args[1] ?? 1),
                         cap: Number(cfg.args[2] ?? 1200),
