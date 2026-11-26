@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795732099249,
+ "at": 1795732112431,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,6 +202,26 @@
    ]
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
    "account": "mmthv2350",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -256,11 +276,11 @@
    "role": "auto"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 -- crafting inventory cut-sapphire",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 -- crafting jewellery-trip"
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=3 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
@@ -291,26 +311,6 @@
    "role": "helper"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:avantoe"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:261",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:261",
-   "role": "army"
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -328,6 +328,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:97",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=4 STOCK_TARGET=4 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=39 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:39 BATCH_UNITS=4 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
    "role": "army"
   },
   {
@@ -381,6 +397,7 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -390,7 +407,6 @@
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
-  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
