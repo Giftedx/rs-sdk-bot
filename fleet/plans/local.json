@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720928325,
+ "at": 1795720950742,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -112,12 +112,27 @@
    "role": "army"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-2357-7-p3597 ITEM_ID=2357 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3597 -- ge-buy",
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=12 STOCK_TARGET=12 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=12 -- crafting jewellery-trip"
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=3 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
@@ -183,15 +198,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "barcrawl"
+    "tree"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "DEMAND_ID": "goal:quest_board:tree",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:quest_board:tree",
    "role": "auto"
   },
   {
@@ -212,18 +227,17 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
+   "script": "scripts/ranged-train.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Magicwanda",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:pk_army:Magicwanda",
    "role": "auto"
   },
   {
@@ -289,21 +303,6 @@
    "role": "auto"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "helper"
-  },
-  {
    "account": "Pullmybow",
    "script": "scripts/ranged-train.ts",
    "args": [],
@@ -349,6 +348,21 @@
    "role": "auto"
   },
   {
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
+   "role": "helper"
+  },
+  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -362,6 +376,21 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   },
   {
    "account": "mmthv2350",
@@ -382,19 +411,19 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 -- fletching arrows"
+    "sweep",
+    "crest"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:53",
+   "goal": "goal:quest_board:crest",
    "role": "army"
   }
  ],
@@ -407,16 +436,14 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
-  "mmtha0205",
-  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketrocket",
