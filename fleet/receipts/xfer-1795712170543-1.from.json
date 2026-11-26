@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795712170543-1",
+ "account": "CoinCock",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 21,
+ "claim": "5f2ed7f4-b8d3-40c0-a428-4a3d5a5d1293",
+ "count": 0,
+ "ok": false,
+ "at": 1795712274560,
+ "detail": "Error: sender pack full: need 21 slots for Tin ore, 7 free",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 21,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795712267785-0000028936-0000000001",
+  "at": 1795712274474,
+  "sha256": "88707054c06d92ca4a1caa2bb3b7199249808879cdb89d4c43283cdffdd3e66b"
+ },
+ "screen": false
+}

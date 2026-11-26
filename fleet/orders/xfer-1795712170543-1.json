@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795712170543-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "TheFullMonty",
+  "item": "Copper ore",
+  "count": 21,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 21,
+      "itemId": 438
+    }
+  ],
+  "start": 1795712170543,
+  "end": 1795713070543,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795711819774-1",
+ "account": "Quickhandjob",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "7fcf120b-a994-499b-84ec-a8883dda604a",
+ "count": 3,
+ "ok": true,
+ "at": 1795712277643,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795712235274
+ },
+ "logout": {
+  "attemptId": "1795712230417-0000006900-0000000001",
+  "at": 1795712277628,
+  "sha256": "9d7d0edc1b4a57402a485c22699f54accda6ff4ece09d512f91ce01136ddc98b"
+ },
+ "screen": true
+}

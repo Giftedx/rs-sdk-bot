@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711888881-1",
+ "account": "Bigpackage",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "63e1d635-9db8-4459-a8f6-d4560bee20bc",
+ "count": 0,
+ "ok": false,
+ "at": 1795712272609,
+ "detail": "trade claimed"
+}

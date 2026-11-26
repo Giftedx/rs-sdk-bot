@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795711996612-1",
+ "account": "Swordinhand",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "621850af-39c9-4ce6-93e7-2a8025ae7142",
+ "count": 1,
+ "ok": true,
+ "at": 1795712300052,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795712299277
+ },
+ "logout": {
+  "attemptId": "1795712288328-0000026296-0000000001",
+  "at": 1795712300039,
+  "sha256": "778976c3219e648bdf0495638ea4855dd78d64ad31c58f6511a039723d1aa91d"
+ },
+ "screen": true
+}
