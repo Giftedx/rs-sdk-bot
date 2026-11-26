@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795725826766,
+ "at": 1795725844886,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -129,19 +129,19 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Packhorse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1400 TARGET_COUNT=140 PRODUCT_TARGET=140 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=140 -- cooking food"
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1075 MAX_MAKE=15 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 TARGET_COUNT=15 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
+   "goal": "campaign:haggis:item:1311",
+   "role": "helper"
   },
   {
    "account": "BackdoorMan",
@@ -161,37 +161,7 @@
    "role": "helper"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=100 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "helper"
-  },
-  {
-   "account": "Billionaire",
+   "account": "MineYourBiz",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -207,19 +177,49 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-quester.ts",
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "tree"
+    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=100 -- prayer bury"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-14-p97 ITEM_ID=440 QUANTITY=14 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:steelrod:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:steelrod:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
@@ -254,7 +254,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
   "mmtha0205",
   "moneyshot",
   "oreelse",
@@ -265,6 +264,8 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker"
  ],
