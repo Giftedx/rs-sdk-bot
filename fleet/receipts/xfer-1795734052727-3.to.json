@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795734052727-3",
+ "account": "CoinCock",
+ "partner": "Pullmybow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 21,
+ "claim": "a56e748e-b935-461a-bd2a-a01475c3703c",
+ "count": 21,
+ "ok": true,
+ "at": 1795734412443,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 21
+ },
+ "bank": {
+  "count": 21,
+  "at": 1795734411683
+ },
+ "logout": {
+  "attemptId": "1795734402684-0000028492-0000000001",
+  "at": 1795734412428,
+  "sha256": "ae8feaf0032a3da8c2bfb1c722540150b127694e55092a190219c640f54d72f5"
+ },
+ "screen": true
+}

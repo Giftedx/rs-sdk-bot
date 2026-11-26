@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795734052727-3",
  "account": "Pullmybow",
  "partner": "CoinCock",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 21,
  "claim": "6b56f673-491f-481a-a92c-9a64eed551de",
- "count": 0,
- "ok": false,
- "at": 1795734340436,
- "detail": "trade claimed"
+ "count": 21,
+ "ok": true,
+ "at": 1795734410846,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21,
+  "after": 0
+ },
+ "bank": {
+  "count": 21,
+  "at": 1795734396506
+ },
+ "logout": {
+  "attemptId": "1795734340511-0000009024-0000000001",
+  "at": 1795734410827,
+  "sha256": "a54028073d2a784b56fa35aaaa86d098e4bd00a986f54ffd4d6f227cfe2463d9"
+ },
+ "screen": true
 }
