@@ -385,7 +385,7 @@ test('a skill unlock by inventory production makes its planned units and must re
     expect(unlock.routeKey).toBe('crafting:inventory');
     expect(unlock.args).toEqual(['crafting', 'inventory', 'identify:ranarr_weed']);
     expect(unlock.env).toMatchObject({ TRAIN_SKILL: 'Herblore', TARGET_LEVEL: '54', MAX_MAKE: '198', ORDER_MODE: 'level', MEMBERS: '1' });
-    // One identification takes about 9 ticks with its bank trip, so the default 600-tick cap ends a long unlock early.
+    // One identification with its bank trip is 5.6 ticks on the bench, so the default 600-tick cap ends a long unlock early.
     expect(Number(unlock.env.CAP)).toBeGreaterThanOrEqual(198 * 12);
 
     // A plan made before unlocks carried a unit count still runs to its level, with the activity's limit.

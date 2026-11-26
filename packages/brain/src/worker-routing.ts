@@ -654,7 +654,8 @@ function resolveAcquireOrGearSource(
     }
 }
 
-// Inventory production makes one unit per bank trip: about 9 ticks for each identified herb.
+// Inventory production makes one unit per bank trip. The bench case extra:inventory-unlock-level identifies
+// 14 herbs in 78 ticks (5.6 a unit); the cap allows about twice that.
 const UNLOCK_TICKS_PER_UNIT = 12;
 
 function unlockTickCap(units: number): number {
