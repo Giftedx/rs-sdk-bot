@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723474209-1",
+ "account": "OreElse",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mithril bar",
+ "requested": 1,
+ "claim": "40178e3d-658a-4f6d-979e-30a830ec720b",
+ "count": 0,
+ "ok": false,
+ "at": 1795723709188,
+ "detail": "trade claimed"
+}

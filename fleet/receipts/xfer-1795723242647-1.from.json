@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723242647-1",
  "account": "Magicwanda",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 300,
  "claim": "e3c7cdcb-dee0-4a08-850c-76f6676b0b05",
- "count": 0,
- "ok": false,
- "at": 1795723665431,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795723696277,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795723673946
+ },
+ "logout": {
+  "attemptId": "1795723665439-0000027772-0000000001",
+  "at": 1795723696268,
+  "sha256": "05f876ebed8663dcec2201c0858561761cbd58fa11c6cbb2c96874f2933f8c73"
+ },
+ "screen": true
 }

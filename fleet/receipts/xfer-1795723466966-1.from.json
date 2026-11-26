@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723466966-1",
+ "account": "YewFirst",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "1b38da4b-27be-45ea-9f3a-f6ddff6abae0",
+ "count": 1,
+ "ok": true,
+ "at": 1795723716288,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723701119
+ },
+ "logout": {
+  "attemptId": "1795723695958-0000026536-0000000001",
+  "at": 1795723716278,
+  "sha256": "0916cfabf098ed2084b703467f16e19266d804cbdac6113bbf0403ef2382be76"
+ },
+ "screen": true
+}
