@@ -228,6 +228,18 @@ test('a refusal before any game tick frees the account instead of holding it', a
     expect(r).toEqual({ reason: 'refused', runs: 1 });
 });
 
+test('a quest sweep refusal at entry ends the job without a second login', async () => {
+    const { supervise, isNamedRefusal } = await import('../src/supervise');
+    const started = "RESULT fail quest-sweep ball refused: Witch's House journal is started and quest-ball.ts has no resume stage";
+    expect(isNamedRefusal(started)).toBe(true);
+    expect(isNamedRefusal('RESULT fail quest-sweep dragon refused: Dragon Slayer needs 32 quest points, the account has 12')).toBe(true);
+    // A script failure after the handover is no refusal: it keeps the retry rules.
+    expect(isNamedRefusal('RESULT fail talk squire 1  xp= at=2976,3343,0 ticks=27')).toBe(false);
+    expect(isNamedRefusal('RESULT fail quest-sweep squire missing 2325:1')).toBe(false);
+    const r = await supervise({ run: async () => ({ exitCode: 1, stdout: started }), stopped: () => false, maxRestarts: 20, pause: async () => { throw new Error('unexpected retry'); } });
+    expect(r).toEqual({ reason: 'refused', runs: 1 });
+});
+
 test('three logins in a row refused on a held fleet claim end the job at once, so its recovery can start; a release still being written does not', async () => {
     const cut = out(['LEDGER ticks=900 xp=9000 inventory=0 move=100 anim=600 dialog=0 stun=0 idle=200 idlePct=22.0 ', 'RESULT fail session ended: disconnected'], 1);
     const refused = out(['RESULT fail login: Error: fleet account claim held by swarm'], 1), ok = out(['RESULT ok ticks=1500'], 0);

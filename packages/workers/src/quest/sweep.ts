@@ -5,6 +5,7 @@ import { accountOf, finish, finishHooks, getWorld, openBot } from '../../../core
 import { ARROWS, BOWS, NPC_SOURCES, gatherItems, magicKit, rangedKit, arrowsFor, castsFor } from '../../../core/src/gather';
 import type { Session } from '../../../core/src/inprocess';
 import { productionStopRequested } from '../../../core/src/production-life';
+import { readQuestJournalStage } from '../../../core/src/quest-journal';
 import { questFlags } from '../../../core/src/quest-status';
 import { sellersByDistance } from '../../../core/src/shop-index';
 import { holdSessionEater, questFoodDefinitions, startQuestSustain } from '../../../core/src/sustain';
@@ -15,6 +16,7 @@ import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { QUEST_NAMES } from './chain';
 import { fireRunesFor } from './fire-spells';
 import { dashThroughDoor, inGhostBasement, leaveGhostBasement, retainedGhostBankSkull, retainedGhostSkull } from './helpers';
+import { questEntry } from './resume';
 import {
     NATURE_REF,
     registerQuestRuntime,
@@ -513,6 +515,29 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             const state = Number.isSafeInteger(observed) ? Number(observed) : undefined;
             base = scorpionBarcrawlNeeds(base, state);
             console.log(`QUEST_SWEEP_SCORPION_ENTRY ${JSON.stringify({ journal, barcrawl: state ?? 'unknown', stagesBarcrawl: state !== 2 })}`);
+        }
+        const questName = QUEST_NAMES[quest];
+        if (questName) {
+            const journal = () => questFlags(s.client)?.find((f) => f.name === questName)?.state ?? 'unknown';
+            await waitUntil(s, () => journal() !== 'unknown', { timeoutTicks: 20 });
+            // %qp (varp 101) reaches the client; varServ holds only server-sent values (packages/core/src/guild-facts.ts).
+            const qp = (s.client as { varServ?: Record<number, unknown> } | undefined)?.varServ?.[101];
+            const questPoints = Number.isSafeInteger(qp) ? Number(qp) : undefined;
+            const entry = questEntry(quest, questName, journal(), questPoints);
+            console.log(`QUEST_SWEEP_ENTRY ${JSON.stringify({ quest, journal: journal(), questPoints: questPoints ?? 'unknown', entry: entry.kind })}`);
+            if (entry.kind === 'refuse') return fail(entry.reason);
+            if (entry.kind === 'resume') {
+                const r = entry.resume;
+                const stage = await readQuestJournalStage({ s, waitUntil: (f, ticks) => waitUntil(s, f, { timeoutTicks: ticks }) }, r.key, r.title, r.stage);
+                if (stage >= r.complete) return fail(`refused: ${questName} journal stage ${stage} is complete`);
+                const spent = r.spent?.(stage) ?? [];
+                for (const id of spent) {
+                    base.delete(id);
+                    food.delete(id);
+                }
+                (s as { questFrom?: number }).questFrom = stage;
+                console.log(`QUEST_SWEEP_RESUME ${JSON.stringify({ quest, stage, spent })}`);
+            }
         }
         const baseLevel = (name: string) => st()?.skills?.find((k: any) => k.name === name)?.baseLevel ?? 1;
         const prayerPoints = () => st()?.skills?.find((k: any) => k.name === 'Prayer')?.level ?? 0;
