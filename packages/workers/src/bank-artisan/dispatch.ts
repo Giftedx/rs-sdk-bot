@@ -262,7 +262,7 @@ export async function runArtisan(
             }
             case 'crafting': {
                 const {
-                    glassSupplyOptions, inventoryRecipes, jewelleryOrderFromEnv, jewelleryRecipes,
+                    glassSupplyOptions, inventoryRecipes, jewelleryOrderFromEnv, jewelleryRecipes, productionLevelOrder,
                     runBankedGlass, runBlackDhideSetsSession, runFurnaceGlass, runInventoryBank,
                     runJewellery, runJewelleryOrder, runLegacyCraftJewelryCli, runProgressiveProduction,
                     runSoftenClay, runSpinBowstrings, tanInventory,
@@ -349,6 +349,7 @@ export async function runArtisan(
                             reserve: Number(setting('RAW_RESERVE', '0')),
                             members: setting('MEMBERS') === '1',
                             ...(setting('PRODUCT_TARGET') ? { productTarget: Number(setting('PRODUCT_TARGET')) } : {}),
+                            ...productionLevelOrder(recipe, key => setting(key)),
                             stop: halted,
                         });
                         return { ok: res.ok, summary: `made=${res.made}`, ticks: res.ticks, produced: res.made, failure: res.ok ? undefined : res.failure };

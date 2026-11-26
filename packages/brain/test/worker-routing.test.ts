@@ -367,6 +367,44 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(agilityUnlock.env.TARGET_LEVEL).toBe('45');
 });
 
+test('a skill unlock by inventory production makes its planned units and must reach its level', () => {
+    const ctx = { catalog: createActivityCatalog() };
+    const unlock = resolvePlannedStepWorkerRoute(
+        'HerbBot',
+        {
+            stepKind: 'unlock',
+            unlockKind: 'skill',
+            activityId: 'bank-artisan:identify-ranarr_weed',
+            skill: 'Herblore',
+            targetLevel: 54,
+            batchUnits: 198,
+            estimatedTicks: 507,
+        },
+        ctx,
+    );
+    expect(unlock.routeKey).toBe('crafting:inventory');
+    expect(unlock.args).toEqual(['crafting', 'inventory', 'identify:ranarr_weed']);
+    expect(unlock.env).toMatchObject({ TRAIN_SKILL: 'Herblore', TARGET_LEVEL: '54', MAX_MAKE: '198', ORDER_MODE: 'level', MEMBERS: '1' });
+    // One identification takes about 9 ticks with its bank trip, so the default 600-tick cap ends a long unlock early.
+    expect(Number(unlock.env.CAP)).toBeGreaterThanOrEqual(198 * 12);
+
+    // A plan made before unlocks carried a unit count still runs to its level, with the activity's limit.
+    const unsized = resolvePlannedStepWorkerRoute(
+        'HerbBot',
+        { stepKind: 'unlock', unlockKind: 'skill', activityId: 'bank-artisan:identify-ranarr_weed', skill: 'Herblore', targetLevel: 54, estimatedTicks: 507 },
+        ctx,
+    );
+    expect(unsized.env).toMatchObject({ TARGET_LEVEL: '54', ORDER_MODE: 'level', MAX_MAKE: '1' });
+
+    // Other routes keep their own completion rule: smelting reads ORDER_MODE as exact or best-effort.
+    const smelt = resolvePlannedStepWorkerRoute(
+        'BarBot',
+        { stepKind: 'unlock', unlockKind: 'skill', activityId: 'bank-artisan:skill:smelting.struct:smelting_iron_bar', skill: 'Smithing', targetLevel: 20, batchUnits: 40, estimatedTicks: 300 },
+        ctx,
+    );
+    expect(smelt.env.ORDER_MODE).toBeUndefined();
+});
+
 test('catalog covers all 9 worker families with existing standalone scripts only', () => {
     const catalog = createActivityCatalog();
     const families = new Set(catalog.list().map((a) => a.family));

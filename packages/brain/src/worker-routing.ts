@@ -654,6 +654,24 @@ function resolveAcquireOrGearSource(
     }
 }
 
+// Inventory production makes one unit per bank trip: about 9 ticks for each identified herb.
+const UNLOCK_TICKS_PER_UNIT = 12;
+
+function unlockTickCap(units: number): number {
+    return Math.max(1000, units * UNLOCK_TICKS_PER_UNIT);
+}
+
+// The next chain step needs the unlock level, so inventory production passes only at that level, ends when
+// its inputs end, and a chain rerun at the level makes nothing (ORDER_MODE=level). Smelting reads
+// ORDER_MODE as exact or best-effort, so other routes keep their own rule.
+function unlockLevelOrder(
+    resolved: Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'>,
+    targetLevel: number | undefined,
+): Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'> {
+    if (!targetLevel || resolved.routeKey !== 'crafting:inventory') return resolved;
+    return { ...resolved, env: { ...resolved.env, ORDER_MODE: 'level' } };
+}
+
 function applyTargetLevelArg(
     resolved: Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'>,
     targetLevel: number | undefined,
@@ -764,20 +782,23 @@ export function resolvePlannedStepWorkerRoute(
                     warnings: [],
                 };
             }
+            // A sized unlock makes the units that the planner staged inputs for, as a craft_gather step
+            // makes its quantity.
             const env: Record<string, string> = {
                 ...(planned.skill ? { TRAIN_SKILL: planned.skill } : {}),
                 ...(planned.targetLevel ? { TARGET_LEVEL: String(planned.targetLevel) } : {}),
+                ...(planned.batchUnits ? { TARGET_COUNT: String(planned.batchUnits), CAP: String(unlockTickCap(planned.batchUnits)) } : {}),
             };
             if (act) {
                 const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(act, env), planned.targetLevel);
-                return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
+                return { account, stepKind: 'unlock', executionMode: 'worker', ...unlockLevelOrder(resolved, planned.targetLevel) };
             }
             const family = inferFamilyFromActivityId(planned.activityId, planned.skill);
             const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(
                 { id: planned.activityId, family, kind: 'train', skill: planned.skill, config: {} },
                 env,
             ), planned.targetLevel);
-            return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
+            return { account, stepKind: 'unlock', executionMode: 'worker', ...unlockLevelOrder(resolved, planned.targetLevel) };
         }
         case 'work': {
             const cfg = (planned.config ?? {}) as Record<string, unknown>;

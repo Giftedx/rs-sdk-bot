@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
-import {inventoryRecipes,parseProductionCli,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from '../src/bank-artisan';
+import {inventoryRecipeExp,inventoryRecipes,parseProductionCli,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from '../src/bank-artisan';
 test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
  const recipes=inventoryRecipes();expect(recipes).toHaveLength(223);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
  expect(recipes.slice(178).map(r=>r.name)).toEqual([
@@ -307,4 +307,60 @@ for(const [label,banked,target,expected] of [['a banked product that meets the t
  expect(result).toMatchObject({ok:true,made:expected,banked:expected,failure:'-'});
  expect(stock.get(r.product)).toBe(banked+expected);
  if(expected===0)expect(withdrawals).toBe(0);
+});
+
+// A planner unlock trains a skill to the level that its next step needs. Each identified herb here
+// gives one level; the run starts at level 10.
+function levelIo(r:ReturnType<typeof inventoryRecipes>[number],stock:{n:number}){
+ let t=0,level=10,prepares=0;let items:Record<number,number>={};
+ const io:ProductionIO={tick:()=>t,stopped:()=>false,level:()=>level,read:()=>({items:{...items},xp:level}),
+  prepare:async()=>{prepares++;if(stock.n<1)return 'spent';stock.n--;items=Object.fromEntries(r.inputs.map(i=>[i.id,i.units]));return true;},
+  use:async()=>{t++;level++;items={[r.product]:1};},wait:async()=>{},
+  deposit:async()=>{items={};return 1;},close:async()=>{}};
+ return {io,prepares:()=>prepares,setLevel:(n:number)=>{level=n;}};
+}
+test('identify and brew XP come from the server herb data in tenths',()=>{
+ expect(inventoryRecipeExp('identify:marentill')).toBe(38);
+ expect(inventoryRecipeExp('identify:kwuarm')).toBe(113);
+ expect(inventoryRecipeExp('brew:3dose1attack')).toBe(250);
+ expect(inventoryRecipeExp('brew:unf_guam_potion')).toBeUndefined();
+});
+test('a target level ends the run at the level, and a run that starts at the level makes nothing',async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='identify:marentill')!;
+ const stock={n:9},a=levelIo(r,stock);
+ expect(await runInventoryProduction(a.io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:12})).toMatchObject({ok:true,made:2,banked:2,failure:'-'});
+ expect(stock.n).toBe(7);
+ // The chain rerun after a later step failed: the level is reached, so the unlock passes with nothing made.
+ const b=levelIo(r,stock);b.setLevel(12);
+ expect(await runInventoryProduction(b.io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:12,levelOrder:true})).toMatchObject({ok:true,made:0,attempts:0,failure:'-'});
+ expect(b.prepares()).toBe(0);
+ expect(stock.n).toBe(7);
+});
+test('a level order fails below its level when the inputs end or the limit is made; other orders keep the count rule',async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='identify:marentill')!;
+ expect(await runInventoryProduction(levelIo(r,{n:1}).io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:13,levelOrder:true})).toMatchObject({ok:false,made:1,banked:1,failure:'Error: production inputs ended below target level'});
+ expect(await runInventoryProduction(levelIo(r,{n:0}).io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:13,levelOrder:true})).toMatchObject({ok:false,made:0,failure:'Error: production inputs ended below target level'});
+ expect(await runInventoryProduction(levelIo(r,{n:9}).io,r,{maximum:1,cap:50,maxAttempts:1,targetLevel:13,levelOrder:true})).toMatchObject({ok:false,made:1,failure:'Error: production target level unreached'});
+ expect(await runInventoryProduction(levelIo(r,{n:9}).io,r,{maximum:5,cap:2,maxAttempts:5,targetLevel:13,levelOrder:true})).toMatchObject({ok:false,made:2,failure:'Error: production target level unreached'});
+ // A work step that also names a level still ends ok at its count.
+ expect(await runInventoryProduction(levelIo(r,{n:9}).io,r,{maximum:1,cap:50,maxAttempts:1,targetLevel:13})).toMatchObject({ok:true,made:1});
+ await expect(runInventoryProduction(levelIo(r,{n:9}).io,r,{maximum:1,cap:50,maxAttempts:1,levelOrder:true})).rejects.toThrow('invalid production limits');
+});
+test('the CLI reads TARGET_LEVEL for the recipe skill and ORDER_MODE=level',()=>{
+ const unlock=parseProductionCli(['bun','scripts/aio-skiller.ts','Actor','identify:marentill','MAX_MAKE=390','CAP=4000','ORDER_MODE=level'],{TARGET_LEVEL:'54',TRAIN_SKILL:'Herblore'});
+ expect(unlock).toMatchObject({maximum:390,cap:4000,targetLevel:54,levelOrder:true,partial:false});
+ expect(parseProductionCli(['bun','scripts/aio-skiller.ts','Actor','identify:marentill'],{TARGET_LEVEL:'54',TRAIN_SKILL:'herblore'})).toMatchObject({targetLevel:54,levelOrder:false});
+ // A level of another skill does not stop a Herblore recipe.
+ expect(parseProductionCli(['bun','scripts/aio-skiller.ts','Actor','identify:marentill'],{TARGET_LEVEL:'54',TRAIN_SKILL:'Crafting'}).targetLevel).toBeUndefined();
+ expect(()=>parseProductionCli(['bun','scripts/aio-skiller.ts','Actor','identify:marentill','ORDER_MODE=level'])).toThrow('invalid production limits');
+ expect(()=>parseProductionCli(['bun','scripts/aio-skiller.ts','Actor','identify:marentill','TARGET_LEVEL=100'])).toThrow('invalid production limits');
+});
+test('SDK adapter: a run at its target level passes with no bank access, even with the product in the pack',async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='identify:marentill')!;let opens=0;
+ const pack=[{id:r.product,count:1,slot:0,name:'Marrentill'}];
+ const s:any={name:'fixture',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getInventory:()=>pack,getSkill:()=>({level:54}),getSkillXp:()=>43354,getDialog:()=>({isOpen:false}),getState:()=>({player:{lifeId:1},inventory:pack,bank:{isOpen:false,items:[]},interface:{isOpen:false}})},
+  bankObservation:()=>({generation:1,items:[]}),bot:{openBank:async()=>{opens++;return{success:true};},closeBank:async()=>{}},direct:async()=>({success:true})};
+ expect(await runInventoryBank(s,r,{maximum:390,cap:4000,members:true,targetLevel:54,levelOrder:true})).toMatchObject({ok:true,made:0,attempts:0,failure:'-'});
+ expect(opens).toBe(0);
 });
