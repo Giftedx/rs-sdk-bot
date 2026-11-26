@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795711052770-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Abracadickra",
+  "to": "SporranBulge",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795711052770,
+  "end": 1795711952770,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

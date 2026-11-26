@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795711084709-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "Wandwaver",
+  "item": "Raw lobster",
+  "count": 62,
+  "itemId": 377,
+  "start": 1795711084709,
+  "end": 1795711984709,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
