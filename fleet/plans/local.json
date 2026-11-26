@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795716438458,
+ "at": 1795716451644,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -145,6 +145,28 @@
    "role": "auto"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery-trip"
+   ],
+   "env": {
+    "RECIPE": "diamond_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1643",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
    "account": "OreElse",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -164,6 +186,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "30",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "30"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
    "role": "army"
   },
   {
@@ -193,64 +240,73 @@
   },
   {
    "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "identify:ranarr_weed"
+    "grind:unicorn_horn"
    ],
    "env": {
     "MAX_MAKE": "1",
     "CAP": "600",
     "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:257",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:235",
+    "BATCH_UNITS": "3"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "campaign:haggis:item:235",
    "role": "army"
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "air"
+    "sweep",
+    "magearena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "221"
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:magearena",
    "role": "army"
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/aio-market.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "mining",
+    "essence"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "304",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "304"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "1012"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
@@ -263,20 +319,16 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "undermykilt",
   "woodpecker",
