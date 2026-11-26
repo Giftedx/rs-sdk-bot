@@ -1429,71 +1429,77 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
     });
 });
 
-test('prepareFleetSender frees full 28-slot packs before withdrawing noted or unnoteable items', async () => {
-    const makeSender = (
-        initialPack: Array<{ id: number; name: string; count: number; slot: number }>,
-        initialBank: Array<{ id: number; name: string; count: number }>,
-        defs: Record<number, { stackable: boolean; certtemplate?: number; certlink?: number }>,
-    ) => {
-        let pack = structuredClone(initialPack);
-        const bank = structuredClone(initialBank);
-        let generation = 1;
-        let opened = false;
-        const withdrawals: Array<{ id: number; amount: number; asNote: boolean }> = [];
-        const session = {
-            client: { objType: (id: number) => defs[id] },
-            sdk: {
-                getInventory: () => pack,
-                getState: () => ({ inventory: pack, bank: { items: bank } }),
+type SenderDef = { stackable: boolean; certtemplate?: number; certlink?: number };
+// `serverNote` is the note the server bank gives for a base item. It defaults to the base item's own client `certlink`.
+const makeSender = (
+    initialPack: Array<{ id: number; name: string; count: number; slot: number }>,
+    initialBank: Array<{ id: number; name: string; count: number }>,
+    defs: Record<number, SenderDef>,
+    serverNote: (id: number) => number | undefined = id => {
+        const link = defs[id]?.certlink;
+        return typeof link === 'number' && link !== -1 ? link : undefined;
+    },
+) => {
+    let pack = structuredClone(initialPack);
+    const bank = structuredClone(initialBank);
+    let generation = 1;
+    let opened = false;
+    const withdrawals: Array<{ id: number; amount: number; asNote: boolean }> = [];
+    const session = {
+        client: { objType: (id: number) => defs[id] },
+        sdk: {
+            getInventory: () => pack,
+            getState: () => ({ inventory: pack, bank: { items: bank } }),
+        },
+        bankObservation: () => (opened ? { generation, at: 2300, items: bank } : undefined),
+        bot: {
+            openBank: async () => { opened = true; return { success: true }; },
+            closeBank: async () => { opened = false; return { success: true }; },
+            depositItem: async (row: { id: number; name: string }) => {
+                const count = pack.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
+                if (count > 0) {
+                    const existing = bank.find(b => b.id === row.id);
+                    if (existing) existing.count += count;
+                    else bank.push({ id: row.id, name: row.name, count });
+                    pack = pack.filter(r => r.id !== row.id);
+                }
+                generation++;
+                return { success: true };
             },
-            bankObservation: () => (opened ? { generation, at: 2300, items: bank } : undefined),
-            bot: {
-                openBank: async () => { opened = true; return { success: true }; },
-                closeBank: async () => { opened = false; return { success: true }; },
-                depositItem: async (row: { id: number; name: string }) => {
-                    const count = pack.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
-                    if (count > 0) {
-                        const existing = bank.find(b => b.id === row.id);
-                        if (existing) existing.count += count;
-                        else bank.push({ id: row.id, name: row.name, count });
-                        pack = pack.filter(r => r.id !== row.id);
+            withdrawItem: async (target: { id: number; name: string }, amount: number, opts: { asNote?: boolean } = {}) => {
+                const asNote = opts.asNote ?? false;
+                withdrawals.push({ id: target.id, amount, asNote });
+                const row = bank.find(b => b.id === target.id)!;
+                const def = defs[target.id];
+                const note = asNote && def?.stackable !== true ? serverNote(target.id) : undefined;
+                const outId = note ?? target.id;
+                const outStackable = def?.stackable === true || note !== undefined;
+                const slotsNeeded = outStackable
+                    ? (pack.some(r => r.id === outId) ? 0 : 1)
+                    : amount;
+                if (28 - pack.length < slotsNeeded) {
+                    return { success: false, message: 'inventory full' };
+                }
+                row.count -= amount;
+                if (outStackable) {
+                    const existing = pack.find(r => r.id === outId);
+                    if (existing) existing.count += amount;
+                    else pack.push({ id: outId, name: target.name, count: amount, slot: pack.length });
+                } else {
+                    for (let k = 0; k < amount; k++) {
+                        pack.push({ id: outId, name: target.name, count: 1, slot: pack.length });
                     }
-                    generation++;
-                    return { success: true };
-                },
-                withdrawItem: async (target: { id: number; name: string }, amount: number, opts: { asNote?: boolean } = {}) => {
-                    const asNote = opts.asNote ?? false;
-                    withdrawals.push({ id: target.id, amount, asNote });
-                    const row = bank.find(b => b.id === target.id)!;
-                    const def = defs[target.id];
-                    const canNote = asNote && def?.stackable !== true && def?.certlink !== -1;
-                    const outId = canNote && typeof def?.certlink === 'number' ? def.certlink : target.id;
-                    const outStackable = def?.stackable === true || canNote;
-                    const slotsNeeded = outStackable
-                        ? (pack.some(r => r.id === outId) ? 0 : 1)
-                        : amount;
-                    if (28 - pack.length < slotsNeeded) {
-                        return { success: false, message: 'inventory full' };
-                    }
-                    row.count -= amount;
-                    if (outStackable) {
-                        const existing = pack.find(r => r.id === outId);
-                        if (existing) existing.count += amount;
-                        else pack.push({ id: outId, name: target.name, count: amount, slot: pack.length });
-                    } else {
-                        for (let k = 0; k < amount; k++) {
-                            pack.push({ id: outId, name: target.name, count: 1, slot: pack.length });
-                        }
-                    }
-                    generation++;
-                    return { success: true };
-                },
+                }
+                generation++;
+                return { success: true };
             },
-        } as unknown as Session;
-        return { session, getPack: () => pack, getOpened: () => opened, withdrawals };
-    };
+        },
+    } as unknown as Session;
+    return { session, getPack: () => pack, getOpened: () => opened, withdrawals };
+};
 
-    const defs: Record<number, { stackable: boolean; certtemplate?: number; certlink?: number }> = {
+test('prepareFleetSender frees full 28-slot packs before withdrawing noted or unnoteable items', async () => {
+    const defs: Record<number, SenderDef> = {
         1925: { stackable: false, certtemplate: -1, certlink: 1926 },
         1436: { stackable: false, certtemplate: -1, certlink: 1437 },
         556: { stackable: true, certtemplate: -1, certlink: -1 },
@@ -1549,6 +1555,55 @@ test('prepareFleetSender frees full 28-slot packs before withdrawing noted or un
         ),
     ).rejects.toThrow(/sender pack full/);
     expect(sender3.withdrawals).toEqual([]);
+});
+
+test('prepareFleetSender notes a base item although the client gives the base item no certlink', async () => {
+    // The client cache sets certlink only on the note. The engine packer writes the base-to-note link into the
+    // server pack only. ObjType.list hands out shared objects from a ring of 10, so a held definition can change.
+    class ClientObjType { static numDefinitions = 4089; id = -1; stackable = false; certtemplate = -1; certlink = -1; }
+    const known: Record<number, Partial<ClientObjType>> = {
+        537: { stackable: true, certtemplate: 799, certlink: 536 },
+        437: { stackable: true, certtemplate: 799, certlink: 436 },
+        439: { stackable: true, certtemplate: 799, certlink: 438 },
+        3116: { stackable: true, certtemplate: 799, certlink: 3096 },
+    };
+    const ring = Array.from({ length: 10 }, () => new ClientObjType());
+    let ringPos = 0;
+    const objType = (id: number) => {
+        if (!Number.isSafeInteger(id) || id < 0 || id >= ClientObjType.numDefinitions) throw Error(`no obj ${id}`);
+        const cached = ring.find(o => o.id === id);
+        if (cached) return cached;
+        ringPos = (ringPos + 1) % ring.length;
+        return Object.assign(ring[ringPos]!, { id, stackable: false, certtemplate: -1, certlink: -1 }, known[id]);
+    };
+    const defs = new Proxy({} as Record<number, SenderDef>, { get: (_t, key) => objType(Number(key)) });
+    const serverNotes = new Map([[536, 537], [436, 437], [438, 439], [3096, 3116]]);
+    const sender = (pack: Parameters<typeof makeSender>[0], bank: Parameters<typeof makeSender>[1]) =>
+        makeSender(pack, bank, defs, id => serverNotes.get(id));
+    const prepare = (s: ReturnType<typeof makeSender>, o: Partial<Order>) =>
+        prepareFleetSender(s.session, order(o), { uncertain: false, count: 0 }, async (_s, pred) => pred(null));
+
+    // CoinCock: 153 Dragon bones in one trade.
+    const bones = sender([], [{ id: 536, name: 'Dragon bones', count: 200 }]);
+    await prepare(bones, { item: 'Dragon bones', itemId: 536, count: 153 });
+    expect(bones.withdrawals).toEqual([{ id: 536, amount: 153, asNote: true }]);
+    expect(bones.getPack()).toEqual([{ id: 537, name: 'Dragon bones', count: 153, slot: 0 }]);
+
+    // CoinCock: a second line found 7 free slots after the first line came out unnoted.
+    const ores = sender([], [{ id: 436, name: 'Copper ore', count: 21 }, { id: 438, name: 'Tin ore', count: 21 }]);
+    await prepare(ores, { item: 'Copper ore', itemId: 436, count: 21, extra: [{ item: 'Tin ore', itemId: 438, count: 21 }] });
+    expect(ores.withdrawals).toEqual([{ id: 436, amount: 21, asNote: true }, { id: 438, amount: 21, asNote: true }]);
+    expect(ores.getPack().map(r => [r.id, r.count])).toEqual([[437, 21], [439, 21]]);
+
+    // A note that is not at base id + 1 (Iron claws 3096, note 3116).
+    const claws = sender([], [{ id: 3096, name: 'Iron claws', count: 30 }]);
+    await prepare(claws, { item: 'Iron claws', itemId: 3096, count: 30 });
+    expect(claws.withdrawals).toEqual([{ id: 3096, amount: 30, asNote: true }]);
+
+    // An item with no note still needs one slot per item.
+    const staffs = sender([], [{ id: 772, name: 'Dramen staff', count: 30 }]);
+    await expect(prepare(staffs, { item: 'Dramen staff', itemId: 772, count: 29 })).rejects.toThrow(/sender pack full: need 29 slots/);
+    expect(staffs.withdrawals).toEqual([]);
 });
 
 test('partnerFailed and pickOrder treat partner reconcile receipts as terminal failures', () => {

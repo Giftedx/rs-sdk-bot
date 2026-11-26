@@ -857,6 +857,34 @@ export async function waitForGiver(
 export const itemDefinition = (s: Session, id: number) =>
     (s.client as { objType?: (id: number) => { stackable: boolean; certtemplate?: number; certlink?: number } } | undefined)?.objType?.(id);
 
+const isNoteDef = (def: { certtemplate?: number; certlink?: number } | undefined): def is { certtemplate: number; certlink: number } =>
+    typeof def?.certtemplate === 'number' && def.certtemplate !== -1 && typeof def.certlink === 'number' && def.certlink >= 0;
+const clientNotes = new WeakMap<object, Map<number, number>>();
+
+// The client cache sets certlink only on a note. The engine packer writes the base item's link to its note into the
+// server pack only (engine/tools/pack/config/ObjConfig.ts), so a base item reads certlink -1 although the bank notes it.
+// This finds the note from the note side: one scan of the client's item list, kept for the client.
+export function noteIdOf(s: Session, id: number): number | undefined {
+    const def = itemDefinition(s, id);
+    if (!def || def.stackable || (typeof def.certtemplate === 'number' && def.certtemplate !== -1)) return undefined;
+    if (typeof def.certlink === 'number' && def.certlink >= 0) return def.certlink;
+    const count = (def.constructor as { numDefinitions?: unknown } | undefined)?.numDefinitions;
+    if (typeof count !== 'number' || !Number.isSafeInteger(count) || count <= 0) {
+        const next = itemDefinition(s, id + 1);
+        return isNoteDef(next) && next.certlink === id ? id + 1 : undefined;
+    }
+    let notes = clientNotes.get(s.client as object);
+    if (!notes) {
+        notes = new Map();
+        for (let noteId = 0; noteId < count; noteId++) {
+            const note = itemDefinition(s, noteId);
+            if (isNoteDef(note)) notes.set(note.certlink, noteId);
+        }
+        clientNotes.set(s.client as object, notes);
+    }
+    return notes.get(id);
+}
+
 export const matchesLineId = (s: Session, id: number | undefined, itemId: number | undefined): boolean => {
     if (itemId === undefined) return true;
     if (id === undefined) return false;
