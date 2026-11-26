@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795727923295-2",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "6d3041a8-dda0-410a-b415-2ae63090506e",
+ "count": 3,
+ "ok": true,
+ "at": 1795728384736,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795728369243
+ },
+ "logout": {
+  "attemptId": "1795728363056-0000011072-0000000001",
+  "at": 1795728384723,
+  "sha256": "ff647cbc08e83a246d4f77cbbbab9058e3a8b35068c9ce0af09a111d9188a5d7"
+ },
+ "screen": true
+}

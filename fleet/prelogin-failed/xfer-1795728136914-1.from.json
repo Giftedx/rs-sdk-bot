@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795728136914-1",
+ "role": "from",
+ "account": "FishAndChips",
+ "partner": "BackdoorMan",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795728407124,
+ "detail": "Error: fleet account claim held by swarm"
+}

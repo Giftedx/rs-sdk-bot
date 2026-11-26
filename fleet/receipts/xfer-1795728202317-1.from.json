@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795728202317-1",
+ "account": "Magicwanda",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 790,
+ "claim": "fba44082-963d-419a-ba3d-645ea8edead1",
+ "count": 0,
+ "ok": false,
+ "at": 1795728379525,
+ "detail": "trade claimed"
+}
