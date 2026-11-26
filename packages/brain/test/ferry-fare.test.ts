@@ -29,3 +29,19 @@ test('ferryFallbackFare is the fare that both ferry fallbacks stage before they 
         }
     }
 });
+
+test('with no route to Ardougne North, the walk east from Kandarin stages no fare, and so does ferryFallbackFare', async () => {
+    // MeatNTwoVeg at 2793,3516: inside the Kandarin box, east of White Wolf Mountain.
+    const from: Tile = { x: 2793, z: 3516, level: 0 };
+    const isNorth = (t: Tile) => t.x === ARDOUGNE_NORTH.x && t.z === ARDOUGNE_NORTH.z && t.level === ARDOUGNE_NORTH.level;
+    expect(ferryFallbackFare(from, VARROCK_WEST, undefined, t => !isNorth(t))).toBe(0);
+    expect(ferryFallbackFare(from, VARROCK_WEST)).toBe(60);
+    const walkTo = async (t: Tile): Promise<Outcome> =>
+        isNorth(t) ? { ok: false, reason: 'precondition', detail: 'no route to 2619,3332,0', ticks: 0 } : { ok: true, ticks: 1 };
+    for (const walk of [logisticsWalk, marketWalk]) {
+        let staged = 0;
+        const out = await walk(from, VARROCK_WEST, walkTo, async () => ({ ok: true, ticks: 1 }), () => 0, async need => { staged = need; return { ok: true, ticks: 1 }; });
+        expect(out.ok).toBe(true);
+        expect(staged).toBe(0);
+    }
+});

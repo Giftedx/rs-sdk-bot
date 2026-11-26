@@ -34,11 +34,13 @@ import {
     type AccountState,
     type DefectRecord,
     type InfraCircuitBreakerState,
+    type NoRouteFact,
     type OperatorCommand,
     type RateSample,
     type SystemHold,
     type WorldSnapshot,
 } from './contracts';
+import { addNoRoute, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, parseNoRoute, standsAt } from './no-route';
 import type { RateStore } from './rate-store';
 
 export const DEFAULT_MARKET_COOLDOWN_MS = 10 * 60_000;
@@ -108,6 +110,8 @@ export interface OutcomeClassifierState {
     readonly marketCooldowns: Readonly<Record<string, number>>;
     readonly defects: readonly DefectRecord[];
     readonly accountOverlays: Readonly<Record<string, AccountOutcomeOverlay>>;
+    // Per account (lower case): the targets its own route search found no route to (no-route.ts).
+    readonly noRoutes?: Readonly<Record<string, readonly NoRouteFact[]>>;
 }
 
 export interface OutcomeClassificationResult {
@@ -121,6 +125,7 @@ export interface OutcomeClassificationResult {
     readonly cooldownExpiresAt?: number;
     readonly missingSupplies?: readonly RunOutcomeMissingItem[];
     readonly defect?: DefectRecord;
+    readonly noRoute?: NoRouteFact;
     readonly infraBreaker?: InfraCircuitBreakerState;
     readonly accountPenalized: boolean;
     readonly unlockFollowUp: boolean;
@@ -415,6 +420,7 @@ export class OutcomeClassifier {
     private marketCooldowns: Record<string, number> = {};
     private readonly defects = new Map<string, DefectRecord>();
     private readonly accountOverlays = new Map<string, AccountOutcomeOverlay>();
+    private readonly noRoutes = new Map<string, NoRouteFact[]>();
 
     constructor(opts: OutcomeClassifierOptions = {}) {
         this.rateStore = opts.rateStore;
@@ -437,6 +443,7 @@ export class OutcomeClassifier {
         this.marketCooldowns = {};
         this.defects.clear();
         this.accountOverlays.clear();
+        this.noRoutes.clear();
         if (!existsSync(this.filePath)) return;
 
         let parsed: unknown;
@@ -498,6 +505,24 @@ export class OutcomeClassifier {
                     holds,
                     cooldowns,
                 });
+            }
+        }
+
+        if (isPlainRecord(parsed.noRoutes)) {
+            for (const [account, facts] of Object.entries(parsed.noRoutes)) {
+                const kept = Array.isArray(facts) ? facts.filter(isNoRouteFact) : [];
+                if (nonEmpty(account) && kept.length > 0) this.noRoutes.set(account.toLowerCase(), kept);
+            }
+        } else {
+            // A state saved before no-route facts holds them only as defects. A defect text that names the start of
+            // its search is the same evidence as a new failure, so the first load makes it a fact. Each later save
+            // writes `noRoutes`, so this runs once and an operator resume stays cleared.
+            for (const d of this.defects.values()) {
+                const searched = d.outcomeKind === 'worker_defect' && d.detail ? parseNoRoute(d.detail) : null;
+                if (!searched) continue;
+                const key = d.account.toLowerCase();
+                const fact: NoRouteFact = { ...searched, activityId: d.activityId, observedAt: d.observedAt, expiresAt: d.observedAt + NO_ROUTE_TTL_MS };
+                this.noRoutes.set(key, addNoRoute(this.noRoutes.get(key) ?? [], fact));
             }
         }
     }
@@ -633,9 +658,17 @@ export class OutcomeClassifier {
         },
     ): OutcomeClassificationResult {
         const outcome = classifyRawWorkerExit(input);
+        const text = [input.detail, input.error, input.reason, input.summary, input.stdout]
+            .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+            .join('\n');
+        // The fact refuses work only while the account stands where the search started (no-route.ts), so it takes
+        // the place of a defect only when the run ended there. Otherwise the defect holds the activity as before.
+        const searched = parseNoRoute(text, input.pos);
+        const noRoute = searched && input.pos && standsAt(input.pos, searched.from) ? searched : undefined;
         return this.applyOutcome(outcome, {
             ...ctx,
             ...(input.skipRateSample || ctx?.skipRateSample ? { skipRateSample: true } : {}),
+            ...(noRoute ? { noRoute } : {}),
         });
     }
 
@@ -647,6 +680,8 @@ export class OutcomeClassifier {
             readonly accountState?: AccountState;
             readonly workerRelease?: string;
             readonly skipRateSample?: boolean;
+            // The "no route" in the run's failure text and where that search started (no-route.ts parseNoRoute).
+            readonly noRoute?: { readonly from: WorkerTile; readonly to: WorkerTile };
         },
     ): OutcomeClassificationResult {
         const errors = validateRunOutcome(outcome);
@@ -841,6 +876,26 @@ export class OutcomeClassifier {
 
             case 'worker_defect': {
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
+                // A route search that found no route for this account is a fact about where the account stands, not a
+                // fault of the worker. As a defect it would hold the activity for every account at its second count.
+                const searched = ctx?.noRoute;
+                if (searched) {
+                    const key = outcome.account.toLowerCase();
+                    const noRoute: NoRouteFact = { ...searched, activityId: outcome.activityId, observedAt: now, expiresAt: now + NO_ROUTE_TTL_MS };
+                    this.noRoutes.set(key, addNoRoute((this.noRoutes.get(key) ?? []).filter(f => now < f.expiresAt), noRoute));
+                    this.saveIfEnabled(now);
+                    return {
+                        outcome,
+                        account: outcome.account,
+                        activityId: outcome.activityId,
+                        accountLifecycle: overlay.lifecycleOverride === 'dead' ? 'dead' : 'idle',
+                        noRoute,
+                        accountPenalized: false,
+                        unlockFollowUp: false,
+                        clearedTransientRecovery: false,
+                        summary: noRouteMessage(outcome.account, noRoute),
+                    };
+                }
                 const defect = this.upsertDefect({
                     activityId: outcome.activityId,
                     faultSignature: outcome.faultSignature,
@@ -983,8 +1038,25 @@ export class OutcomeClassifier {
         return { ...this.marketCooldowns };
     }
 
+    // The facts that still hold for the account. A fact ends when it expires or the account leaves the start of
+    // its search: the account moved, so a new search decides.
+    private holdingNoRoutes(acct: AccountState, now: number): readonly NoRouteFact[] | undefined {
+        const key = acct.name.toLowerCase();
+        const facts = this.noRoutes.get(key);
+        if (!facts) return acct.noRoutes;
+        const kept = acct.pos === null ? facts.filter(f => now < f.expiresAt) : facts.filter(f => noRouteHolds(f, acct.pos, now));
+        if (kept.length === 0) this.noRoutes.delete(key);
+        else if (kept.length < facts.length) this.noRoutes.set(key, kept);
+        return kept.length > 0 ? kept : undefined;
+    }
+
     private applyToAccountInternal(acct: AccountState, now: number, validate: boolean): AccountState {
         const key = acct.name.toLowerCase();
+        const noRoutes = this.holdingNoRoutes(acct, now);
+        if (noRoutes !== acct.noRoutes) {
+            const { noRoutes: _old, ...without } = acct;
+            acct = noRoutes ? { ...without, noRoutes } : without;
+        }
         const hasOverlay = this.accountOverlays.has(key);
         if (!hasOverlay) {
             const hasActiveJobMismatch = acct.activeJob !== undefined && acct.lifecycle !== 'running';
@@ -1102,9 +1174,13 @@ export class OutcomeClassifier {
             case 'resume_account': {
                 const acctKey = cmd.account.toLowerCase();
                 const overlay = this.accountOverlays.get(acctKey);
-                if (!overlay) return false;
-                if (overlay.lifecycleOverride === 'dead' && cmd.clearDead !== true) {
+                if (overlay?.lifecycleOverride === 'dead' && cmd.clearDead !== true) {
                     return false;
+                }
+                const hadNoRoutes = this.noRoutes.delete(acctKey);
+                if (!overlay) {
+                    if (hadNoRoutes) this.saveIfEnabled(now);
+                    return hadNoRoutes;
                 }
                 const nextHolds = overlay.holds.filter(
                     (h) => h.key !== 'location_stranded' && h.key !== 'session_unsettled',
@@ -1138,6 +1214,11 @@ export class OutcomeClassifier {
                 overlays[account] = cleaned;
             }
         }
+        const noRoutes: Record<string, NoRouteFact[]> = {};
+        for (const [account, facts] of this.noRoutes) {
+            const kept = facts.filter(f => now < f.expiresAt);
+            if (kept.length > 0) noRoutes[account] = kept;
+        }
         return {
             schemaVersion: OUTCOME_STATE_SCHEMA_VERSION,
             updatedAt: now,
@@ -1145,6 +1226,7 @@ export class OutcomeClassifier {
             marketCooldowns,
             defects: [...this.defects.values()],
             accountOverlays: overlays,
+            noRoutes,
         };
     }
 }
