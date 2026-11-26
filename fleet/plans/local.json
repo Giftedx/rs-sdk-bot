@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795725494926,
+ "at": 1795725511723,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -121,6 +121,21 @@
    "role": "army"
   },
   {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep biohazard",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:upass BATCH_UNITS=1 -- sweep upass"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:upass",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -134,21 +149,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:lochnessrod:item:314",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep biohazard",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:upass BATCH_UNITS=1 -- sweep upass"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:upass",
    "role": "army"
   },
   {
