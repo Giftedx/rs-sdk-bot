@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795709542185,
+ "at": 1795709556250,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -108,44 +108,6 @@
    "role": "army"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "iron"
-   ],
-   "env": {
-    "BAR_TYPE": "iron",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "helper"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -218,9 +180,9 @@
    "account": "Pocketrocket",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-34-p23 ITEM_ID=436 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-34-p23 ITEM_ID=438 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=34 -- smithing smelt 1500 bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-33-p23 ITEM_ID=436 QUANTITY=33 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-33-p23 ITEM_ID=438 QUANTITY=33 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=33 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
@@ -248,37 +210,6 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=2 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=2 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy generalshop2 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p117 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=117 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1309",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -294,20 +225,67 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1353 \"ITEMS=Steel axe\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy axeshop 3000",
+    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "249"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "auto"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "249"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "249"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   },
   {
    "account": "Shaftsinker",
@@ -341,36 +319,20 @@
    "role": "auto"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
+   "account": "Packhorse",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "749"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "749"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "PickpockDick",
@@ -435,6 +397,37 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=103 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- prayer bury"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "auto"
   }
  ],
  "army": [
