@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711084709-1",
+ "account": "MineYourBiz",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 62,
+ "claim": "94cc7748-ab0a-47a1-aa82-64d26caf86c6",
+ "count": 0,
+ "ok": false,
+ "at": 1795711155025,
+ "detail": "trade claimed"
+}
