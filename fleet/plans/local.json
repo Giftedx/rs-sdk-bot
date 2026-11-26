@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727479945,
+ "at": 1795727509523,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -116,22 +116,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1500"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
    "role": "army"
   },
   {
@@ -269,6 +253,7 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
+  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpool",
