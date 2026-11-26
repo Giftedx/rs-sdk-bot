@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727071267-1",
  "account": "Shaftsinker",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Cake",
  "requested": 10,
  "claim": "1094dc8c-ed08-4ab2-a312-0df62af17096",
- "count": 0,
- "ok": false,
- "at": 1795727246999,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795727286393,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795727285635
+ },
+ "logout": {
+  "attemptId": "1795727247021-0000025032-0000000001",
+  "at": 1795727286380,
+  "sha256": "54d7798f988a9e5e456d610ae873dba775389e51c81fd56913828989ad376fb7"
+ },
+ "screen": true
 }
