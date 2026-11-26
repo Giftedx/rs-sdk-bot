@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795709689255,
+ "at": 1795709700542,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Fingerblastr",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -74,7 +74,7 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -102,23 +102,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "army"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
   },
   {
    "account": "Bigpackage",
@@ -187,53 +170,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Earlyshooter",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Earlyshooter",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/generated/quest-chompybird.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:chompybird",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
    "role": "army"
   },
   {
@@ -329,6 +265,83 @@
    "repeat": false,
    "goal": "goal:pk_army:CoinCock",
    "role": "auto"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/generated/quest-chompybird.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:chompybird",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:chompybird",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chompy"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Nockitoff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chompy"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Earlyshooter",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Earlyshooter",
+   "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/generated/quest-viking.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:viking",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "army"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chompy"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
   }
  ],
  "army": [
@@ -340,7 +353,6 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fingersmith",
   "hocuspokeus",
