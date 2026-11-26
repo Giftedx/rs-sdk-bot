@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721344791-3",
  "account": "AFKnight",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 300,
  "claim": "d8ff888c-2713-4935-961a-63f493233633",
- "count": 0,
- "ok": false,
- "at": 1795721708795,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795721738851,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795721738018
+ },
+ "logout": {
+  "attemptId": "1795721708805-0000007064-0000000001",
+  "at": 1795721738839,
+  "sha256": "8cdbd0d36982f89fd0ec1e15f7a27b6f8722f67e4c8a6372d03815abaa409ceb"
+ },
+ "screen": true
 }
