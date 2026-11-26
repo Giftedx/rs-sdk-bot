@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795713061354-2",
  "account": "BoneToPick",
  "partner": "Hocuspokeus",
@@ -12,6 +12,16 @@
  "claim": "3619e83e-c9d4-428a-bf7b-f58c9dbb859b",
  "count": 0,
  "ok": false,
- "at": 1795713484917,
- "detail": "trade claimed"
+ "at": 1795713524375,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795713493245
+ },
+ "logout": {
+  "attemptId": "1795713484925-0000005152-0000000001",
+  "at": 1795713524362,
+  "sha256": "1094afe559e1926275363aa6c5b9aa274a0e46a2afc0d46290af170d14e64c5e"
+ },
+ "screen": false
 }
