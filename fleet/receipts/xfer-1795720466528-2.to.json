@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720466528-2",
  "account": "Fatstack",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 1,
  "claim": "1e52db0c-d414-4101-8d7d-968c80d5abd0",
- "count": 0,
- "ok": false,
- "at": 1795721048532,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795721059574,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795721058484
+ },
+ "logout": {
+  "attemptId": "1795721048691-0000022472-0000000001",
+  "at": 1795721059227,
+  "sha256": "6b1d57902317ec991be6da9e8688e10e28be57644fb7297f9a711a921dd626b5"
+ },
+ "screen": true
 }
