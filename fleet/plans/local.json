@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795725470175,
+ "at": 1795725494926,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1770 TARGET_COUNT=177 PRODUCT_TARGET=177 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=177 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1670 TARGET_COUNT=167 PRODUCT_TARGET=167 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=167 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -205,9 +205,9 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-10-p97 ITEM_ID=440 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-178-p517 ITEM_ID=453 QUANTITY=178 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=89 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-4-p97 ITEM_ID=440 QUANTITY=4 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-166-p517 ITEM_ID=453 QUANTITY=166 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=83 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -236,6 +236,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=100 -- prayer bury"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   },
   {
    "account": "YewFirst",

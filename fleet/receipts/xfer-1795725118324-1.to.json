@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725118324-1",
+ "account": "Shaftsinker",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 4,
+ "claim": "7c6bb8e3-1d95-448e-8fab-788f4f723620",
+ "count": 4,
+ "ok": true,
+ "at": 1795725482181,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795725481455
+ },
+ "logout": {
+  "attemptId": "1795725471713-0000026048-0000000001",
+  "at": 1795725482173,
+  "sha256": "f254cd8be987f56a3a7785bfff1a704294166d9b9efd9563846f9d782719a8dd"
+ },
+ "screen": true
+}

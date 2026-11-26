@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725118324-1",
  "account": "Magicwanda",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 4,
  "claim": "03d35630-b3be-4bec-97e0-3cc759eaebec",
- "count": 0,
- "ok": false,
- "at": 1795725267455,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795725480608,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795725454656
+ },
+ "logout": {
+  "attemptId": "1795725267465-0000015800-0000000001",
+  "at": 1795725480597,
+  "sha256": "37f2f090876f53e4f68aed12758767916fd4fd58cb09a516adbd5f140858875d"
+ },
+ "screen": true
 }
