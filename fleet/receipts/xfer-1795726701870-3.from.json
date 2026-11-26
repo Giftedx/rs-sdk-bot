@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795726701870-3",
  "account": "Wandwaver",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "a92a9344-9d3f-4950-a787-f401d5649508",
- "count": 0,
- "ok": false,
- "at": 1795726817750,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795726861988,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795726825247
+ },
+ "logout": {
+  "attemptId": "1795726817779-0000004636-0000000001",
+  "at": 1795726861979,
+  "sha256": "d4779edaf29e015738e954231b1c926a2352ce66168754010992dbd59c5c7a4c"
+ },
+ "screen": true
 }
