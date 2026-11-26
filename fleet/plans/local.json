@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719233435,
+ "at": 1795719256965,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,9 +62,9 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-86-p97 ITEM_ID=440 QUANTITY=86 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-172-p517 ITEM_ID=453 QUANTITY=172 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=86 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-83-p97 ITEM_ID=440 QUANTITY=83 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-166-p517 ITEM_ID=453 QUANTITY=166 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=83 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -75,6 +75,21 @@
    "role": "army"
   },
   {
+   "account": "AFKnight",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:AFKnight",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:AFKnight",
+   "role": "auto"
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -83,7 +98,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "289"
+    "BATCH_UNITS": "267"
    },
    "enabled": true,
    "repeat": false,
@@ -172,25 +187,9 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "crest"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:crest",
-   "role": "army"
-  },
-  {
-   "account": "Packhorse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1339 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1105 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
     "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
@@ -199,37 +198,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1311",
-   "role": "helper"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-2-p224 ITEM_ID=2351 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=5 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:40",
    "role": "army"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:AFKnight",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:AFKnight",
-   "role": "auto"
   }
  ],
  "army": [
@@ -246,6 +215,7 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
