@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713467399-1",
  "account": "Shaftsinker",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 128,
  "claim": "8e5bc0ad-323a-43ca-8dea-842d9fdc16f4",
- "count": 0,
- "ok": false,
- "at": 1795713645447,
- "detail": "trade claimed"
+ "count": 128,
+ "ok": true,
+ "at": 1795713658874,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 128
+ },
+ "bank": {
+  "count": 128,
+  "at": 1795713658014
+ },
+ "logout": {
+  "attemptId": "1795713645455-0000012184-0000000001",
+  "at": 1795713658778,
+  "sha256": "03d9d232d050d955823ff91ef719c220318765c6d03a24489beec51fe7fcbfe3"
+ },
+ "screen": true
 }
