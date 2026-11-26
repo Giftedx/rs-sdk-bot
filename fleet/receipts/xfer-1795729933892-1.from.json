@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729933892-1",
+ "account": "Quickhandjob",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "2e1fd420-d5e2-4d47-9cea-2ac513935abc",
+ "count": 1,
+ "ok": true,
+ "at": 1795730382677,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795730366277
+ },
+ "logout": {
+  "attemptId": "1795730358742-0000012356-0000000001",
+  "at": 1795730382627,
+  "sha256": "e1097a9dd3787ad9f9e0a13dd9a8f0dd7653002e0f4b365923e659403a30eb86"
+ },
+ "screen": true
+}
