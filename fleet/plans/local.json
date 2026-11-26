@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795708197852,
+ "at": 1795708222097,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,26 +74,10 @@
    "role": "auto"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "73"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2280 TARGET_COUNT=228 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2260 TARGET_COUNT=226 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -143,6 +127,25 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -162,41 +165,29 @@
    ]
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "trooper"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army",
    "resources": [
-    "varrock-se-mine"
+    "khazard-troopers"
    ]
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-73-p61 ITEM_ID=1436 QUANTITY=73 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=73 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
-   "account": "Quickhandjob",
+   "account": "NabTheKnob",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -209,6 +200,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "army"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-436-34-p23 ITEM_ID=436 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-34-p23 ITEM_ID=438 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=34 -- smithing smelt 1500 bronze"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "helper"
   },
   {
    "account": "SporranDip",
@@ -245,15 +252,16 @@
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-73-p61 ITEM_ID=1436 QUANTITY=73 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=73 -- runecraft air"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-34-p23 ITEM_ID=436 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-34-p23 ITEM_ID=438 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=34 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:2349",
    "role": "army"
   },
   {
@@ -285,6 +293,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "army"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- magic items enchant:sapphire_ring - 50 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto"
   },
   {
    "account": "Unsheathed",
@@ -398,45 +421,19 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
+   "account": "InTheSack",
+   "script": "scripts/chain.ts",
    "args": [
-    "giant"
+    "scripts/aio-logistics.ts ITEM_ID=1436 QUANTITY=28 \"ITEM_NAME=Rune essence\" -- loadout",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=163 -- runecraft air"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "50",
-    "1200"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   }
  ],
  "army": [
@@ -459,6 +456,7 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "swordinhand",
   "thefullmonty",
