@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721438351-4",
  "account": "TheFullMonty",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "9d67c223-f8f6-43b3-aff3-54d4e1680494",
- "count": 0,
- "ok": false,
- "at": 1795721808357,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795721829582,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795721828441
+ },
+ "logout": {
+  "attemptId": "1795721808365-0000019092-0000000001",
+  "at": 1795721829570,
+  "sha256": "b0d41d3367e29909305b7c4fe794459cab7aa7f4bd639e856b2284f49fa420e2"
+ },
+ "screen": true
 }
