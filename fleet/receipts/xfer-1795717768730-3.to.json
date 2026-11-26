@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717768730-3",
  "account": "BoneToPick",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "28535be1-91ad-4539-af06-1875e439ea90",
- "count": 0,
- "ok": false,
- "at": 1795718141803,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795718154538,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795718153861
+ },
+ "logout": {
+  "attemptId": "1795718142008-0000019052-0000000001",
+  "at": 1795718154531,
+  "sha256": "280254b5e5dd13a5379f84005899439f1204b69b5dae6b2533e547125a9a4a56"
+ },
+ "screen": true
 }
