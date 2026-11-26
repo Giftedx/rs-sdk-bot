@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795715103968-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Quickhandjob",
+  "item": "Law rune",
+  "count": 20,
+  "itemId": 563,
+  "start": 1795715103968,
+  "end": 1795716003968,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
