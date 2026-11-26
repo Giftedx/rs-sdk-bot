@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795731912849,
+ "at": 1795731923662,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,34 +90,6 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -134,18 +106,33 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-pvp.ts",
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
    "args": [
-    "team"
+    "scripts/aio-market.ts ITEM_ID=379 ITEMS=Lobster MAX_ITEMS=10 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy alfonse 3000",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:hiltsdeep:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-315-10-p7 ITEM_ID=315 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:castmyload:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:castmyload:item:563",
    "role": "army"
   },
   {
@@ -263,6 +250,26 @@
    "role": "army"
   },
   {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
+  },
+  {
    "account": "Pullmybow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -283,23 +290,19 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
    "args": [
-    "druid"
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=10 TARGET_COUNT=29 CAP=1000 -- fletching shafts",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
    ],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:563",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:563",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
   }
  ],
  "army": [
@@ -312,6 +315,7 @@
   "ballspinner",
   "bigpackage",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -329,7 +333,6 @@
   "sporrandip",
   "swordinhand",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

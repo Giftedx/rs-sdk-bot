@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795731919031-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Bigpackage",
+  "item": "Gold bar",
+  "count": 8,
+  "itemId": 2357,
+  "start": 1795731919031,
+  "end": 1795732819031,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
