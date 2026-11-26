@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719589782,
+ "at": 1795719632134,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -155,19 +155,23 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 -- smithing smelt 1500 bronze",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=2 -- smithing anvil 1500"
+    "prayer",
+    "bury"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BONE_ID": "536",
+    "TRAIN_SKILL": "Prayer",
+    "TARGET_LEVEL": "70",
+    "DEMAND_ID": "goal:pk_army:Spitroaster",
+    "BATCH_UNITS": "42"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "helper"
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
   },
   {
    "account": "Pocketpython",
@@ -185,23 +189,7 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
+   "account": "BoneToPick",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -214,21 +202,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
-   "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   },
   {
@@ -261,6 +234,66 @@
    "repeat": false,
    "goal": "goal:pk_army:Earlyshooter",
    "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
+   "role": "helper"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
   }
  ],
  "army": [
@@ -277,12 +310,14 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
   "oreelse",
   "pocketpool",
   "quickhandjob",
