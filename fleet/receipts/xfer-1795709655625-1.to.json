@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795709655625-1",
  "account": "mmthv2350",
  "partner": "Kiltlifter",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "06d60be5-a983-480d-b146-5f776837c1f3",
- "count": 0,
- "ok": false,
- "at": 1795710217391,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795710230570,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 16
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795710229810
+ },
+ "logout": {
+  "attemptId": "1795710217399-0000011580-0000000001",
+  "at": 1795710230556,
+  "sha256": "b03d19a5701e6a94dc52de12bf530203681e1ffbfbc6f57ce08a8b93c1adb08e"
+ },
+ "screen": true
 }
