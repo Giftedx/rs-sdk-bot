@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727071267-1",
+ "account": "Fingersmith",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 10,
+ "claim": "a485e680-37ec-48c3-b4de-31140a4d382d",
+ "count": 0,
+ "ok": false,
+ "at": 1795727228013,
+ "detail": "trade claimed"
+}

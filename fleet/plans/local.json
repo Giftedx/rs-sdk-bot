@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727170677,
+ "at": 1795727232779,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-32-p97 ITEM_ID=440 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=32 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "helper"
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
@@ -74,26 +89,11 @@
    "role": "auto"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-15-p97 ITEM_ID=440 QUANTITY=15 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=15 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "helper"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=15 PRODUCT_TARGET=15 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=15 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=32 PRODUCT_TARGET=32 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=32 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -107,32 +107,27 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=32 PRODUCT_TARGET=32 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=32 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1309",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-21-p23 ITEM_ID=436 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-21-p23 ITEM_ID=438 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=21 -- smithing smelt 1500 bronze"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "8"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -140,12 +135,12 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-8-p23 ITEM_ID=436 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-8-p23 ITEM_ID=438 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=8 -- smithing smelt 1500 bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-21-p23 ITEM_ID=436 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-21-p23 ITEM_ID=438 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=21 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
@@ -159,25 +154,9 @@
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-8-p23 ITEM_ID=436 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-8-p23 ITEM_ID=438 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=8 -- smithing smelt 1500 bronze"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-8-p23 ITEM_ID=436 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-8-p23 ITEM_ID=438 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=8 -- smithing smelt 1500 bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-21-p23 ITEM_ID=436 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-21-p23 ITEM_ID=438 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=21 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
@@ -191,9 +170,9 @@
    "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-8-p23 ITEM_ID=436 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-8-p23 ITEM_ID=438 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=8 -- smithing smelt 1500 bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-21-p23 ITEM_ID=436 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-21-p23 ITEM_ID=438 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=21 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
@@ -220,14 +199,42 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "Wandwaver",
    "script": "scripts/aio-pvp.ts",
    "args": [
     "__escort-ore"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "23"
+    "BATCH_UNITS": "24"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "24"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "24"
    },
    "enabled": true,
    "repeat": false,
@@ -248,19 +255,19 @@
    "role": "auto"
   },
   {
-   "account": "AFKnight",
-   "script": "scripts/aio-pvp.ts",
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
    "args": [
-    "team"
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "23"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
+   "goal": "goal:quest_board:biohazard",
+   "role": "helper"
   },
   {
    "account": "CoinCock",
@@ -270,12 +277,28 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "23"
+    "BATCH_UNITS": "24"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "auto"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "mmthv2350",
@@ -312,61 +335,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:101",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:avantoe"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:261",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:261",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
   }
  ],
  "army": [
@@ -378,7 +346,6 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
-  "billionaire",
   "dipstick",
   "fingersmith",
   "hocuspokeus",
@@ -391,7 +358,8 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
+  "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "yewfirst"
  ],
