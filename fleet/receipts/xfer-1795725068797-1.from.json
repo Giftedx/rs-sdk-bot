@@ -13,4 +13,19 @@
  "count": 8200,
  "ok": true,
  "at": 1795725307180,
- "detail": "transfer observe
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8200,
+  "after": 0
+ },
+ "bank": {
+  "count": 8200,
+  "at": 1795725291047
+ },
+ "logout": {
+  "attemptId": "1795725284758-0000015804-0000000001",
+  "at": 1795725307052,
+  "sha256": "6f4ffda467ada849f70ccb58eeb9065a7d0983cf0e3dfff791c102ff30cdf973"
+ },
+ "screen": true
+}

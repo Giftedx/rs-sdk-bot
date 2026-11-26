@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725068797-1",
  "account": "SporranDip",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 8200,
  "claim": "2ed231ca-3637-479c-9e2d-55e5528d5a36",
- "count": 0,
- "ok": false,
- "at": 1795725298904,
- "detail": "trade claimed"
+ "count": 8200,
+ "ok": true,
+ "at": 1795725308612,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 8200
+ },
+ "bank": {
+  "count": 8200,
+  "at": 1795725307858
+ },
+ "logout": {
+  "attemptId": "1795725298913-0000026200-0000000001",
+  "at": 1795725308600,
+  "sha256": "a24a60c0e4faf396d6856e639e3ab729c48378598d44d100cc845bfc53879334"
+ },
+ "screen": true
 }

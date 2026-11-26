@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795725315285-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "mmtha0205",
+  "item": "Coins",
+  "count": 8257,
+  "itemId": 995,
+  "start": 1795725315285,
+  "end": 1795726215285,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
