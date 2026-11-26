@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795712407616-1",
+ "account": "Unsheathed",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 2,
+ "claim": "679c91aa-ff10-494d-a97c-bdebede45453",
+ "count": 2,
+ "ok": true,
+ "at": 1795712528470,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795712510935
+ },
+ "logout": {
+  "attemptId": "1795712489211-0000024308-0000000001",
+  "at": 1795712528411,
+  "sha256": "d62cdd517e25c6fdec81d77a41600aee3545609d73fdc273876230352326e416"
+ },
+ "screen": true
+}

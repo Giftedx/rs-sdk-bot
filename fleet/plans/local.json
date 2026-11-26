@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795712448563,
+ "at": 1795712548466,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,90 +74,95 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Packhorse",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:2351",
+   "role": "helper"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/generated/quest-dragon.ts",
-   "args": [],
+   "account": "Billionaire",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dragon",
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "gang"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
    "account": "Pocketrocket",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-pvp.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0"
+    "__escort-ore"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "gang"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
+    "scripts/generated/quest-dragon.ts DEMAND_ID=goal:quest_board:dragon BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
+   "role": "helper"
   },
   {
    "account": "PickpockDick",
@@ -224,6 +229,22 @@
    "role": "helper"
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:tarromin",
+    "scripts/aio-logistics.ts ITEM_ID=213 QUANTITY=2 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=5 -- crafting inventory identify:kwuarm"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -244,18 +265,19 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-pvp.ts",
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
    "args": [
-    "__escort-ore"
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1375 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
+    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p748 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=748 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "42"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   }
  ],
@@ -267,6 +289,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "bowbeforeme",
   "dipstick",
   "fatstack",
@@ -275,8 +298,6 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "oreelse",
