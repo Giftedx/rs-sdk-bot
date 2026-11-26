@@ -834,7 +834,7 @@ test('resolveShopProfile resolves hand-authored profiles and raw knowledge/shops
 
 test('a planned order passes only with every unit bought or its stock target met', async () => {
     const { shopOrderShortText } = await import('../src/market/shop-buy');
-    // KnightRider: 2 vials wanted, the shelf held 0, the stock wait ended: the consumer must not start.
+    // 2 vials wanted, an empty shelf and the stock wait at its limit: the consumer must not start.
     expect(shopFinishOk(0, false, 'stock-wait', 2)).toBe(false);
     expect(shopFinishOk(1, false, 'stock-wait', 2)).toBe(false);
     expect(shopFinishOk(2, false, 'item-cap', 2)).toBe(true);

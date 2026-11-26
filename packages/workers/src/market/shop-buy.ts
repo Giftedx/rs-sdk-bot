@@ -676,7 +676,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                     const since = s.tick();
                     await waitTicks(s, NO_BUY_TICKS);
                     noBuyTicks = s.tick() - since;
-                    // The wait was for coins, not shelf stock: a planned order names the coin shortfall.
+                    // This wait is for coins, not shelf stock: a planned order names the coin shortfall.
                     stopReason = FILL_ORDER ? 'coin-reserve' : 'stock-wait';
                 } else {
                     stopReason = 'coin-reserve';

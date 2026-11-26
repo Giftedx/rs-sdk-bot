@@ -471,7 +471,7 @@ export function resolveActivityWorkerRoute(
 
 // A planned shop step waits this long between purchases for the shelf to restock. The engine
 // adds one unit each stockrate ticks (World.ts: tick % stockrate), and Vial of water at the
-// Ardougne Adventurers' Store restocks each 30 ticks, so a 25-tick wait never saw one unit.
+// Ardougne Adventurers' Store restocks each 30 ticks, so the wait spans more than one restock.
 export const PLANNED_SHOP_NO_BUY_TICKS = 100;
 
 function resolveAcquireOrGearSource(
