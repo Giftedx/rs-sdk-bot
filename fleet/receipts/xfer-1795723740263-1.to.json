@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723740263-1",
+ "account": "Unsheathed",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 52,
+ "claim": "079d77ac-8b67-4bbf-a374-4c170b7fed98",
+ "count": 0,
+ "ok": false,
+ "at": 1795724136816,
+ "detail": "trade claimed"
+}

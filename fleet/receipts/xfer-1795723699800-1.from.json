@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723699800-1",
+ "account": "Magicwanda",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth talisman",
+ "requested": 1,
+ "claim": "2fb99ff6-a011-40d6-87b8-516d4a026975",
+ "count": 0,
+ "ok": false,
+ "at": 1795724142279,
+ "detail": "trade claimed"
+}
