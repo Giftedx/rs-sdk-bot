@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795709655625-1",
+ "account": "mmthv2350",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "06d60be5-a983-480d-b146-5f776837c1f3",
+ "count": 0,
+ "ok": false,
+ "at": 1795710217391,
+ "detail": "trade claimed"
+}
