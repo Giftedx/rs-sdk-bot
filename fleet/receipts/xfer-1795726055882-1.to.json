@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795726055882-1",
+ "account": "Unsheathed",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "2460ab7c-4d8c-429a-8386-0f1ecd85c837",
+ "count": 0,
+ "ok": false,
+ "at": 1795726472584,
+ "detail": "trade claimed"
+}
