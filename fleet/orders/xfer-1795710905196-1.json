@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795710905196-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "OreElse",
+  "item": "Diamond",
+  "count": 1,
+  "itemId": 1601,
+  "start": 1795710905196,
+  "end": 1795711805196,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

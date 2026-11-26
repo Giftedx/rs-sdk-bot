@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710857289-1",
+ "account": "TheFullMonty",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 52,
+ "claim": "a91ed34b-6bc6-444d-a598-fbfc94a6596d",
+ "count": 0,
+ "ok": false,
+ "at": 1795710963978,
+ "detail": "trade claimed"
+}

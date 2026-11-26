@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710751617-1",
+ "account": "Quickhandjob",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "3a0ddefd-9d21-439c-ab8d-73d0c070228e",
+ "count": 1,
+ "ok": true,
+ "at": 1795711006913,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795710991782
+ },
+ "logout": {
+  "attemptId": "1795710983831-0000020076-0000000001",
+  "at": 1795711006902,
+  "sha256": "ec0af9ca0eb9a6feb382fb69b8eefd59262fdd0f46b7973b96482532a1eca43c"
+ },
+ "screen": true
+}
