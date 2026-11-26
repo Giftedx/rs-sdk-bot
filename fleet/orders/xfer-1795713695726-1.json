@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795713695726-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Quickhandjob",
+  "item": "Law rune",
+  "count": 4,
+  "itemId": 563,
+  "start": 1795713695726,
+  "end": 1795714595726,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
