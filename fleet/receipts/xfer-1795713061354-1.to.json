@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713061354-1",
+ "account": "Hocuspokeus",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "ccdef0ee-0a2e-4167-bfdd-3c9106e085dc",
+ "count": 0,
+ "ok": false,
+ "at": 1795713264951,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713194647-1",
+ "account": "BowBeforeMe",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "980b53d6-f9b9-4ef1-be4a-ba552f8127df",
+ "count": 0,
+ "ok": false,
+ "at": 1795713281777,
+ "detail": "trade claimed"
+}
