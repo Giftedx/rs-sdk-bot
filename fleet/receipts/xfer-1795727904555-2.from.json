@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727904555-2",
  "account": "BowBeforeMe",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 3,
  "claim": "226d1af7-44c9-4698-ae04-f3d2eb6c50f5",
- "count": 0,
- "ok": false,
- "at": 1795728338654,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795728522742,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795728493556
+ },
+ "logout": {
+  "attemptId": "1795728338662-0000010312-0000000001",
+  "at": 1795728522730,
+  "sha256": "6ac0da6c65e65ca0e52d92d85be69025a6119c8e02580fe74b60b11ed0d14104"
+ },
+ "screen": true
 }
