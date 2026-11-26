@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723753441,
+ "at": 1795723801239,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -93,17 +93,20 @@
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1500"
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
-   "role": "army"
+   "goal": "campaign:mineshafted:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "mmthv2350",
