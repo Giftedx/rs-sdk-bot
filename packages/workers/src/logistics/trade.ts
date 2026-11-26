@@ -25,7 +25,7 @@ import {
     ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, assertTradeAdmission, coinTradeObservation, courierCargo, courierFoodAllocation,
     courierIslandProblem, courierRecord, deliveryRecipientAtBank, deliveryResume, draynorApproach, exactCoinDelta,
     featherBatchAmount, featherPurchaseAmount, featherPurchaseEffect, fleetTradeOutcome, fleetTradeRecord,
-    giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight,
+    giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight, noteIdOf,
     onKaramja, outboundStart, parseCoins, parseFanin, parseFanout, partnerFailed, performFleetTransfer, pickOrder,
     prepareCoinSlot, releaseWatch, requestCourierFunding, runOrderWork, SARIM, separateTroutNotes,
     waitForGiver, watchTradeScreen, type CoinState, type FleetTradeProgress,
@@ -1016,11 +1016,13 @@ export async function prepareFleetSender(
         if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
 
         const stack = s.sdk.getInventory().find(r => orderLineMatches(r, item, line.itemId));
+        // Copy the fields at once: the client lends shared definition objects, and noteIdOf reads others.
         const rowDef = itemDefinition(s, row.id);
+        const rowStackable = rowDef?.stackable === true, rowLinkKnown = typeof rowDef?.certlink === 'number';
         const inherentlyStackable = /^coins$/i.test(line.item)
-            || rowDef?.stackable === true
+            || rowStackable
             || (!!stack && stack.id === row.id && stack.count > 1);
-        const unnoteable = rowDef !== undefined && typeof rowDef.certlink === 'number' && rowDef.certlink === -1;
+        const unnoteable = amount > 1 && !inherentlyStackable && rowLinkKnown && noteIdOf(s, row.id) === undefined;
         const asNote = amount > 1 && !inherentlyStackable && !unnoteable;
         const neededSlots = inherentlyStackable
             ? (stack ? 0 : 1)
