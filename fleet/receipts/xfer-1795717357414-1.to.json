@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717357414-1",
+ "account": "Nockitoff",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "e52e0ab8-8fd1-410b-9203-bdf27f84a835",
+ "count": 0,
+ "ok": false,
+ "at": 1795717919447,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Sapphire ring",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717864934,
+ "at": 1795717924637,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -145,6 +145,22 @@
    "role": "helper"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
@@ -184,22 +200,6 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
     "magearena"
    ],
    "env": {
@@ -212,18 +212,19 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
+   "account": "Quickhandjob",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 -- sweep itwatchtower"
+    "sweep",
+    "ball"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
+   "goal": "goal:quest_board:ball",
    "role": "army"
   }
  ],
@@ -237,7 +238,6 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -249,6 +249,7 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",
