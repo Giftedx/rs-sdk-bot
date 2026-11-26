@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717483635-1",
+ "account": "Wandwaver",
+ "partner": "Earlyshooter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 4,
+ "claim": "7f159220-978c-4640-8010-444141f824fd",
+ "count": 4,
+ "ok": true,
+ "at": 1795717799384,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795717798261
+ },
+ "logout": {
+  "attemptId": "1795717778068-0000015384-0000000001",
+  "at": 1795717799374,
+  "sha256": "88aecda7f47b7859d3b16ace0e44428c98b22dc9b07b710a45fcf4cd1806c5e9"
+ },
+ "screen": true
+}

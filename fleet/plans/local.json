@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717770058,
+ "at": 1795717814250,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -115,58 +115,11 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1890"
+    "BATCH_UNITS": "1740"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:99 BATCH_UNITS=1 -- crafting inventory brew:unf_ranarr_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:99",
    "role": "army"
   },
   {
@@ -208,70 +161,70 @@
    "role": "helper"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "41",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "6"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:41",
-   "role": "helper"
+   "goal": "goal:supply_chain:263",
+   "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "sweep",
-    "chompybird"
+    "crafting",
+    "inventory",
+    "brew:unf_ranarr_potion"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:chompybird",
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:99",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:chompybird",
+   "goal": "campaign:haggis:item:99",
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=41 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:tipmyshaft:item:41 BATCH_UNITS=6 -- smithing anvil 1500"
+    "sweep",
+    "arena"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:tipmyshaft:item:41",
+   "goal": "goal:quest_board:arena",
    "role": "army"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+    "sweep",
+    "magearena"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:biohazard",
+   "goal": "goal:quest_board:magearena",
    "role": "army"
   }
  ],
@@ -285,21 +238,22 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",
   "sporrandip",
-  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"

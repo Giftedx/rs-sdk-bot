@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717483635-1",
  "account": "Earlyshooter",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 4,
  "claim": "40f92353-65f7-4342-9d06-d8ee119eb75f",
- "count": 0,
- "ok": false,
- "at": 1795717764430,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795717797396,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795717773035
+ },
+ "logout": {
+  "attemptId": "1795717764439-0000000276-0000000001",
+  "at": 1795717797386,
+  "sha256": "1d6b037e6503203aa807fef5f86c4069203a3a6f8adc7ddc6c1b5163a27989a7"
+ },
+ "screen": true
 }

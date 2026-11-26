@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795717768730-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Unsheathed",
+  "item": "Unfinished potion",
+  "count": 6,
+  "itemId": 99,
+  "start": 1795717768730,
+  "end": 1795718668730,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

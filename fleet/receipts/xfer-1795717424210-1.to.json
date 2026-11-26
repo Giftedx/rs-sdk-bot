@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717424210-1",
  "account": "YewFirst",
  "partner": "CoinCock",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "b21370c3-f6be-41c0-89d0-437e274bbb25",
- "count": 0,
- "ok": false,
- "at": 1795717743886,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795717795384,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795717794654
+ },
+ "logout": {
+  "attemptId": "1795717743968-0000021740-0000000001",
+  "at": 1795717795371,
+  "sha256": "e2fdd5d54569f943d2467e6ebea950087c01181ff9efec6a741cd2cc43e7871d"
+ },
+ "screen": true
 }
