@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795731810594-1",
+ "account": "Fingerblastr",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "e64204c2-3aac-4529-b291-aa078a57f608",
+ "count": 2,
+ "ok": true,
+ "at": 1795732304547,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795732303789
+ },
+ "logout": {
+  "attemptId": "1795732291270-0000008160-0000000001",
+  "at": 1795732304536,
+  "sha256": "389961688a1d5ca7f0f698c2a58953db263974040fc64cd02a022115eaf18acb"
+ },
+ "screen": true
+}

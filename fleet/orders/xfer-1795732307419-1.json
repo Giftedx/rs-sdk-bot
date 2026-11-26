@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795732307419-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "BoneToPick",
+  "item": "Nature rune",
+  "count": 3,
+  "itemId": 561,
+  "extra": [
+    {
+      "item": "Feather",
+      "count": 250,
+      "itemId": 314
+    }
+  ],
+  "start": 1795732307419,
+  "end": 1795733207419,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

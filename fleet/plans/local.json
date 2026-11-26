@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795732283338,
+ "at": 1795732320384,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,6 +60,21 @@
   },
   {
    "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -72,27 +87,23 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Spitroaster",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "chicken"
+    "sweep",
+    "fluffs"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:fluffs",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "goal:quest_board:fluffs",
+   "role": "auto"
   },
   {
    "account": "Unsheathed",
@@ -115,6 +126,21 @@
    ]
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:hiltsdeep:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army"
+  },
+  {
    "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
@@ -135,14 +161,14 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ORDER_KEY=brain-315-10-p7 ITEM_ID=315 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7 -- ge-buy",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:hiltsdeep:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:castmyload:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:563",
+   "goal": "campaign:castmyload:item:563",
    "role": "army"
   },
   {
@@ -160,46 +186,6 @@
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
    "role": "army"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Magicwanda",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Magicwanda",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Spitroaster",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
   },
   {
    "account": "mmthv2350",
@@ -275,21 +261,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=8 STOCK_TARGET=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=8 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {

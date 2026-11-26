@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731810594-1",
  "account": "BoneToPick",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 2,
  "claim": "1b17dc25-f483-466d-901e-a316e146f437",
- "count": 0,
- "ok": false,
- "at": 1795732255954,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795732303060,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795732264601
+ },
+ "logout": {
+  "attemptId": "1795732255962-0000024772-0000000001",
+  "at": 1795732303049,
+  "sha256": "000ef5d0d500c8260226a4a5d3e2456d4f00162965ddca561c3c83be7ceeb804"
+ },
+ "screen": true
 }
