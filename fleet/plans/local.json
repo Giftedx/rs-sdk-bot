@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715664941,
+ "at": 1795715695066,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,24 +63,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "shantayshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "16",
+    "ITEM_ID": "1937",
+    "ITEMS": "Jug of water",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "16"
+    "DEMAND_ID": "campaign:haggis:item:1937",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:1937",
    "role": "army"
   },
   {
@@ -170,24 +170,24 @@
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "runeshop",
     "3000"
    ],
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "50",
+    "MAX_ITEMS": "66",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "50"
+    "BATCH_UNITS": "66"
    },
    "enabled": true,
    "repeat": false,
@@ -195,7 +195,7 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -217,26 +217,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:ranarr_weed"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:257",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
    "role": "army"
   },
   {
@@ -265,11 +245,11 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -290,32 +270,32 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "Billionaire",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "shantayshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1937",
-    "ITEMS": "Jug of water",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1937",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:tipmyshaft:item:39",
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1937",
+   "goal": "campaign:tipmyshaft:item:39",
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "Fingersmith",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -331,28 +311,28 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "fishingshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "311",
-    "ITEMS": "Harpoon",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:311",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:311",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   },
   {
@@ -378,6 +358,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:837",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "fishingshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "311",
+    "ITEMS": "Harpoon",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:311",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:311",
    "role": "army"
   }
  ],
