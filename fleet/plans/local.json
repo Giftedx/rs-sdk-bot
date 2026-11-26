@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715967425,
+ "at": 1795715985493,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "320",
+    "MAX_ITEMS": "317",
     "COIN_RESERVE": "1000",
-    "FLOAT": "66000",
+    "FLOAT": "65400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "320"
+    "BATCH_UNITS": "317"
    },
    "enabled": true,
    "repeat": false,
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1734",
+    "MAX_ITEMS": "1825",
     "COIN_RESERVE": "1000",
-    "FLOAT": "348800",
+    "FLOAT": "367000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1734"
+    "BATCH_UNITS": "1825"
    },
    "enabled": true,
    "repeat": false,
@@ -184,29 +184,29 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "CoinCock",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "runeshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "39",
-    "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "12",
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "348",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "12"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "348"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "army"
+   "goal": "campaign:haggis:item:556",
+   "role": "auto"
   },
   {
    "account": "Earlyshooter",
@@ -239,6 +239,31 @@
    "repeat": false,
    "goal": "goal:quest_board:magearena",
    "role": "auto"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "5",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
   },
   {
    "account": "Unsheathed",
@@ -276,14 +301,14 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=275 -- runecraft supply"
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:death BATCH_UNITS=1 -- sweep death"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:death",
    "role": "helper"
   },
   {
@@ -320,25 +345,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "prayer",
-    "bury"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "TRAIN_SKILL": "Prayer",
-    "TARGET_LEVEL": "70",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "147"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
    "role": "auto"
   }
  ],
