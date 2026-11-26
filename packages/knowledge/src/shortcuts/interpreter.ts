@@ -323,7 +323,13 @@ class Run {
     callProc(e: Extract<Expr, { k: 'call' }>): V {
         const n = e.n, line = e.line;
         if (/choice|multi\d|^menu/i.test(n)) return { t: 'sym', cls: 'choice', text: `~${n}(${e.args.filter(a => a.k === 'str').length} options)`, line };
-        if (/^check_axis/.test(n)) return { t: 'sym', cls: 'side', text: exprText(e), line };
+        if (/^check_axis/.test(n)) {
+            // doors/scripts/door_procs.rs2 compares the player tile with the loc's axis: from an exact tile it runs,
+            // else it stays the player's side.
+            const proc = this.st.pos?.exact && this.depth < 24 ? this.ctx.scripts.get(`proc,${n}`) : undefined;
+            const v = proc ? this.enter(proc, this.argList(e.args), false) : undefined;
+            return v?.t === 'bool' ? v : { t: 'sym', cls: 'side', text: exprText(e), line };
+        }
         const proc = this.ctx.scripts.get(`proc,${n}`);
         // Value procs run in place (db lookups, distance helpers); dialogue, door and random-event procs stay symbolic.
         if (proc && this.depth < 24 && valueProc(proc)) {
