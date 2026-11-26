@@ -66,8 +66,28 @@ export function itemByDebugName(debugname: string): KnowledgeItem | undefined {
     return cachedItemsByDebug.get(debugname);
 }
 
+let cachedBanknoteIds: ReadonlySet<number> | undefined;
+
+// The pack tool makes every banknote (`cert_*`) stackable, and items.json holds no banknotes.
+function banknoteIds(): ReadonlySet<number> {
+    if (!cachedBanknoteIds) cachedBanknoteIds = new Set([...packMap('obj')].filter(([name]) => name.startsWith('cert_')).map(([, id]) => id));
+    return cachedBanknoteIds;
+}
+
 export function isItemStackable(id: number): boolean {
-    return itemById(id)?.stackable === true;
+    return itemById(id)?.stackable === true || banknoteIds().has(id);
+}
+
+// The client item type decides when the session has one. The knowledge build decides otherwise.
+export function itemStackable(client: unknown, id: number): boolean {
+    const objType = (client as { objType?: (id: number) => { stackable?: unknown } | undefined } | undefined)?.objType;
+    if (typeof objType === 'function') {
+        try {
+            const value = objType.call(client, id)?.stackable;
+            if (typeof value === 'boolean') return value;
+        } catch { /* fall back to the knowledge build */ }
+    }
+    return isItemStackable(id);
 }
 
 let cachedObjIdSet: ReadonlySet<number> | undefined;

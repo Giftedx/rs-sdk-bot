@@ -12,7 +12,13 @@ test('config blocks remember the line of each property', () => {
 test('buildItems maps pack ids, static cost and source line', () => {
     const blocks = parseConfigs('[knife]\nname=Knife\ncost=6\ntradeable=yes\n', 'scripts/a.obj');
     const items = buildItems(blocks, new Map([[946, 'knife']]));
-    expect(items).toEqual([{ id: 946, name: 'Knife', debugname: 'knife', cost: 6, members: false, tradeable: true, src: 'scripts/a.obj:3', def: 'scripts/a.obj:1' }]);
+    expect(items).toEqual([{ id: 946, name: 'Knife', debugname: 'knife', cost: 6, members: false, tradeable: true, stackable: false, src: 'scripts/a.obj:3', def: 'scripts/a.obj:1' }]);
+});
+
+test('items are stackable only where the config says stackable=yes (engine default false)', () => {
+    const blocks = parseConfigs('[airrune]\nname=Air rune\nstackable=yes\n\n[logs]\nname=Logs\n', 'scripts/c.obj');
+    const items = buildItems(blocks, new Map([[556, 'airrune'], [1511, 'logs']]));
+    expect(items.map(i => [i.id, i.stackable])).toEqual([[556, true], [1511, false]]);
 });
 
 test('buildShops reads stockN=item,count,restock with the stock line as src', () => {
