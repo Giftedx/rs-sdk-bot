@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795714608238-2",
  "account": "SporranDip",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "5c8b0094-d72c-41ec-a0aa-4db4c7b10d8e",
- "count": 0,
- "ok": false,
- "at": 1795715359795,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795715406760,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795715405841
+ },
+ "logout": {
+  "attemptId": "1795715359805-0000019140-0000000001",
+  "at": 1795715406679,
+  "sha256": "ec7b1b3db0f004d0dee55fadd206cd6acb4937b10c3d438243f1b04dbbacd8bb"
+ },
+ "screen": true
 }
