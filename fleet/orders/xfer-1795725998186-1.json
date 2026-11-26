@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795725998186-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Quickhandjob",
+  "item": "Air rune",
+  "count": 918,
+  "itemId": 556,
+  "start": 1795725998186,
+  "end": 1795726898186,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

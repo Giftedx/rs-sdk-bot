@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725455193-1",
  "account": "BowBeforeMe",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 1,
  "claim": "3a5ac1e8-a923-46c0-832d-ee7e37a45b0e",
- "count": 0,
- "ok": false,
- "at": 1795725761593,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795725956844,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795725942885
+ },
+ "logout": {
+  "attemptId": "1795725761600-0000003760-0000000001",
+  "at": 1795725956834,
+  "sha256": "765a347f51c8946a160c89252a46a2e5224533102f2fa5370073473d5f50b1b1"
+ },
+ "screen": true
 }

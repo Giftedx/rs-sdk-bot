@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725819167-1",
+ "account": "CoinCock",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 2,
+ "claim": "ce7580d6-3c2d-4cd4-8537-d3b213cf7898",
+ "count": 0,
+ "ok": false,
+ "at": 1795726018134,
+ "detail": "trade claimed"
+}

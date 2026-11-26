@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795725826912-1",
+ "account": "SporranBulge",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 18,
+ "claim": "cf9ade67-4b46-4782-98bd-08ba738ad16c",
+ "count": 0,
+ "ok": false,
+ "at": 1795725977248,
+ "detail": "Error: route to 3183, 3440: precondition bank stop at 2618,3332: withdraw outcome unknown 3853:0/1",
+ "logout": {
+  "attemptId": "1795725956040-0000030552-0000000001",
+  "at": 1795725977235,
+  "sha256": "e668031ca128c7ec0158e1d8a23e3976065e394f743a58e4ebfef5d3b0a13e34"
+ },
+ "screen": false
+}

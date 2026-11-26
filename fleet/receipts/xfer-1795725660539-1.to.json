@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725660539-1",
+ "account": "Wandwaver",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "4ea20c3b-5b66-4c46-a79c-f898cc81eb42",
+ "count": 10,
+ "ok": true,
+ "at": 1795726020329,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 14
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795726019280
+ },
+ "logout": {
+  "attemptId": "1795726009517-0000026748-0000000001",
+  "at": 1795726020075,
+  "sha256": "4bd848ec82142bfd1a9778afa851280b60d606f25992a65b48cfdd81e32e963b"
+ },
+ "screen": true
+}

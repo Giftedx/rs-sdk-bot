@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725840640-2",
+ "account": "Quickhandjob",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 2,
+ "claim": "600e230f-340f-4883-ab09-edb3d11c60d1",
+ "count": 2,
+ "ok": true,
+ "at": 1795725994365,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795725993303
+ },
+ "logout": {
+  "attemptId": "1795725984385-0000025436-0000000001",
+  "at": 1795725994018,
+  "sha256": "856131920605a1fe863d782a98874c55797e1c8fab83e32a7a03e11ca80587a2"
+ },
+ "screen": true
+}
