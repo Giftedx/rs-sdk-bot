@@ -343,14 +343,18 @@ export const UNDERGROUND_Z_OFFSET = 6400;
 // The hub bank nearest a tile: Chebyshev distance plus 100 a floor. A dungeon tile counts as the land tile above it;
 // its raw z is about 6400 from every bank, which would make the bank with the largest z the nearest to every dungeon.
 export function nearestHubBank(pos: { x: number; z: number; level: number } | null | undefined, fallback: HubBankId = 'varrock_west'): HubBankId {
-    if (!pos) return fallback;
+    return hubBanksByDistance(pos, fallback)[0]!;
+}
+// Every hub bank, nearest first by the same distance as nearestHubBank. An unknown tile puts the fallback first.
+export function hubBanksByDistance(pos: { x: number; z: number; level: number } | null | undefined, fallback: HubBankId = 'varrock_west'): HubBankId[] {
+    const ids = Object.keys(HUB_BANKER_LOCATIONS) as HubBankId[];
+    if (!pos) return [fallback, ...ids.filter(id => id !== fallback)];
     const z = pos.z >= UNDERGROUND_Z_OFFSET ? pos.z - UNDERGROUND_Z_OFFSET : pos.z;
-    let best = fallback, bestDist = Infinity;
-    for (const [id, spec] of Object.entries(HUB_BANKER_LOCATIONS) as [HubBankId, (typeof HUB_BANKER_LOCATIONS)[HubBankId]][]) {
-        const d = Math.max(Math.abs(pos.x - spec.bankTile.x), Math.abs(z - spec.bankTile.z)) + Math.abs(pos.level - spec.bankTile.level) * 100;
-        if (d < bestDist) { bestDist = d; best = id; }
-    }
-    return best;
+    const dist = (id: HubBankId) => {
+        const t = HUB_BANKER_LOCATIONS[id].bankTile;
+        return Math.max(Math.abs(pos.x - t.x), Math.abs(z - t.z)) + Math.abs(pos.level - t.level) * 100;
+    };
+    return ids.map(id => ({ id, d: dist(id) })).sort((a, b) => a.d - b.d).map(e => e.id);
 }
 
 export interface AcquireStep {
