@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710486909-1",
  "account": "Billionaire",
  "partner": "Quickhandjob",
@@ -10,8 +10,18 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "455187b1-1364-4d96-9266-89df181dd3e3",
- "count": 0,
- "ok": false,
- "at": 1795710642768,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795710728552,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795710642776-0000025280-0000000001",
+  "at": 1795710728540,
+  "sha256": "6a6a67907b09dc8f19eb0f98f1d24f7efafbf878da2fdbd7ca64993f64c6de17"
+ },
+ "screen": true
 }

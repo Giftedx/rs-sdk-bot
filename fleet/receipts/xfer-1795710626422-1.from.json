@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710626422-1",
+ "account": "Abracadickra",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 32,
+ "claim": "efe93e83-b93b-4e02-8b5d-3717e5753ab1",
+ "count": 0,
+ "ok": false,
+ "at": 1795710751332,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 32,
+   "count": 0
+  }
+ ]
+}

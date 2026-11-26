@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710551919-1",
  "account": "TossTheCaber",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 10,
  "claim": "02410540-bec6-4f0a-a50f-69a5bf4a917f",
- "count": 0,
- "ok": false,
- "at": 1795710692270,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795710745728,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795710744982
+ },
+ "logout": {
+  "attemptId": "1795710692279-0000015948-0000000001",
+  "at": 1795710745716,
+  "sha256": "7cd4d8b7ebccdcdd043b5b587fc253bef2bc9baea0fdd937bd0eafb2abcc1924"
+ },
+ "screen": true
 }

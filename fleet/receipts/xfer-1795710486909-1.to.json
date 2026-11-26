@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710486909-1",
+ "account": "Quickhandjob",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "ab1c2e13-59d7-4fac-b5e8-e8b638a04946",
+ "count": 1,
+ "ok": true,
+ "at": 1795710730912,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795710730177
+ },
+ "logout": {
+  "attemptId": "1795710717690-0000016764-0000000001",
+  "at": 1795710730902,
+  "sha256": "901f8951ddc617f8c5b468b2d6210fd4d6551212d0eebcebf2d0b0eecc3f7793"
+ },
+ "screen": true
+}

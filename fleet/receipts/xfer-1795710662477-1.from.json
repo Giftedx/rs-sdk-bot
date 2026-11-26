@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710662477-1",
+ "account": "Kiltlifter",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 50,
+ "claim": "072053b8-d48d-4a97-80ad-5b1b1b1530b3",
+ "count": 0,
+ "ok": false,
+ "at": 1795710762796,
+ "detail": "trade claimed"
+}

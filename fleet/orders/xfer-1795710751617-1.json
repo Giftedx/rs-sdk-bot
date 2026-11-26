@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795710751617-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "SporranBulge",
+  "item": "Sapphire necklace",
+  "count": 1,
+  "itemId": 1656,
+  "start": 1795710751617,
+  "end": 1795711651617,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
