@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723997733,
+ "at": 1795724016234,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -148,11 +148,28 @@
    "role": "helper"
   },
   {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "20",
+    "ORE_RESERVE": "0"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "helper"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-453-154-p517 ITEM_ID=453 QUANTITY=154 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=77 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-453-114-p517 ITEM_ID=453 QUANTITY=114 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=57 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -222,6 +239,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "grind:chocolate_bar"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:grindmyherb:item:1975",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "auto"
   }
  ],

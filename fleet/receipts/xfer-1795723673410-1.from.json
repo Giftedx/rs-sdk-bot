@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723673410-1",
  "account": "YewGotWood",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 770,
  "claim": "685e7941-9d6e-4534-8861-d56a53b403d3",
- "count": 0,
- "ok": false,
- "at": 1795723975344,
- "detail": "trade claimed"
+ "count": 770,
+ "ok": true,
+ "at": 1795724011124,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 770,
+  "after": 0
+ },
+ "bank": {
+  "count": 770,
+  "at": 1795723981966
+ },
+ "logout": {
+  "attemptId": "1795723975561-0000030040-0000000001",
+  "at": 1795724011110,
+  "sha256": "9e8aed5e2e42562cea26008b42dfc4791d3e37ef07fa8bec165269ca404c625c"
+ },
+ "screen": true
 }

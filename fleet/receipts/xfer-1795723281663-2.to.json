@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723281663-2",
  "account": "BackdoorMan",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Coal",
  "requested": 40,
  "claim": "0f273ec2-dd65-46d4-a271-6fd78e51b654",
- "count": 0,
- "ok": false,
- "at": 1795723986227,
- "detail": "trade claimed"
+ "count": 40,
+ "ok": true,
+ "at": 1795723999080,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 40
+ },
+ "bank": {
+  "count": 40,
+  "at": 1795723998326
+ },
+ "logout": {
+  "attemptId": "1795723986235-0000030204-0000000001",
+  "at": 1795723999066,
+  "sha256": "5bf23870bc4956a81cab1a1481d72079e6666c7d98446fb5dc9971c5befe9bf6"
+ },
+ "screen": true
 }

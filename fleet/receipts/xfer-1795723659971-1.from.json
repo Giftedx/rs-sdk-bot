@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795723659971-1",
  "account": "Fingersmith",
  "partner": "CoinCock",
@@ -12,6 +12,16 @@
  "claim": "34306cf3-ddd6-4e99-8ba9-e3e835d037eb",
  "count": 0,
  "ok": false,
- "at": 1795723933417,
- "detail": "trade claimed"
+ "at": 1795724011091,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 150,
+  "at": 1795723979915
+ },
+ "logout": {
+  "attemptId": "1795723933425-0000023592-0000000001",
+  "at": 1795724011080,
+  "sha256": "5cb2b6ba4ca31066e9322c6ceaab0a0d6f63d8ae67ad5e32546678d1c5fa6109"
+ },
+ "screen": false
 }

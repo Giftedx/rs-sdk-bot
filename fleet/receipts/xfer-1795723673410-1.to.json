@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723673410-1",
+ "account": "Swordinhand",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 770,
+ "claim": "678f9a5e-f9b8-42dd-8d7c-7420f0f25a11",
+ "count": 770,
+ "ok": true,
+ "at": 1795724012679,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 770
+ },
+ "bank": {
+  "count": 770,
+  "at": 1795724011915
+ },
+ "logout": {
+  "attemptId": "1795723998646-0000028076-0000000001",
+  "at": 1795724012666,
+  "sha256": "4f57b6113c14a3c8d96abd8e6127f8481049cd3a7d1e2f511cf18bb49e6d2721"
+ },
+ "screen": true
+}

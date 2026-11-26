@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795723659971-1",
+ "role": "to",
+ "account": "CoinCock",
+ "partner": "Fingersmith",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795723998032,
+ "detail": "Error: account plan writer waits for its existing owner"
+}
