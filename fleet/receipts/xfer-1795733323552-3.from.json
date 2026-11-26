@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795733323552-3",
+ "account": "Pocketpython",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "5683edd2-432b-4d66-8a9e-fb04b771265b",
+ "count": 0,
+ "ok": false,
+ "at": 1795733504029,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Unicorn horn",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

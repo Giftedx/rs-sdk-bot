@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795733342730-1",
+ "account": "YewFirst",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "222314f9-35ae-414e-a2ec-37e9e5fc7011",
+ "count": 1,
+ "ok": true,
+ "at": 1795733599730,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795733598922
+ },
+ "logout": {
+  "attemptId": "1795733587381-0000010128-0000000001",
+  "at": 1795733599718,
+  "sha256": "e67daab94f4dcedf6fb6d7f673c3cdde7658b45084016a0b0e3fae28b82f7bf4"
+ },
+ "screen": true
+}

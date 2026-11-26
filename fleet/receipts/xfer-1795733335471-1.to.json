@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795733335471-1",
+ "account": "Quickhandjob",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 162,
+ "claim": "2a66ff10-5151-4c60-a15b-f21d3d9f515d",
+ "count": 162,
+ "ok": true,
+ "at": 1795733542896,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 162
+ },
+ "bank": {
+  "count": 162,
+  "at": 1795733542097
+ },
+ "logout": {
+  "attemptId": "1795733528773-0000010384-0000000001",
+  "at": 1795733542882,
+  "sha256": "b8791dd4f4055ca336df05ad6df4b8e0fd25f43fa31aa52650949ae7b71e4aa1"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795733454874,
+ "at": 1795733608770,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=39 PRODUCT_TARGET=39 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=39 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=37 PRODUCT_TARGET=37 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=37 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -74,28 +74,12 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -110,7 +94,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -125,22 +109,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -224,6 +193,36 @@
    "role": "army"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=9 STOCK_TARGET=9 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=9 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
@@ -239,19 +238,44 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:103 BATCH_UNITS=6 -- crafting inventory brew:unf_avantoe_potion"
+    "crafting",
+    "inventory",
+    "brew:unf_harralander_potion"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:103",
+   "goal": "campaign:haggis:item:97",
    "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   },
   {
    "account": "MeatNTwoVeg",
@@ -274,7 +298,7 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "Quickhandjob",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -287,6 +311,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
+   "role": "army"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
    "role": "auto"
   },
   {
@@ -304,26 +344,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "grind:chocolate_bar"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:grindmyherb:item:1975",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
   }
  ],
  "army": [
@@ -337,6 +357,7 @@
   "bigpackage",
   "bowbeforeme",
   "dipstick",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -347,9 +368,9 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "undermykilt",
   "yewfirst"
  ],

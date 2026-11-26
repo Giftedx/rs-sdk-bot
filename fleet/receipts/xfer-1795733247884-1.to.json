@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795733247884-1",
+ "account": "Fingersmith",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 70,
+ "claim": "b829d54f-bebd-482d-b8a9-07e5d1361053",
+ "count": 0,
+ "ok": false,
+ "at": 1795733591484,
+ "detail": "trade claimed"
+}

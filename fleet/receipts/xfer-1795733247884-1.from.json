@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795733247884-1",
+ "account": "mmtha0205",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 70,
+ "claim": "f7733512-1232-4629-805e-2b3f88d43d52",
+ "count": 70,
+ "ok": true,
+ "at": 1795733607686,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8079,
+  "after": 8009
+ },
+ "logout": {
+  "attemptId": "1795733545130-0000023936-0000000001",
+  "at": 1795733607674,
+  "sha256": "dd40d54ccd1765ab875a611e12085aaf3cff153ecf15eafa9c92a1118c5348cc"
+ },
+ "screen": true
+}
