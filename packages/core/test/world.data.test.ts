@@ -57,6 +57,19 @@ test('the pocket below the Ikov dark stairs has a route out up those stairs', as
     if (r.ok) expect(r.legs.some(l => l.kind === 'transport' && l.loc === 'ikov_darkstairs')).toBe(true);
 }, 120_000);
 
+test('the jungle east of the Tai Bwo Wannai river has a route out across the river log', async () => {
+    const w = createWorld({ pathLength: await rsPathLength() });
+    // Where Shilo Village left an account (north of its stepping stones) to Trufitus, west of the river.
+    const out = w.route({ x: 2889, z: 3090, level: 0 }, { x: 2809, z: 3086, level: 0 }, maxed);
+    const logs = (r: typeof out) => r.ok ? r.legs.flatMap(l => l.kind === 'travel' && l.travel.run.how === 'loc' && l.travel.run.loc === 'zq_logbalance' ? [l.travel.id] : []) : [];
+    console.log(`east jungle->trufitus: ${legsOf(out)} ${logs(out).join(' ')}`);
+    expect(out.ok).toBe(true);
+    expect(logs(out)).toEqual(['loc:zq_logbalance@2909,3049,0>2906,3049']);
+    const back = w.route({ x: 2809, z: 3086, level: 0 }, { x: 2917, z: 3058, level: 0 }, maxed);
+    expect(back.ok).toBe(true);
+    expect(logs(back)).toEqual(['loc:zq_logbalance@2907,3049,0>2910,3049']);
+}, 120_000);
+
 test('the room between the Paterdomus gates has a route out from priestperil stage 5 only', async () => {
     const w = createWorld({ pathLength: await rsPathLength() });
     const at = (stage: number | undefined) => w.route({ x: 3428, z: 9891, level: 0 }, { x: 3185, z: 3436, level: 0 }, { ...maxed, questStages: stage === undefined ? {} : { priestperil: stage } });

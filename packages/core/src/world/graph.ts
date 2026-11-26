@@ -1,5 +1,5 @@
 import type { InteractionTarget } from '../../../knowledge/src/transports';
-import { crossingTravel, loadCrossings, loadTravel, type Travel } from '../travel';
+import { crossingTravel, loadCrossings, loadTravel, RIVER_LOG_TRAVEL, type Travel } from '../travel';
 import { normalizeTransports } from './filters';
 import { entryOf, GOAL_TOL, loadKnowledgeJson, PORTAL_TOL, tileKey, TRANSPORT_COST, type Door, type Leg, type Tile, type Transport, type WorldOptions } from './model';
 
@@ -404,7 +404,7 @@ export function buildWorldGraph(opts: WorldOptions): WorldGraph {
     };
     // A world given its own transports (a test) gets no default travel; the real world loads all of it.
     const real = !opts.travel && !opts.transports && opts.pathLength.areaOf;
-    const travel = (opts.travel ?? (opts.transports ? [] : [...loadTravel(), ...(real ? crossingTravel(loadCrossings(), opts.pathLength.areaOf!) : [])]))
+    const travel = (opts.travel ?? (opts.transports ? [] : [...loadTravel(), ...(real ? [...crossingTravel(loadCrossings(), opts.pathLength.areaOf!), ...RIVER_LOG_TRAVEL] : [])]))
         .map(t => ({ ...t, from: t.from && snap(t.from), to: snap(t.to) }));
     const fixed = travel.filter(t => t.from);
     const anywhere = travel.filter(t => !t.from);
