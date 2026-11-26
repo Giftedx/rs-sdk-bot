@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795718694799-1",
  "account": "YewFirst",
  "partner": "Spitroaster",
@@ -12,6 +12,16 @@
  "claim": "8c6738cb-af48-4eed-b129-85e4749e9761",
  "count": 0,
  "ok": false,
- "at": 1795719045066,
- "detail": "trade claimed"
+ "at": 1795719071725,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 6,
+  "at": 1795719055360
+ },
+ "logout": {
+  "attemptId": "1795719045074-0000014752-0000000001",
+  "at": 1795719071708,
+  "sha256": "8c8464f5e9ce0c3148b0e45a6c19bf441071689333db4aedc337d6ca33753677"
+ },
+ "screen": false
 }

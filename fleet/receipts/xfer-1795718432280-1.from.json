@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795718432280-1",
  "account": "Fatstack",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Harralander",
  "requested": 1,
  "claim": "b1833b4b-01f1-4256-9b69-d1c305d4ab69",
- "count": 0,
- "ok": false,
- "at": 1795719034624,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795719079541,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795719045403
+ },
+ "logout": {
+  "attemptId": "1795719034633-0000021796-0000000001",
+  "at": 1795719079368,
+  "sha256": "4449b10e8f7c4622ffd5ff745b64973b462bcb598d335d50e2d91b0f2d1d9540"
+ },
+ "screen": true
 }
