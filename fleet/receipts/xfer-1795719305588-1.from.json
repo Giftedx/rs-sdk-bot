@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795719305588-1",
  "account": "Magicwanda",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 2,
  "claim": "f53574d7-9aa5-461f-92c7-de085e6b1835",
- "count": 0,
- "ok": false,
- "at": 1795719647483,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795719867284,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795719850641
+ },
+ "logout": {
+  "attemptId": "1795719647495-0000006140-0000000001",
+  "at": 1795719867271,
+  "sha256": "a95e7cbe465c4c1f7f79025342b4996f8c61f9f6049661333d8281dccfe10761"
+ },
+ "screen": true
 }

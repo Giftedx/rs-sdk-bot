@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719647518,
+ "at": 1795719885221,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -107,6 +107,21 @@
    "role": "army"
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=38 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:139 BATCH_UNITS=4 -- crafting inventory brew:3doseprayerrestore"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:139",
+   "role": "army"
+  },
+  {
    "account": "Spitroaster",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -201,6 +216,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:FishAndChips",
+   "role": "auto"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Magicwanda",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Magicwanda",
    "role": "auto"
   },
   {
