@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795715742026-1",
+ "account": "MineYourBiz",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 62,
+ "claim": "9036b27c-b9dd-4ddc-83e4-f4207973e034",
+ "count": 0,
+ "ok": false,
+ "at": 1795716187781,
+ "detail": "trade claimed"
+}

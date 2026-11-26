@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795715282405-2",
+ "account": "Pocketrocket",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 275,
+ "claim": "f3cd9ec6-8f17-4b15-b610-4d39dd35dafe",
+ "count": 0,
+ "ok": false,
+ "at": 1795716183241,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 275,
+  "at": 1795716159101
+ },
+ "logout": {
+  "attemptId": "1795716148723-0000006960-0000000001",
+  "at": 1795716183150,
+  "sha256": "3e983f612de742afc2434870e3cf30a5459de517bdaa6ee2a40b6111cfea2a41"
+ },
+ "screen": false
+}

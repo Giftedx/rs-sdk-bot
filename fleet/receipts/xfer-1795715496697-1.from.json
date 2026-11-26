@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795715496697-1",
+ "account": "BowBeforeMe",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 11,
+ "claim": "0d138284-9767-4a15-bfa8-dc6bc9b66451",
+ "count": 0,
+ "ok": false,
+ "at": 1795716138476,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 11,
+   "count": 0
+  }
+ ]
+}
