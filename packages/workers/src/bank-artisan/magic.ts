@@ -1846,6 +1846,10 @@ export async function runBonesConversion(io: BonesIO, o: { maximum: number; cap:
     return { ok: !failure, made, banked, casts, ticks: io.tick() - start, failure: failure || '-' };
 }
 
+// Bones to Bananas: the runes of one cast, and the bones one cast converts (a pack holds 28 less the three rune stacks).
+export const BONES_TO_BANANAS_RUNES = { 557: 2, 555: 2, 561: 1 } as const;
+export const BONES_PER_CAST = 25;
+
 export async function runBonesBank(s: Session, o: { maximum: number; cap: number; members?: boolean; reserve?: number; stop?: () => boolean }) {
     const reserve = o.reserve ?? 0;
     if (!Number.isSafeInteger(reserve) || reserve < 0) throw Error('invalid bones reserve');
@@ -1857,7 +1861,7 @@ export async function runBonesBank(s: Session, o: { maximum: number; cap: number
         throw Error('bones conversion initial state unavailable');
     }
     const p0 = state()!.player;
-    const costs = (): BonesCosts => ({ earth: elementalRuneCost(557, 2, s.sdk.getEquipment(), !!o.members), water: elementalRuneCost(555, 2, s.sdk.getEquipment(), !!o.members), nature: 1 });
+    const costs = (): BonesCosts => ({ earth: elementalRuneCost(557, BONES_TO_BANANAS_RUNES[557], s.sdk.getEquipment(), !!o.members), water: elementalRuneCost(555, BONES_TO_BANANAS_RUNES[555], s.sdk.getEquipment(), !!o.members), nature: BONES_TO_BANANAS_RUNES[561] });
     const protectedItems = new Map(inv().filter(i => !Object.values(ids).includes(i.id as any)).map(i => [i.id, count(i.id)]));
     let ended = false;
     void s.ended.then(() => { ended = true; });

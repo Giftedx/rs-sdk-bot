@@ -18,6 +18,8 @@ test('magic training steps name the inputs of the spell their default arguments 
     expect(inputsOf('combat:magic-splash')).toEqual({ 559: 1, 555: 2, 557: 3 });
     // The level-1 coop spell is Wind Strike: one Air and one Mind rune.
     expect(inputsOf('combat:magic-splash-coop')).toEqual({ 556: 1, 558: 1 });
+    // Bones to Bananas: one bone per unit, and two Earth, two Water and one Nature rune per 25 bones.
+    expect(inputsOf('bank-artisan:magic-bones')).toEqual({ 526: 1, 557: 0.08, 555: 0.08, 561: 0.04 });
 });
 
 test('enchanting gets no staff upgrade: a weapon does not change item spell XP', () => {
