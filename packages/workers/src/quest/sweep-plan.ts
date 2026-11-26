@@ -49,13 +49,17 @@ export const COINS = 995;
 export const QUEST_ITEMS_AMONG_FOOD: Record<string, number[]> = { merlin: [2309], 'herogloves-owned': [554, 556, 563] };
 export const OPTIONAL = new Set([2446]);
 export const QUEST_OPTIONAL: Record<string, number[]> = { druidspirit: [2952] };
+// Items of OPTIONAL that a quest's script cannot do without: Family Crest uses an antipoison on Johnathon
+// (crest_johnathon.rs2:21; hosted bench extra:sweep-crest-resume-s2 failed "step antipoison" with none staged).
+export const QUEST_REQUIRED: Record<string, number[]> = { crest: [2446] };
 
 export function needs(preset: SaveConfig, food = false, quest = ''): Map<number, number> {
     const m = new Map<number, number>();
     const own = new Set(QUEST_ITEMS_AMONG_FOOD[quest] ?? []);
     const optional = new Set(QUEST_OPTIONAL[quest] ?? []);
+    const required = new Set(QUEST_REQUIRED[quest] ?? []);
     for (const i of preset.inventory ?? []) {
-        if (!OPTIONAL.has(i.id) && !optional.has(i.id) && (FOOD.has(i.id) && !own.has(i.id)) === food) {
+        if ((!OPTIONAL.has(i.id) || required.has(i.id)) && !optional.has(i.id) && (FOOD.has(i.id) && !own.has(i.id)) === food) {
             m.set(i.id, (m.get(i.id) ?? 0) + i.count);
         }
     }

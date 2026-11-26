@@ -532,13 +532,16 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 const r = entry.resume;
                 const stage = await readQuestJournalStage({ s, waitUntil: (f, ticks) => waitUntil(s, f, { timeoutTicks: ticks }) }, r.key, r.title, r.stage);
                 const start = resumeStart(r, questName, stage);
-                const logged = start.kind === 'resume' ? { quest, stage, spent: start.spent, from: start.from, held: start.held } : { quest, stage, kind: start.kind, reason: start.reason };
+                const logged = start.kind === 'resume'
+                    ? { quest, stage, spent: start.spent, from: start.from, held: start.held, extra: start.extra }
+                    : { quest, stage, kind: start.kind, reason: start.reason };
                 console.log(`QUEST_SWEEP_RESUME ${JSON.stringify(logged)}`);
                 if (start.kind === 'refuse') return fail(start.reason);
                 for (const id of start.spent) {
                     base.delete(id);
                     food.delete(id);
                 }
+                for (const i of start.extra) base.set(i.id, (base.get(i.id) ?? 0) + i.count);
                 held = start.held;
                 (s as { questFrom?: number }).questFrom = start.from;
             }

@@ -1418,4 +1418,4 @@ try {
     handoff.QUEST_SCRIPT_ID = prevQuestId;
 }
 }
-if (import.meta.main) await runQuestMM();
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) await runQuestMM();

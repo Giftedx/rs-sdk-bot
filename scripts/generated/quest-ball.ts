@@ -301,4 +301,4 @@ try {
     handoff.QUEST_SCRIPT_ID = prevQuestId;
 }
 }
-if (import.meta.main) await runQuestBall();
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION) await runQuestBall();

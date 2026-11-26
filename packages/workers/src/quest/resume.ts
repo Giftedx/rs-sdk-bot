@@ -26,6 +26,9 @@ export type QuestResume = {
     // Quest items that the account got before a stage and that the script needs: the sweep withdraws them when the
     // pack and the worn slots do not hold them.
     readonly held?: (stage: number) => readonly number[];
+    // Items that the sweep stages beyond the preset pack at a stage: the price of a lost quest item that the script
+    // gets again.
+    readonly extra?: (stage: number) => readonly { readonly id: number; readonly count: number }[];
 };
 
 // The script's FROM value for a journal stage, or undefined for a stage with no resume from the start tile.
@@ -141,6 +144,65 @@ export function ballJournalStage(body: string): number | undefined {
 
 const BALL_CHEESE = 1985, BALL_MAGNET = 2410, BALL_SHED_KEY = 2411;
 
+// Holy Grail: %grail (varp 5), quests/quest_grail/configs/quest_grail.constant (2, 3, 4, 7, 8, 9) and quest.constant:27
+// (complete 10). Each stage's own line of grail_journal.rs2, from the highest stage down. No server script sets 5 or 6;
+// there the journal holds only the two struck start lines, and the parser names no stage. The longest journal has 22
+// lines, under the 49 that split_init shows.
+export function grailJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return 10;
+    if (/I honoured the Fisher King's request to find his son/i.test(text)) return 9;
+    if (/The Fisher King is very sick\. He has asked me to find his son/i.test(text)) return 8;
+    if (/I need to find a weapon that can defeat him somehow/i.test(text)) return 7;
+    if (/According to a Crone on Entrana I need to go to where the/i.test(text)) return 4;
+    if (/Merlin suggested two things to help find the Grail/i.test(text)) return 3;
+    if (/King Arthur has sent me questing for the Holy Grail of legend/i.test(text)) return 2;
+    if (/I can start this quest by speaking to King Arthur at Camelot Castle/i.test(text)) return 0;
+    return undefined;
+}
+
+// quest-grail.ts HG_FROM is a milestone. 2: Merlin on (milestone 1). 3: Entrana on (2). 4 and 7 (the titan beaten
+// without Excalibur worn, black_knight_titan.rs2:30-32): Galahad on (3); the script skips Galahad with a napkin held and
+// the manor with two whistles held. 8: Sir Percival on (7). 9: the restored realm on (8), skipped with the grail held.
+export function grailFrom(stage: number): number | undefined {
+    switch (stage) {
+        case 0: return 0;
+        case 2: return 1;
+        case 3: return 2;
+        case 4: case 7: return 3;
+        case 8: return 7;
+        case 9: return 8;
+        default: return undefined;
+    }
+}
+
+const GRAIL_NAPKIN = 15, GRAIL_WHISTLE = 16, HOLY_GRAIL = 19, EXCALIBUR = 35, RUNE_SCIMITAR = 1333;
+
+// The napkin opens the whistle door (quest_grail.rs2:31), the whistles cross to the realm and back
+// (quest_grail.rs2:37-50) and one goes to Sir Percival (sir_percival.rs2:43-47); King Arthur takes the grail from the
+// pack only, and a banked grail stops a second pick-up (quest_grail.rs2:69-72). Before the titan the script needs
+// Excalibur: a banked one is withdrawn.
+export function grailHeld(stage: number): readonly number[] {
+    if (stage >= 2 && stage <= 3) return [EXCALIBUR];
+    if (stage === 4 || stage === 7) return [GRAIL_NAPKIN, GRAIL_WHISTLE, EXCALIBUR];
+    if (stage === 8) return [GRAIL_NAPKIN, GRAIL_WHISTLE];
+    if (stage === 9) return [GRAIL_NAPKIN, GRAIL_WHISTLE, HOLY_GRAIL];
+    return [];
+}
+
+// The script leaves Excalibur on the Port Sarim dock before Entrana (a drop lasts 300 ticks, drop.rs2:22), so a run
+// that ended there has lost it. Before the titan the sweep does not ask for Excalibur, and stages the 500 coins for
+// which the Lady of the Lake gives it again to a player who holds none (lady_of_the_lake.rs2:4-35). From 8 the titan
+// is behind the account and no block wields Excalibur or the rune scimitar.
+export function grailSpent(stage: number): readonly number[] {
+    if (stage >= 8) return [EXCALIBUR, RUNE_SCIMITAR];
+    return stage >= 2 ? [EXCALIBUR] : [];
+}
+
+export function grailExtra(stage: number): readonly { id: number; count: number }[] {
+    return stage >= 2 && stage <= 7 ? [{ id: 995, count: 500 }] : [];
+}
+
 const SQUIRE_PIE = 2325;
 
 export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
@@ -154,6 +216,7 @@ export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
     // The mouse hole takes the cheese before the magnet unlocks the back door (quest_ball.rs2:80-86, 111-112). The
     // cupboard gives a magnet and the fountain a shed key only when the pack and the bank hold none (:67-70, :163-165),
     // so the sweep withdraws a banked one.
+    grail: { key: 'grail', title: /Holy Grail/i, stage: grailJournalStage, complete: 10, from: grailFrom, held: grailHeld, spent: grailSpent, extra: grailExtra },
     ball: {
         key: 'ball', title: /Witch's House/i, stage: ballJournalStage, complete: 7,
         spent: (stage) => (stage >= 3 ? [BALL_CHEESE] : []),
@@ -186,7 +249,10 @@ export type QuestEntry =
     | { readonly kind: 'refuse'; readonly reason: string };
 
 export type QuestResumeStart =
-    | { readonly kind: 'resume'; readonly from: number; readonly spent: readonly number[]; readonly held: readonly number[] }
+    | {
+        readonly kind: 'resume'; readonly from: number; readonly spent: readonly number[]; readonly held: readonly number[];
+        readonly extra: readonly { readonly id: number; readonly count: number }[];
+    }
     | { readonly kind: 'refuse'; readonly reason: string };
 
 // What the sweep does with the journal stage that it read: the script's FROM value and the items to leave out or fetch,
@@ -195,7 +261,7 @@ export function resumeStart(resume: QuestResume, name: string, stage: number): Q
     if (stage >= resume.complete) return { kind: 'refuse', reason: `refused: ${name} journal stage ${stage} is complete` };
     const from = resumeFrom(resume, stage);
     if (from === undefined) return { kind: 'refuse', reason: `refused: ${name} journal stage ${stage} has no resume from the start tile` };
-    return { kind: 'resume', from, spent: resume.spent?.(stage) ?? [], held: resume.held?.(stage) ?? [] };
+    return { kind: 'resume', from, spent: resume.spent?.(stage) ?? [], held: resume.held?.(stage) ?? [], extra: resume.extra?.(stage) ?? [] };
 }
 
 // The refusal text starts with "refused:": the supervisor ends the job on it and does not log in again

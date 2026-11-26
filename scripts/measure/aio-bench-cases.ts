@@ -1860,6 +1860,19 @@ return [
     scriptArgs: ['imp', 'journal is started and quest-imp.ts has no resume stage'], timeoutMs: 120_000,
     presetConfig: {...PRESETS.quest_imp!, varps: {...PRESETS.quest_imp!.varps, 160: 1}},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_ENTRY .*"journal":"started".*"entry":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+  // Holy Grail through the quest sweep from the Seers' Village bank with the quest pack banked, at %grail (varp 5) = 4:
+  // the crone spoken to, no napkin or whistle (live TrouserSnake and UnderMyKilt hold neither). The sweep reads the
+  // stage from the journal, and the script starts at Galahad: no King Arthur, Merlin or Entrana. `resume-s4` has
+  // Excalibur in the bank, and the sweep withdraws it (QuestResume.held). `resume-s4-lost` has none, as on the live
+  // accounts (an earlier run left it on the Port Sarim dock): the Lady of the Lake gives it again for 500 of the 600
+  // staged coins.
+  ...([['resume-s4', true], ['resume-s4-lost', false]] as const).map(([mode, banked]) =>
+    ({key: `extra:sweep-grail-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_grail', scriptArgs: ['sweep', 'grail'], timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_grail!, position: {x: 2727, z: 3493, level: 0}, inventory: [], coins: 0, varps: {...PRESETS.quest_grail!.varps, 5: 4},
+        bank: [...(PRESETS.quest_grail!.inventory ?? []).filter((i) => banked || i.id !== 35), {id: 995, count: (PRESETS.quest_grail!.coins ?? 0) + 500}]},
+      pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^HG_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":4/m.test(s)
+        && /^MILESTONE 4 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE ([123]|whistles again) /m.test(s)
+        && /^MILESTONE excalibur again /m.test(s) !== banked} as BenchCase)),
   // Witch's House through the quest sweep from the Falador west bank with the quest pack banked. `resume-s1` has
   // %ballquest (varp 226) = 1, the state that live runs left at "fail step gate in" (no leather gloves worn, so the
   // gate shocks, quest_ball.rs2:33-38): the gloves and the door key are banked, the sweep wears the gloves, and the

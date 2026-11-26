@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, grailFrom, grailJournalStage, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
 
 const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
@@ -46,7 +46,7 @@ describe('arena journal stage', () => {
         expect([6, 8, 9, 10, 11].map(arenaFrom)).toEqual([undefined, undefined, undefined, undefined, undefined]);
         expect([12, 13].map(arenaFrom)).toEqual([12, 12]);
         const arena = QUEST_RESUME.arena!;
-        expect(resumeStart(arena, 'Fight Arena', 3)).toEqual({ kind: 'resume', from: 3, spent: [], held: [] });
+        expect(resumeStart(arena, 'Fight Arena', 3)).toEqual({ kind: 'resume', from: 3, spent: [], held: [], extra: [] });
         expect(resumeStart(arena, 'Fight Arena', 6)).toEqual({ kind: 'refuse', reason: 'refused: Fight Arena journal stage 6 has no resume from the start tile' });
         expect(resumeStart(arena, 'Fight Arena', 14)).toEqual({ kind: 'refuse', reason: 'refused: Fight Arena journal stage 14 is complete' });
     });
@@ -137,7 +137,7 @@ describe('ball journal stage', () => {
         const ball = QUEST_RESUME.ball!;
         expect([1, 2, 3, 6].map((s) => ball.spent!(s))).toEqual([[], [], [1985], [1985]]);
         expect([1, 2, 3, 5, 6].map((s) => ball.held!(s))).toEqual([[], [2410], [2411], [2411], []]);
-        expect(resumeStart(ball, "Witch's House", 2)).toEqual({ kind: 'resume', from: 2, spent: [], held: [2410] });
+        expect(resumeStart(ball, "Witch's House", 2)).toEqual({ kind: 'resume', from: 2, spent: [], held: [2410], extra: [] });
     });
 });
 
@@ -225,5 +225,54 @@ describe('crest resume start', () => {
         expect(crestHeld(7)).toEqual([779, 773, 774]);
         expect(crestHeld(8)).toEqual([779, 780]);
         expect(crestHeld(10)).toEqual([779, 780, 781, 782]);
+    });
+});
+
+// The string literals of grail_journal.rs2 in the order they appear, as the client receives them.
+function grailJournalLines(): string[] {
+    const src = readFileSync(join(REPO_ROOT, `${QUESTS}/quest_grail/scripts/grail_journal.rs2`), 'utf8');
+    return [...src.matchAll(/(?:\$text = |append\(\$text, )"([^"]*)"/g)].map((m) => m[1]!);
+}
+
+describe('grail journal stage', () => {
+    const lines = grailJournalLines();
+    const has = (re: RegExp) => lines.filter((l) => re.test(l)).join('');
+    // The journal of each stage: the struck lines of the earlier stages and its own lines (grail_journal.rs2 branches).
+    const notStarted = has(/I can start this quest|@dre@Camelot Castle@dbl@, just|must be able to defeat|120 Black Knight Titan/);
+    const struckStart = has(/I started my Quest for the Holy Grail|sent me to Merlin for advice/);
+    const struckRealm = has(/I spoke to Galahad|gave me a napkin|^@str@King\.\|$|used the napkin|me to the Realm of the Fisher King\.\||I blew the Whistle|teleported to the Realm|path to\|$|castle was blocked|called the Black Knight Titan/);
+    const struckTitan = has(/defeated the Black Knight Titan|power\.Once past|couldn't give me the Grail|restores the land|^@str@Grail\.\|$/);
+    const struckPercival = has(/I honoured the Fisher King|used a Magic Golden Feather|heard of his father's illness|Castle using a Magic Whistle/);
+    const percival = has(/is very sick|son @dre@Sir Percival/);
+    const done = struckStart + struckRealm + struckTitan + has(/I returned to the Grail Castle|been renewed|gratitude he allowed|prowess as a Knight|QUEST COMPLETE/);
+
+    test('each stage of the server journal names its %grail stage', () => {
+        expect(lines.length).toBe(46);
+        expect(grailJournalStage(notStarted)).toBe(0);
+        expect(grailJournalStage(has(/has sent me questing|legend\. I should start|study next to the Camelot library/))).toBe(2);
+        expect(grailJournalStage(struckStart + has(/suggested two things|lives @dre@West|someone on a '/))).toBe(3);
+        expect(grailJournalStage(struckStart + has(/According to a Crone|Six Heads' face|To get the @dre@Magic Whistle|to a @dre@Haunted House/))).toBe(4);
+        expect(grailJournalStage(struckStart + struckRealm + has(/find a @dre@weapon/))).toBe(7);
+        expect(grailJournalStage(struckStart + struckRealm + struckTitan + percival)).toBe(8);
+        // With the feather in the pack (grail_journal.rs2:64-67).
+        expect(grailJournalStage(struckStart + struckRealm + struckTitan + percival + has(/magic golden feather@dbl@ to help|I should use it to find him/))).toBe(8);
+        // Without and with the grail in the pack (grail_journal.rs2:75-79).
+        expect(grailJournalStage(struckStart + struckRealm + struckTitan + struckPercival + has(/I should follow him/))).toBe(9);
+        expect(grailJournalStage(struckStart + struckRealm + struckTitan + struckPercival + has(/Now I have the @dre@Grail/))).toBe(9);
+        expect(grailJournalStage(done)).toBe(10);
+        // %grail 5 or 6: no server script sets them, and the journal holds only the struck start lines.
+        expect(grailJournalStage(struckStart)).toBeUndefined();
+        expect(grailJournalStage('Holy Grail')).toBeUndefined();
+        expect(done.split('|').length).toBeLessThanOrEqual(49);
+    });
+
+    test('a resume before the titan gets Excalibur again if lost; after it, Excalibur is not staged', () => {
+        expect([2, 3, 4, 7, 8, 9].map(grailFrom)).toEqual([1, 2, 3, 3, 7, 8]);
+        expect([5, 6].map(grailFrom)).toEqual([undefined, undefined]);
+        const grail = QUEST_RESUME.grail!;
+        expect(resumeStart(grail, 'Holy Grail', 4)).toEqual({ kind: 'resume', from: 3, spent: [35], held: [15, 16, 35], extra: [{ id: 995, count: 500 }] });
+        expect(resumeStart(grail, 'Holy Grail', 8)).toEqual({ kind: 'resume', from: 7, spent: [35, 1333], held: [15, 16], extra: [] });
+        expect(resumeStart(grail, 'Holy Grail', 9)).toEqual({ kind: 'resume', from: 8, spent: [35, 1333], held: [15, 16, 19], extra: [] });
+        expect(resumeStart(grail, 'Holy Grail', 6)).toEqual({ kind: 'refuse', reason: 'refused: Holy Grail journal stage 6 has no resume from the start tile' });
     });
 });
