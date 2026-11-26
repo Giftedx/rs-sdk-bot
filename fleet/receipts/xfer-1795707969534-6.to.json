@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795707969534-6",
+ "account": "Nockitoff",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "f5764d8f-67ef-4d28-9c25-2409b0bfb9bf",
+ "count": 0,
+ "ok": false,
+ "at": 1795708120148,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

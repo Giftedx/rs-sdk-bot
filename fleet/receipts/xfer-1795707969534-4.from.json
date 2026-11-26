@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795707969534-4",
  "account": "Woodenstaff",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "2177e65c-4b66-4f5a-8b5e-769f78a572b1",
  "count": 0,
  "ok": false,
- "at": 1795708085932,
- "detail": "trade claimed"
+ "at": 1795708140693,
+ "detail": "Error: route to 3183, 3440: precondition bank stop at 2947,3368: withdraw short {\"554\":1}",
+ "logout": {
+  "attemptId": "1795708085941-0000005084-0000000001",
+  "at": 1795708140610,
+  "sha256": "ac3111c631c205abd89710b0924561af1cf893c8cec7658316c65d452230b8b7"
+ },
+ "screen": false
 }
