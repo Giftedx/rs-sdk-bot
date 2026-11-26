@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795716345453-1",
+ "account": "Hocuspokeus",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "4be800f1-1063-4b0d-bb27-e42e9ebae4d0",
+ "count": 1,
+ "ok": true,
+ "at": 1795716871427,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795716853899
+ },
+ "logout": {
+  "attemptId": "1795716847062-0000014324-0000000001",
+  "at": 1795716871416,
+  "sha256": "d9ff54452a89a7c88df4b925dca57df687999f6d70b62eb2c2bdfe6f1417795b"
+ },
+ "screen": true
+}

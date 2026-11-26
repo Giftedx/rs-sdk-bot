@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716491777-1",
+ "account": "CoinCock",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 78,
+ "claim": "5c622d39-2839-4c06-b1e0-f638bf58f61e",
+ "count": 0,
+ "ok": false,
+ "at": 1795716841684,
+ "detail": "trade claimed"
+}
