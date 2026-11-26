@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795707969534-8",
+ "account": "Pullmybow",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff",
+ "requested": 1,
+ "claim": "dde7a830-9b81-461b-936d-aeb62e79e3fd",
+ "count": 0,
+ "ok": false,
+ "at": 1795708340758,
+ "detail": "trade claimed"
+}
