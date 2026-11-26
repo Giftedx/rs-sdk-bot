@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795708322690-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "InTheSack",
+  "to": "WellHung",
+  "item": "Rune essence",
+  "count": 135,
+  "itemId": 1436,
+  "start": 1795708322690,
+  "end": 1795709222690,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

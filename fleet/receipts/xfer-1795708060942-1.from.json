@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795708060942-1",
  "account": "Fatstack",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "4b40aae3-f2e6-494b-8ed2-77035a491286",
- "count": 0,
- "ok": false,
- "at": 1795708290198,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795708320231,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795708299881
+ },
+ "logout": {
+  "attemptId": "1795708290207-0000021820-0000000001",
+  "at": 1795708320217,
+  "sha256": "63889cda5a54dd53b740dad046a8bd23da960f957ac95b08760c4699304ce32f"
+ },
+ "screen": true
 }
