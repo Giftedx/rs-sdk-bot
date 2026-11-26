@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712570740-1",
  "account": "Woodenstaff",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 5,
  "claim": "e0d2cfaa-8b2d-4e30-a103-88989a00c8de",
- "count": 0,
- "ok": false,
- "at": 1795712984887,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795713007682,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795712990505
+ },
+ "logout": {
+  "attemptId": "1795712985237-0000009932-0000000001",
+  "at": 1795713007669,
+  "sha256": "5ec2add3a8a28d67490895d7502b0befe99c761f054b8bf553fb58394991bff2"
+ },
+ "screen": true
 }

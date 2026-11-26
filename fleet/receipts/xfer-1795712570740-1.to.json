@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795712570740-1",
+ "account": "Shaftsinker",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 5,
+ "claim": "8e357406-a46c-47d0-bb33-680dce791f66",
+ "count": 5,
+ "ok": true,
+ "at": 1795713009293,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795713008446
+ },
+ "logout": {
+  "attemptId": "1795712999521-0000007256-0000000001",
+  "at": 1795713009206,
+  "sha256": "b28c7097851e5e693118d73ace568a39b89d4eadc4fa1af6fb43ae1375a5473e"
+ },
+ "screen": true
+}
