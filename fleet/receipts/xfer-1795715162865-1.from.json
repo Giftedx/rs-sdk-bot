@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795715162865-1",
  "account": "Ballspinner",
  "partner": "Nockitoff",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "0c48a128-efd2-4372-97a2-f585a18d359e",
- "count": 0,
- "ok": false,
- "at": 1795715343226,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795715536706,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795715494737
+ },
+ "logout": {
+  "attemptId": "1795715343235-0000024596-0000000001",
+  "at": 1795715536689,
+  "sha256": "15cf99a00c86b04fc47e9a297d7259860b60e8e5ed24ecf4cada41f44979e22e"
+ },
+ "screen": true
 }

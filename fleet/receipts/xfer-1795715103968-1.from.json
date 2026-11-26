@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795715103968-1",
  "account": "Hocuspokeus",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 20,
  "claim": "c83fe67a-6321-4491-af77-0c63c6af748f",
- "count": 0,
- "ok": false,
- "at": 1795715374019,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795715538767,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795715380354
+ },
+ "logout": {
+  "attemptId": "1795715374028-0000025912-0000000001",
+  "at": 1795715538755,
+  "sha256": "4981671c48ac082ccc09ef01503e90acddcb6c90c44fb8f07ba9c35c24eb0e7b"
+ },
+ "screen": true
 }

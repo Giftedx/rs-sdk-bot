@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795715195202-1",
  "account": "OreElse",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "b632a082-9ba1-455c-a5e6-dbc2b07f07da",
- "count": 0,
- "ok": false,
- "at": 1795715331062,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795715511091,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795715426483
+ },
+ "logout": {
+  "attemptId": "1795715331070-0000023064-0000000001",
+  "at": 1795715511081,
+  "sha256": "a9ac8ae1576ac999a89522ce779f1202042c6a1a25384a18f267f8b11857026d"
+ },
+ "screen": true
 }

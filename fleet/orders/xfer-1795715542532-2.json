@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795715542532-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Fatstack",
+  "item": "Diamond",
+  "count": 1,
+  "itemId": 1601,
+  "start": 1795715542532,
+  "end": 1795716442532,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

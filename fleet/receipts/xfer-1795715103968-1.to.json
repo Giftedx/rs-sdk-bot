@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795715103968-1",
+ "account": "Quickhandjob",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 20,
+ "claim": "4ccebef2-0b08-481c-8157-b5ab366b33fd",
+ "count": 20,
+ "ok": true,
+ "at": 1795715540297,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795715539568
+ },
+ "logout": {
+  "attemptId": "1795715530310-0000026748-0000000001",
+  "at": 1795715540286,
+  "sha256": "d12d9ef3b252908c4a44e04aa4d32884cf8f9c664c702617adcbc7ec390c5357"
+ },
+ "screen": true
+}

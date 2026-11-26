@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795715442107-1",
+ "account": "TheFullMonty",
+ "partner": "Packhorse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 2000,
+ "claim": "1ad55d27-e4c3-4d21-b9ea-494f1f7f34ce",
+ "count": 0,
+ "ok": false,
+ "at": 1795715528283,
+ "detail": "Error: sender pack full: need 2000 slots for Rune essence, 28 free",
+ "logout": {
+  "attemptId": "1795715518895-0000023244-0000000001",
+  "at": 1795715528273,
+  "sha256": "936c66fc63df5b1646afbfc1d52ea2939756063eb799cac69dc94fbf6028cb4b"
+ },
+ "screen": false
+}
