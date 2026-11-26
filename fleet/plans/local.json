@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718511413,
+ "at": 1795718535682,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,15 +63,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "elena"
+    "barcrawl"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:elena",
+   "goal": "goal:quest_board:barcrawl",
    "role": "auto"
   },
   {
@@ -131,15 +131,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "tree"
+    "elena"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
+    "DEMAND_ID": "goal:quest_board:elena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:quest_board:elena",
    "role": "auto"
   },
   {
@@ -160,19 +160,18 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "ranged-camp"
+    "sweep",
+    "tree"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:FishAndChips",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
+   "goal": "goal:quest_board:tree",
    "role": "auto"
   },
   {
