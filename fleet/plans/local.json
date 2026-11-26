@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795709232772,
+ "at": 1795709259481,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,36 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2340 TARGET_COUNT=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2340 TARGET_COUNT=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
   },
   {
    "account": "Fingerblastr",
@@ -245,51 +275,19 @@
    "role": "helper"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "TheFullMonty",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto"
+   "goal": "campaign:haggis:item:225",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -325,24 +323,25 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p117 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=117 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "campaign:haggis:item:1309",
    "role": "army"
   },
   {
    "account": "CoinCock",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-21-p23 ITEM_ID=436 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-21-p23 ITEM_ID=438 QUANTITY=21 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=21 -- smithing smelt 1500 bronze"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-28-p23 ITEM_ID=436 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-28-p23 ITEM_ID=438 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=28 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
@@ -440,7 +439,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "717"
+    "BATCH_UNITS": "742"
    },
    "enabled": true,
    "repeat": false,
@@ -463,6 +462,7 @@
   "moneyshot",
   "oreelse",
   "pocketpool",
+  "pocketpython",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
