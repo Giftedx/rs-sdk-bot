@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708322690-1",
+ "account": "InTheSack",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "0e71fe3e-31da-4bb7-a3a6-534189f4c8c0",
+ "count": 0,
+ "ok": false,
+ "at": 1795708514895,
+ "detail": "trade claimed"
+}
