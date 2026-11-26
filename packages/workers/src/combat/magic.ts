@@ -1271,7 +1271,12 @@ export interface MagicResult {
     alchemy?: { itemId: number; itemsUsed: number; natureUsed: number; fireUsed: number; coinsGained: number };
 }
 
-export async function runMagicOrder(s: CombatSession, o: MagicOptions, stopRequested: () => boolean = () => false): Promise<MagicResult> {
+export async function runMagicOrder(
+    s: CombatSession,
+    o: MagicOptions,
+    stopRequested: () => boolean = () => false,
+    io?: { travel?: (to: { x: number; z: number; level: number }) => Promise<{ ok: boolean; detail?: string }> },
+): Promise<MagicResult> {
     const start = s.tick();
     let ended = false;
     void s.ended.then(() => {
@@ -1358,7 +1363,10 @@ export async function runMagicOrder(s: CombatSession, o: MagicOptions, stopReque
         return r;
     }
     let region = startRegion(at()!);
-    if (!region) {
+    // A training order from a tile outside the named regions walks the world route to Varrock East bank at entry, as
+    // from the Falador and Seers cleanup banks. An alch order banks where it stands, so it needs a named region.
+    const far = !region && o.alchItemId === undefined;
+    if (!region && !far) {
         r.stop = 'unsupported start region';
         r.failure = `no checked route from ${JSON.stringify(at())}`;
         return r;
@@ -1615,9 +1623,10 @@ export async function runMagicOrder(s: CombatSession, o: MagicOptions, stopReque
     };
     try {
         r.stop = 'entry-bank';
-        if (o.alchItemId === undefined && (region === 'falador' || region === 'seers')) {
-            const movedWorld = await goTo(s, await getWorld(), { ...BANKS.varrockEast, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
-            if (!movedWorld.ok) throw Error(`no route from the ${region} cleanup bank to Varrock East bank: ${JSON.stringify(movedWorld)}`);
+        if (o.alchItemId === undefined && (far || region === 'falador' || region === 'seers')) {
+            const to = { ...BANKS.varrockEast, level: 0 };
+            const movedWorld = io?.travel ? await io.travel(to) : await goTo(s, await getWorld(), to, accountOf(s), { legTimeoutTicks: 100 });
+            if (!movedWorld.ok) throw Error(`no route from ${far ? 'the far start' : `the ${region} cleanup bank`} to Varrock East bank: ${JSON.stringify(movedWorld)}`);
             region = 'varrock-east';
         }
         if (region === 'varrock') await walk([{ ...BANKS.varrockEast, tol: 2 }], 'entry bank');
