@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722836820-1",
  "account": "SporranBulge",
  "partner": "CoinCock",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 608,
  "claim": "0b99612d-ba9a-43aa-8819-fc9185ea5d62",
- "count": 0,
- "ok": false,
- "at": 1795723442840,
- "detail": "trade claimed"
+ "count": 608,
+ "ok": true,
+ "at": 1795723521097,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 608
+ },
+ "bank": {
+  "count": 608,
+  "at": 1795723519938
+ },
+ "logout": {
+  "attemptId": "1795723442849-0000022716-0000000001",
+  "at": 1795723521088,
+  "sha256": "b8700a1856a67fb6333b5f3d571c548b1b998fc42b354cba3eb37f489c87421a"
+ },
+ "screen": true
 }

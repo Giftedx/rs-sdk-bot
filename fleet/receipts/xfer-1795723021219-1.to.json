@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723021219-1",
+ "account": "AFKnight",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 360,
+ "claim": "d04c509e-d9b2-4b28-95cc-257647ea2f35",
+ "count": 360,
+ "ok": true,
+ "at": 1795723515498,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 360
+ },
+ "bank": {
+  "count": 360,
+  "at": 1795723514754
+ },
+ "logout": {
+  "attemptId": "1795723502591-0000008452-0000000001",
+  "at": 1795723515487,
+  "sha256": "a25eb768fba50f34a1891db4beb35ae6171ead130d73cac24c5d7a7b652e2622"
+ },
+ "screen": true
+}
