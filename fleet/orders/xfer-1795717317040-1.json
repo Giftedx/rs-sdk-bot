@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795717317040-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Spitroaster",
+  "item": "Dragon bones",
+  "count": 7,
+  "itemId": 536,
+  "start": 1795717317040,
+  "end": 1795718217040,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
