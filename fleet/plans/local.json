@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795711585885,
+ "at": 1795711614997,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -192,7 +192,7 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -205,13 +205,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
-   "role": "auto",
+   "role": "army",
    "resources": [
     "edgeville-yews"
    ]
   },
   {
-   "account": "Billionaire",
+   "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -223,13 +223,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1470",
-   "role": "army",
+   "role": "auto",
    "resources": [
     "ardougne-imps"
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "Billionaire",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -247,7 +247,7 @@
    ]
   },
   {
-   "account": "Fingerblastr",
+   "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -265,7 +265,7 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
+   "account": "Fingerblastr",
    "script": "scripts/generated/quest-dragon.ts",
    "args": [],
    "env": {
@@ -292,6 +292,22 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
   }
  ],
  "army": [
@@ -302,10 +318,9 @@
   "Wandwaver",
   "mmsmk1232",
   "bigpackage",
-  "bowbeforeme",
   "fatstack",
   "fingersmith",
-  "knightrider",
+  "hocuspokeus",
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
