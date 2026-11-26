@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795729127796,
+ "at": 1795729141622,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,38 @@
    "role": "pvp"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy general_sarim 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p224 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1309",
+   "role": "army"
+  },
+  {
    "account": "Stirmypot",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -103,22 +135,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1500"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
    "role": "army"
   },
   {
@@ -174,33 +190,25 @@
    "role": "auto"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 -- crafting jewellery-trip"
+    "crafting",
+    "jewellery-trip"
    ],
    "env": {
-    "ROUNDS": "1"
+    "RECIPE": "sapphire_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1637",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:235",
    "role": "army"
   },
   {
@@ -259,6 +267,21 @@
    "role": "army"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -285,7 +308,6 @@
   "ballspinner",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
