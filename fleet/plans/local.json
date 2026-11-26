@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795710462135,
+ "at": 1795710476908,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,23 +100,19 @@
    ]
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=59 -- thieving knights-stable",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -177,18 +173,22 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/aio-pvp.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "army"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "KnightRider",
@@ -360,21 +360,6 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=59 -- thieving knights-stable",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
    "account": "Earlyshooter",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -388,6 +373,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
+   "role": "auto"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "auto"
   },
   {
