@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795708625151-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Unsheathed",
+  "item": "Staff",
+  "count": 1,
+  "itemId": 1379,
+  "start": 1795708625151,
+  "end": 1795709525151,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
