@@ -2047,6 +2047,10 @@ return [
   {key: 'extra:inventory-best-effort', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1', 'ORDER_MODE=best-effort'],
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Crafting: 55}, inventory: [{id: 1755, count: 1}], bank: [{id: 1631, count: 5}]},
     pass: s => ok(s) && /"made":5,"banked":5\b/.test(s) && s.includes('LOGOUT logged-out')},
+  // A chain rerun: 4 cut diamonds already banked toward a stock target of 7, so the step cuts 3 of its 7.
+  {key: 'extra:inventory-stock-target', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'cut-diamond', 'MAX_MAKE=7', 'CAP=600', 'PRODUCT_TARGET=7'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Crafting: 43}, inventory: [{id: 1755, count: 1}], bank: [{id: 1617, count: 10}, {id: 1601, count: 4}]},
+    pass: s => ok(s) && /"made":3,"banked":3\b/.test(s)},
   {key: 'extra:jewellery-trip-env-order', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['crafting', 'jewellery-trip', 'RECIPE=gold_ring', 'TARGET=1', 'BATCH=1', 'CAP=800'],
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
     pass: s => ok(s) && s.includes('LOGOUT logged-out')},
