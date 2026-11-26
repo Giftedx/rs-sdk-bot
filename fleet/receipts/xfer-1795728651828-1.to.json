@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728651828-1",
  "account": "WellHung",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 1,
  "claim": "5041c690-f053-4179-b0da-7a7b2b493a08",
- "count": 0,
- "ok": false,
- "at": 1795729005682,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795729027076,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795729026368
+ },
+ "logout": {
+  "attemptId": "1795729005967-0000015976-0000000001",
+  "at": 1795729027066,
+  "sha256": "6c6286ec95c6301950f39374aae99e479b89a36c291b7e62ed49dd706b507648"
+ },
+ "screen": true
 }
