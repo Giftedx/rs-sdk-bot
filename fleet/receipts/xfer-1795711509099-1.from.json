@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711509099-1",
+ "account": "Packhorse",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "08d0d7dc-d12a-4375-9205-aae4945b08bd",
+ "count": 0,
+ "ok": false,
+ "at": 1795711833844,
+ "detail": "trade claimed"
+}
