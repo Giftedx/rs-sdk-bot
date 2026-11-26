@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713467399-2",
  "account": "Ballspinner",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "e0ea910c-d1f2-4f03-a297-8ae0a05fb36a",
- "count": 0,
- "ok": false,
- "at": 1795713657445,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795713681558,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795713665620
+ },
+ "logout": {
+  "attemptId": "1795713657526-0000019848-0000000001",
+  "at": 1795713681549,
+  "sha256": "669255e5d639de823b472a3b76197f4c7400afe6b6a8773c16a88828325c904d"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795713519978,
+ "at": 1795713684244,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,14 +186,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "98",
+    "MAX_ITEMS": "73",
     "COIN_RESERVE": "1000",
-    "FLOAT": "21600",
+    "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "98"
+    "BATCH_UNITS": "73"
    },
    "enabled": true,
    "repeat": false,
@@ -201,7 +201,7 @@
    "role": "auto"
   },
   {
-   "account": "Packhorse",
+   "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -223,6 +223,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:39",
+   "role": "auto"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1313",
    "role": "helper"
   },
   {
@@ -268,7 +293,7 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "Unsheathed",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -278,14 +303,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
@@ -293,32 +318,32 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
+   "account": "Billionaire",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "15",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:tipmyshaft:item:39",
+    "BATCH_UNITS": "15"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "auto"
+   "goal": "campaign:tipmyshaft:item:39",
+   "role": "army"
   },
   {
-   "account": "MineYourBiz",
+   "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -340,7 +365,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1315",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "CoinCock",
@@ -349,14 +374,14 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1511-2-p55",
+    "ORDER_KEY": "brain-1511-1-p55",
     "ITEM_ID": "1511",
-    "QUANTITY": "2",
+    "QUANTITY": "1",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "55",
     "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "2"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -389,32 +414,7 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "39",
-    "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "15",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:tipmyshaft:item:39",
-    "BATCH_UNITS": "15"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:tipmyshaft:item:39",
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
+   "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -435,7 +435,32 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "mmtha0205",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "15",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "15"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -453,6 +478,27 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:317",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1436-323-p61",
+    "ITEM_ID": "1436",
+    "QUANTITY": "323",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "61",
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "323"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
    "role": "army"
   },
   {
@@ -482,18 +528,27 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-1-p117 ITEM_ID=2351 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=117 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=1 -- smithing anvil 1500"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "555",
+    "ITEMS": "Water rune",
+    "MAX_ITEMS": "636",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:555",
+    "BATCH_UNITS": "636"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "campaign:haggis:item:555",
    "role": "army"
   }
  ],
