@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720576967-1",
+ "account": "Moneyshot",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold ore",
+ "requested": 35,
+ "claim": "66ed465a-bd14-4066-a183-19c627eafc7c",
+ "count": 0,
+ "ok": false,
+ "at": 1795720844429,
+ "detail": "trade claimed"
+}

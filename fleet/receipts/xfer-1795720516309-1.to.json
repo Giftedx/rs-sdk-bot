@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720516309-1",
+ "account": "Fingersmith",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 1970,
+ "claim": "4969a51f-338a-4f74-a9f5-fcc48a7bfb97",
+ "count": 0,
+ "ok": false,
+ "at": 1795720832664,
+ "detail": "trade claimed"
+}

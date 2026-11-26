@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720037811-2",
+ "account": "Packhorse",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "03a70553-272e-480b-b88d-e58b3a5f9015",
+ "count": 0,
+ "ok": false,
+ "at": 1795720839129,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720667538,
+ "at": 1795720845270,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,38 +90,6 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -199,6 +167,38 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
+   "account": "AFKnight",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
     "magearena"
    ],
    "env": {
@@ -208,37 +208,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
@@ -258,17 +227,18 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "tree"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
+   "goal": "goal:quest_board:tree",
    "role": "auto"
   },
   {
@@ -304,6 +274,21 @@
    "role": "auto"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto"
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/ranged-train.ts",
    "args": [],
@@ -319,19 +304,19 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
+   "goal": "goal:quest_board:biohazard",
+   "role": "helper"
   }
  ],
  "army": [
@@ -350,7 +335,9 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pickpockdick",
