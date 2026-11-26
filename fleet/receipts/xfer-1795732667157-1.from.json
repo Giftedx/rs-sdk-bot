@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795732667157-1",
  "account": "Wandwaver",
  "partner": "Moneyshot",
@@ -12,6 +12,16 @@
  "claim": "f5cee866-e4ba-4c52-bf04-43ac419ac00e",
  "count": 0,
  "ok": false,
- "at": 1795732787571,
- "detail": "trade claimed"
+ "at": 1795732812912,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795732796987
+ },
+ "logout": {
+  "attemptId": "1795732787580-0000018880-0000000001",
+  "at": 1795732812904,
+  "sha256": "a63d0f558fa401f53aa24d9149463aed5b7478d14e5925e5e18ef24949fb7311"
+ },
+ "screen": false
 }

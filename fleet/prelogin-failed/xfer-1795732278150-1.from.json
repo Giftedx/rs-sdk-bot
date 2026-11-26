@@ -5,6 +5,6 @@
  "account": "FishAndChips",
  "partner": "Fingersmith",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795732500286,
+ "at": 1795732808252,
  "detail": "Error: fleet account claim held by swarm"
 }
