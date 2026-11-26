@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795729933892-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "Pullmybow",
+  "item": "Sapphire ring",
+  "count": 1,
+  "itemId": 1637,
+  "start": 1795729933892,
+  "end": 1795730833892,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

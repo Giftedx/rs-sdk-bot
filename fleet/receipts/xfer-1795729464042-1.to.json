@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729464042-1",
+ "account": "SporranBulge",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 1,
+ "claim": "45976203-383b-4d82-9ff3-84d1f8042981",
+ "count": 1,
+ "ok": true,
+ "at": 1795729917894,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795729917096
+ },
+ "logout": {
+  "attemptId": "1795729905735-0000019184-0000000001",
+  "at": 1795729917869,
+  "sha256": "a81fd184f7276bb8a3e58282d5ee6edb706db788d7ee459b9f261b77c03f1851"
+ },
+ "screen": true
+}

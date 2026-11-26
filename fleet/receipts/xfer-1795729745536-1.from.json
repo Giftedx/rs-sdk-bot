@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729745536-1",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold ore",
+ "requested": 35,
+ "claim": "7d38e25f-85a7-466c-93ee-03d8aae0e751",
+ "count": 0,
+ "ok": false,
+ "at": 1795729930494,
+ "detail": "trade claimed"
+}
