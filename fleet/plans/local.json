@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727553735,
+ "at": 1795727583624,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -217,21 +217,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=10 TARGET_COUNT=29 CAP=1000 -- fletching shafts",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
   }
  ],
  "army": [
@@ -250,6 +235,7 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "mineyourbiz",
   "mmtha0205",
   "moneyshot",
   "oreelse",
