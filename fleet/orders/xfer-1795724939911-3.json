@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795724939911-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "TossTheCaber",
+  "item": "Bones",
+  "count": 58,
+  "itemId": 526,
+  "start": 1795724939911,
+  "end": 1795725839911,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
