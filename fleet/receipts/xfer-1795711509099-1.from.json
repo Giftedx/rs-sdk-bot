@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711509099-1",
  "account": "Packhorse",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "08d0d7dc-d12a-4375-9205-aae4945b08bd",
- "count": 0,
- "ok": false,
- "at": 1795711833844,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795711860865,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795711839716
+ },
+ "logout": {
+  "attemptId": "1795711833853-0000011320-0000000001",
+  "at": 1795711860851,
+  "sha256": "5bd5ead33e3cfa0f1bf0a6f9a05fabdf3ba4f34dc316cd642e87cb578f2d6ee3"
+ },
+ "screen": true
 }
