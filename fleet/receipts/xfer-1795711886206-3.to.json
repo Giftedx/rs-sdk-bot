@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711886206-3",
  "account": "Woodenstaff",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 27,
  "claim": "24436739-762d-4b3d-acb7-5c64fae513af",
- "count": 0,
- "ok": false,
- "at": 1795712142771,
- "detail": "trade claimed"
+ "count": 27,
+ "ok": true,
+ "at": 1795712160394,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 27
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795712159303
+ },
+ "logout": {
+  "attemptId": "1795712142781-0000025152-0000000001",
+  "at": 1795712160040,
+  "sha256": "7b5a6146534d27517d55f76fca3d5aca33df6cfd405179982e985b8a3eaa7e9a"
+ },
+ "screen": true
 }
