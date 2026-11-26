@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795708625151-1",
+ "account": "Unsheathed",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff",
+ "requested": 1,
+ "claim": "fa6336a3-272c-4e4a-aa2f-ad7b0d9d9d7c",
+ "count": 1,
+ "ok": true,
+ "at": 1795708902597,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795708901867
+ },
+ "logout": {
+  "attemptId": "1795708891006-0000019440-0000000001",
+  "at": 1795708902588,
+  "sha256": "158e9d2ad23bbf76a927b6dd8148589d0d3e4cfb47cc4d975498f918a3c95b8a"
+ },
+ "screen": true
+}

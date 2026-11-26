@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795708625151-1",
  "account": "Billionaire",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Staff",
  "requested": 1,
  "claim": "ac31a699-a867-4ce1-8da5-5f184ed60083",
- "count": 0,
- "ok": false,
- "at": 1795708734406,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795708901013,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795708880669
+ },
+ "logout": {
+  "attemptId": "1795708734414-0000025708-0000000001",
+  "at": 1795708901002,
+  "sha256": "223b7a7e90155fbf6b43ef22f0348a5551a070b4e9678e7ab6fcf14b79b6233d"
+ },
+ "screen": true
 }
