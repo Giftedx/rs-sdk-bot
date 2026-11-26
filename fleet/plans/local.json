@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717840772,
+ "at": 1795717864934,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -67,7 +67,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1353"
+    "BATCH_UNITS": "326"
    },
    "enabled": true,
    "repeat": false,
@@ -212,19 +212,18 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/aio-quester.ts",
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "ball"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 -- sweep itwatchtower"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ball",
+   "goal": "goal:quest_board:itwatchtower",
    "role": "army"
   }
  ],
@@ -242,6 +241,7 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
@@ -249,7 +249,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",
