@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795729745536-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "OreElse",
+  "item": "Gold ore",
+  "count": 35,
+  "itemId": 444,
+  "start": 1795729745536,
+  "end": 1795730645536,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

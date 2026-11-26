@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795729481635-1",
  "account": "Spitroaster",
  "partner": "AFKnight",
@@ -10,15 +10,37 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "dde404f1-3f83-4a12-ba12-b91946a3a0bf",
- "count": 0,
- "ok": false,
- "at": 1795729603541,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795729746283,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Chocolate bar",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795729729122
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795729727898
+ },
+ "logout": {
+  "attemptId": "1795729603552-0000015196-0000000001",
+  "at": 1795729746269,
+  "sha256": "004ffb29d3c210f50b69967eecbedde92c1cef880077366e0f62216bf5a49995"
+ },
+ "screen": true
 }

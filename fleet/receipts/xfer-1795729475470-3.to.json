@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729475470-3",
+ "account": "Magicwanda",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "54530c9a-2407-44e9-8d8b-c6939615aed9",
+ "count": 1,
+ "ok": true,
+ "at": 1795729725068,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795729724317
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795729723933
+ },
+ "logout": {
+  "attemptId": "1795729712509-0000020964-0000000001",
+  "at": 1795729725058,
+  "sha256": "8d94a03dea07931077941832c215e98906b7c1ea5378ea8292a9ba67093640c9"
+ },
+ "screen": true
+}

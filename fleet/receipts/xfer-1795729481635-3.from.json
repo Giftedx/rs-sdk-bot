@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795729481635-3",
  "account": "mmtha0205",
  "partner": "ChaosInPants",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 117,
  "claim": "dc622a5f-5852-4334-bc58-8da3461b832b",
- "count": 0,
- "ok": false,
- "at": 1795729570016,
- "detail": "trade claimed"
+ "count": 117,
+ "ok": true,
+ "at": 1795729744277,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9060,
+  "after": 8943
+ },
+ "logout": {
+  "attemptId": "1795729570049-0000006640-0000000001",
+  "at": 1795729744265,
+  "sha256": "d45874a211d174d8baae9d3503c5f604addb35a81610fd1a2f95eeac094f88e2"
+ },
+ "screen": true
 }
