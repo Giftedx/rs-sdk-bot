@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795730074307,
+ "at": 1795730098634,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -160,6 +160,27 @@
    "role": "auto"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "gold"
+   ],
+   "env": {
+    "BAR_TYPE": "gold",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "goal:supply_chain:2357",
+    "BATCH_UNITS": "35"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2357",
+   "role": "army"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -280,22 +301,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=14 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy shantayshop 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
   }
  ],
  "army": [
@@ -317,7 +322,6 @@
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -326,7 +330,8 @@
   "sausagefest",
   "sporrandip",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

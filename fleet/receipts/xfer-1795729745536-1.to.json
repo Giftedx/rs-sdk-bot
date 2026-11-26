@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795729745536-1",
  "account": "OreElse",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Gold ore",
  "requested": 35,
  "claim": "5e3b23f1-75f9-4b51-bbc6-59abe7f4b335",
- "count": 0,
- "ok": false,
- "at": 1795730055921,
- "detail": "trade claimed"
+ "count": 35,
+ "ok": true,
+ "at": 1795730084256,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 35
+ },
+ "bank": {
+  "count": 35,
+  "at": 1795730083546
+ },
+ "logout": {
+  "attemptId": "1795730055937-0000011088-0000000001",
+  "at": 1795730084244,
+  "sha256": "577ffc7875c8e2548aaae08f3eee68fe13e4d31051f83d9ac1df627405ea7050"
+ },
+ "screen": true
 }
