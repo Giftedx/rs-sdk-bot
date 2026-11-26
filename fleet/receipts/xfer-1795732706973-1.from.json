@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732706973-1",
  "account": "BoneToPick",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "ad041bc7-fd25-4c89-a2c5-cc00114aedee",
- "count": 0,
- "ok": false,
- "at": 1795733018822,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795733040500,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795733023808
+ },
+ "logout": {
+  "attemptId": "1795733018832-0000007476-0000000001",
+  "at": 1795733040490,
+  "sha256": "22b3c673c7127f041ace5970bd764158c28c2233d261992053c24b70d045a8cf"
+ },
+ "screen": true
 }
