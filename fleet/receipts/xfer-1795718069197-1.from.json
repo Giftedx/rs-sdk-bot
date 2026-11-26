@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795718069197-1",
+ "account": "Fingerblastr",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 500,
+ "claim": "d33cc766-7382-4f74-ac8a-9b555baa9d08",
+ "count": 0,
+ "ok": false,
+ "at": 1795718355296,
+ "detail": "trade claimed"
+}

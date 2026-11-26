@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718242096-2",
+ "account": "SporranBulge",
+ "partner": "mmthv2350",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "6b95be0d-ab06-4b2d-8a3c-f844107d1782",
+ "count": 10,
+ "ok": true,
+ "at": 1795718338286,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795718324197
+ },
+ "logout": {
+  "attemptId": "1795718315125-0000023584-0000000001",
+  "at": 1795718338134,
+  "sha256": "7af4a217d702b0b4b36e3b1901bdcf8fd528b167154a62992b037534334dd4f8"
+ },
+ "screen": true
+}
