@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795710184431,
+ "at": 1795710196867,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -131,6 +131,22 @@
    "role": "army"
   },
   {
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2353-9-p748 ITEM_ID=2353 QUANTITY=9 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=748 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=41 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:41 BATCH_UNITS=9 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:41",
+   "role": "helper"
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -166,21 +182,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "army"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "helper"
   },
   {
    "account": "Fingerblastr",
