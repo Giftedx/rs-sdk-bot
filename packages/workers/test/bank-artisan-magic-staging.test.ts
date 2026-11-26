@@ -192,7 +192,7 @@ test('a run that hits its tick cap reports cap, not supplies', async () => {
 });
 
 test('a pack Staff of water pays the water runes, so a pack without water runes still enchants', async () => {
-    // The old pack runner equipped the staff before its costs; the banked runner must too.
+    // runItemMagic wields the pack staff before it prices a cast; the banked runner does too.
     const f = bankSession({}, [{ id: RING, count: 1 }, { id: RING, count: 1 }, { id: COSMIC, count: 2 }, { id: STAFF_OF_WATER, count: 1 }]);
     try {
         const out = await runItemMagicBanked(f.s, f.r, { count: 2, cap: 400 });

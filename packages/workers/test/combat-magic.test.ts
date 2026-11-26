@@ -1485,7 +1485,7 @@ test('the coop site takes Wind Strike runes from a bank in reach when the pack h
     let staged = false;
     f.s.bot.closeBank = async () => { staged = true; return close(); };
     try {
-        // CoinCock: Magic 1, an empty pack and SPLASH_SITE=coop ended at once with stop=supplies.
+        // Magic 1, an empty pack and the coop site: without bank staging the run stops at once on supplies.
         const res = await runSplash(f.s, { target: 19, cap: 500, site: coop, stop: () => staged, walkTo: f.walkTo });
         expect(res.stop).not.toBe('supplies');
         expect(f.withdraws.map(w => w.id).sort()).toEqual([AIR, MIND].sort());
