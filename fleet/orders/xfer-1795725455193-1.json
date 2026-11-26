@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795725455193-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Woodenstaff",
+  "item": "Prayer potion(4)",
+  "count": 1,
+  "itemId": 2434,
+  "start": 1795725455193,
+  "end": 1795726355193,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725359600-1",
+ "account": "Ballbag",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 224,
+ "claim": "b4f1dc7b-6dcd-42ea-b991-0f3a20a253b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795725459172,
+ "detail": "trade claimed"
+}

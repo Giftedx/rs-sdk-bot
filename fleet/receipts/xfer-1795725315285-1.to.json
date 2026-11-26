@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725315285-1",
  "account": "mmtha0205",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 8257,
  "claim": "99251075-0b0d-4707-8f27-cd7fa65cf2c9",
- "count": 0,
- "ok": false,
- "at": 1795725440122,
- "detail": "trade claimed"
+ "count": 8257,
+ "ok": true,
+ "at": 1795725453840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 863,
+  "after": 9120
+ },
+ "bank": {
+  "count": 8257,
+  "at": 1795725453053
+ },
+ "logout": {
+  "attemptId": "1795725440132-0000023972-0000000001",
+  "at": 1795725453828,
+  "sha256": "f4efe0f1efb1632c002eaa0e4b9c86400559f04bb23c35e8e756fea8eb7af1e0"
+ },
+ "screen": true
 }

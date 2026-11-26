@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724777445-2",
  "account": "CoinCock",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Tin ore",
  "requested": 9,
  "claim": "f5de2f51-09a5-463c-80dc-98b23731e28f",
- "count": 0,
- "ok": false,
- "at": 1795725273673,
- "detail": "trade claimed"
+ "count": 9,
+ "ok": true,
+ "at": 1795725453452,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9,
+  "after": 0
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795725442258
+ },
+ "logout": {
+  "attemptId": "1795725273681-0000025172-0000000001",
+  "at": 1795725453442,
+  "sha256": "749ba89d9f781621067cdc8818edb6173fdf6cc6efee5e970a69e040e535c858"
+ },
+ "screen": true
 }
