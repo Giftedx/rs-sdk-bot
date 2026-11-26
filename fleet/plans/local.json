@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795712642173,
+ "at": 1795712653667,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
@@ -192,24 +192,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "clotheshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1061",
-    "ITEMS": "Leather boots",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "16",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1061",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1061",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
