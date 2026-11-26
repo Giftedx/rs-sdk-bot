@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795723021219-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "AFKnight",
+  "item": "Coins",
+  "count": 360,
+  "itemId": 995,
+  "start": 1795723021219,
+  "end": 1795723921219,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
