@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713475353-1",
+ "account": "Wandwaver",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "8cb7d5ca-07a7-4b44-b7f4-88d29b1ce03c",
+ "count": 0,
+ "ok": false,
+ "at": 1795713801349,
+ "detail": "trade claimed"
+}
