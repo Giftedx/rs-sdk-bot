@@ -18,7 +18,7 @@ import {
 import { DEFAULT_FOOD_TYPE, foodRule } from '../../workers/src/bank-artisan/cooking';
 import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
 import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
-import { itemMagicRecipe, nativeTeleport } from '../../workers/src/bank-artisan/magic';
+import { BONES_PER_CAST, BONES_TO_BANANAS_RUNES, itemMagicRecipe, nativeTeleport } from '../../workers/src/bank-artisan/magic';
 import { nativeNpcSpell } from '../../core/src/magic-data';
 import { smeltRecipe, smithRecipe } from '../../workers/src/bank-artisan/smithing';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
@@ -394,6 +394,10 @@ const spellInputs = (runes: Readonly<Record<number, number>>): readonly Activity
 const itemSpellSeed = (mode: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(itemMagicRecipe(mode).inputs) });
 const teleportSeed = (name: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(nativeTeleport(name).runes) });
 const npcSpellSeed = (name: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(nativeNpcSpell(name).runes) });
+// Bones to Bananas: one unit is one bone, and one cast converts BONES_PER_CAST of them.
+const bonesSeed = (): Partial<SkillerSeed> => ({
+    inputs: [{ itemId: 526, countPerUnit: 1 }, ...spellInputs(BONES_TO_BANANAS_RUNES).map((io) => ({ ...io, countPerUnit: io.countPerUnit / BONES_PER_CAST }))],
+});
 
 const SKILLER_SPECS: readonly SkillerSeed[] = [
     // Fishing
@@ -472,7 +476,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'magic', method: 'trip', script: 'scripts/aio-skiller.ts', label: 'Bank-staged magic training trip', location: HUB_TILES.varrock_west, xpPerTick: 290, unitsPerTick: 0.22, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 25 },
     { skill: 'magic', method: 'orbs', script: 'scripts/aio-skiller.ts', label: 'Bank-to-obelisk orb charging trip', location: HUB_TILES.varrock_west, xpPerTick: 160, unitsPerTick: 0.08, gpPerTick: 8, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '3000'], defaultEnv: { ORB_TRIP: '1' } },
     { skill: 'magic', method: 'orbs-at-site', script: 'scripts/aio-skiller.ts', label: 'At-obelisk orb charging batch', location: HUB_TILES.catherby, xpPerTick: 250, unitsPerTick: 0.22, gpPerTick: 10, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '1200'] },
-    { skill: 'magic', method: 'bones', script: 'scripts/aio-skiller.ts', label: 'Bones to Bananas conversion', location: HUB_TILES.draynor, xpPerTick: 150, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 15 },
+    { skill: 'magic', method: 'bones', script: 'scripts/aio-skiller.ts', label: 'Bones to Bananas conversion', location: HUB_TILES.draynor, xpPerTick: 150, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 15, resolve: bonesSeed },
     { skill: 'magic', trainingSkill: 'Runecraft', method: 'earth-production', script: 'scripts/aio-skiller.ts', label: 'Earth rune production for magic/superheat', location: HUB_TILES.varrock_east, spotId: 'earth-altar', maxConcurrentAccounts: 4, xpPerTick: 32, unitsPerTick: 0.2, gpPerTick: 2, minBatchUnits: 27, requiredSkills: { Runecraft: 9 }, requiredQuests: ['runemysteries'], requiredTools: [1440], inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 557, countPerUnit: 1 }], defaultArgs: ['craft', '2000'] },
     { skill: 'magic', method: 'alch-train', script: 'scripts/aio-skiller.ts', label: 'Low/High Alchemy bank training at Ardougne', location: HUB_TILES.ardougne_north, xpPerTick: 325, unitsPerTick: 0.2, gpPerTick: -2, minBatchUnits: 50, requiredLevel: 21, defaultArgs: ['55', '3000'], inputs: [{ itemId: 561, countPerUnit: 1 }, { itemId: 314, countPerUnit: 1 }] },
     { skill: 'magic', method: 'splash', script: 'scripts/aio-skiller.ts', label: 'Curse splash over Ardougne cow fence', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, xpPerTick: 145, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 19, defaultArgs: ['55', '3000'], resolve: npcSpellSeed('curse') },
