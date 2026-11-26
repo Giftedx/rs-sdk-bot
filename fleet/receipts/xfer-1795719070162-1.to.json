@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795719070162-1",
+ "account": "mmtha0205",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "f49eb6b1-4cda-4dd4-8167-c3f9c676b1ab",
+ "count": 0,
+ "ok": false,
+ "at": 1795719407057,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718483051-2",
+ "account": "Pocketpython",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "3c63eeb7-682b-4dbc-8bb1-17a1f98078b2",
+ "count": 1,
+ "ok": true,
+ "at": 1795719370936,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795719370204
+ },
+ "logout": {
+  "attemptId": "1795719355520-0000023116-0000000001",
+  "at": 1795719370926,
+  "sha256": "120866597f90a2c8f3c757513117ceda2e31ae6fd86dfea62f8c86824bf37ce0"
+ },
+ "screen": true
+}

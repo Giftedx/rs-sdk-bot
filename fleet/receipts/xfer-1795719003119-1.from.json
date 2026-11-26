@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795719003119-1",
+ "account": "Quickhandjob",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "ab028b64-514c-41a5-bddd-203a9cb268aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795719387372,
+ "detail": "trade claimed"
+}
