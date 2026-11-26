@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795721286275-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "8b0e0b0c-bd1c-4924-90b8-280cb1719832",
+ "count": 0,
+ "ok": false,
+ "at": 1795721563113,
+ "detail": "trade claimed"
+}

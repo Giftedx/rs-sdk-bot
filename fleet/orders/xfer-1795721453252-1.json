@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795721453252-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "SporranDip",
+  "item": "Ranarr weed",
+  "count": 1,
+  "itemId": 257,
+  "start": 1795721453252,
+  "end": 1795722353252,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

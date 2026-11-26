@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795721344791-3",
+ "account": "Pocketpython",
+ "partner": "AFKnight",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "771e9943-0e45-45ed-aec0-6e67ebd91133",
+ "count": 0,
+ "ok": false,
+ "at": 1795721490610,
+ "detail": "trade claimed"
+}

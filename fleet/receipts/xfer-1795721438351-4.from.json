@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795721438351-4",
+ "account": "BoneToPick",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "6824a33e-2aa2-4162-a327-1b7b6a36c267",
+ "count": 0,
+ "ok": false,
+ "at": 1795721581419,
+ "detail": "trade claimed"
+}

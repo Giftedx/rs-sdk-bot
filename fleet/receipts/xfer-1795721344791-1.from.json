@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795721344791-1",
+ "account": "Fingersmith",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "0ffaf2d1-0d24-4362-8670-2cf4887da4d4",
+ "count": 300,
+ "ok": true,
+ "at": 1795721556801,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795721543233
+ },
+ "logout": {
+  "attemptId": "1795721535321-0000029876-0000000001",
+  "at": 1795721556788,
+  "sha256": "12895e111329f0c6cb684ce58afac6f76817d56a10df673947bdd1defa34ef5f"
+ },
+ "screen": true
+}
