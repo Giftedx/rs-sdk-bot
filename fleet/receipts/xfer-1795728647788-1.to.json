@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795728647788-1",
+ "account": "Quickhandjob",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 145,
+ "claim": "3cf3a5cb-5eea-4d43-a161-9404000691a8",
+ "count": 145,
+ "ok": true,
+ "at": 1795728858788,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 145
+ },
+ "bank": {
+  "count": 145,
+  "at": 1795728858011
+ },
+ "logout": {
+  "attemptId": "1795728846554-0000017868-0000000001",
+  "at": 1795728858674,
+  "sha256": "a1d27a55b4ae5603b261467b3b9ca0fa8e68cced74288fac421bb0ee0230c725"
+ },
+ "screen": true
+}

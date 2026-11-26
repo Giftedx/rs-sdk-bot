@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795728713566-1",
+ "account": "Swordinhand",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "f6150f98-562c-42c1-82d8-f60c705557f7",
+ "count": 0,
+ "ok": false,
+ "at": 1795728849754,
+ "detail": "trade claimed"
+}

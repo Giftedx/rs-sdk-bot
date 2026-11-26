@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795728651828-1",
+ "account": "Fatstack",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 1,
+ "claim": "926f11b6-fcf9-4dda-976c-7fe6e027f4ca",
+ "count": 0,
+ "ok": false,
+ "at": 1795728811384,
+ "detail": "trade claimed"
+}
