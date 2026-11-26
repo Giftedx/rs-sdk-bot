@@ -180,6 +180,7 @@ test('randomevents facade preserves all public runtime exports and content resol
         'mazeWalls',
         'outOfReach',
         'solveCube',
+        'targetsMe',
         'watchRandomEvents',
     ]);
     expect(mod.loadDanger().size).toBeGreaterThan(0);

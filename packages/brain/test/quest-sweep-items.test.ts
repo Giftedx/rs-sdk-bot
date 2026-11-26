@@ -129,7 +129,8 @@ test('a quest preflight asks for the coins that the sweep takes for its shop buy
 });
 
 test('the planner chains a purchase of a missing quest item before the quest', () => {
-    const acct = makeAcct();
+    // 6 sharks meet the Priest in Peril fight floor (catalog.ts QUEST_FIGHT_FLOORS), so only the quest item is bought.
+    const acct = makeAcct({ bank: { items: { 995: 200_000, 385: 6 }, observedAt: NOW - 10_000, trusted: true } });
     const plan = planAccount(acct, {
         world: worldOf(acct),
         activities: [quest('priestperil')],

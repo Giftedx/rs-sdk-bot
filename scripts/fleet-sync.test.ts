@@ -536,6 +536,34 @@ test('a settled receipt left in an autostash entry by a failed pull comes back, 
     }
 }, 30_000);
 
+test('of two autostash entries that change one receipt, the newer one wins and both entries go', () => {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000, windowsHide: true }).trim();
+    const base = mkdtempSync(join(tmpdir(), 'fleet-autostash2-'));
+    const saved = { name: process.env.GIT_AUTHOR_NAME, email: process.env.GIT_AUTHOR_EMAIL, cname: process.env.GIT_COMMITTER_NAME, cemail: process.env.GIT_COMMITTER_EMAIL };
+    Object.assign(process.env, { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@localhost', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@localhost' });
+    try {
+        const here = join(base, 'here');
+        g(base, 'init', '-q', '-b', 'fleet-data', here);
+        const receipt = join(here, 'fleet', 'receipts', 'xfer-1-1.from.json'), other = join(here, 'fleet', 'receipts', 'xfer-2-1.from.json');
+        mkdirSync(dirname(receipt), { recursive: true });
+        for (const f of [receipt, other]) writeFileSync(f, '{"state":"prepared"}\n');
+        g(here, 'add', '.'); g(here, 'commit', '-qm', 'sync');
+        // The older entry holds 'reconcile' and a second receipt; the newer entry holds 'settled'.
+        writeFileSync(receipt, '{"state":"reconcile"}\n'); writeFileSync(other, '{"state":"settled"}\n');
+        g(here, 'stash', 'store', '-m', 'autostash', g(here, 'stash', 'create')); g(here, 'reset', '-q', '--hard');
+        writeFileSync(receipt, '{"state":"settled"}\n');
+        g(here, 'stash', 'store', '-m', 'autostash', g(here, 'stash', 'create')); g(here, 'reset', '-q', '--hard');
+        expect(restoreAutostashes(here).sort()).toEqual(['fleet/receipts/xfer-1-1.from.json', 'fleet/receipts/xfer-2-1.from.json']);
+        expect(readFileSync(receipt, 'utf8').replace(/\r/g, '')).toBe('{"state":"settled"}\n');
+        expect(readFileSync(other, 'utf8').replace(/\r/g, '')).toBe('{"state":"settled"}\n');
+        expect(g(here, 'stash', 'list', '--format=%gs')).toBe('');
+    } finally {
+        for (const [k, v] of [['GIT_AUTHOR_NAME', saved.name], ['GIT_AUTHOR_EMAIL', saved.email], ['GIT_COMMITTER_NAME', saved.cname], ['GIT_COMMITTER_EMAIL', saved.cemail]] as const) if (v === undefined) delete process.env[k]; else process.env[k] = v;
+        rmSync(base, { recursive: true, force: true });
+    }
+}, 30_000);
+
 test('a clone of master alone gets the published fleet-data branch, never one made from the code', () => {
     const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
     const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000, windowsHide: true }).trim();

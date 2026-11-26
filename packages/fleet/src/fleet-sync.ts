@@ -547,16 +547,21 @@ const rebaseStopped = (dir: string) => {
 // "autostash" and leaves those paths at HEAD or in conflict. The local changes are this side's receipts, and a settled
 // receipt kept there holds its trade claim for good: releasePublishedTradeClaims reads the committed receipt. Each
 // autostash entry made on this branch puts back each of its fleet/ paths that HEAD still holds as the entry's base had
-// it, and the entry is then dropped. A path with a newer commit since the base, or a newer local write, keeps the newer
-// content. A path in conflict goes back to HEAD first. Returns the paths put back.
+// it. The newest entry goes first, so of two entries that change one receipt the newer content wins. A path with a
+// newer commit since the base, or a newer local write (a newer entry put back first included), keeps the newer
+// content. A path in conflict goes back to HEAD first. An entry is dropped only when each of its paths was put back or
+// has newer content; an entry with a path that could not be put back stays for a later sync. Returns the paths put back.
 export function restoreAutostashes(dir: string): string[] {
-    const list = git(dir, 'stash', 'list', '--format=%gd%x00%H%x00%P%x00%gs');
-    if (!list.ok || !list.out) return [];
+    const stashList = () => {
+        const list = git(dir, 'stash', 'list', '--format=%gd%x00%H%x00%P%x00%gs');
+        return list.ok && list.out ? list.out.split(/\r?\n/).map(line => line.split('\0')) : [];
+    };
     const unmerged = new Set(git(dir, 'diff', '--name-only', '--diff-filter=U').out.split(/\r?\n/).map(l => l.trim()).filter(Boolean));
     const restored: string[] = [];
-    const entries = list.out.split(/\r?\n/).map(line => line.split('\0')).filter(([ref, hash, parents, subject]) =>
+    // `git stash list` gives the newest entry first (stash@{0}).
+    const entries = stashList().filter(([ref, hash, parents, subject]) =>
         /^stash@\{\d+\}$/.test(ref ?? '') && /^[0-9a-f]{40}$/.test(hash ?? '') && !!parents && subject === 'autostash');
-    for (const [ref, hash, parents] of entries.reverse()) {
+    for (const [, hash, parents] of entries) {
         const base = parents!.split(' ')[0]!;
         if (!git(dir, 'merge-base', '--is-ancestor', base, 'HEAD').ok) continue;
         const diff = git(dir, 'diff', '--name-status', '--no-renames', '-z', base, hash!);
@@ -564,17 +569,21 @@ export function restoreAutostashes(dir: string): string[] {
         const fields = diff.out.split('\0').filter(Boolean), changes: [string, string][] = [];
         for (let i = 0; i + 1 < fields.length; i += 2) changes.push([fields[i]!, fields[i + 1]!]);
         if (!changes.length || !changes.every(([, path]) => path.startsWith('fleet/'))) continue;
+        let kept = false;
         for (const [status, path] of changes) {
             if (unmerged.has(path) && git(dir, 'checkout', 'HEAD', '--', path).ok) unmerged.delete(path);
-            if (unmerged.has(path) || !git(dir, 'diff', '--quiet', base, 'HEAD', '--', path).ok) continue;
+            if (unmerged.has(path)) { kept = true; continue; }
+            if (!git(dir, 'diff', '--quiet', base, 'HEAD', '--', path).ok) continue;
             if (!git(dir, 'diff', '--quiet', 'HEAD', '--', path).ok || (status === 'A' && existsSync(join(dir, path)))) continue;
             if (status === 'D') rmSync(join(dir, path), { force: true });
-            else if (!git(dir, 'checkout', hash!, '--', path).ok) continue;
+            else if (!git(dir, 'checkout', hash!, '--', path).ok) { kept = true; continue; }
             restored.push(path);
         }
-        // The stash list is shared with the code checkout: drop the entry only while its ref still names this commit.
-        const now = git(dir, 'rev-parse', '--verify', '-q', ref!);
-        if (now.ok && now.out === hash) git(dir, 'stash', 'drop', '-q', ref!);
+        if (kept) continue;
+        // The stash list is shared with the code checkout, and each drop renumbers the entries after it: drop the entry
+        // by the ref that names this commit now.
+        const ref = stashList().find(([, h]) => h === hash)?.[0];
+        if (ref && /^stash@\{\d+\}$/.test(ref)) git(dir, 'stash', 'drop', '-q', ref);
     }
     return restored;
 }

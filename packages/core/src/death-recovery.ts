@@ -9,7 +9,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { lootRisk, unitValue, type LootTables } from './loot';
 import { wildernessLevel } from './prayer-guard';
-import { targetsMe } from './randomevents/model';
+import { targetsMe } from './randomevents';
 import { waitUntil, type TickSource } from './ticks';
 
 export type Tile = { x: number; z: number; level: number };
