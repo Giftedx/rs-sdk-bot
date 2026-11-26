@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795732383253,
+ "at": 1795732495496,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2260 TARGET_COUNT=226 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 PRODUCT_TARGET=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -74,18 +74,18 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-pvp.ts",
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
    "args": [
-    "__escort-ore"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "6"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:haggis:item:91",
    "role": "army"
   },
   {
@@ -132,21 +132,6 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "6"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -179,6 +164,26 @@
    "role": "auto"
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/aio-pvp.ts",
    "args": [
@@ -191,24 +196,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
    "role": "army"
   },
   {
@@ -288,23 +275,78 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
+   "account": "Wandwaver",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "identify:avantoe"
+    "brew:unf_harralander_potion"
    ],
    "env": {
     "MAX_MAKE": "1",
-    "CAP": "600",
+    "CAP": "1200",
     "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:261",
-    "BATCH_UNITS": "4"
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:261",
+   "goal": "campaign:haggis:item:97",
+   "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:hiltsdeep:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
    "role": "army"
   }
  ],
@@ -316,6 +358,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "bowbeforeme",
   "dipstick",
   "fingerblastr",

@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795732113586-1",
+ "account": "SporranBulge",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "5ec0c018-2231-4b83-a91a-a047f44b7d32",
+ "count": 1,
+ "ok": true,
+ "at": 1795732493736,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795732442274-0000027060-0000000001",
+  "at": 1795732493723,
+  "sha256": "4c8e2702b98d80ab4d8cdbf753ca836a42d5e60f6243ebc277c4ec4643a9d62d"
+ },
+ "screen": true
+}
