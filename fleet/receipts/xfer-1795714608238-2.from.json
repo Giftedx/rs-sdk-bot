@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795714608238-2",
+ "account": "BoneToPick",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "717affe9-d224-48cd-9a36-cb3c39bbf100",
+ "count": 0,
+ "ok": false,
+ "at": 1795715386999,
+ "detail": "trade claimed"
+}

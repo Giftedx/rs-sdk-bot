@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795715103968-1",
+ "account": "Hocuspokeus",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 20,
+ "claim": "c83fe67a-6321-4491-af77-0c63c6af748f",
+ "count": 0,
+ "ok": false,
+ "at": 1795715374019,
+ "detail": "trade claimed"
+}

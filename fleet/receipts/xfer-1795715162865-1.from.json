@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795715162865-1",
+ "account": "Ballspinner",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "0c48a128-efd2-4372-97a2-f585a18d359e",
+ "count": 0,
+ "ok": false,
+ "at": 1795715343226,
+ "detail": "trade claimed"
+}
