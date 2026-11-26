@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723801239,
+ "at": 1795723816222,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,39 +74,20 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "foraging",
+    "feathers"
    ],
    "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:lochnessrod:item:314",
+   "role": "army"
   },
   {
    "account": "mmthv2350",
@@ -167,8 +148,8 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-453-154-p517 ITEM_ID=453 QUANTITY=154 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=77 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -177,22 +158,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "auto"
   },
   {
    "account": "Shaftsinker",
@@ -210,19 +175,55 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
+   "account": "Woodenstaff",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "tree"
+    "barcrawl"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "grind:chocolate_bar"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:grindmyherb:item:1975",
+    "BATCH_UNITS": "3"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
   }
  ],
