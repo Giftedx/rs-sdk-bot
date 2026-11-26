@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712732620-1",
  "account": "Woodpecker",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 13,
  "claim": "b149dc95-8f55-47c5-91bd-a9ae75801d83",
- "count": 0,
- "ok": false,
- "at": 1795712995354,
- "detail": "trade claimed"
+ "count": 13,
+ "ok": true,
+ "at": 1795713116791,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 13,
+  "after": 0
+ },
+ "bank": {
+  "count": 13,
+  "at": 1795713058046
+ },
+ "logout": {
+  "attemptId": "1795712995365-0000020224-0000000001",
+  "at": 1795713116781,
+  "sha256": "b37a268df915dcebbd770eb328afd942a2ff2e52809659b83c99d6095e0c88df"
+ },
+ "screen": true
 }

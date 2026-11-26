@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795713070734,
+ "at": 1795713146918,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,15 +60,27 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/generated/quest-dragon.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "fancyclothesstore",
+    "3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
+    "ITEM_ID": "1061",
+    "ITEMS": "Leather boots",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1061",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dragon",
+   "goal": "campaign:haggis:item:1061",
    "role": "army"
   },
   {
@@ -161,6 +173,21 @@
    "role": "auto"
   },
   {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "auto"
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -171,14 +198,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1415",
+    "MAX_ITEMS": "946",
     "COIN_RESERVE": "1000",
-    "FLOAT": "285000",
+    "FLOAT": "191200",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1415"
+    "BATCH_UNITS": "946"
    },
    "enabled": true,
    "repeat": false,
@@ -196,14 +223,14 @@
    "env": {
     "ITEM_ID": "39",
     "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "60",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "60"
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
@@ -211,49 +238,127 @@
    "role": "auto"
   },
   {
-   "account": "Fingersmith",
+   "account": "Wandwaver",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "smithing",
     "smelt",
     "1500",
-    "bronze"
+    "iron"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
+    "BAR_TYPE": "iron",
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "4"
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=103 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- prayer bury"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "fancyclothesstore",
+    "2handedshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1061",
-    "ITEMS": "Leather boots",
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1061",
+    "DEMAND_ID": "campaign:haggis:item:1313",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1061",
+   "goal": "campaign:haggis:item:1313",
+   "role": "auto"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1315",
+    "ITEMS": "Mithril 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1315",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1315",
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "6",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -282,7 +387,7 @@
    "role": "army"
   },
   {
-   "account": "Abracadickra",
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -290,70 +395,70 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
+    "ITEM_ID": "1311",
+    "ITEMS": "Steel 2h sword",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
+    "DEMAND_ID": "campaign:haggis:item:1311",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1311",
+   "role": "army"
   },
   {
-   "account": "FishAndChips",
+   "account": "Woodpecker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "shantayshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1315",
-    "ITEMS": "Mithril 2h sword",
+    "ITEM_ID": "1937",
+    "ITEMS": "Jug of water",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1315",
+    "DEMAND_ID": "campaign:haggis:item:1937",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1315",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1937",
+   "role": "army"
   },
   {
-   "account": "mmtha0205",
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "6",
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "6"
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   }
  ],
@@ -369,10 +474,10 @@
   "billionaire",
   "dipstick",
   "fatstack",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
   "mmthv2350",
   "oreelse",
   "pocketpool",
@@ -381,9 +486,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
