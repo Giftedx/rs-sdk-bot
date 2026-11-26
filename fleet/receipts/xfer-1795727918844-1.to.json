@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795727918844-1",
+ "account": "Pullmybow",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "cc02abab-26b1-453c-9444-690de7b5c969",
+ "count": 60,
+ "ok": true,
+ "at": 1795728199161,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795728198383
+ },
+ "logout": {
+  "attemptId": "1795728189395-0000025576-0000000001",
+  "at": 1795728199148,
+  "sha256": "944576c7e46748feec8db61c6f388fb45985237f4e52dbae28fed072507ed42b"
+ },
+ "screen": true
+}

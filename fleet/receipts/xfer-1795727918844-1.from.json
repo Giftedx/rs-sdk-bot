@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727918844-1",
  "account": "Fingersmith",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "480a4dc6-eadd-4863-a01c-e40fc2efd606",
- "count": 0,
- "ok": false,
- "at": 1795728026700,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795728197520,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795728177587
+ },
+ "logout": {
+  "attemptId": "1795728026709-0000023784-0000000001",
+  "at": 1795728197507,
+  "sha256": "892ee16a163a5105cf1df98b66fa87959e56033b55cd6af826ee2a6f7eeb7d34"
+ },
+ "screen": true
 }
