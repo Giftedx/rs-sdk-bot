@@ -70,6 +70,17 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         expect(run('RESULT fail Oh dear, you are dead!')).toBe('death');
     });
 
+    test('a quest sweep that could not stage an item names each item and count it misses', () => {
+        const out = classifyRawWorkerExit({ activityId: 'quest:squire', account: 'Bot1', exitCode: 1, status: 'RESULT fail quest-sweep squire missing 2325:1,2351:2 (unsold; others in shops)', ticksElapsed: 60 });
+        expect(out.kind).toBe('missing_supply');
+        expect(out.kind === 'missing_supply' && out.missing).toEqual([
+            { itemId: 2325, required: 1, available: 0 },
+            { itemId: 2351, required: 2, available: 0 },
+        ]);
+        const short = classifyRawWorkerExit({ activityId: 'quest:ball', account: 'Bot1', exitCode: 1, status: 'RESULT fail quest-sweep ball withdraw short 1985:1', ticksElapsed: 40 });
+        expect(short.kind === 'missing_supply' && short.missing).toEqual([{ itemId: 1985, required: 1, available: 0 }]);
+    });
+
     test('classifyRawWorkerExit maps raw process exits to all 8 valid RunOutcome kinds', () => {
         const cases: Array<Parameters<typeof classifyRawWorkerExit>[0]> = [
             { activityId: 'a:1', account: 'Bot1', exitCode: 0, status: 'done', ticksElapsed: 100, unitsCompleted: 20, xpGained: { Woodcutting: 500 } },

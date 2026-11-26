@@ -6,6 +6,7 @@ import { repoRoot } from '../../core/src/practice-paths';
 import { questDefinitions } from '../../core/src/quest-status';
 import { QUEST_SKILLS } from '../../workers/src/quest/chain';
 import { QUEST_PREREQUISITES } from '../../workers/src/quest/modes';
+import { questResumable } from '../../workers/src/quest/resume';
 import {
     TRUST_TIER_RANK,
     trustMeetsMinimum,
@@ -1367,7 +1368,14 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 questPoints: meta.qp,
                 ...(Object.keys(requiredSkills).length > 0 ? { requiredSkills } : {}),
                 ...(requiredQuests.length > 0 ? { requiredQuests } : {}),
-                script: `scripts/generated/${meta.folder === 'quest_mcannon' ? 'dwarfcannon.ts' : meta.folder === 'quest_waterfall' ? 'waterfall.ts' : `quest-${slug}.ts`}`,
+                // A quest-<slug>.ts quest runs through the quest sweep (aio-quester sweep <slug>,
+                // packages/workers/src/quest/sweep.ts): it stages the preset's items from the bank, shops and gathering,
+                // walks to the start tile and reads a started journal before the script runs. The sweep has no route to
+                // dwarfcannon.ts or waterfall.ts, so those two run their scripts alone.
+                ...(meta.folder === 'quest_mcannon' || meta.folder === 'quest_waterfall'
+                    ? { script: `scripts/generated/${meta.folder === 'quest_mcannon' ? 'dwarfcannon.ts' : 'waterfall.ts'}` }
+                    : { mode: 'sweep' }),
+                questResumable: questResumable(slug),
             },
             baselineRate: {
                 xpPerTick,

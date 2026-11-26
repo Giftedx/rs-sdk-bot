@@ -990,6 +990,9 @@ export interface PreflightSpec {
     readonly skillRequirements?: Readonly<Record<string, number>>;
     readonly trainingSkills?: readonly string[];
     readonly questRequirements?: readonly (string | QuestRequirementSpec)[];
+    // The quest of a quest activity whose script cannot go on from a started journal (catalog questResumable false):
+    // the quest sweep refuses it at entry (packages/workers/src/quest/resume.ts questEntry).
+    readonly startedQuestRefused?: string;
     readonly wearableItemIds?: readonly number[];
     readonly requiredItems?: readonly RequiredItemSpec[];
     readonly coinsRequired?: number;
@@ -1119,6 +1122,13 @@ export function evaluatePreflight(
                 });
             }
         }
+    }
+
+    if (spec.startedQuestRefused && cachedAccountQuestState(acct, spec.startedQuestRefused, _acctCache) === 'started') {
+        blockers.push({
+            kind: 'invalid_config',
+            message: `Quest ${spec.startedQuestRefused} is started and its script has no resume stage`,
+        });
     }
 
     if (spec.wearableItemIds && spec.wearableItemIds.length > 0) {
@@ -1278,6 +1288,7 @@ interface StaticActivityPreflight {
     readonly skillRequirements: Readonly<Record<string, number>>;
     readonly trainingSkills: readonly string[];
     readonly questRequirements: readonly (string | QuestRequirementSpec)[];
+    readonly startedQuestRefused: string | undefined;
     readonly wearableItemIds: readonly number[];
     readonly staticRequiredItems: readonly RequiredItemSpec[];
     readonly coinsRequired: number | undefined;
@@ -1346,6 +1357,9 @@ function extractStaticActivityPreflight(activity: {
         skillRequirements,
         trainingSkills,
         questRequirements,
+        startedQuestRefused: cfg.questResumable === false && typeof cfg.questSlug === 'string'
+            ? (typeof cfg.questName === 'string' ? cfg.questName : cfg.questSlug)
+            : undefined,
         wearableItemIds,
         staticRequiredItems,
         coinsRequired: typeof cfg.coinsRequired === 'number' && cfg.coinsRequired > 0 ? Math.ceil(cfg.coinsRequired) : undefined,
@@ -1398,6 +1412,7 @@ export function activityPreflightFromConfig(
             skillRequirements: base.skillRequirements,
             trainingSkills: base.trainingSkills,
             questRequirements: base.questRequirements,
+            startedQuestRefused: base.startedQuestRefused,
             wearableItemIds: base.wearableItemIds,
             requiredItems,
             coinsRequired: base.coinsRequired,

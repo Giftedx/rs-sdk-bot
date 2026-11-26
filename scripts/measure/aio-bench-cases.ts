@@ -1815,6 +1815,22 @@ return [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1351, count: 1}, {id: 1171, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-loadout.json': {bank: {x: 3092, z: 3243, level: 0}, pack: [{id: 1351, count: 1}], wear: [{id: 1171, count: 1, slot: 5}], cap: 300, maximumMoves: 64}}},
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
+  // The Knight's Sword through the quest sweep, the route of a live quest_board run (packages/brain/src/catalog.ts): the
+  // account stands at the Falador west bank with the quest pack banked. `bank` starts the quest; `resume-s2` has
+  // %squire (varp 122) = 2, after Reldo, the state that live runs left at "fail talk thurgo pie". The sweep reads the
+  // stage from the journal, and the script starts at the pie to Thurgo: no "squire 1" and no Reldo.
+  ...([['bank', 0], ['resume-s2', 2]] as const).map(([mode, stage]) =>
+    ({key: `extra:sweep-squire-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_squire', scriptArgs: ['sweep', 'squire'], timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_squire!, position: {x: 2946, z: 3368, level: 0}, inventory: [], varps: {...PRESETS.quest_squire!.varps, 122: stage},
+        bank: [...(PRESETS.quest_squire!.inventory ?? [])]},
+      pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && new RegExp(`^SQUIRE_FROM ${stage}$`, 'm').test(s) && /^MILESTONE 100 /m.test(s)
+        && (stage === 0 ? /^MILESTONE 1 /m.test(s) : /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s))} as BenchCase)),
+  // Witch's House on a started journal (%ballquest, varp 226, = 1): quest-ball.ts has no resume stage, so the sweep
+  // refuses at entry, before a bank walk, with the text the supervisor ends the job on (live: "fail step cheese",
+  // then "fail talk boy 1" on each next login).
+  {key: 'extra:sweep-ball-started-refused', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 120_000,
+    presetConfig: {...PRESETS.quest_ball!, varps: {...PRESETS.quest_ball!.varps, 226: 1}},
+    pass: (s: string) => /^RESULT fail quest-sweep ball refused: Witch's House journal is started and quest-ball\.ts has no resume stage$/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
   // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,

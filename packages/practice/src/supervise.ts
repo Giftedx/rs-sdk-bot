@@ -149,6 +149,13 @@ export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
 
+// The quest sweep refuses at entry, before it acts, a quest that the account cannot start or go on with: a started
+// journal with no resume stage, a complete quest, too few quest points (packages/workers/src/quest/resume.ts
+// questEntry). The journal and the quest points do not change between two logins.
+export function isNamedRefusal(result: string): boolean {
+    return /^RESULT fail quest-sweep \S+ refused: /.test(result);
+}
+
 // A login refused because a dropped session still holds the account's fleet claim ("fleet account claim held"). Only
 // an authenticated recovery clears that (packages/core/src/fleet-trade-claim.ts acquireFleetSwarmClaim), and the
 // recovery starts from this supervisor's end. A release that is still being written clears within a try or two, so
@@ -256,7 +263,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
         // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
-        if (isEntryRefusal(result)) return { reason: 'refused', runs };
+        if (isEntryRefusal(result) || isNamedRefusal(result)) return { reason: 'refused', runs };
         if (!isTransportStall(result) && (isNoProgressFailure(result) || isPrerequisiteFailure(result))) return { reason: 'blocked', runs };
         held = isHeldClaimRefusal(result) ? held + 1 : 0;
         if (held >= HELD_CLAIM_TRIES) return { reason: 'gave-up', runs };

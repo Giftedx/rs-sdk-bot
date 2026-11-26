@@ -194,7 +194,10 @@ const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in
 const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
 const MARKET_UNAVAILABLE_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i;
 const SHOP_STOCK_WAIT_RE = /\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
-const MISSING_SUPPLY_RE = /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank/i;
+// The quest sweep names what it could not stage as <id>:<count> pairs: "missing 2325:1" (no bank row, shop or gather
+// plan) and "withdraw short 2351:2" (packages/workers/src/quest/sweep.ts).
+const MISSING_PAIRS_RE = /\b(?:missing|withdraw short) (\d+:\d+(?:,\d+:\d+)*)\b/;
+const MISSING_SUPPLY_RE = /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank|\b(?:missing|withdraw short) \d+:\d+\b/i;
 const FAILURE_MARKER_RE = /\b(?:fail|failed|error|exception|crash|abort|defect|timeout|timed out)\b/i;
 const SUCCESS_MARKER_RE = /\b(?:target.?met|completed?|done)\b/i;
 
@@ -218,6 +221,13 @@ function detectInfraSource(text: string): InfraFaultSource | undefined {
 }
 
 function inferMissingItems(text: string): RunOutcomeMissingItem[] {
+    const pairs = MISSING_PAIRS_RE.exec(text);
+    if (pairs) {
+        return pairs[1]!.split(',').map((p) => {
+            const [id, count] = p.split(':').map(Number);
+            return { itemId: id!, required: Math.max(1, count!), available: 0 };
+        });
+    }
     const idMatch = /\bitem(?:id)?[=: #]*(\d+)\b/i.exec(text);
     const qtyMatch = /\b(?:need|required|missing)[=: ]*(\d+)\b/i.exec(text);
     const required = qtyMatch ? Math.max(1, Number(qtyMatch[1])) : 1;
