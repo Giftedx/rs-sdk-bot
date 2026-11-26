@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795729248032,
+ "at": 1795729390824,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,25 +60,30 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop1 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+    "smithing",
+    "smelt",
+    "1500",
+    "gold"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BAR_TYPE": "gold",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "goal:supply_chain:2357",
+    "BATCH_UNITS": "24"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "goal:supply_chain:2357",
    "role": "army"
   },
   {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy general_sarim 3000",
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop4 3000",
     "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p224 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
     "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
@@ -120,6 +125,142 @@
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
    "role": "army"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=3 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_harralander_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:97",
+   "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=557 \"ITEMS=Earth rune\" MAX_ITEMS=5 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=65 CAP=1000 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=554 \"ITEMS=Fire rune\" MAX_ITEMS=249 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-market.ts ITEM_ID=563 \"ITEMS=Law rune\" MAX_ITEMS=200 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic teleport varrock 50 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   }
  ],
  "army": [
@@ -141,7 +282,6 @@
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
-  "mmthv2350",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -150,7 +290,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"

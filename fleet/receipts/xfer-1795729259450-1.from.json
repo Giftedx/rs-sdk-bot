@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729259450-1",
+ "account": "Bigpackage",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 2,
+ "claim": "017e5c43-f9a6-4749-8645-79f38fd02d1c",
+ "count": 0,
+ "ok": false,
+ "at": 1795729316131,
+ "detail": "trade claimed"
+}
