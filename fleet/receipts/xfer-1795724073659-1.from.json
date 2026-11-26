@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724073659-1",
  "account": "Swordinhand",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 90,
  "claim": "c89e2219-6e97-4580-b2f2-2b955a9232ef",
- "count": 0,
- "ok": false,
- "at": 1795724287879,
- "detail": "trade claimed"
+ "count": 90,
+ "ok": true,
+ "at": 1795724453076,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 90,
+  "after": 0
+ },
+ "bank": {
+  "count": 90,
+  "at": 1795724437529
+ },
+ "logout": {
+  "attemptId": "1795724287888-0000011376-0000000001",
+  "at": 1795724453065,
+  "sha256": "7981f3aa58ebac752e724e28a52ae3ec4875a15c930b2b82ac5834dec4b024b8"
+ },
+ "screen": true
 }

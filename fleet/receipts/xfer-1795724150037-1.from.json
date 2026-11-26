@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724150037-1",
  "account": "OreElse",
  "partner": "mmsmk1232",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 7162,
  "claim": "916d0223-fd8c-4b5f-96d6-d296cbf8814e",
- "count": 0,
- "ok": false,
- "at": 1795724397688,
- "detail": "trade claimed"
+ "count": 7162,
+ "ok": true,
+ "at": 1795724447839,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20000,
+  "after": 12838
+ },
+ "logout": {
+  "attemptId": "1795724397697-0000019708-0000000001",
+  "at": 1795724447831,
+  "sha256": "1cc8981208922ced22b4a024f599ed45707fc0909f46bb631e45515cb87d06b5"
+ },
+ "screen": true
 }

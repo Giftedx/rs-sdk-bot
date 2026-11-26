@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795724438500-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Unsheathed",
+  "item": "Dragon bones",
+  "count": 7,
+  "itemId": 536,
+  "start": 1795724438500,
+  "end": 1795725338500,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

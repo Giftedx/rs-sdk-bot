@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795724073659-1",
+ "account": "Wandwaver",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 90,
+ "claim": "669f1800-bb39-4987-8cec-7bf24aa711a0",
+ "count": 90,
+ "ok": true,
+ "at": 1795724454690,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 90
+ },
+ "bank": {
+  "count": 90,
+  "at": 1795724453920
+ },
+ "logout": {
+  "attemptId": "1795724442286-0000003128-0000000001",
+  "at": 1795724454672,
+  "sha256": "619504e49367ad90190fd6eb35700cf886267f0c0ac1a519a429296fb5754f6d"
+ },
+ "screen": true
+}
