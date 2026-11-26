@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795716875373-1",
  "account": "Billionaire",
  "partner": "Packhorse",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "7f09c39c-8bce-415e-9a09-b2c8974591ac",
- "count": 0,
- "ok": false,
- "at": 1795717017262,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795717122202,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795717027888
+ },
+ "logout": {
+  "attemptId": "1795717017270-0000026808-0000000001",
+  "at": 1795717122192,
+  "sha256": "c34b35c5ab13bb639a3605fca144de33e6aa1d45ae985f613476684c00116f27"
+ },
+ "screen": true
 }
