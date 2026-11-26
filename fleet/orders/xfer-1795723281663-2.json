@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795723281663-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "BackdoorMan",
+  "item": "Coal",
+  "count": 40,
+  "itemId": 453,
+  "start": 1795723281663,
+  "end": 1795724181663,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723276722,
+ "at": 1795723293456,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -166,22 +166,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
    "account": "mmthv2350",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -200,37 +184,6 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-20-p97 ITEM_ID=440 QUANTITY=20 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-40-p517 ITEM_ID=453 QUANTITY=40 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=20 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "auto"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-20-p97 ITEM_ID=440 QUANTITY=20 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=20 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
@@ -244,22 +197,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
    "role": "army"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "helper"
   },
   {
    "account": "BowBeforeMe",
@@ -279,19 +216,34 @@
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-40-p97 ITEM_ID=440 QUANTITY=40 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-80-p517 ITEM_ID=453 QUANTITY=80 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=40 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-536-7-p7074 ITEM_ID=536 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=97 -- prayer bury"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -304,6 +256,7 @@
   "ballspinner",
   "billionaire",
   "dipstick",
+  "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
@@ -317,6 +270,7 @@
   "sporrandip",
   "swordinhand",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
