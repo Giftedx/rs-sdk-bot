@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720423965,
+ "at": 1795720440668,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,22 @@
    "role": "pvp"
   },
   {
+   "account": "Magicwanda",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "240"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "auto"
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/ranged-train.ts",
    "args": [],
@@ -71,22 +87,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "480"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "auto"
   },
   {
@@ -170,21 +170,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -220,6 +205,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_guam_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:91",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
    "role": "army"
   }
  ],
