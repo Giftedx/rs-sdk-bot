@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795713884315,
+ "at": 1795713908835,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,19 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/generated/quest-dragon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -394,27 +381,15 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
-   ],
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "565",
-    "ITEMS": "Blood rune",
-    "MAX_ITEMS": "466",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "25300",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "466"
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:565",
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   },
   {
@@ -491,6 +466,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:viking",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=40 -- smithing smelt 1500 bronze",
+    "scripts/generated/quest-crest.ts DEMAND_ID=goal:quest_board:crest BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
    "role": "army"
   },
   {
