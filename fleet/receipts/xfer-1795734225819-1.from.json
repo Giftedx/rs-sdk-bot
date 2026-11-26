@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795734225819-1",
+ "account": "Fingersmith",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "df4522c7-2443-4ba1-a25d-56e9691167a6",
+ "count": 1,
+ "ok": true,
+ "at": 1795734666119,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 3
+ },
+ "logout": {
+  "attemptId": "1795734622134-0000025880-0000000001",
+  "at": 1795734666056,
+  "sha256": "b7f5bc52237c471c3060a6adc60ca880bc71feb2c1cc0e99358a8255e90ae80f"
+ },
+ "screen": true
+}

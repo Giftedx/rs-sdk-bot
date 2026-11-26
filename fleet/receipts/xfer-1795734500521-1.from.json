@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795734500521-1",
+ "account": "Pocketpython",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "08485996-fa6f-4fd4-9e70-d9eec09a2924",
+ "count": 0,
+ "ok": false,
+ "at": 1795734642890,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 4,
+  "at": 1795734626888
+ },
+ "logout": {
+  "attemptId": "1795734616509-0000027300-0000000001",
+  "at": 1795734642823,
+  "sha256": "832844bdfc6db4dbbe5579112f88c7ec87fb5923e755ebd93fb5ed5c5ec8e052"
+ },
+ "screen": false
+}

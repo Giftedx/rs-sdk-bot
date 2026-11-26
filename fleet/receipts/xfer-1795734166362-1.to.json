@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795734166362-1",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 1,
+ "claim": "22669800-e5c9-4e73-a10b-363fe75e3ef0",
+ "count": 1,
+ "ok": true,
+ "at": 1795734637252,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 5
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795734636479
+ },
+ "logout": {
+  "attemptId": "1795734628120-0000019856-0000000001",
+  "at": 1795734637233,
+  "sha256": "1cf975bc4b0d1db39e5a4d8f4169a4205e75652b8b99f461d179f1c2421bf2a9"
+ },
+ "screen": true
+}

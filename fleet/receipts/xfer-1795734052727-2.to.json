@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795734052727-2",
+ "account": "KnightRider",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "f0b7639e-ff31-4625-85fb-944789cbba5e",
+ "count": 0,
+ "ok": false,
+ "at": 1795734666825,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795734661370-0000022940-0000000001",
+  "at": 1795734666803,
+  "sha256": "d7b3b7cf669cb5559366f7a35648c2c93fcb99af65738dcf61d0642c7fd50404"
+ },
+ "screen": false
+}

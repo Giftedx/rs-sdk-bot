@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795734636504-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Quickhandjob",
+  "item": "Raw lobster",
+  "count": 28,
+  "itemId": 377,
+  "start": 1795734636504,
+  "end": 1795735536504,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

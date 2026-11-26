@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795734052727-2",
+ "account": "Swordinhand",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "9fc1088e-aa31-435b-b88c-6a5a1374b551",
+ "count": 0,
+ "ok": false,
+ "at": 1795734679267,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795734678459
+ },
+ "logout": {
+  "attemptId": "1795734672013-0000019112-0000000001",
+  "at": 1795734679201,
+  "sha256": "d05654323590be6bc814601091cdce0f7314ea4029eea66d5258eb1e37228d2d"
+ },
+ "screen": false
+}
