@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795735540999-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Swordinhand",
+  "item": "Unicorn horn dust",
+  "count": 1,
+  "itemId": 235,
+  "start": 1795735540999,
+  "end": 1795736440999,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
