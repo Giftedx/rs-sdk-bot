@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723088167,
+ "at": 1795723105792,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -128,7 +128,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "37"
+    "BATCH_UNITS": "26"
    },
    "enabled": true,
    "repeat": false,
@@ -158,7 +158,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "37"
+    "BATCH_UNITS": "26"
    },
    "enabled": true,
    "repeat": false,
@@ -173,7 +173,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "37"
+    "BATCH_UNITS": "26"
    },
    "enabled": true,
    "repeat": false,
@@ -188,12 +188,27 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "37"
+    "BATCH_UNITS": "26"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "26"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
   },
   {
    "account": "mmthv2350",
@@ -214,40 +229,35 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=6 STOCK_TARGET=7 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=7 -- crafting jewellery-trip"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "tree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:tree",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "goal:quest_board:tree",
    "role": "army"
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
-    "DEMAND_ID": "goal:pk_army:Earlyshooter",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Earlyshooter",
-   "role": "auto"
   }
  ],
  "army": [
@@ -262,13 +272,11 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
