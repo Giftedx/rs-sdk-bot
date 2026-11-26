@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727119298-1",
  "account": "Woodenstaff",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "48f66a39-661c-40d2-9776-5faa6e634558",
- "count": 0,
- "ok": false,
- "at": 1795727415576,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795727617969,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795727596416
+ },
+ "logout": {
+  "attemptId": "1795727415585-0000030612-0000000001",
+  "at": 1795727617957,
+  "sha256": "4e9768d262f03e83bdd3281d6ea5a7b2aff1a65164767e3ee16470ded3712260"
+ },
+ "screen": true
 }
