@@ -39,6 +39,26 @@ test('McGrubor entry accepts the native inside tile even though the route landin
  finally{g.stop();}
 });
 
+// gnomevillage_fence.rs2: from 2515,3160 the squeeze moves 1 tile onto the railing tile 2515,3161 (shortcuts.json).
+test('a 1-tile squeeze waits for the landing tile before the next movement can cancel it',async()=>{
+ const rail={id:2186,name:'Loose railing',x:2515,z:3161,level:0,optionsWithIndex:[{text:'Squeeze-through',opIndex:1}]};
+ const travel={id:'loc:treegnomelooserailing@2515,3161,0>2515,3161<2515,3160',kind:'passage',name:'treegnomelooserailing op1',from:{x:2515,z:3160,level:0},
+  to:{x:2515,z:3161,level:0},coins:0,needs:[],runes:[],cost:4,run:{how:'loc',loc:'treegnomelooserailing',op:1,option:null,id:2186,at:{x:2515,z:3161,level:0}}};
+ const g=fakeGame({x:2515,z:3160,level:0,nearbyLocs:[rail]});let pending=false,crossAt=0;
+ g.quirks.onDirectLoc=()=>{pending=true;crossAt=g.tick()+3;};
+ const off=g.onTick(()=>{
+  if(!pending)return;
+  if(g.calls.some(c=>c.startsWith('walk '))){pending=false;g.calls.push('squeeze canceled');return;}
+  if(g.tick()>=crossAt){pending=false;g.state.player.worldZ=3161;g.calls.push('native inside');}
+ });
+ try{
+  const result=await walkRoute(g as any,[{kind:'travel',travel,at:travel.from,to:travel.to} as any,{kind:'walk',to:{x:2530,z:3165,level:0}}],{maxRetriesPerLeg:1,legTimeoutTicks:30});
+  expect(result.ok).toBe(true);
+  expect(g.calls).not.toContain('squeeze canceled');
+  expect(g.calls.indexOf('walk 2530,3165')).toBeGreaterThan(g.calls.indexOf('native inside'));
+ }finally{off();g.stop();}
+});
+
 test('McGrubor already-outside travel does not squeeze back into the wood',async()=>{
  const g=fakeGame({x:2661,z:3500,level:0,nearbyLocs:[mcGruborRail]});g.quirks.onDirectLoc=()=>{g.state.player.worldX=2662;};
  try{expect((await walkRoute(g as any,[mcGruborLeg()],{maxRetriesPerLeg:1,legTimeoutTicks:30})).ok).toBe(true);expect(g.calls).toEqual([]);}

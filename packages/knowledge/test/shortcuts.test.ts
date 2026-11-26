@@ -89,6 +89,16 @@ test('Ardougne ship gangplank lands 3 tiles from the deck tile, one level down',
     expect(rows.map(x => [x.starts, x.to])).toEqual([[[{ x: 2775, z: 3234, level: 1 }], { x: 2772, z: 3234, level: 0 }]]);
 });
 
+// areas/area_gnome/scripts/gnomevillage_fence.rs2:1-12: ~check_axis (doors/scripts/door_procs.rs2:77) picks the side
+// from the player tile; the squeeze moves 1 tile, onto the railing tile going in and off it going out.
+test('Tree Gnome Village loose railing has one landing for each side', () => {
+    const rows = edges.filter(x => x.locName === 'treegnomelooserailing').map(x => [x.starts, x.to, x.side]);
+    expect(rows).toEqual([
+        [[{ x: 2515, z: 3161, level: 0 }, { x: 2516, z: 3161, level: 0 }], { x: 2515, z: 3160, level: 0 }, undefined],
+        [[{ x: 2515, z: 3160, level: 0 }], { x: 2515, z: 3161, level: 0 }, undefined],
+    ]);
+});
+
 // areas/area_mage_arena/scripts/mage_arena.rs2:82-96: from north of the barrier (shape 0, angle 1: a wall on the north
 // edge of 3105,3953) the player steps onto the loc tile; from the loc tile it steps north. A landing on the wall's own
 // tile is a move.

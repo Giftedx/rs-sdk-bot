@@ -166,9 +166,12 @@ async function travelLocLeg(
     const slipped = () => { const p = here(); return !!p && (t.slips ?? []).some(k => k.level === p.level && k.x === p.x && k.z === p.z); };
     // mcgrubors_wood.rs2 squeezes onto x=loc.x going in and x<loc.x going out. The railing tile is still inside;
     // accepting it on exit lets the next movement cancel the pending squeeze before it crosses.
+    // A landing next to the start (gnomevillage_fence.rs2 squeezes 1 tile, from 2515,3160 onto the railing tile
+    // 2515,3161) counts only on it: within 1 tile of it the player still stands on the start.
+    const reach = t.from ? Math.max(0, Math.min(1, cheb(t.to, { worldX: t.from.x, worldZ: t.from.z }) - 1)) : 1;
     const landed = () => {
         const p = here();
-        return (!!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1
+        return (!!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= reach
             && (!railing || (t.to.x < railing.x ? p.x < railing.x : p.x >= railing.x))) || slipped();
     };
     if (stop()) return fail('aborted', 'stopped before location travel');
