@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795731258065-1",
+ "account": "Shaftsinker",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "11e4b396-f7ac-42b3-82fb-ddebd5ffe2fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795731421157,
+ "detail": "trade claimed"
+}

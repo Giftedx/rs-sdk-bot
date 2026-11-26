@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795730863043-4",
+ "account": "YewFirst",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 29,
+ "claim": "b17a5c88-75c4-41e2-8e09-315f3724abe9",
+ "count": 0,
+ "ok": false,
+ "at": 1795731522276,
+ "detail": "trade claimed"
+}

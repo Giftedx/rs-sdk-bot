@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795731146503-1",
+ "account": "SporranBulge",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "587589e6-0a1f-4b13-95e5-8e25543e0e8d",
+ "count": 0,
+ "ok": false,
+ "at": 1795731546572,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795731455475
+ },
+ "logout": {
+  "attemptId": "1795731445879-0000009732-0000000001",
+  "at": 1795731546555,
+  "sha256": "acbc9ceac3503cbce3633458fc2b159c96616c7fb064f2627638352c44b608a1"
+ },
+ "screen": false
+}
