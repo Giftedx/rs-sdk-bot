@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795731810594-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Fingerblastr",
+  "item": "Swamp toad",
+  "count": 2,
+  "itemId": 2150,
+  "start": 1795731810594,
+  "end": 1795732710594,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
