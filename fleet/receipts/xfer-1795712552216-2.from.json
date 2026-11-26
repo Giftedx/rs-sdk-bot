@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712552216-2",
  "account": "Pocketpython",
  "partner": "Packhorse",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "95422c53-a18b-4e3f-976d-5262fc1ac9eb",
- "count": 0,
- "ok": false,
- "at": 1795712965208,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795713014856,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795712965217-0000029144-0000000001",
+  "at": 1795713014844,
+  "sha256": "1ca3c988e3d7ab5937ccc6c7d479dc11ee06d13e40896a34f156954c2aefea1d"
+ },
+ "screen": true
 }
