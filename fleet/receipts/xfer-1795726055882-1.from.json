@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795726055882-1",
  "account": "Wandwaver",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 6,
  "claim": "5be9a037-3a9e-4b90-91b5-2aa1e3bd7cb0",
- "count": 0,
- "ok": false,
- "at": 1795726458794,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795726484017,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795726466485
+ },
+ "logout": {
+  "attemptId": "1795726458804-0000020432-0000000001",
+  "at": 1795726484004,
+  "sha256": "051a76b9bf15964445baa0040768abaf062e09666694f53584f086c18513987b"
+ },
+ "screen": true
 }

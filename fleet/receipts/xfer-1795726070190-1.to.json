@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726070190-1",
+ "account": "TheFullMonty",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Irit leaf",
+ "requested": 5,
+ "claim": "49aca6b4-14e0-4fbd-b036-60ae721c4743",
+ "count": 5,
+ "ok": true,
+ "at": 1795726493643,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795726492886
+ },
+ "logout": {
+  "attemptId": "1795726482498-0000008664-0000000001",
+  "at": 1795726493632,
+  "sha256": "db5b77bcca95ade2943b8dcde1ac98b49a6523a5de62291b63f5fd1087d1b730"
+ },
+ "screen": true
+}
