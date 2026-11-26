@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723474209-1",
  "account": "OreElse",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Mithril bar",
  "requested": 1,
  "claim": "40178e3d-658a-4f6d-979e-30a830ec720b",
- "count": 0,
- "ok": false,
- "at": 1795723709188,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795723737898,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723737153
+ },
+ "logout": {
+  "attemptId": "1795723709197-0000009760-0000000001",
+  "at": 1795723737889,
+  "sha256": "135aec24987db8bb56fe23c7b5977eae2cb3abbc114827d940d4b40f56fe4f83"
+ },
+ "screen": true
 }

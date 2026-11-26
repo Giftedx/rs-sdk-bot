@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795723740263-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Unsheathed",
+  "item": "Dragon bones",
+  "count": 52,
+  "itemId": 536,
+  "start": 1795723740263,
+  "end": 1795724640263,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
