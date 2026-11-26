@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713961669-1",
+ "account": "Fingerblastr",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "6b094e39-c442-41f1-a4fa-e780293ca6be",
+ "count": 0,
+ "ok": false,
+ "at": 1795714797061,
+ "detail": "trade claimed"
+}
