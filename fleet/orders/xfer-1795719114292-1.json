@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795719114292-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Earlyshooter",
+  "to": "SporranBulge",
+  "item": "Iron bar",
+  "count": 6,
+  "itemId": 2351,
+  "start": 1795719114292,
+  "end": 1795720014292,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
