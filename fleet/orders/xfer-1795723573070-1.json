@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795723573070-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "Spitroaster",
+  "item": "Bones",
+  "count": 65,
+  "itemId": 526,
+  "start": 1795723573070,
+  "end": 1795724473070,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

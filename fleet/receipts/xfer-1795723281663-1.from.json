@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723281663-1",
  "account": "Woodpecker",
  "partner": "BackdoorMan",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 20,
  "claim": "3a0375e5-3118-4639-87d2-fc5b964b1ffc",
- "count": 0,
- "ok": false,
- "at": 1795723439746,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795723570192,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795723552757
+ },
+ "logout": {
+  "attemptId": "1795723439754-0000028712-0000000001",
+  "at": 1795723569981,
+  "sha256": "03830b919f9f3459a4f4b8a0c1d8b71fd2ae5a0fafbd0785682672a9871dc192"
+ },
+ "screen": true
 }
