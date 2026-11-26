@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795718388247-3",
+ "account": "ChaosInPants",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "d805b903-0a2b-4626-bd56-ffc45bb63bd9",
+ "count": 0,
+ "ok": false,
+ "at": 1795718709915,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795718242096-1",
  "account": "Fingersmith",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 1,
  "claim": "f1141fe3-a409-46dd-a293-8399c23eba87",
- "count": 0,
- "ok": false,
- "at": 1795718577626,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795718706376,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795718587792
+ },
+ "logout": {
+  "attemptId": "1795718577635-0000011032-0000000001",
+  "at": 1795718706172,
+  "sha256": "0a65b97a28b3368c117db157064deddf11b5fc84b54ae3c7e3eff95f0fdda2fe"
+ },
+ "screen": true
 }

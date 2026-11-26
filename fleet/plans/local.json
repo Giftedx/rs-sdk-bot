@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718698560,
+ "at": 1795718729813,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -127,22 +127,6 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "air"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "81"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -157,38 +141,6 @@
    "repeat": false,
    "goal": "goal:quest_board:elena",
    "role": "auto"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "air"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "801"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
   },
   {
    "account": "FishAndChips",
@@ -207,20 +159,119 @@
    "role": "auto"
   },
   {
+   "account": "Magicwanda",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Magicwanda",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Magicwanda",
+   "role": "auto"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "magearena"
+    "arena"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
+    "DEMAND_ID": "goal:quest_board:arena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:magearena",
+   "goal": "goal:quest_board:arena",
    "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Earlyshooter",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Earlyshooter",
+   "role": "auto"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "ball"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ball",
+   "role": "helper"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
+   "role": "helper"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
   }
  ],
  "army": [
@@ -248,6 +299,7 @@
   "pickpockdick",
   "pocketpool",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",

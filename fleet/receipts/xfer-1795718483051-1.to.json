@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718483051-1",
+ "account": "Pocketpython",
+ "partner": "Packhorse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "9b32f4d8-b61c-42e3-9825-091d7ff74450",
+ "count": 60,
+ "ok": true,
+ "at": 1795718718138,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795718717434
+ },
+ "logout": {
+  "attemptId": "1795718702106-0000024448-0000000001",
+  "at": 1795718718129,
+  "sha256": "bc1a73e1ab4fc780f63700c8baa93b46f4997836ef0132b0ea332f6ba6587f23"
+ },
+ "screen": true
+}
