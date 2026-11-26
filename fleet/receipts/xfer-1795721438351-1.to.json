@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721438351-1",
  "account": "BowBeforeMe",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(3)",
  "requested": 2,
  "claim": "ce2892f7-c10b-454c-b033-e0538940f348",
- "count": 0,
- "ok": false,
- "at": 1795722051921,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795722165345,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795722164437
+ },
+ "logout": {
+  "attemptId": "1795722051929-0000019600-0000000001",
+  "at": 1795722165211,
+  "sha256": "58218a664388cc3e55894dd80894622c704da6e1c24bb946a6fab20140681aa1"
+ },
+ "screen": true
 }
