@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795724939911-3",
+ "account": "Woodenstaff",
+ "partner": "TossTheCaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 58,
+ "claim": "26dc6d07-6185-4aaf-99de-ce89fb557044",
+ "count": 0,
+ "ok": false,
+ "at": 1795725020001,
+ "detail": "trade claimed"
+}
