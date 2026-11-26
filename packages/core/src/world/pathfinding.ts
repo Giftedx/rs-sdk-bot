@@ -1,15 +1,18 @@
 import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, registerRouteActor, withDoorPolicy } from '../door-policy';
-import { mapAreas, separated } from '../components';
+import { labelAreas, mapAreas, separated, type Labels } from '../components';
 import { activeDanger, guardRoute, guardWalk } from '../danger';
-import { legCache, routeDangerHash } from '../leg-cache';
+import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { cheb, tileKey, worldRepoRoot, type DoorBlock, type PathLength, type Tile } from './model';
 import { unwrapGuarded } from '../worker-execution';
 
 let rsPath: { findLongPath: Function; getDoorAt: Function } | null = null;
 let activePathPolicy: { owner: object; blocked: DoorBlock[] } | null = null;
+// Scope labels (rsPathLength labelScope): measured nulls in one scope before it is labelled, scopes kept labelled, and
+// scopes whose nulls are counted.
+const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 3, SCOPE_NULL_KEYS = 256;
 const policySdks = new WeakSet<object>();
 
 async function loadPathfinding() {
@@ -39,7 +42,8 @@ export async function installDoorPolicy(sdk: any, client?: unknown): Promise<voi
 }
 
 // Default walk cost: rs-sdk findLongPath turn points, summed as Chebyshev steps. Null if the path stops short.
-export async function rsPathLength(): Promise<PathLength> {
+// `opts.legs`: the store of measured walk lengths (default the shared file, leg-cache.ts); a test passes an empty one.
+export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<PathLength> {
     const pf = await loadPathfinding();
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     const owner = {};
@@ -55,8 +59,34 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
     // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
-    const cache = legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
+    const cache = opts.legs ?? legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
     const areas = mapAreas(pf, grid, worldRepoRoot);
+    // The map labels (`areas`) join tiles with every door open and no danger ground closed. A scope (the doors an
+    // account keeps shut and the ground of monsters that would kill it) can split one map area in two: for a 10 HP
+    // account White Wolf Mountain closes, and Burthorpe and Ardougne stay in one map area. Each leg between the two
+    // parts then measures null only after a findLongPath flood of up to 524,288 tiles (5 to 8 ms): a cold search from
+    // Burthorpe to Ardougne made 20,040 such floods, 106 s of its 126 s. After SCOPE_LABEL_NULLS measured nulls in one
+    // scope, the scope gets its own labels (about 1 s for every level) and a leg between two of its areas is null at
+    // once. A search with fewer nulls pays nothing.
+    const scopeLabels = new Map<string, Labels>(), scopeNulls = new Map<string, number>();
+    const labelScope = (prefix: string, blocked: DoorBlock[]) => {
+        if (scopeLabels.has(prefix)) return;
+        const d = activeDanger();
+        if (blocked.length === 0 && (!d || d.key === 'none')) return; // the map labels already hold for this scope
+        const n = (scopeNulls.get(prefix) ?? 0) + 1;
+        if (n < SCOPE_LABEL_NULLS) {
+            if (!scopeNulls.has(prefix) && scopeNulls.size >= SCOPE_NULL_KEYS) scopeNulls.delete(scopeNulls.keys().next().value!);
+            scopeNulls.set(prefix, n);
+            return;
+        }
+        scopeNulls.delete(prefix);
+        const zones: [number, number, number][] = [];
+        for (const k of areas.zones.keys()) zones.push([k >>> 28, ((k >>> 14) & 0x3fff) << 3, (k & 0x3fff) << 3]);
+        const labels = scoped(blocked, () => labelAreas(zones, (l, x, z) => (pf as any).isTileWalkable(l, x, z),
+            (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)));
+        if (scopeLabels.size >= SCOPE_LABEL_KEEP) scopeLabels.delete(scopeLabels.keys().next().value!);
+        scopeLabels.set(prefix, labels);
+    };
     let lastBlocked: DoorBlock[] | undefined, lastShut = '', lastDanger: object | null | undefined, lastDk = '-';
     let interactionAreasScope = '';
     const interactionAreasCache = new Map<string, number[] | null>();
@@ -90,23 +120,23 @@ export async function rsPathLength(): Promise<PathLength> {
         if (cachedIk === undefined) { cachedIk = cache.hash(q); interactionKeys.set(q, cachedIk); }
         return cachedIk;
     };
-    const separatedInteraction = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, q: InteractionTarget): boolean => {
+    const separatedInteraction = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, q: InteractionTarget, labels: Labels = areas): boolean => {
         if (from.level !== to.level) return false;
         const lvl = from.level;
-        const own = areas.area(lvl, from.x, from.z);
+        const own = labels.area(lvl, from.x, from.z);
         if (own === -2) return false;
         let starts: number[] | null = null;
         if (own < 0) {
             starts = [];
             for (let x = from.x - 1; x <= from.x + 1; x++) for (let z = from.z - 1; z <= from.z + 1; z++) {
-                const v = areas.area(lvl, x, z);
+                const v = labels.area(lvl, x, z);
                 if (v === -2) return false;
                 if (v >= 0 && !starts.includes(v)) starts.push(v);
             }
             if (starts.length === 0) return false;
         }
         scopePrefix(blocked);
-        const key = `${to.x},${to.z},${lvl}:${tol}:${interactionKey(q)}`;
+        const key = `${labels === areas ? 'm' : 's'}:${to.x},${to.z},${lvl}:${tol}:${interactionKey(q)}`;
         let targetAreas = interactionAreasCache.get(key);
         if (targetAreas === undefined) {
             const r = Math.max(tol, 1);
@@ -115,7 +145,7 @@ export async function rsPathLength(): Promise<PathLength> {
             let unknown = false;
             for (let x = x0; x <= x1 && !unknown; x++) for (let z = z0; z <= z1; z++) {
                 if (!grid.reached(lvl, x, z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) continue;
-                const v = areas.area(lvl, x, z);
+                const v = labels.area(lvl, x, z);
                 if (v === -2) { unknown = true; break; }
                 if (v >= 0 && !list.includes(v)) list.push(v);
             }
@@ -129,6 +159,24 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         if (!interaction) {
+            // A leg that must end on its goal asks for no closest approach (moveNear false): a goal the flood does not
+            // reach then returns no path at once, where moveNear scans the 2048x2048 grid for the nearest tile first
+            // (8.3 ms against 6.8 ms a null leg, the same lengths on 3,776 legs of a weak account's search).
+            if (tol === 0) return scoped(blocked, () => {
+                const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, 1, 1, 0, -1, false, 0, 500, grid.CollisionType.NORMAL);
+                if (!raw.length) return from.x === to.x && from.z === to.z ? 0 : null;
+                const lastPacked = raw[raw.length - 1]!;
+                if (((lastPacked >>> 14) & 0x3fff) !== to.x || (lastPacked & 0x3fff) !== to.z) return null;
+                let len = 0, px = from.x, pz = from.z;
+                for (let i = 0; i < raw.length; i++) {
+                    const p = raw[i]!, nx = (p >>> 14) & 0x3fff, nz = p & 0x3fff;
+                    const dx = nx - px, dz = nz - pz;
+                    const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
+                    len += adx > adz ? adx : adz;
+                    px = nx; pz = nz;
+                }
+                return len;
+            });
             const pts: Tile[] | null = scoped(blocked, () => pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 500));
             if (pts === null) return null;
             if (pts.length === 0) return cheb(from, to) <= tol ? 0 : null;
@@ -165,13 +213,22 @@ export async function rsPathLength(): Promise<PathLength> {
         if (cached !== undefined) return cached;
         const v = measureNow(from, to, blocked, tol, interaction);
         cache.set(k, v);
+        if (v === null) labelScope(prefix, blocked);
         return v;
+    };
+    // True when the labels of the active scope (labelScope) put the two ends in areas no walk joins.
+    const scopeSeparated = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): boolean => {
+        if (scopeLabels.size === 0) return false;
+        const labels = scopeLabels.get(scopePrefix(blocked));
+        if (!labels) return false;
+        return interaction ? separatedInteraction(from, to, blocked, tol, interaction, labels) : separated(labels, from, to, tol);
     };
     const measure: PathLength = (from, to, blocked, tol, interaction) => {
         if (from.level !== to.level) return null;
         if (!interaction && tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) return null;
         // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
         if (interaction ? separatedInteraction(from, to, blocked, tol, interaction) : separated(areas, from, to, tol)) return null;
+        if (scopeSeparated(from, to, blocked, tol, interaction)) return null;
         return lookupOrMeasure(from, to, blocked, tol, interaction);
     };
     measure.measurePrechecked = (from, to, blocked, tol, interaction) => {
@@ -181,6 +238,7 @@ export async function rsPathLength(): Promise<PathLength> {
         } else if (tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) {
             return null;
         }
+        if (scopeSeparated(from, to, blocked, tol, interaction)) return null;
         return lookupOrMeasure(from, to, blocked, tol, interaction);
     };
     measure.withPolicy = scoped;
