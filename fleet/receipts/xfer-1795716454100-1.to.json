@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795716454100-1",
  "account": "BowBeforeMe",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 3,
  "claim": "4f1a294e-0c98-4ee5-894a-a1609fb59583",
- "count": 0,
- "ok": false,
- "at": 1795716886410,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795716897560,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795716896610
+ },
+ "logout": {
+  "attemptId": "1795716886418-0000025976-0000000001",
+  "at": 1795716897526,
+  "sha256": "05347f1bd64592d2740a469e21b986d22af3168615a9fb1d699008f3da667610"
+ },
+ "screen": true
 }
