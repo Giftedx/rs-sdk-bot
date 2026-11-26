@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795716314124-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Wandwaver",
+  "item": "Steel bar",
+  "count": 3,
+  "itemId": 2353,
+  "start": 1795716314124,
+  "end": 1795717214124,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

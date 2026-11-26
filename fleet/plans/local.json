@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795716296874,
+ "at": 1795716322402,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -109,31 +109,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "39",
-    "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "34",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "34"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "army"
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -170,31 +145,6 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "297",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "61400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "297"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "auto"
-  },
-  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -203,20 +153,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "885",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1466",
     "COIN_RESERVE": "1000",
-    "FLOAT": "356000",
+    "FLOAT": "295200",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "885"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1466"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -245,48 +195,64 @@
    "role": "army"
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "1173",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "TRAIN_SKILL": "Smithing",
+    "TARGET_LEVEL": "44"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
+   "role": "army"
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "fishingshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "301",
-    "ITEMS": "Lobster pot",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:301",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:301",
+   "goal": "campaign:haggis:item:39",
    "role": "auto"
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:ranarr_weed"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:257",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "goal:supply_chain:263",
    "role": "army"
   },
   {
