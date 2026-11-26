@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795708945103,
+ "at": 1795708962813,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -74,7 +74,7 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -104,7 +104,7 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
+   "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
@@ -119,20 +119,20 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "293"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   },
   {
    "account": "MineYourBiz",
@@ -173,22 +173,6 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts SPLASH_SITE=coop TRAIN_SKILL=Magic TARGET_LEVEL=56 -- magic splash-coop 56 3000",
-    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
-    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -215,6 +199,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
    "resources": [
     "draynor-willows"
    ]
@@ -354,31 +354,33 @@
    "account": "Packhorse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-158-p61 ITEM_ID=1436 QUANTITY=158 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=293 -- runecraft air"
+    "scripts/aio-market.ts ORDER_KEY=brain-436-6-p23 ITEM_ID=436 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-6-p23 ITEM_ID=438 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=6 -- smithing smelt 1500 bronze"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:2349",
    "role": "helper"
   },
   {
-   "account": "Dipstick",
+   "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/quest-merlin.ts --",
-    "scripts/generated/quest-grail.ts DEMAND_ID=goal:quest_board:grail BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
+    "scripts/generated/quest-druid.ts --",
+    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grail",
-   "role": "army"
+   "goal": "goal:quest_board:itwatchtower",
+   "role": "auto"
   }
  ],
  "army": [

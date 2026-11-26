@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795708322690-2",
  "account": "Wandwaver",
  "partner": "WellHung",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "2bc4581a-12d2-4eca-b9d9-f412364f4b80",
- "count": 0,
- "ok": false,
- "at": 1795708864829,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795708961398,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7462,
+  "after": 7402
+ },
+ "logout": {
+  "attemptId": "1795708864838-0000018828-0000000001",
+  "at": 1795708961386,
+  "sha256": "e074765e467d39cdb5605349fccfc5d861124599e41e0204045d525dce48074c"
+ },
+ "screen": true
 }
