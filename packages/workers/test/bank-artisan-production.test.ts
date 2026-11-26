@@ -330,7 +330,7 @@ test('a target level ends the run at the level, and a run that starts at the lev
  const stock={n:9},a=levelIo(r,stock);
  expect(await runInventoryProduction(a.io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:12})).toMatchObject({ok:true,made:2,banked:2,failure:'-'});
  expect(stock.n).toBe(7);
- // The chain rerun after a later step failed: the level is reached, so the unlock passes with nothing made.
+ // A chain rerun after a later step fails starts at the level, so the unlock passes with nothing made.
  const b=levelIo(r,stock);b.setLevel(12);
  expect(await runInventoryProduction(b.io,r,{maximum:5,cap:50,maxAttempts:5,targetLevel:12,levelOrder:true})).toMatchObject({ok:true,made:0,attempts:0,failure:'-'});
  expect(b.prepares()).toBe(0);

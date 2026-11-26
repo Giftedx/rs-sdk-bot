@@ -1644,9 +1644,8 @@ test('a supply purchase names the owned total its consumer needs, so a chain rer
     expect(isAccountPlan(plan)).toBe(true);
 });
 
-// Live goal:supply_chain:263: the unlock identified one grimy marrentill for Herblore 54, the work step
-// failed "production level missing" and the chain rerun found no herb. An unlock must hold the inputs for
-// the XP that it needs, or the planner skips that train activity.
+// A skill unlock holds the inputs for the XP to its level (in the bank, or bought by an earlier plan step),
+// or the planner skips that train activity. The work step after the unlock needs the level.
 describe('a skill unlock by inventory production is sized for the XP that it needs', () => {
     const identify = createActivityCatalog().list().filter((a) => a.id.startsWith('bank-artisan:identify-'));
     const act = (herb: string) => identify.find((a) => a.id === `bank-artisan:identify-${herb}`)!;
@@ -1667,7 +1666,7 @@ describe('a skill unlock by inventory production is sized for the XP that it nee
         priorityWeight: 1,
         active: true,
     };
-    // The live market cache holds no valid GE ask for a grimy herb (trades 0, or a few units on sale).
+    // An empty quote map is a market cache with no valid GE ask for a grimy herb.
     const plan = (acct: AccountState, marketQuotes: Record<number, { ask: number; sell: number; trades: number }> = {}) => planAccount(acct, {
         world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { HerbRider: acct } },
         activities: identify,
