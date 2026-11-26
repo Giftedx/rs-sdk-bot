@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724458133-1",
  "account": "Billionaire",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 6960,
  "claim": "fd524a80-4cf9-4891-bc2d-65dbf8c85c7c",
- "count": 0,
- "ok": false,
- "at": 1795724570679,
- "detail": "trade claimed"
+ "count": 6960,
+ "ok": true,
+ "at": 1795724582259,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6960
+ },
+ "bank": {
+  "count": 6960,
+  "at": 1795724581479
+ },
+ "logout": {
+  "attemptId": "1795724570689-0000005620-0000000001",
+  "at": 1795724582244,
+  "sha256": "221b8c63b8b40aba7eccf90ecd47f9818da88a3ae44d325755da22b0b88e2c04"
+ },
+ "screen": true
 }
