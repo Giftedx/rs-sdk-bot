@@ -165,6 +165,16 @@ describe('rule b: the switch to a drained target uses the filters of the target 
         expect(sw([{ ...goon, x: 3068, z: 3641 }, multi], { inMulti: true, meAt: { x: 3067, z: 3641 }, skip: new Set(['ligma']) })).toBeUndefined();
         expect(drainedSwitch({ current: 'Ligma', watch, targets, focus: { view: [goon, multi], health: () => 0.5, me, inMulti: true } })).toBeUndefined();
     });
+    test('a choice that keeps the current target is no switch: a multi-way target before a drained one on single-way ground', () => {
+        // The loop's choice with preferMulti takes Goondelf on multi-way ground before Ligma on single-way ground, so a
+        // switch to Ligma would stop the fight and the loop would start it again on Goondelf.
+        const goonMulti = { ...goon, x: 3068, z: 3641 };
+        const focus = { view: [goonMulti, ligma], health: () => 0.5, me: { ...me, x: 3067, z: 3641 }, inMulti: true, selfIndex: 3 };
+        expect(pickSquadFocus({ ...focus, targets, priority: new Set(['ligma']), preferMulti: true })?.name).toBe('Goondelf');
+        expect(drainedSwitch({ current: 'Goondelf', watch, targets, focus: { ...focus, preferMulti: true } })).toBeUndefined();
+        // With no multi-way preference the drained target comes first, and the switch goes to it.
+        expect(drainedSwitch({ current: 'Goondelf', watch, targets, focus: { ...focus, preferMulti: false } })?.name).toBe('Ligma');
+    });
 });
 
 describe('rule c: the pickup of a kill', () => {

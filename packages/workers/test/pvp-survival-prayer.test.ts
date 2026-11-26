@@ -8,7 +8,8 @@ import { createWildSurvival } from '../src/pvp/squad';
 // server model is the one of pvp-fight-prayer.test.ts: a prayer button toggles its prayer and turns the others of its
 // group off, the server reads 5 inputs a tick, and `lag` holds each input that many ticks more.
 // `start`: the prayers on at the start (a fight can leave its Defence prayer on).
-async function between(o: { start: number[]; lag?: number; ticks?: number }) {
+// `hold`: the squad's hold loop with no target, which also wants Protect from Melee on, each 3 ticks of its own.
+async function between(o: { start: number[]; lag?: number; ticks?: number; hold?: boolean }) {
     const lag = o.lag ?? 0, ticks = o.ticks ?? 60;
     let tick = 10;
     const active: boolean[] = new Array(15).fill(false);
@@ -46,7 +47,7 @@ async function between(o: { start: number[]; lag?: number; ticks?: number }) {
     // A prayer input of the script before this part (the fight loop's): the guard chooses no prayer of its own.
     guard.note({ type: 'togglePrayer', prayerIndex: PRAYER.melee });
     const survival = createWildSurvival(session, { protect: () => 'melee', protectItem: () => true, eatBelow: 0 });
-    let off = 0, counted = 0;
+    let off = 0, counted = 0, holdAt = -10;
     for (let t = 0; t < ticks; t++) {
         let read = 0;
         for (let i = 0; i < inbox.length && read < 5;) {
@@ -63,10 +64,21 @@ async function between(o: { start: number[]; lag?: number; ticks?: number }) {
         // The guard's listener first (openBot starts it at login), then the squad's loop.
         for (const cb of [...listeners]) cb();
         survival.step(tick);
+        if (o.hold && tick - holdAt >= 3) { survival.protectNow('melee', tick); holdAt = tick; }
         await new Promise(r => setTimeout(r, 0));
     }
     return { off, counted, stats: guard.stats() };
 }
+
+// The helper and the hold loop run in the same tick and read the same prayers. If each sent a toggle for the prayer
+// that is off, the second toggle would turn it off again, each 3 ticks. So they share one protect input (protectNow).
+test('the survival helper and the hold loop send one protect prayer input between them', async () => {
+    for (const lag of [0, 1]) {
+        const r = await between({ start: [PRAYER.item], lag, hold: true });
+        expect(r.counted).toBeGreaterThan(40);
+        expect(r.off).toBe(0);
+    }
+});
 
 for (const start of [[PRAYER.item, PRAYER.melee], [PRAYER.item, PRAYER.steelSkin, PRAYER.melee]]) {
     for (const lag of [0, 1]) {

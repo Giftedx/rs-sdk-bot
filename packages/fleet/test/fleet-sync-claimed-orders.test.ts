@@ -58,12 +58,19 @@ test('a sync puts back a deleted order file that a held claim names, also when g
         expect(JSON.parse(readFileSync(join(dir, 'fleet', 'orders', `${order.id}.json`), 'utf8'))).toEqual(order);
         expect(stagedDeletions(dir)).toEqual([`fleet/orders/${withdrawn.id}.json`]);
         expect(existsSync(join(dir, 'fleet', 'orders', `${withdrawn.id}.json`))).toBe(false);
-        // The claim refs cannot be read: every deleted order stays until a later sync can tell.
+        // The claim refs cannot be read: every deleted order stays until a later sync can tell. The commit holds no
+        // deletion, and the worktree keeps the withdrawal for that later sync.
         expect(keepClaimedOrders(dir, () => { throw Error('ls-remote timed out'); })).toEqual([`fleet/orders/${withdrawn.id}.json`]);
         expect(stagedDeletions(dir)).toEqual([]);
+        expect(existsSync(join(dir, 'fleet', 'orders', `${withdrawn.id}.json`))).toBe(false);
         // No staged order deletion: the claim refs are not read.
         expect(keepClaimedOrders(dir, () => { reads++; return []; })).toEqual([]);
         expect(reads).toBe(1);
+        // The next sync stages the withdrawal again and reads the claims: no held claim names it, so it is published.
+        g(dir, 'add', '--', 'fleet');
+        expect(keepClaimedOrders(dir, () => { reads++; return []; })).toEqual([]);
+        expect(reads).toBe(2);
+        expect(stagedDeletions(dir)).toEqual([`fleet/orders/${withdrawn.id}.json`]);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }, 30_000);
 

@@ -483,7 +483,8 @@ export function claimedOrderDeletions(deleted: readonly string[], held: readonly
 
 // Run after `git add -- fleet`. An order file that is gone from the worktree is a staged deletion, and the commit
 // would publish it. The deletion of a withdrawn order stays. The deletion of an order that a held claim names is
-// put back from HEAD, in the index and in the worktree.
+// put back from HEAD, in the index and in the worktree. While the held claims are unreadable, no order deletion goes
+// into the commit, and the worktree keeps each deletion, so the next sync that reads the claims decides it.
 export function keepClaimedOrders(dir: string, readHeld: () => FleetTradeClaim[]): string[] {
     const listed = git(dir, 'diff', '--cached', '--name-only', '--no-renames', '--diff-filter=D', '--', 'fleet/orders');
     if (!listed.ok) throw Error(`staged order deletions: ${listed.out}`);
@@ -493,7 +494,7 @@ export function keepClaimedOrders(dir: string, readHeld: () => FleetTradeClaim[]
     try { held = readHeld(); } catch { held = null; }
     const keep = claimedOrderDeletions(deleted, held);
     if (keep.length) {
-        const restored = git(dir, 'checkout', 'HEAD', '--', ...keep);
+        const restored = held === null ? git(dir, 'restore', '--staged', '--', ...keep) : git(dir, 'checkout', 'HEAD', '--', ...keep);
         if (!restored.ok) throw Error(`keep claimed orders: ${restored.out}`);
     }
     return keep;

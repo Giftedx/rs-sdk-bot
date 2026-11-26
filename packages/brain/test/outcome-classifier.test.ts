@@ -339,6 +339,21 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         expect(validateWorldSnapshot(diskSnap)).toEqual([]);
     });
 
+    test('a defect whose hold expired or was cleared counts its next failure as a first one', () => {
+        const classifier = new OutcomeClassifier({ persist: false, defaultDefectTtlMs: 600_000 });
+        const fail = (account: string, now: number) => classifier.applyOutcome(
+            { kind: 'worker_defect', activityId: 'gather:x', account, ticksElapsed: 10, faultSignature: 'DoorStuck' },
+            { now },
+        ).defect?.count;
+        expect(fail('A', NOW)).toBe(1);
+        expect(fail('B', NOW + 1_000)).toBe(2);
+        // The hold expires: the next failure starts a new count.
+        expect(fail('C', NOW + 1_000 + 600_000)).toBe(1);
+        // The owner clears the hold: the next failure starts a new count.
+        expect(classifier.clearDefect({ activityId: 'gather:x' })).toBe(1);
+        expect(fail('D', NOW + 700_000)).toBe(1);
+    });
+
     test('classifies shop-buy boughtTotal=0 stop=stock-wait as market_unavailable and honors skipRateSample', () => {
         const catalog = defaultActivityCatalog();
         const rateStore = createRateStore({

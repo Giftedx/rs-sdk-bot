@@ -313,7 +313,7 @@ export function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => boolean; prayStep: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean; holdGuard: () => void; release: () => void } {
+): { step: (now: number) => boolean; prayStep: (now: number) => boolean; protectNow: (style: CombatStyle, now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean; holdGuard: () => void; release: () => void } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100, ateAt = -10;
     // The helper and the session's prayer guard both send prayer inputs. A flick of the guard with three prayers on
     // turns the last ones on in its second tick; the helper sees one of them off in that tick and turns it on too, and
@@ -353,6 +353,16 @@ export function createWildSurvival(
         }
         return true;
     };
+    // The protect prayer input of the helper and of its caller (the squad's hold loop). The two run in the same tick and
+    // read the same prayers, so if each turned the prayer on, the second toggle would turn it off again. One input at
+    // most each 3 ticks, from either of them.
+    const protectNow = (style: CombatStyle, now: number): boolean => {
+        if (now - prayAt < 3) return false;
+        holdGuard();
+        holdProtect(s, style, 0);
+        prayAt = now;
+        return true;
+    };
     const prayStep = (now: number): boolean => {
         const cur = wildMe();
         if (!cur) return false;
@@ -372,12 +382,7 @@ export function createWildSurvival(
         const prayers = st.prayers;
         if (prayers && prayers.prayerPoints > 0) {
             const style = opts.protect?.() ?? (now - hitAt <= 8 ? hitStyle : null);
-            if (style && now - prayAt >= 3) {
-                holdGuard();
-                holdProtect(s, style, 0);
-                prayAt = now;
-                acted = true;
-            }
+            if (style && protectNow(style, now)) acted = true;
             const active = prayers.activePrayers ?? [];
             if (opts.protectItem?.() && (s.sdk.getSkill?.('Prayer')?.baseLevel ?? 1) >= 25 && !active[PRAYER.item] && now - itemAt >= 3 && typeof s.sdk.sendTogglePrayer === 'function') {
                 holdGuard();
@@ -391,6 +396,7 @@ export function createWildSurvival(
     return {
         tryEat,
         prayStep,
+        protectNow,
         holdGuard,
         release: () => { guardHold?.release(); guardHold = null; },
         foodWait: (now: number) => Math.max(0, foodReady - now),
@@ -1375,12 +1381,17 @@ export function cancelAttack(s: { sdk: { getState: () => { player?: { worldX: nu
 // single-way fight). Undefined: the member keeps its fight.
 export function drainedSwitch<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean; combatTargetType?: string; combatTargetIndex?: number }>(o: {
     current: string; watch: Pick<DaggerWatch, 'drained'>; targets: ReadonlySet<string>;
-    focus: { view: readonly P[]; health: (p: P) => number; skip?: ReadonlySet<string>; me?: { x: number; z: number; combatLevel: number }; inMulti?: boolean; preferMulti?: boolean; stunned?: ReadonlySet<string>; selfIndex?: number };
+    focus: { view: readonly P[]; health: (p: P) => number; skip?: ReadonlySet<string>; me?: { x: number; z: number; combatLevel: number }; inMulti?: boolean; preferMulti?: boolean; stunned?: ReadonlySet<string>; priority?: ReadonlySet<string>; selfIndex?: number };
 }): P | undefined {
     const cur = o.current.toLowerCase();
     if (o.watch.drained(cur)) return undefined;
     const drained = new Set(o.focus.view.map(q => q.name.toLowerCase()).filter(n => n !== cur && o.targets.has(n) && o.watch.drained(n)));
-    return drained.size ? pickSquadFocus({ ...o.focus, targets: drained }) : undefined;
+    if (!drained.size) return undefined;
+    // The choice is the loop's own (preferMulti before priority, then health) among the drained targets and the
+    // current one. A choice that keeps the current target is no switch: the loop would pick it again and restart the
+    // fight that the switch stopped.
+    const pick = pickSquadFocus({ ...o.focus, targets: new Set([...drained, cur]), priority: new Set([...(o.focus.priority ?? []), ...drained]) });
+    return pick && pick.name.toLowerCase() !== cur ? pick : undefined;
 }
 
 /** Whether a member must still move to reach single-way safety for a radar action. */
@@ -2023,7 +2034,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     singleUntil = now + 120;
                     if (needsSingleWayMove(p, single.to) && !fallbackDue()) {
                         o.threats!.acted(now);
-                        if (protect && now - holdPrayAt >= 3) { wildSurvival.holdGuard(); holdProtect(s, protect, 0); holdPrayAt = now; }
+                        if (protect && now - holdPrayAt >= 3) { wildSurvival.protectNow(protect, now); holdPrayAt = now; }
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
                         let stuckTicks = 0, lastX = p.worldX, lastZ = p.worldZ, checkedTick = s.tick();
                         const walkDist = Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z));
@@ -2091,7 +2102,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // in the last 10 ticks (`keepPrayer`). Protect Item stays on while the survival helper keeps it on (`idlePrayersOff`).
                 const holdNow = s.tick();
                 if (protect) {
-                    if (holdNow - holdPrayAt >= 3) { wildSurvival.holdGuard(); holdProtect(s, protect, 0); holdPrayAt = holdNow; }
+                    if (holdNow - holdPrayAt >= 3) { wildSurvival.protectNow(protect, holdNow); holdPrayAt = holdNow; }
                 } else if (!keepPrayer({ view, targets: o.targets, now: holdNow, damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && holdNow - holdPrayAt >= 3) {
                     const off = idlePrayersOff(s.sdk.getState()?.prayers.activePrayers ?? [], rescueOpts.protectItem());
                     if (off.length) {
@@ -2168,7 +2179,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     if (tNow - began >= 2 && drainedSwitch({ current: target.name, watch: o.dagger, targets: o.targets, focus: {
                         view: o.pull !== false && aimInMulti && tNow >= singleUntil ? curView.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(pos, curView, q, allTargets)) : curView,
                         health, skip: daggerSkip(curView, tNow), me: { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel }, inMulti: isMulti(pos.worldX, pos.worldZ),
-                        preferMulti: aimInMulti && tNow >= singleUntil, selfIndex: selfSlotIndex(),
+                        preferMulti: aimInMulti && tNow >= singleUntil, stunned, priority: daggerPriority(curView, interlopers), selfIndex: selfSlotIndex(),
                     } })) return true;
                 }
                 if (!o.focus) return false;
