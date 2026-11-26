@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795730863043-4",
  "account": "Woodpecker",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 29,
  "claim": "130dd723-087a-480f-be69-89ccfc9ce510",
- "count": 0,
- "ok": false,
- "at": 1795731509389,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795731708959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 29
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795731708248
+ },
+ "logout": {
+  "attemptId": "1795731509398-0000012952-0000000001",
+  "at": 1795731708947,
+  "sha256": "c5a0b94499a7eb7d765ef1fc5f7b466151bca4b3679118eb134db0dbad18b50a"
+ },
+ "screen": true
 }

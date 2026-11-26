@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795731563611-1",
+ "account": "Woodenstaff",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "9b8c8b88-b114-4cfc-905a-8ef4a74734aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795731767249,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731175171-1",
  "account": "mmtha0205",
  "partner": "Pocketpython",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 10,
  "claim": "6f278329-2aa5-4ba2-ba0a-faf133c8c2a9",
- "count": 0,
- "ok": false,
- "at": 1795731489935,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795731684146,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8883,
+  "after": 8873
+ },
+ "logout": {
+  "attemptId": "1795731489964-0000020868-0000000001",
+  "at": 1795731684137,
+  "sha256": "76f09953d08f2230beef9a2dac74a07e921011534a6a1dce8504c2d0ec55bcb0"
+ },
+ "screen": true
 }

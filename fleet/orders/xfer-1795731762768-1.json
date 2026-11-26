@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795731762768-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "ChaosInPants",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795731762768,
+  "end": 1795732662768,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
