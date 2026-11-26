@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795711666241-1",
+ "account": "Fingerblastr",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "64625abd-a3ce-4e2b-a1cc-1acbf4ab8049",
+ "count": 0,
+ "ok": false,
+ "at": 1795712052456,
+ "detail": "Error: sender pack full: need 40 slots for Coal, 28 free",
+ "logout": {
+  "attemptId": "1795712042383-0000010600-0000000001",
+  "at": 1795712052443,
+  "sha256": "4750e667926cc349e9496517896005b111ebbd411ea808ce3eb4c1ce45118ec3"
+ },
+ "screen": false
+}

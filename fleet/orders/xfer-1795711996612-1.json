@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795711996612-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Swordinhand",
+  "item": "Guam leaf",
+  "count": 1,
+  "itemId": 249,
+  "start": 1795711996612,
+  "end": 1795712896612,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

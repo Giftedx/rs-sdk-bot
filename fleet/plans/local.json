@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795711978975,
+ "at": 1795712061954,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,18 +60,22 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=59 -- thieving knights-stable",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "woodcutting",
+    "yews"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
   },
   {
    "account": "Billionaire",
@@ -112,7 +116,7 @@
    ]
   },
   {
-   "account": "Kiltlifter",
+   "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -131,7 +135,7 @@
    ]
   },
   {
-   "account": "Unsheathed",
+   "account": "mmsmk1232",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -148,6 +152,19 @@
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
   },
   {
    "account": "OreElse",
@@ -158,7 +175,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "185"
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
@@ -228,22 +245,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=7 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=7 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=14 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
   }
  ],
  "army": [
@@ -259,11 +260,11 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
