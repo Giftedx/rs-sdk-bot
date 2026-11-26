@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795721744279-1",
+ "account": "Earlyshooter",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 84,
+ "claim": "f4b3171f-297c-4e02-8e21-3a50bd700eb2",
+ "count": 0,
+ "ok": false,
+ "at": 1795722048683,
+ "detail": "trade claimed"
+}

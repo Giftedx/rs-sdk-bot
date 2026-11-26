@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795721564165-1",
+ "account": "CoinCock",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "941e56a6-f695-476f-8367-1b19d0f40dca",
+ "count": 300,
+ "ok": true,
+ "at": 1795722030366,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795722011273
+ },
+ "logout": {
+  "attemptId": "1795722005332-0000013560-0000000001",
+  "at": 1795722030357,
+  "sha256": "77c1c2646528395bc2498a1d9bf850cfce52b18ddc6eb78d543552f3148af8ab"
+ },
+ "screen": true
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795721583486-1",
+ "account": "Hocuspokeus",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 918,
+ "claim": "6a0d5d66-a424-48b8-9644-b6e66f4dc8bd",
+ "count": 0,
+ "ok": false,
+ "at": 1795722035970,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795722029604-0000011028-0000000001",
+  "at": 1795722035957,
+  "sha256": "c99294b8de81880be41563d76eac6a42cf042d30d42e09dc458faf97e5bb69fd"
+ },
+ "screen": false
+}

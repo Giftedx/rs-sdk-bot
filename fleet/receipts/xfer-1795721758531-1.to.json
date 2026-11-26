@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795721758531-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "9b809d10-019a-45c9-8e18-db9ba3e68875",
+ "count": 1,
+ "ok": true,
+ "at": 1795722025582,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795722024839
+ },
+ "logout": {
+  "attemptId": "1795722014672-0000026320-0000000001",
+  "at": 1795722025572,
+  "sha256": "7c730a01658cd54c818a67a7e371b29a65418b162f36040ccc15f0eb9561c913"
+ },
+ "screen": true
+}

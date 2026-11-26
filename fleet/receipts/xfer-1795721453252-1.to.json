@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795721453252-1",
+ "account": "SporranDip",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "ae9068d7-37ba-47be-8af3-b39cd11c44a4",
+ "count": 1,
+ "ok": true,
+ "at": 1795721990059,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795721989302
+ },
+ "logout": {
+  "attemptId": "1795721979805-0000004780-0000000001",
+  "at": 1795721989971,
+  "sha256": "5a00f70c0629dbe0e33e6460564ddb19bb000c8b58b823eb143144b6b003c12e"
+ },
+ "screen": true
+}

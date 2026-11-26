@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721849394,
+ "at": 1795722055721,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,57 +59,67 @@
    "role": "pvp"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "cooking",
-    "food"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:379",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "helper"
-  },
-  {
-   "account": "OreElse",
+   "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=10 STOCK_TARGET=10 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=10 -- crafting jewellery-trip"
+    "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 PRODUCT_TARGET=240 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=240 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1637",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "helper"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
+  },
+  {
+   "account": "AFKnight",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "tree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
+   "role": "auto"
   },
   {
    "account": "Bigpackage",
@@ -128,119 +138,81 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Fatstack",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "magearena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "crest"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=98 PRODUCT_TARGET=98 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=98 -- cooking food"
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1339 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "campaign:haggis:item:1311",
+   "role": "helper"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1105 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
-    "DEMAND_ID": "goal:pk_army:TossTheCaber",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
   }
  ],
  "army": [
@@ -262,7 +234,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",

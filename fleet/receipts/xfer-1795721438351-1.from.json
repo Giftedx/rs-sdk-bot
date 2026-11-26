@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795721438351-1",
+ "account": "Unsheathed",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(3)",
+ "requested": 2,
+ "claim": "5fefb927-07fc-4581-8d01-d73bc8653826",
+ "count": 0,
+ "ok": false,
+ "at": 1795721949034,
+ "detail": "trade claimed"
+}
