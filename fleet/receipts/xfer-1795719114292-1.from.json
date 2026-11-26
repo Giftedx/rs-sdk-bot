@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795719114292-1",
  "account": "Earlyshooter",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 6,
  "claim": "1cace1d2-ae73-4184-8c06-e82ebac5cfd0",
- "count": 0,
- "ok": false,
- "at": 1795719434600,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795719462089,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795719441805
+ },
+ "logout": {
+  "attemptId": "1795719434608-0000017520-0000000001",
+  "at": 1795719462078,
+  "sha256": "d02c3d52d93153dba852c5d099449f500c56801f66af1920aedd4cc31ae55e50"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795719070162-1",
  "account": "mmtha0205",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "f49eb6b1-4cda-4dd4-8167-c3f9c676b1ab",
- "count": 0,
- "ok": false,
- "at": 1795719407057,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795719476906,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795719476147
+ },
+ "logout": {
+  "attemptId": "1795719407067-0000010932-0000000001",
+  "at": 1795719476898,
+  "sha256": "6276d3b01617b60aeb7816760cd1b0bc26fbd1b68b31d01afed20744dd881d41"
+ },
+ "screen": true
 }

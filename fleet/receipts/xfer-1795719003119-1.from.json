@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795719003119-1",
  "account": "Quickhandjob",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "ab028b64-514c-41a5-bddd-203a9cb268aa",
  "count": 0,
  "ok": false,
- "at": 1795719387372,
- "detail": "trade claimed"
+ "at": 1795719453348,
+ "detail": "Error: route to 3183, 3440: timeout far walk to 2619,3332,0: no progress: walk rejected 3 times start=2542,3175,0 at=2542,3175,0 target=2547,3180 reply={\"phase\":\"validation\",\"reason\":\"client_rejected\",\"message\":\"Failed to walk\"}",
+ "logout": {
+  "attemptId": "1795719387382-0000021264-0000000001",
+  "at": 1795719453333,
+  "sha256": "65661c73dad5cb583cd07b407d77c32e4453bc9aab60b3202d39da041cfa6944"
+ },
+ "screen": false
 }
