@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716260882-1",
+ "account": "Unsheathed",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 925,
+ "claim": "9e497467-668d-4919-b10d-ec44fcab3e14",
+ "count": 0,
+ "ok": false,
+ "at": 1795716588115,
+ "detail": "trade claimed"
+}
