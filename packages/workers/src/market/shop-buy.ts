@@ -180,7 +180,9 @@ export function shopOrderShortText(bought: number, orderUnits: number, stop: str
     if (stop === 'coin-reserve' || stop === 'spend-cap' || stop === 'bounded-purchase-unaffordable') {
         return `order short bought=${bought}/${units}: insufficient coins`;
     }
-    return `order short bought=${bought}/${units}: shop out of stock`;
+    // Only an empty shelf is a venue fault: a tick cap or a full pack says nothing about the shop.
+    if (stop === 'stock-wait') return `order short bought=${bought}/${units}: shop out of stock`;
+    return `order short bought=${bought}/${units}: ended on ${stop || 'no stop'}`;
 }
 
 export function maximumUnitCost(

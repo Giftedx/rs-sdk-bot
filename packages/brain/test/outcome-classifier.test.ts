@@ -429,3 +429,10 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         expect(rateStore.hasOverride(actId)).toBe(false);
     });
 });
+
+test('a short planned shop order cools its venue only when the shelf was empty', () => {
+    const kind = (status: string) => classifyRawWorkerExit({ activityId: 'market:shop-buy', account: 'Bot1', exitCode: 1, status }).kind;
+    expect(kind('RESULT fail order short bought=0/2: shop out of stock ticks=281 boughtTotal=0 stop=stock-wait')).toBe('market_unavailable');
+    expect(kind('RESULT fail order short bought=435/2000: ended on cap ticks=3085 boughtTotal=435 stop=cap')).not.toBe('market_unavailable');
+    expect(kind('RESULT fail order short bought=0/1: insufficient coins ticks=99 boughtTotal=0 stop=coin-reserve')).toBe('missing_supply');
+});
