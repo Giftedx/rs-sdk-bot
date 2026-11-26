@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727655486,
+ "at": 1795727763235,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,7 +74,7 @@
    "role": "auto"
   },
   {
-   "account": "Stirmypot",
+   "account": "mmsmk1232",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -87,35 +87,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:biohazard",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
+   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
@@ -217,23 +203,15 @@
   },
   {
    "account": "Packhorse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:tipmyshaft:item:40",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:tipmyshaft:item:40",
+   "goal": "goal:quest_board:dwarfcannon",
    "role": "helper"
   },
   {
@@ -285,6 +263,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:93",
    "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=25 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:tipmyshaft:item:40 BATCH_UNITS=2 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:tipmyshaft:item:40",
+   "role": "helper"
   },
   {
    "account": "Magicwanda",

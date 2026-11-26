@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727578796-1",
+ "account": "Fingersmith",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 29,
+ "claim": "ac5819e6-1a2c-43f6-b671-9cc3ea427d16",
+ "count": 0,
+ "ok": false,
+ "at": 1795727752724,
+ "detail": "trade claimed"
+}
