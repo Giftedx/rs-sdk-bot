@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728202317-1",
  "account": "Magicwanda",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 790,
  "claim": "fba44082-963d-419a-ba3d-645ea8edead1",
- "count": 0,
- "ok": false,
- "at": 1795728379525,
- "detail": "trade claimed"
+ "count": 790,
+ "ok": true,
+ "at": 1795728580308,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 790,
+  "after": 0
+ },
+ "bank": {
+  "count": 790,
+  "at": 1795728559169
+ },
+ "logout": {
+  "attemptId": "1795728379535-0000001424-0000000001",
+  "at": 1795728580298,
+  "sha256": "27dd38379de89ba67290f140e7e9f5df3096520a2ae3da53350375748ecd79a0"
+ },
+ "screen": true
 }
