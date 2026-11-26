@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726693908-1",
+ "account": "mmtha0205",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "add2b224-bb9b-4e9f-a0c3-c49dda4db828",
+ "count": 1,
+ "ok": true,
+ "at": 1795726855208,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795726831248
+ },
+ "logout": {
+  "attemptId": "1795726822354-0000023076-0000000001",
+  "at": 1795726855195,
+  "sha256": "ab37dd64483ca3c4220cab3951f6f7af7b773c77661bb8053ac170eb18b4ca62"
+ },
+ "screen": true
+}

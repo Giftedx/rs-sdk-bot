@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795726701870-3",
+ "account": "Swordinhand",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "d7c81b99-e28c-459e-947c-99a1c5a5f60e",
+ "count": 0,
+ "ok": false,
+ "at": 1795726852758,
+ "detail": "trade claimed"
+}
