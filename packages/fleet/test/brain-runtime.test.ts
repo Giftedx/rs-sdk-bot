@@ -63,6 +63,17 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail live admission paused by stop file chain rounds=1 ok=0 failed=1')).toBe(true);
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail stop file ticks=1200 picks=80 fails=2')).toBe(true);
         expect(gateHeldRunEnd('stopped after 0 runs', undefined)).toBe(true);
+        // Live quarantines that were only a gate: a login refusal with its "login: " prefix, a held claim, and a
+        // stop that the worker names in its own words.
+        expect(gateHeldRunEnd('gave-up after 21 runs', 'RESULT fail login: Error: no worker progress: release peer state unknown; verify offline before rollout chain rounds=1 ok=0 failed=1')).toBe(true);
+        expect(gateHeldRunEnd('gave-up after 3 runs', 'RESULT fail login: Error: fleet account claim held by swarm')).toBe(true);
+        expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: fleet trade claim held for order xfer-1795716352592-1')).toBe(true);
+        expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail fleet account claim held by swarm chain rounds=1 ok=0 failed=1')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail Error: cargo stopped')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail {"ok":false,"recipe":"brew:3doseprayerrestore","made":0,"failure":"production session stopped"}')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail magic-order stop requested level=15 target=56 casts=11 spent=0 chain rounds=1 ok=0 failed=1')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail Error: smelt travel to Al Kharid bank failed: walk to 3269,3167,0: Error: smelt original session/input owner/life/stop unavailable')).toBe(true);
+        expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: cargo stopped')).toBe(false);
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required chain rounds=1 ok=0 failed=1')).toBe(false);
         expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: account, native spell and NPC ID required')).toBe(false);
         expect(gateHeldRunEnd('gave-up after 21 runs', 'RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=2')).toBe(false);

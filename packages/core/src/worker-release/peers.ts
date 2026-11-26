@@ -41,7 +41,7 @@ export function standingAccounts(base = root): Set<string> {
 }
 
 export function isWorkerReleaseHold(result: string): boolean {
-    return /^RESULT fail (?:Error: )?no worker progress: (?:release (?:pin missing|source changed|peer state unknown|build in progress|update pending)|active legacy\/different release)/.test(result);
+    return /^RESULT fail (?:login: )?(?:Error: )?no worker progress: (?:release (?:pin missing|source changed|peer state unknown|build in progress|update pending)|active legacy\/different release)/.test(result);
 }
 
 // Recheck before the network boundary, including workers launched by an old

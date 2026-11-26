@@ -4,6 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { liveRoot, repoRoot } from '../../core/src/practice-paths';
+import { isWorkerReleaseHold } from '../../core/src/worker-release';
 import {
     validateRunOutcome,
     type DeathOutcome,
@@ -208,6 +209,22 @@ const MISSING_PAIRS_RE = /\b(?:missing|withdraw short) (\d+:\d+(?:,\d+:\d+)*)\b/
 const MISSING_SUPPLY_RE = /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank|\b(?:missing|withdraw short) \d+:\d+\b/i;
 const FAILURE_MARKER_RE = /\b(?:fail|failed|error|exception|crash|abort|defect|timeout|timed out)\b/i;
 const SUCCESS_MARKER_RE = /\b(?:target.?met|completed?|done)\b/i;
+
+// A login that a fleet claim refused ("fleet account claim held by swarm", "fleet trade claim held for order ...",
+// packages/core/src/fleet-trade-claim.ts). The claim holds the account. It says nothing about the activity.
+const CLAIM_HELD_RE = /^RESULT fail (?:login: )?(?:Error: )?fleet (?:account|trade) claim held\b/;
+export const isClaimHeldResult = (result: string) => CLAIM_HELD_RE.test(result);
+// A worker that a stop ends in the middle of its work names the stop in its own words: "stop file", "cargo stopped",
+// "production session stopped", "stop=stopped", "magic-order stop requested", "far walk to ...: stopped", and the
+// smelt send guard "owner/life/stop unavailable".
+const STOP_RESULT_RE = /\bstop file\b|\bstopped\b|\bstop requested\b|\/stop unavailable\b/;
+export const isStopResult = (result: string) => STOP_RESULT_RE.test(result);
+// A saved defect has no end reason of its supervisor, so only a text that a stop request alone writes counts there.
+// "production session stopped", "herblore stopped" and the smelt send guard also name an ended session or a changed
+// life: such a record keeps its quarantine.
+const STOP_FAILURE_RE = /\bstop file\b|\bstop requested\b/;
+// A result line that a gate wrote: a release hold, a held claim or a stop. Such a line is no worker defect.
+export const isGateHeldResult = (result: string) => isWorkerReleaseHold(result) || isClaimHeldResult(result) || STOP_FAILURE_RE.test(result);
 
 function detectInfraSource(text: string): InfraFaultSource | undefined {
     if (INFRA_PROXY_RE.test(text)) {
@@ -481,7 +498,9 @@ export class OutcomeClassifier {
         if (Array.isArray(parsed.defects)) {
             for (const item of parsed.defects) {
                 if (validateDefectRecord(item).length === 0) {
-                    this.defects.set(defectKey(item.activityId, item.faultSignature), item);
+                    // A saved state can hold a gate's line as a worker defect. Such a record does not quarantine.
+                    const gateHeld = item.quarantined && item.outcomeKind === 'worker_defect' && isGateHeldResult(item.detail);
+                    this.defects.set(defectKey(item.activityId, item.faultSignature), gateHeld ? { ...item, quarantined: false } : item);
                 }
             }
         }
