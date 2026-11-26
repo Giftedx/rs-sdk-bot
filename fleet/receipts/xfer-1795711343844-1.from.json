@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711343844-1",
  "account": "TheFullMonty",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 7,
  "claim": "7f6f6b91-2821-433c-8235-36d08e40055b",
- "count": 0,
- "ok": false,
- "at": 1795711709814,
- "detail": "trade claimed"
+ "count": 7,
+ "ok": true,
+ "at": 1795711953740,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 0
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795711900549
+ },
+ "logout": {
+  "attemptId": "1795711709825-0000003816-0000000001",
+  "at": 1795711953636,
+  "sha256": "85d8c0f4a2ab39340665fec196c1b2e3093e9aba9d2a562c891e7c4988067a45"
+ },
+ "screen": true
 }
