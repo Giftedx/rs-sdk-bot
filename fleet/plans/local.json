@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715210046,
+ "at": 1795715225050,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,32 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -106,6 +81,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "gemshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1621",
+    "ITEMS": "Uncut emerald",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1621",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1621",
    "role": "army"
   },
   {
@@ -311,24 +311,28 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Billionaire",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-2353-26-p748",
-    "ITEM_ID": "2353",
-    "QUANTITY": "26",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "748",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "26"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
