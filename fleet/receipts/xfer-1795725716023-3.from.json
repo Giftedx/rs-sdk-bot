@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725716023-3",
  "account": "Fatstack",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Sapphire ring",
  "requested": 2,
  "claim": "57c6e7f5-c6fc-4a4a-83a7-3b45de8bad45",
- "count": 0,
- "ok": false,
- "at": 1795726208796,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795726357638,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795726346491
+ },
+ "logout": {
+  "attemptId": "1795726208805-0000004884-0000000001",
+  "at": 1795726357625,
+  "sha256": "5ddca6702e07501bb7244ee5331ee04572a15b1addcbab7dba23f16f1e38d1da"
+ },
+ "screen": true
 }
