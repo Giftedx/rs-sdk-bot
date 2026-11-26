@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795707969534-3",
+ "account": "KnightRider",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "5362b401-4faf-4906-b409-ef3ce2a049c0",
+ "count": 3,
+ "ok": true,
+ "at": 1795708101087,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795708047897
+ },
+ "logout": {
+  "attemptId": "1795708041010-0000003208-0000000001",
+  "at": 1795708101076,
+  "sha256": "80b2e72e6a7f40aaa18029f49419084877eb8398aa0c99b83ef078bc4e0e871b"
+ },
+ "screen": true
+}

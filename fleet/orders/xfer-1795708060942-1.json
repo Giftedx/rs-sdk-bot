@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795708060942-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Pocketpython",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795708060942,
+  "end": 1795708960942,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
