@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712810234-1",
  "account": "Fatstack",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Harralander",
  "requested": 1,
  "claim": "c9006ec0-5b72-42ae-bc6a-faa7af9abdce",
- "count": 0,
- "ok": false,
- "at": 1795713103651,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795713198140,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795713179636
+ },
+ "logout": {
+  "attemptId": "1795713103998-0000009532-0000000001",
+  "at": 1795713197973,
+  "sha256": "71e708c02a3e4788eac78f82a6f39a04cce52ea588e929c67414aaa3c96a7ac2"
+ },
+ "screen": true
 }
