@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713475353-1",
  "account": "Fatstack",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "bdf524e3-1da1-4491-af2a-1396f1a652e3",
- "count": 0,
- "ok": false,
- "at": 1795713818379,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795713830545,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795713829700
+ },
+ "logout": {
+  "attemptId": "1795713818388-0000023204-0000000001",
+  "at": 1795713830380,
+  "sha256": "4232e95da9506d1b8336b1014ffa937090b50d13e828f092672b7782d3bb9c28"
+ },
+ "screen": true
 }

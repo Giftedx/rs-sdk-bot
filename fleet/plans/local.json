@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795713703598,
+ "at": 1795713833228,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Moneyshot",
+   "account": "Fatstack",
    "script": "scripts/generated/quest-dragon.ts",
    "args": [],
    "env": {
@@ -69,6 +69,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:dragon",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "feathers"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lochnessrod:item:314",
    "role": "army"
   },
   {
@@ -294,27 +310,34 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "herblore",
+    "potions"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "2"
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "70"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "goal:supply_chain:267",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=65 -- herblore potions",
+    "scripts/aio-logistics.ts ITEM_ID=215 QUANTITY=1 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:265 BATCH_UNITS=3 -- crafting inventory identify:cadantine"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:265",
    "role": "army"
   },
   {
@@ -326,20 +349,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "39",
-    "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "15",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:tipmyshaft:item:39",
-    "BATCH_UNITS": "15"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:tipmyshaft:item:39",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -468,20 +491,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "40",
-    "ITEMS": "Iron arrowtips",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
     "MAX_ITEMS": "15",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:40",
+    "DEMAND_ID": "campaign:tipmyshaft:item:39",
     "BATCH_UNITS": "15"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "campaign:tipmyshaft:item:39",
    "role": "army"
   },
   {
@@ -538,31 +561,6 @@
    "repeat": false,
    "goal": "goal:quest_board:viking",
    "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "555",
-    "ITEMS": "Water rune",
-    "MAX_ITEMS": "636",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:555",
-    "BATCH_UNITS": "636"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:555",
-   "role": "army"
   }
  ],
  "army": [
@@ -574,7 +572,7 @@
   "mmsmk1232",
   "bigpackage",
   "dipstick",
-  "fatstack",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mmthv2350",
@@ -584,7 +582,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
   "yewfirst"
  ],

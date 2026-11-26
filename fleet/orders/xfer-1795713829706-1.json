@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795713829706-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 217,
+  "start": 1795713829706,
+  "end": 1795714729706,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
