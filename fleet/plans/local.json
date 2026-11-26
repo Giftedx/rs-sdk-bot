@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720845270,
+ "at": 1795720860410,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -304,6 +304,21 @@
    "role": "army"
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
+  },
+  {
    "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
@@ -317,6 +332,21 @@
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
    "role": "helper"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   }
  ],
  "army": [
@@ -337,7 +367,6 @@
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pickpockdick",

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720576967-1",
  "account": "Magicwanda",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Gold ore",
  "requested": 35,
  "claim": "2aa450ac-6026-4407-838e-19baf90c124e",
- "count": 0,
- "ok": false,
- "at": 1795720809329,
- "detail": "trade claimed"
+ "count": 35,
+ "ok": true,
+ "at": 1795720856852,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 35,
+  "after": 0
+ },
+ "bank": {
+  "count": 35,
+  "at": 1795720836063
+ },
+ "logout": {
+  "attemptId": "1795720809338-0000026740-0000000001",
+  "at": 1795720856836,
+  "sha256": "9c88dae4c0aae428f465a08ea7eb1d81892500791ca3ec9c836830f36679e134"
+ },
+ "screen": true
 }

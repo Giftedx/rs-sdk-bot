@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720516309-1",
  "account": "CoinCock",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 1970,
  "claim": "14743696-9283-4b90-8494-7bf7d50ea96c",
- "count": 0,
- "ok": false,
- "at": 1795720819331,
- "detail": "trade claimed"
+ "count": 1970,
+ "ok": true,
+ "at": 1795720845629,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1970,
+  "after": 0
+ },
+ "bank": {
+  "count": 1970,
+  "at": 1795720824876
+ },
+ "logout": {
+  "attemptId": "1795720819339-0000024920-0000000001",
+  "at": 1795720845615,
+  "sha256": "ba7645b67dbeb63405e7742780e41edc1245afdcb9e57961e0c4122ec404d683"
+ },
+ "screen": true
 }

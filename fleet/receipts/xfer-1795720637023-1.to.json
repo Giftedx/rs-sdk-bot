@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720637023-1",
+ "account": "Quickhandjob",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "d72503d6-877b-4eaf-9ce0-de3c9dae1ff2",
+ "count": 0,
+ "ok": false,
+ "at": 1795720849118,
+ "detail": "trade claimed"
+}
