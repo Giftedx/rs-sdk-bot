@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795711886206-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Packhorse",
+  "to": "Pocketpython",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "extra": [
+    {
+      "item": "Unicorn horn",
+      "count": 3,
+      "itemId": 237
+    }
+  ],
+  "start": 1795711886206,
+  "end": 1795712786206,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

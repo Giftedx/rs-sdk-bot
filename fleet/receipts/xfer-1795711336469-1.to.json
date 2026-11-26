@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795711336469-1",
+ "account": "Unsheathed",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "2bee72ce-7c9e-47e9-ac4f-2ca0f9f4bc09",
+ "count": 1,
+ "ok": true,
+ "at": 1795711887246,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Diamond",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795711886516
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795711886154
+ },
+ "logout": {
+  "attemptId": "1795711876380-0000025776-0000000001",
+  "at": 1795711887235,
+  "sha256": "a6a50f170bcb8fcdcc0814cef1530b053e7b1e6376ac56cba94d0db0420c7237"
+ },
+ "screen": true
+}
