@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732307419-1",
  "account": "Fingerblastr",
  "partner": "BoneToPick",
@@ -10,15 +10,37 @@
  "item": "Nature rune",
  "requested": 3,
  "claim": "574a8b4c-c33c-4a4e-8c96-59350cc06ea9",
- "count": 0,
- "ok": false,
- "at": 1795732611750,
- "detail": "trade claimed",
+ "count": 3,
+ "ok": true,
+ "at": 1795732647404,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Feather",
    "requested": 250,
-   "count": 0
+   "count": 250,
+   "inventory": {
+    "before": 250,
+    "after": 0
+   },
+   "bank": {
+    "count": 250,
+    "at": 1795732620238
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795732619391
+ },
+ "logout": {
+  "attemptId": "1795732611758-0000000504-0000000001",
+  "at": 1795732647390,
+  "sha256": "f48fac2ac32f1c83970166b0752ceb3ec21d74fd113231499b0cce2f50d10427"
+ },
+ "screen": true
 }
