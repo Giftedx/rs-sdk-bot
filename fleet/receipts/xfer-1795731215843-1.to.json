@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731215843-1",
  "account": "ChaosInPants",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 30,
  "claim": "0035f9ae-e767-45d9-8daf-eadc23eae7d1",
- "count": 0,
- "ok": false,
- "at": 1795731595459,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795731652184,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795731651419
+ },
+ "logout": {
+  "attemptId": "1795731595489-0000005880-0000000001",
+  "at": 1795731652173,
+  "sha256": "c384959ef41c19fd54ae3ecea918504546af7c23458070503cb7863ed9b2b8aa"
+ },
+ "screen": true
 }
