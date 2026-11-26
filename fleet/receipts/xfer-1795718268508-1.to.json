@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718268508-1",
+ "account": "Spitroaster",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "cc7652d2-6a02-4a73-bb05-86b9ff0e0d01",
+ "count": 6,
+ "ok": true,
+ "at": 1795718690945,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795718690183
+ },
+ "logout": {
+  "attemptId": "1795718678236-0000021584-0000000001",
+  "at": 1795718690932,
+  "sha256": "828196627c02b8e5b4f94514973e430430fe4fecfe18eacb58533980fc369e36"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795718388247-1",
+ "account": "mmsmk1232",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "0ff224d7-0527-42b5-8e7e-b185ba6c3b12",
+ "count": 0,
+ "ok": false,
+ "at": 1795718612933,
+ "detail": "trade claimed"
+}

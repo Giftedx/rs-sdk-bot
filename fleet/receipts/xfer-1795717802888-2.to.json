@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717802888-2",
+ "account": "Magicwanda",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "b99c8f6b-a052-4c43-b6fc-1c669dcf590d",
+ "count": 60,
+ "ok": true,
+ "at": 1795718672941,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795718672179
+ },
+ "logout": {
+  "attemptId": "1795718602445-0000024544-0000000001",
+  "at": 1795718672930,
+  "sha256": "73ca62743b8c8d7ee21579d75a73e3d7352b2fa42572e01954507f042180afd9"
+ },
+ "screen": true
+}

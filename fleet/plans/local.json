@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718535682,
+ "at": 1795718698560,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -127,6 +127,22 @@
    "role": "army"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "air"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "81"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -143,7 +159,7 @@
    "role": "auto"
   },
   {
-   "account": "SporranBulge",
+   "account": "Magicwanda",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "runecraft",
@@ -151,12 +167,28 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "81"
+    "BATCH_UNITS": "801"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
-   "role": "helper"
+   "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   },
   {
    "account": "FishAndChips",
@@ -179,15 +211,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "arena"
+    "magearena"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
+    "DEMAND_ID": "goal:quest_board:magearena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
+   "goal": "goal:quest_board:magearena",
    "role": "army"
   }
  ],
@@ -216,7 +248,6 @@
   "pickpockdick",
   "pocketpool",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",

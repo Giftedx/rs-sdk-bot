@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795718242096-1",
+ "account": "Woodenstaff",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "47ca2d7c-ed8b-42ff-a9d7-4de705fdc760",
+ "count": 0,
+ "ok": false,
+ "at": 1795718626854,
+ "detail": "trade claimed"
+}
