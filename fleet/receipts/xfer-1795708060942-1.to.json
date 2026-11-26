@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708060942-1",
+ "account": "Pocketpython",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "ab8d402e-1866-459e-833e-547587814e1a",
+ "count": 0,
+ "ok": false,
+ "at": 1795708307832,
+ "detail": "trade claimed"
+}
