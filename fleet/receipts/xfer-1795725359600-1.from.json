@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795725359600-1",
  "account": "YewGotWood",
  "partner": "Ballbag",
@@ -12,6 +12,16 @@
  "claim": "00ec8d77-7598-4a6a-94b6-69eca473f748",
  "count": 0,
  "ok": false,
- "at": 1795725436273,
- "detail": "trade claimed"
+ "at": 1795725520610,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 224,
+  "at": 1795725444250
+ },
+ "logout": {
+  "attemptId": "1795725436282-0000014320-0000000001",
+  "at": 1795725520600,
+  "sha256": "774b2518f487440a931b17969db75e79d384acb74e7b59f992149b5d12d7b106"
+ },
+ "screen": false
 }

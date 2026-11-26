@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795725359600-1",
  "account": "Ballbag",
  "partner": "YewGotWood",
@@ -12,6 +12,12 @@
  "claim": "b4f1dc7b-6dcd-42ea-b991-0f3a20a253b6",
  "count": 0,
  "ok": false,
- "at": 1795725459172,
- "detail": "trade claimed"
+ "at": 1795725511935,
+ "detail": "fled at low hitpoints: flee_guard id=1 at=3212,3385 ticks=5",
+ "logout": {
+  "attemptId": "1795725459181-0000015088-0000000001",
+  "at": 1795725511799,
+  "sha256": "84bfbb7a84be8ee32af24c1868aceea7dab5efb29590832dfb010a1b34065aaa"
+ },
+ "screen": false
 }
