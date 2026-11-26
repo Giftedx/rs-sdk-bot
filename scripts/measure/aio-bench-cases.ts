@@ -1896,14 +1896,19 @@ return [
       && /^RESULT ok\b.*\bquestMsg=true\b/m.test(s) && !/^MILESTONE [123] /m.test(s)},
   // Temple of Ikov through the quest sweep from the Ardougne north bank with the quest pack banked, at %ikov (varp 26)
   // = 10 with the pendant of Lucien worn: the state that 3 live runs left after "fail walk to web" (the dark stairs
-  // with no light). The sweep keeps the worn bow on (one slot), stages the lit candle, and the script starts at the
-  // cellar ladder with no Lucien talk.
-  {key: 'extra:sweep-ikov-resume-s10', script: 'scripts/aio-quester.ts', preset: 'quest_ikov', scriptArgs: ['sweep', 'ikov'], timeoutMs: 600_000,
-    presetConfig: {...PRESETS.quest_ikov!, position: {x: 2618, z: 3332, level: 0}, inventory: [], varps: {...PRESETS.quest_ikov!.varps, 26: 10},
-      equipment: [...(PRESETS.quest_ikov!.equipment ?? []), {id: 86, count: 1, slot: 2}],
-      bank: [...(PRESETS.quest_ikov!.inventory ?? [])]},
-    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^IK_FROM low$/m.test(s)
-      && /^QUEST_SWEEP_RESUME .*"stage":10,"spent":\[\],"from":1,/m.test(s) && /^MILESTONE 100 /m.test(s) && !/^MILESTONE 10 /m.test(s)},
+  // with no light). The sweep keeps the worn bow on (one slot), and the script starts at the cellar ladder with no
+  // Lucien talk. The bank holds no lit candle. `resume-s10` banks an unlit candle and a tinderbox in its place: the
+  // sweep lights the candle at the bank and banks the tinderbox again. `resume-s10-spawn` banks the tinderbox alone, as
+  // the 3 live accounts hold: the sweep takes the lit candle that lies in the Ardougne monastery.
+  ...([['resume-s10', [{id: 36, count: 1}, {id: 590, count: 1}], /^QUEST_SWEEP_LIGHT .*"made":\{"33":1\},"tinderbox":"banked again"/m, /^QUEST_SWEEP_GATHER .*"item":33,/m],
+    ['resume-s10-spawn', [{id: 590, count: 1}], /^QUEST_SWEEP_GATHER .*"item":33,"how":"spawn"/m, /^QUEST_SWEEP_LIGHT /m]] as const).map(([mode, banked, has, hasNot]) =>
+    ({key: `extra:sweep-ikov-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_ikov', scriptArgs: ['sweep', 'ikov'], timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_ikov!, position: {x: 2618, z: 3332, level: 0}, inventory: [], varps: {...PRESETS.quest_ikov!.varps, 26: 10},
+        equipment: [...(PRESETS.quest_ikov!.equipment ?? []), {id: 86, count: 1, slot: 2}],
+        bank: [...(PRESETS.quest_ikov!.inventory ?? []).filter((i) => i.id !== 33), ...banked]},
+      pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^IK_FROM low$/m.test(s)
+        && /^QUEST_SWEEP_RESUME .*"stage":10,"spent":\[\],"from":1,/m.test(s) && /^MILESTONE 100 /m.test(s) && !/^MILESTONE 10 /m.test(s)
+        && has.test(s) && !hasNot.test(s)} as BenchCase)),
   // Holy Grail through the quest sweep from the Seers' Village bank with the quest pack banked, at %grail (varp 5) = 4:
   // the crone spoken to, no napkin or whistle (live TrouserSnake and UnderMyKilt hold neither). The sweep reads the
   // stage from the journal, and the script starts at Galahad: no King Arthur, Merlin or Entrana. `resume-s4` has

@@ -1,5 +1,6 @@
 // Travel, door exits, shop purchases, gathering helpers, and handOver session management for quest sweep.
 import { accountOf, sessionDied } from '../../../core/src/bot';
+import { TINDERBOX } from '../../../core/src/gather';
 import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
 import { questFlags } from '../../../core/src/quest-status';
@@ -62,6 +63,7 @@ import {
     wayDown,
     WEST_ARDOUGNE,
     type Buy,
+    type LightStep,
     type Pt,
     type Walked,
 } from './sweep-plan';
@@ -148,6 +150,72 @@ export async function reserveInputSlots(s: Session, inputs: readonly Item[], kee
     const free = 28 - pack().length;
     console.log(`QUEST_SWEEP_CAPACITY ${JSON.stringify({ required, free })}`);
     return free >= required ? null : `input capacity short: free ${free}, required ${required}`;
+}
+
+// Lights each planned light source at the open bank: withdraws the unlit ones and a tinderbox, closes the bank (the
+// bank hides the inventory, and the server refuses an item use under it), uses each unlit one on the tinderbox, opens
+// the bank again and banks a tinderbox that it withdrew and that the quest pack does not need. Each light is one free
+// slot fewer than a staged unlit one and a staged tinderbox: Temple of Ikov at stage 10 fills all 28 slots with the
+// pendant of Lucien and the lit candle.
+export async function lightAtBank(s: Session, lights: readonly LightStep[], keepTinderbox: boolean): Promise<string | null> {
+    const pack = () => (s.sdk.getState()?.inventory ?? []).map((i) => ({ id: i.id, count: i.count }));
+    const bank = () => (s.sdk.getState()?.bank?.items ?? []).map((i) => ({ id: i.id, count: i.count }));
+    const take = async (id: number, count: number) => {
+        const row = (s.sdk.getState()?.bank?.items ?? []).find((i) => i.id === id);
+        if (!row) return `light: bank row ${id} vanished`;
+        const before = countItems(pack(), id);
+        await s.bot.withdrawItem(row, count);
+        return (await waitUntil(s, () => countItems(pack(), id) === before + count, { timeoutTicks: 10 })) ? null : `light: withdraw unobserved ${id}:${count}`;
+    };
+    const tinderFromBank = countItems(pack(), TINDERBOX) === 0;
+    const required = lights.reduce((n, l) => n + Math.max(0, l.count - countItems(pack(), l.unlit)), tinderFromBank ? 1 : 0);
+    const free = 28 - pack().length;
+    if (free < required) {
+        console.log(`QUEST_SWEEP_LIGHT ${JSON.stringify({ skipped: 'pack room', free, required })}`);
+        return null;
+    }
+    if (tinderFromBank) {
+        const why = await take(TINDERBOX, 1);
+        if (why) return why;
+    }
+    for (const l of lights) {
+        const short = l.count - countItems(pack(), l.unlit);
+        if (short > 0) {
+            const why = await take(l.unlit, short);
+            if (why) return why;
+        }
+    }
+    const closed = await s.bot.closeBank();
+    if (!closed.success) return `light: ${closed.message}`;
+    const made: Record<number, number> = {};
+    for (const l of lights) {
+        made[l.lit] = 0;
+        for (let i = 0; i < l.count; i++) {
+            const inv = s.sdk.getState()?.inventory ?? [];
+            const unlit = inv.find((it) => it.id === l.unlit), tinder = inv.find((it) => it.id === TINDERBOX);
+            if (!unlit || !tinder) return `light: ${l.unlit} or ${TINDERBOX} left the pack`;
+            const before = countItems(pack(), l.lit);
+            await s.direct({ type: 'useItemOnItem', sourceSlot: unlit.slot, targetSlot: tinder.slot, reason: 'SDK' });
+            if (!(await waitUntil(s, () => countItems(pack(), l.lit) > before, { timeoutTicks: 5 }))) {
+                return `light: ${l.unlit} on ${TINDERBOX} made no ${l.lit}`;
+            }
+            made[l.lit]!++;
+        }
+    }
+    if (!(await s.bot.openBank()).success || !(await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }))) {
+        return 'bank did not reopen after the light';
+    }
+    // The sweep plans from the bank rows next, so the light waits for them as the first bank open does.
+    await waitUntil(s, () => bank().length > 0, { timeoutTicks: 10 });
+    let banked = false;
+    if (tinderFromBank && !keepTinderbox) {
+        const row = (s.sdk.getState()?.inventory ?? []).find((i) => i.id === TINDERBOX);
+        if (row) await s.bot.depositItem(row, -1);
+        banked = await waitUntil(s, () => countItems(pack(), TINDERBOX) === 0, { timeoutTicks: 10 });
+        if (!banked) return `light: tinderbox deposit unobserved`;
+    }
+    console.log(`QUEST_SWEEP_LIGHT ${JSON.stringify({ lights, made, tinderbox: tinderFromBank ? (banked ? 'banked again' : 'kept') : 'pack', free: 28 - pack().length })}`);
+    return null;
 }
 
 export async function leaveStronghold(
