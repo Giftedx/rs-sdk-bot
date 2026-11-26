@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729464042-2",
+ "account": "Shaftsinker",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "0e6be4a5-499d-413b-b1e6-986875bc9f1f",
+ "count": 0,
+ "ok": false,
+ "at": 1795729667718,
+ "detail": "trade claimed"
+}
