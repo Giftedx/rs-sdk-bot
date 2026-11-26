@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795715742026-1",
  "account": "MineYourBiz",
  "partner": "SporranBulge",
@@ -12,6 +12,12 @@
  "claim": "9036b27c-b9dd-4ddc-83e4-f4207973e034",
  "count": 0,
  "ok": false,
- "at": 1795716187781,
- "detail": "trade claimed"
+ "at": 1795716258677,
+ "detail": "Error: sender pack full: need 62 slots for Raw lobster, 28 free",
+ "logout": {
+  "attemptId": "1795716187790-0000026904-0000000001",
+  "at": 1795716258655,
+  "sha256": "330f06db15715f9eaf9879e99cc0ef7dcbd3bcd8c1a40a3a86ae7fff525c5040"
+ },
+ "screen": false
 }
