@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795726809337-1",
+ "account": "YewFirst",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 725,
+ "claim": "03b8bd49-875e-47e1-b1e9-7def5efb0795",
+ "count": 0,
+ "ok": false,
+ "at": 1795727032672,
+ "detail": "trade claimed"
+}

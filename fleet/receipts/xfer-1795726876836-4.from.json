@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726876836-4",
+ "account": "Fatstack",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "37feaced-6932-4652-af1c-e1a4720629c0",
+ "count": 10,
+ "ok": true,
+ "at": 1795727039177,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795726974860
+ },
+ "logout": {
+  "attemptId": "1795726966368-0000029360-0000000001",
+  "at": 1795727039165,
+  "sha256": "d40ee3845c0f69dca69aaf9d3f3b1670fcafa7764b64fbf46ee389b1807bc45a"
+ },
+ "screen": true
+}

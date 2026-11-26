@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726876836-1",
+ "account": "Unsheathed",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 36,
+ "claim": "05f6048b-747b-4a91-b636-071c989a7cbb",
+ "count": 36,
+ "ok": true,
+ "at": 1795727005189,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 36,
+  "after": 0
+ },
+ "bank": {
+  "count": 36,
+  "at": 1795726962894
+ },
+ "logout": {
+  "attemptId": "1795726955073-0000006504-0000000001",
+  "at": 1795727005181,
+  "sha256": "9d48aa3768587b0d4b50a65dffd4cc34f12ff15da05fbad572907e7ab5e63411"
+ },
+ "screen": true
+}
