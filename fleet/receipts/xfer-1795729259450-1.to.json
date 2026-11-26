@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729259450-1",
+ "account": "BowBeforeMe",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 2,
+ "claim": "26de6863-bfd6-4d03-8e85-5e2411f4e17a",
+ "count": 2,
+ "ok": true,
+ "at": 1795729497486,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795729496740
+ },
+ "logout": {
+  "attemptId": "1795729487814-0000015960-0000000001",
+  "at": 1795729497474,
+  "sha256": "1275b1e9418c42c210fb907a57059475df71a5f5a3f6a47f9964424b76ce7533"
+ },
+ "screen": true
+}

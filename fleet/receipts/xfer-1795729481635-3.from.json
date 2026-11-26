@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729481635-3",
+ "account": "mmtha0205",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 117,
+ "claim": "dc622a5f-5852-4334-bc58-8da3461b832b",
+ "count": 0,
+ "ok": false,
+ "at": 1795729570016,
+ "detail": "trade claimed"
+}

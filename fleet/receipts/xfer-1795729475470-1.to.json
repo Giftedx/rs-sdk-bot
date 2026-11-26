@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729475470-1",
+ "account": "Unsheathed",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 5,
+ "claim": "617b6c95-6222-4c2b-baf8-a204904cd44e",
+ "count": 5,
+ "ok": true,
+ "at": 1795729603060,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795729602331
+ },
+ "logout": {
+  "attemptId": "1795729593665-0000002256-0000000001",
+  "at": 1795729603050,
+  "sha256": "24c85e7b08afed990cf9138a6970572f0f41462d64ecab0a2908d226222836ea"
+ },
+ "screen": true
+}

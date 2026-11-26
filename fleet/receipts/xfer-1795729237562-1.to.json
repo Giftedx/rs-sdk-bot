@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729237562-1",
+ "account": "Woodpecker",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 29,
+ "claim": "bd4f16e9-c104-4206-a29c-64b850d9dc1c",
+ "count": 29,
+ "ok": true,
+ "at": 1795729571618,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 29
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795729570772
+ },
+ "logout": {
+  "attemptId": "1795729497501-0000011804-0000000001",
+  "at": 1795729571477,
+  "sha256": "3001eaf89c3e51be8e2a3d4e92465a8b8ffc11947ad9a3ba540f1e8dcfccacf9"
+ },
+ "screen": true
+}

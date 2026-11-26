@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729475470-3",
+ "account": "Billionaire",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "d417fcef-4256-4ca2-895c-c56864a577b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795729597520,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
