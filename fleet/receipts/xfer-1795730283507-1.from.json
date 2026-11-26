@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795730283507-1",
+ "account": "Swordinhand",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "2c829b57-075f-4629-91ee-0b9676a96646",
+ "count": 0,
+ "ok": false,
+ "at": 1795730563977,
+ "detail": "trade claimed"
+}

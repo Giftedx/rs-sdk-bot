@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795729889066-1",
  "account": "Shaftsinker",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Cannonball",
  "requested": 200,
  "claim": "b3a2a43f-1698-415a-bcf5-38ce64b139ee",
- "count": 0,
- "ok": false,
- "at": 1795730495559,
- "detail": "trade claimed"
+ "count": 200,
+ "ok": true,
+ "at": 1795730532238,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 200
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795730531569
+ },
+ "logout": {
+  "attemptId": "1795730495595-0000020412-0000000001",
+  "at": 1795730532225,
+  "sha256": "3e5b38f06b593a1acfdf81bdbdae8993d36d82b80e260691590140d3dc8c58c4"
+ },
+ "screen": true
 }
