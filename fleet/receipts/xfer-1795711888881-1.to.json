@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795711888881-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "c63d778c-38de-4f6d-a149-689caa1afc01",
+ "count": 0,
+ "ok": false,
+ "at": 1795712310853,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795712307411-0000002100-0000000001",
+  "at": 1795712310841,
+  "sha256": "6a075166bb161b257369af0b40fc2313c003e5d22b6a818cb7cb6d8b9bc0934d"
+ },
+ "screen": false
+}
