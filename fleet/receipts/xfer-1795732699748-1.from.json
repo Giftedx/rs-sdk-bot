@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795732699748-1",
+ "account": "Fingerblastr",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 3,
+ "claim": "88690e47-66dc-4c22-92e3-ee4debf6fbbb",
+ "count": 0,
+ "ok": false,
+ "at": 1795732978488,
+ "detail": "trade claimed"
+}
