@@ -2239,6 +2239,11 @@ return [
   {key: 'extra:smelt-bronze-from-varrock', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'bronze', 'MAX_MAKE=5', 'ORE_RESERVE=0'],
     pass: s => ok(s) && /"made":5\b/.test(s) && /"banked":5\b/.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 1}, inventory: [{id: 995, count: 100}], bank: [{id: 436, count: 5}, {id: 438, count: 5}]}},
+  // A start away from the three smith banks (live: "smith refused: smith staging requires Al Kharid, Varrock East or
+  // Varrock West bank"): the batch walks from Falador east bank to Varrock West bank, then smiths.
+  {key: 'extra:smith-bronze-dagger-from-falador', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '1200', 'PRODUCT_ID=1205', 'MAX_MAKE=1', 'BAR_RESERVE=0'],
+    pass: s => ok(s) && /"made":1,"banked":1/.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3013, z: 3355, level: 0}, inventory: [{id: 2347, count: 1}], bank: [{id: 2349, count: 1}]}},
   {key: 'extra:smith-rune-full-helm', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1163', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
   // Iron arrows from bars and headless arrows: two iron bars into 30 iron arrowtips at the Varrock West anvils, and 90 tips
