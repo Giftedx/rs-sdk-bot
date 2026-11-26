@@ -224,8 +224,12 @@ try {
             await talkId('guard 2', NPC.guard2, [], () => q.has(ITEM.keys), 80);
             q.milestone(5);
         }
-        // 6. The keys on Jeremy's cell door; the server walks the player into the arena and lets the ogre out.
-        await q.walk('to corridor', [{ x: 2617, z: 3151, tol: 0 }]);
+        // 6. The keys on Jeremy's cell door; the server walks the player into the arena and lets the ogre out. From the
+        // guard the corridor is north through loc_1533 (2616,3147). The walk south to the first guard talk opens it; a
+        // run resumed at 3 came in by the west door, and its walk to the corridor took the cell gates instead ("The
+        // cell gate is securely locked", hosted bench extra:sweep-arena-resume-s3, 3 of 3 seeds).
+        await q.openDoor('door 2616,3147', 2616, 3147);
+        await q.dash('to corridor', 2617, 3151, 0, 30);
         await q.dash('to cell', CELL.x, CELL.z, 0, 30);
         await setPfm(true);
         await q.step('keys on cell', () => q.useOnLoc(ITEM.keys, CELL), () => inArena() || q.sawText(/i have the keys/i), 15, 4);
