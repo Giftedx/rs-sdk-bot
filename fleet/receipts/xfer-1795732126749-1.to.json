@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732126749-1",
  "account": "OreElse",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 29,
  "claim": "8fd88dae-1afc-4ab8-b7dd-56eb4530740c",
- "count": 0,
- "ok": false,
- "at": 1795732510334,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795732587324,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 29
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795732586560
+ },
+ "logout": {
+  "attemptId": "1795732510352-0000020484-0000000001",
+  "at": 1795732587314,
+  "sha256": "a2d21e69e51ef336aab6a5aba97984a5576eb3414a309546426abc2fefc96a74"
+ },
+ "screen": true
 }
