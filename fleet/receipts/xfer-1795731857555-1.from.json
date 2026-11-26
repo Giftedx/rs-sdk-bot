@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731857555-1",
  "account": "Quickhandjob",
  "partner": "Woodenstaff",
@@ -10,8 +10,18 @@
  "item": "Shark",
  "requested": 1,
  "claim": "e98a9e4e-64c2-4bb0-b862-599612b52ba5",
- "count": 0,
- "ok": false,
- "at": 1795732185231,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795732240140,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795732185270-0000013260-0000000001",
+  "at": 1795732240131,
+  "sha256": "4adbecf3785a09432104099f68174560a094eb060479ca6edac9b6d5ba06badc"
+ },
+ "screen": true
 }

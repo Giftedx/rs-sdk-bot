@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795731919031-1",
+ "account": "Bigpackage",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 8,
+ "claim": "6cd9d9d3-71e0-4758-9dac-b3d6f843a7ab",
+ "count": 0,
+ "ok": false,
+ "at": 1795732261117,
+ "detail": "trade claimed"
+}
