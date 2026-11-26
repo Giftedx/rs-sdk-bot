@@ -46,10 +46,11 @@ export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
 
 // Quests whose script or sweep branch reads a started journal itself: the journal stage parsers of priestperil, zanaris,
 // rj and totem, the journal-flag branches of cook, druidspirit, fluffs, hetty, hunt, priest, runemysteries, sheepherder
-// and vampire, and the sweep's own Black Knight return to Amik (sweep-plan.ts returnToAmik).
+// and vampire, the held armour and Ceril's greeting of hazeelcult, and the sweep's own Black Knight return to Amik
+// (sweep-plan.ts returnToAmik).
 export const SELF_RESUME: ReadonlySet<string> = new Set([
-    'blackknight', 'cook', 'druidspirit', 'fluffs', 'hetty', 'hunt', 'priest', 'priestperil', 'rj', 'runemysteries',
-    'sheepherder', 'totem', 'vampire', 'zanaris',
+    'blackknight', 'cook', 'druidspirit', 'fluffs', 'hazeelcult', 'hetty', 'hunt', 'priest', 'priestperil', 'rj',
+    'runemysteries', 'sheepherder', 'totem', 'vampire', 'zanaris',
 ]);
 
 // A quest that can go on from a started journal.

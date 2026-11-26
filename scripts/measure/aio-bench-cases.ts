@@ -1827,10 +1827,12 @@ return [
         && (stage === 0 ? /^MILESTONE 1 /m.test(s) : /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s))} as BenchCase)),
   // Witch's House on a started journal (%ballquest, varp 226, = 1): quest-ball.ts has no resume stage, so the sweep
   // refuses at entry, before a bank walk, with the text the supervisor ends the job on (live: "fail step cheese",
-  // then "fail talk boy 1" on each next login).
-  {key: 'extra:sweep-ball-started-refused', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 120_000,
+  // then "fail talk boy 1" on each next login). The sweep ends RESULT fail by design, so the case runs it through
+  // scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
+  {key: 'extra:sweep-ball-started-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_ball',
+    scriptArgs: ['ball', 'journal is started and quest-ball.ts has no resume stage'], timeoutMs: 120_000,
     presetConfig: {...PRESETS.quest_ball!, varps: {...PRESETS.quest_ball!.varps, 226: 1}},
-    pass: (s: string) => /^RESULT fail quest-sweep ball refused: Witch's House journal is started and quest-ball\.ts has no resume stage$/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_ENTRY .*"journal":"started".*"entry":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
   // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,
