@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728736747-1",
  "account": "Bigpackage",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 3,
  "claim": "0126f1a4-c37d-4f5c-985c-9918377cb101",
- "count": 0,
- "ok": false,
- "at": 1795728843165,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795728991916,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795728965575
+ },
+ "logout": {
+  "attemptId": "1795728843175-0000027880-0000000001",
+  "at": 1795728991904,
+  "sha256": "1587f2899df7a4a64b7bc7c6c5a9781560abc232cb59b74cf8fb93570743177e"
+ },
+ "screen": true
 }
