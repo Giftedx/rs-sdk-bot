@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795708922714-2",
  "account": "Abracadickra",
  "partner": "Earlyshooter",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "100c7b95-5727-4d84-b84c-87cb6c411b6c",
- "count": 0,
- "ok": false,
- "at": 1795709051616,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795709312182,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795709222285
+ },
+ "logout": {
+  "attemptId": "1795709051626-0000023696-0000000001",
+  "at": 1795709312170,
+  "sha256": "99c8aeee4bbaa043d7a650d7961d78bab5942cd16bfbe08f897771b9f3a5d171"
+ },
+ "screen": true
 }
