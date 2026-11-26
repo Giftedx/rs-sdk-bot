@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717632737-1",
+ "account": "SporranBulge",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 28,
+ "claim": "7338afc7-3e34-4c95-b7a4-93b826f3d565",
+ "count": 28,
+ "ok": true,
+ "at": 1795717719010,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795717717896
+ },
+ "logout": {
+  "attemptId": "1795717703146-0000020116-0000000001",
+  "at": 1795717718997,
+  "sha256": "530064e796ccba7a409f59c4bc7a8bcb48706d5e0579710f6827b98113e0a4ea"
+ },
+ "screen": true
+}

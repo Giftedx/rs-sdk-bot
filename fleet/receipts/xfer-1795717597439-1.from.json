@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717597439-1",
+ "account": "Swordinhand",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "6f851acf-5e58-440b-9742-40622cc13f82",
+ "count": 1,
+ "ok": true,
+ "at": 1795717762584,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795717729836
+ },
+ "logout": {
+  "attemptId": "1795717723511-0000020336-0000000001",
+  "at": 1795717762574,
+  "sha256": "49ab484fd929ef0f8374dc09021d317cb8f778dd3adc9bd294291ee15c2c9ff9"
+ },
+ "screen": true
+}

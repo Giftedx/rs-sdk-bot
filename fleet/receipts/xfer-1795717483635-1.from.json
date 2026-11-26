@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717483635-1",
+ "account": "Earlyshooter",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 4,
+ "claim": "40f92353-65f7-4342-9d06-d8ee119eb75f",
+ "count": 0,
+ "ok": false,
+ "at": 1795717764430,
+ "detail": "trade claimed"
+}

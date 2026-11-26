@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717424210-1",
+ "account": "CoinCock",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "e207f852-9579-4c62-b1cd-67b5170db43d",
+ "count": 0,
+ "ok": false,
+ "at": 1795717712971,
+ "detail": "trade claimed"
+}
