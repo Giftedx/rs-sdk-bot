@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726320145-1",
+ "account": "MineYourBiz",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "9de2d5db-d946-487f-82cc-1bd7eeb1e4fc",
+ "count": 6,
+ "ok": true,
+ "at": 1795726450841,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795726436533
+ },
+ "logout": {
+  "attemptId": "1795726427905-0000001492-0000000001",
+  "at": 1795726450829,
+  "sha256": "bc094634925bff40b582a411cd9f8cc00dd54bb28e9bbe7db6534f0e4b8c0776"
+ },
+ "screen": true
+}

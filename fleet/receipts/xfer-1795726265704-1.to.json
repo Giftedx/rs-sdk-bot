@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795726265704-1",
+ "account": "Moneyshot",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 2,
+ "claim": "ac1de738-cc77-4240-a695-e98ca586b070",
+ "count": 0,
+ "ok": false,
+ "at": 1795726462089,
+ "detail": "trade claimed"
+}
