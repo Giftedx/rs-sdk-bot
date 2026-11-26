@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795724765639,
+ "at": 1795724794369,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,6 +75,21 @@
    "role": "army"
   },
   {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 PRODUCT_TARGET=217 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=217 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
@@ -123,6 +138,22 @@
    "role": "army"
   },
   {
+   "account": "Packhorse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p224 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1309",
+   "role": "helper"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -136,6 +167,96 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1309",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "spar"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -155,52 +276,6 @@
    "role": "auto"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=150 STOCK_TARGET=150 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "army"
-  },
-  {
    "account": "mmthv2350",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -217,86 +292,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "20",
-    "ORE_RESERVE": "0"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "helper"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=96 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-436-9-p23 ITEM_ID=436 QUANTITY=9 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-438-9-p23 ITEM_ID=438 QUANTITY=9 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:steelrod:item:2349 BATCH_UNITS=9 -- smithing smelt 1500 bronze"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:steelrod:item:2349",
-   "role": "auto"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=1487 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "helper"
   }
  ],
  "army": [
@@ -307,6 +302,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "billionaire",
   "dipstick",
   "fatstack",
   "hocuspokeus",
@@ -319,11 +315,9 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
-  "yewfirst"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

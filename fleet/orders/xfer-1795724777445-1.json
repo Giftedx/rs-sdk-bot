@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795724777445-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "MineYourBiz",
+  "item": "Copper ore",
+  "count": 9,
+  "itemId": 436,
+  "start": 1795724777445,
+  "end": 1795725677445,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
