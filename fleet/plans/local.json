@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715558552,
+ "at": 1795715603165,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1388",
+    "MAX_ITEMS": "1349",
     "COIN_RESERVE": "1000",
-    "FLOAT": "279600",
+    "FLOAT": "271800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1388"
+    "BATCH_UNITS": "1349"
    },
    "enabled": true,
    "repeat": false,
@@ -113,24 +113,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "16",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
@@ -221,17 +221,22 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=4 -- crafting inventory identify:kwuarm"
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "goal:supply_chain:257",
    "role": "army"
   },
   {
@@ -270,14 +275,14 @@
    "env": {
     "ITEM_ID": "39",
     "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "30",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "30"
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
@@ -301,77 +306,79 @@
    "role": "army"
   },
   {
-   "account": "Earlyshooter",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "death"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:death",
-   "role": "auto"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "gemshop2",
+    "shantayshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1621",
-    "ITEMS": "Uncut emerald",
+    "ITEM_ID": "1937",
+    "ITEMS": "Jug of water",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:cutmyjewels:item:1621",
+    "DEMAND_ID": "campaign:haggis:item:1937",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:cutmyjewels:item:1621",
+   "goal": "campaign:haggis:item:1937",
    "role": "army"
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
+   "account": "Woodpecker",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "sweep",
-    "priestperil"
+    "shop-buy",
+    "archeryshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
+    "ITEM_ID": "837",
+    "ITEMS": "Crossbow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:837",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:priestperil",
-   "role": "auto"
+   "goal": "campaign:haggis:item:837",
+   "role": "army"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/chain.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-quester.ts -- sweep priest",
-    "scripts/aio-quester.ts -- sweep priestperil",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:druidspirit BATCH_UNITS=1 -- sweep druidspirit"
+    "shop-buy",
+    "fishingshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "311",
+    "ITEMS": "Harpoon",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:311",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:druidspirit",
-   "role": "auto"
+   "goal": "campaign:haggis:item:311",
+   "role": "army"
   }
  ],
  "army": [
@@ -398,7 +405,6 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

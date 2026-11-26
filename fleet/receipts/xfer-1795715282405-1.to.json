@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795715282405-1",
+ "account": "Swordinhand",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 275,
+ "claim": "f2c3de04-da62-4b73-8306-ce4b8760cba6",
+ "count": 275,
+ "ok": true,
+ "at": 1795715591985,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 275
+ },
+ "bank": {
+  "count": 275,
+  "at": 1795715591147
+ },
+ "logout": {
+  "attemptId": "1795715581645-0000013156-0000000001",
+  "at": 1795715591902,
+  "sha256": "1608cad5110498e178cf1eab133d780e7529b074e7a67278aa02775b46fd065c"
+ },
+ "screen": true
+}

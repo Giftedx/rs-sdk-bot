@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795715282405-1",
  "account": "Woodpecker",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 275,
  "claim": "45aec0e0-c989-46ee-b336-350b731fa750",
- "count": 0,
- "ok": false,
- "at": 1795715552883,
- "detail": "trade claimed"
+ "count": 275,
+ "ok": true,
+ "at": 1795715590299,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 275,
+  "after": 0
+ },
+ "bank": {
+  "count": 275,
+  "at": 1795715563203
+ },
+ "logout": {
+  "attemptId": "1795715552907-0000019500-0000000001",
+  "at": 1795715590290,
+  "sha256": "5e35e8523113021d4ae8211b5ab77e5bacc4d01843046130079c54a18f010085"
+ },
+ "screen": true
 }
