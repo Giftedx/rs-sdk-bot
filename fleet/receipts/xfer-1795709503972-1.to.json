@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795709503972-1",
  "account": "SporranDip",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "f77cde43-2b52-49b1-93b1-0cd2a2066f40",
- "count": 0,
- "ok": false,
- "at": 1795709824603,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795709837359,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795709836595
+ },
+ "logout": {
+  "attemptId": "1795709824615-0000025308-0000000001",
+  "at": 1795709837350,
+  "sha256": "98a9409829db1481f7a90f8e51216d1b963fe03c4e18e0ef418a1e6c357c9786"
+ },
+ "screen": true
 }
