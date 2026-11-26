@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795717130499-1",
  "account": "Woodenstaff",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "d8bbd8eb-1874-403a-bf42-3807532cef26",
  "count": 0,
  "ok": false,
- "at": 1795717298669,
- "detail": "trade claimed"
+ "at": 1795717348643,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1795717298677-0000022392-0000000001",
+  "at": 1795717348633,
+  "sha256": "96617f2e7834edbc3ee22b0c241b7f803831866bce97a89977cc7436bd51bf1a"
+ },
+ "screen": false
 }
