@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795708322690-1",
  "account": "InTheSack",
  "partner": "WellHung",
@@ -12,6 +12,12 @@
  "claim": "0e71fe3e-31da-4bb7-a3a6-534189f4c8c0",
  "count": 0,
  "ok": false,
- "at": 1795708514895,
- "detail": "trade claimed"
+ "at": 1795708545840,
+ "detail": "Error: sender pack full: need 135 slots for Rune essence, 28 free",
+ "logout": {
+  "attemptId": "1795708514905-0000014812-0000000001",
+  "at": 1795708545826,
+  "sha256": "b2012e520bc9fdceed05214086038bce84cf6c21ceb9ff438a4bc5399211479d"
+ },
+ "screen": false
 }
