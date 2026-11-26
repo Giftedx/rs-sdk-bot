@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717192997-1",
+ "account": "BowBeforeMe",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "2769fa51-09e5-48f2-8113-6e6df0f8633b",
+ "count": 60,
+ "ok": true,
+ "at": 1795717313021,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1087,
+  "after": 1027
+ },
+ "logout": {
+  "attemptId": "1795717247056-0000029004-0000000001",
+  "at": 1795717313009,
+  "sha256": "2396a80e162a94d81af2072f2f5633912c1ed467837ee8093e80cdf5db8fa432"
+ },
+ "screen": true
+}
