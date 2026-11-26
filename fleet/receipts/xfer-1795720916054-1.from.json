@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720916054-1",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 6,
+ "claim": "6694d935-998a-4e02-acc7-0644031f9539",
+ "count": 0,
+ "ok": false,
+ "at": 1795721219165,
+ "detail": "trade claimed"
+}
