@@ -118,7 +118,11 @@ try {
         if (FROM < 6 || q.has(ITEM.portrait)) await q.talk('thurgo portrait', thurgo, [], () => !q.has(ITEM.portrait), THURGO, 60);
         if (!q.has(ITEM.blurite)) {
             await mineBlurite();
-            await q.walk('to thurgo 3', [{ x: 3030, z: 9560, tol: 3 }, ...TO_THURGO.slice(-1)]);
+            // Out of the dungeon by the cellar ladder: the cellar down lands at 3009,9550, and q.walk plans only on the
+            // floor it stands on once a walk of the run has arrived (quest-lib.ts restartStart).
+            await q.walk('to cellar ladder', [{ x: 3030, z: 9560, tol: 3 }, { x: CELLAR_DOWN.x + 1, z: CELLAR_DOWN.z + 6400, tol: 1 }]);
+            await q.climb('cellar up', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 4), /climb-up|climb up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
+            await q.walk('to thurgo 3', TO_THURGO.slice(-1));
         }
         await q.talk('thurgo make', thurgo, [], () => q.has(ITEM.sword), THURGO, 40);
         q.milestone(6);

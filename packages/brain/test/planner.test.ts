@@ -1568,3 +1568,47 @@ test('a first worker defect holds the activity only for the account that failed;
     const fleetIndex = buildPlannerSharedIndex({ world, activities: ACTIVITIES, defects: [druidDefect('Ballspinner', 2)] });
     expect(fleetIndex.eligibleActivities.some((a) => a.id === 'quest:sweep-druid')).toBe(false);
 });
+
+test('a shortfall of banked stock shrinks the batch to that stock instead of a loadout from the same bank', () => {
+    const buryAct: ActivityDefinition = {
+        id: 'bank-artisan:prayer-bury',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'train',
+        label: 'Bury banked bones for Prayer XP',
+        skill: 'Prayer',
+        config: { skill: 'prayer', method: 'bury', requiredLevel: 1 },
+        baselineRate: { xpPerTick: 600, unitsPerTick: 0.45, gpPerTick: -10, setupTicks: 20, minBatchUnits: 28, confidence: 'model', inputsPerUnit: { 536: 1 } },
+        inputs: [{ itemId: 536, countPerUnit: 1, reserve: 6 }],
+        location: { x: 3185, z: 3436, level: 0 },
+        trust: 'practice_passed',
+    };
+    const acct = makeAcct({
+        name: 'CoinCock',
+        skills: { Prayer: { level: 1, xp: 0 } },
+        inventory: {},
+        bank: { items: { 995: 2_000, 536: 60 }, observedAt: NOW - 10_000, trusted: true },
+        cooldowns: { '536:ge': NOW + 60_000, '536:npc_shop': NOW + 60_000 },
+    });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { CoinCock: acct } };
+    const plan = planAccount(acct, {
+        world,
+        activities: [buryAct],
+        demands: [{
+            id: 'goal:pk_army:CoinCock',
+            goalKind: 'pk_army',
+            valueScore: 100,
+            valuePerHour: 100,
+            target: { kind: 'skill', account: 'CoinCock', skill: 'Prayer', targetLevel: 70 },
+            fulfilled: 1,
+            remaining: 69,
+            priorityWeight: 1,
+            assignedAccount: 'CoinCock',
+            active: true,
+        }],
+    });
+    expect(plan.steps.some((s) => s.stepKind === 'acquire' && s.source === 'own_bank')).toBe(false);
+    expect(plan.steps.map((s) => s.stepKind)).toEqual(['work']);
+    const work = plan.steps[0];
+    expect(work?.stepKind === 'work' && work.batchUnits).toBe(54);
+});

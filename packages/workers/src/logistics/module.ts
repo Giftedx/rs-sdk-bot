@@ -593,6 +593,12 @@ export async function runLogisticsRole(
                         throw Error('loadout bank open failed');
                     }
                     const need = quantity - haveTotal;
+                    const { clientStackable, loadoutSpaceRefusal } = await import('./loadout-space');
+                    const spaceRefusal = loadoutSpaceRefusal(itemId, need, s.sdk.getInventory(), clientStackable(s.client, itemId));
+                    if (spaceRefusal) {
+                        await s.bot.closeBank();
+                        throw Error(spaceRefusal);
+                    }
                     const bankItem = s.sdk.getState()?.bank?.items.find(i => i.id === itemId);
                     if (!bankItem || bankItem.count < need) {
                         await s.bot.closeBank();

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { planTrip, takeItems } from '../src/trip';
+import { itemsFor, planTrip, takeItems } from '../src/trip';
 import { createWorld, type PathLength } from '../src/world';
-import type { Travel } from '../src/travel';
+import { loadTravel, staffCovers, travelAllowed, type Travel } from '../src/travel';
 
 const boat: Travel = { id: 'b', kind: 'boat', name: 'A to B', from: { x: 0, z: 0, level: 0 }, to: { x: 1000, z: 0, level: 0 }, coins: 30, needs: [], runes: [], run: { how: 'npc', npc: 'Captain', op: 1, options: [], deck: true }, cost: 40 };
 const pathLength: PathLength = (a, b, _bl, tol) => { const d = Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z)); return d <= 50 ? Math.max(0, d - tol) : null; };
@@ -36,6 +36,20 @@ test('a teleport leaves from the route start when the account holds its runes', 
     expect(w.route(from, goal, { ...poor, skills: { magic: 24 }, counts: { lawrune: 1 } }).ok).toBe(false);
     const r = w.route(from, goal, { ...poor, skills: { magic: 25 }, counts: { lawrune: 1 } });
     expect(r.ok && r.legs.map(l => l.kind)).toEqual(['travel', 'walk']);
+});
+
+test('a bank stop takes no rune that the worn staff gives', () => {
+    loadTravel('');
+    const spell: Travel = { id: 'f', kind: 'spell', name: 'Fire teleport', from: null, to: { x: 2000, z: 0, level: 0 }, coins: 0, needs: [],
+        runes: [{ item: 'lawrune', count: 1 }, { item: 'firerune', count: 1 }], run: { how: 'spell', component: 'magic:fire' }, cost: 5 };
+    const legs = [{ kind: 'travel', travel: spell }] as any;
+    expect(staffCovers('firerune', ['staff_of_fire'])).toBe(true);
+    expect(staffCovers('firerune', undefined)).toBe(false);
+    // The route check needs no fire rune held under the staff, so the bank stop must not take one.
+    const worn = { ...poor, worn: ['staff_of_fire'], counts: { lawrune: 1 } };
+    expect(travelAllowed(spell, worn)).toBe(true);
+    expect(itemsFor(legs, {}, ['staff_of_fire'])).toEqual({ lawrune: 1 });
+    expect(itemsFor(legs, {})).toEqual({ lawrune: 1, firerune: 1 });
 });
 
 // A world whose direct route costs 400 and whose route from the bank costs 50 only with a law rune.

@@ -1816,15 +1816,18 @@ return [
     jobFiles: {'.practice/aio-bench/jobs/{bot}-loadout.json': {bank: {x: 3092, z: 3243, level: 0}, pack: [{id: 1351, count: 1}], wear: [{id: 1171, count: 1, slot: 5}], cap: 300, maximumMoves: 64}}},
   {key: 'quester:mode:sweep', script: 'scripts/aio-quester.ts', preset: 'quest_cook', scriptArgs: ['sweep', 'cook'], pass: ok},
   // The Knight's Sword through the quest sweep, the route of a live quest_board run (packages/brain/src/catalog.ts): the
-  // account stands at the Falador west bank with the quest pack banked. `bank` starts the quest; `resume-s2` has
-  // %squire (varp 122) = 2, after Reldo, the state that live runs left at "fail talk thurgo pie". The sweep reads the
-  // stage from the journal, and the script starts at the pie to Thurgo: no "squire 1" and no Reldo.
-  ...([['bank', 0], ['resume-s2', 2]] as const).map(([mode, stage]) =>
+  // account stands at the Falador west bank with the quest pack banked. `bank` starts the quest. `resume-s2` has
+  // %squire (varp 122) = 2, after Reldo, the state that live runs left at "fail talk thurgo pie": the sweep reads the
+  // stage from the journal, and the script starts at the pie to Thurgo, with no "squire 1" and no Reldo. `resume-s6`
+  // has 6, the portrait given and no blurite: the pie stays in the bank, and the script mines the blurite from Thurgo's
+  // hut, climbs out of the dungeon and gets the sword.
+  ...([['bank', 0, /^MILESTONE 1 /m, /^QUEST_SWEEP_RESUME /m], ['resume-s2', 2, /^QUEST_SWEEP_RESUME .*"stage":2,"spent":\[\]/m, /^MILESTONE [12] /m],
+    ['resume-s6', 6, /^QUEST_SWEEP_RESUME .*"stage":6,"spent":\[2325\][\s\S]*^MILESTONE blurite [\s\S]*^MILESTONE 6 /m, /^MILESTONE (?:[1245]|portrait) /m]] as const).map(([mode, stage, has, hasNot]) =>
     ({key: `extra:sweep-squire-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_squire', scriptArgs: ['sweep', 'squire'], timeoutMs: 600_000,
       presetConfig: {...PRESETS.quest_squire!, position: {x: 2946, z: 3368, level: 0}, inventory: [], varps: {...PRESETS.quest_squire!.varps, 122: stage},
         bank: [...(PRESETS.quest_squire!.inventory ?? [])]},
       pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && new RegExp(`^SQUIRE_FROM ${stage}$`, 'm').test(s) && /^MILESTONE 100 /m.test(s)
-        && (stage === 0 ? /^MILESTONE 1 /m.test(s) : /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s))} as BenchCase)),
+        && has.test(s) && !hasNot.test(s)} as BenchCase)),
   // Fight Arena through the quest sweep from the Ardougne south bank with the quest pack banked, at %arenaquest
   // (varp 17) = 3 in the worn Khazard helmet and armour: the state that live runs left at "fail talk barman" (no coins
   // then; the sweep stages the preset's 20). The sweep reads the stage from the journal, and the script starts at the

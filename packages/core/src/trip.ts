@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { isLocalServer } from './localserver';
 import { practiceRoot, simStatusDir, statusReadDirs } from './practice-paths';
+import { staffCovers } from './travel';
 import type { Account, Leg, RouteOptions, Tile, World } from './world';
 import { executionContext, withExecutionDeadline } from '../../../vendor/rs-sdk/sdk/execution-context';
 
@@ -19,12 +20,14 @@ export type BankStock = { coins: number; items?: Record<string, number> };
 export type TripPlan = { cost: number; legs: Leg[]; bank?: { at: Tile; coins: number; items: Record<string, number>; then: Leg[] } };
 const BANK_ITEM_CAP = 100; // runes or passes a plan may count on taking from the bank
 
-// Items the legs use up or need in the pack: spell runes, one charged jewellery item, consumed passes.
-export function itemsFor(legs: Leg[], counts: Record<string, number>): Record<string, number> {
+// Items the legs use up or need in the pack: spell runes, one charged jewellery item, consumed passes. A rune that a
+// `worn` staff gives is not one of them: the route search counted on the staff (travel.ts travelAllowed), and a bank
+// stop for that rune fails when the bank holds none.
+export function itemsFor(legs: Leg[], counts: Record<string, number>, worn?: readonly string[]): Record<string, number> {
     const out: Record<string, number> = {};
     for (const l of legs) {
         if (l.kind !== 'travel') continue;
-        for (const r of l.travel.runes) out[r.item] = (out[r.item] ?? 0) + r.count;
+        for (const r of l.travel.runes) if (!staffCovers(r.item, worn)) out[r.item] = (out[r.item] ?? 0) + r.count;
         for (const n of l.travel.needs) if ('held' in n) out[n.held] = Math.max(out[n.held] ?? 0, n.count);
         if (l.travel.run.how === 'rub') { const j = l.travel.run.items.find(i => (counts[i] ?? 0) > 0); if (j) out[j] = Math.max(out[j] ?? 0, 1); }
     }
@@ -69,7 +72,7 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
         bankRouteFound=true;
         const cost = there.cost + BANK_STOP_COST + on.cost;
         if (!best || cost < best.cost) {
-            const want = itemsFor(on.legs, counts), items: Record<string, number> = {};
+            const want = itemsFor(on.legs, counts, acct.worn), items: Record<string, number> = {};
             for (const [i, n] of Object.entries(want)) { const short = n - (acct.counts?.[i] ?? 0); if (short > 0) items[i] = short; }
             // Fares for the legs after the bank, twice over for the way back, within what the bank holds.
             const fares = on.legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
