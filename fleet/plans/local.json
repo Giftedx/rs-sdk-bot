@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795716503414,
+ "at": 1795716575297,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -217,7 +217,7 @@
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=70 -- crafting inventory identify:ranarr_weed",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=70 -- crafting inventory identify:guam_leaf",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=1 -- crafting inventory identify:dwarf_weed"
    ],
    "env": {
@@ -232,7 +232,7 @@
    "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
    ],
    "env": {
