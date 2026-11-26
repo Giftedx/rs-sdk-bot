@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795724462628,
+ "at": 1795724502432,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -218,17 +218,18 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-quester.ts -- sweep biohazard",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:upass BATCH_UNITS=1 -- sweep upass"
+    "sweep",
+    "tree"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:upass",
+   "goal": "goal:quest_board:tree",
    "role": "army"
   },
   {
