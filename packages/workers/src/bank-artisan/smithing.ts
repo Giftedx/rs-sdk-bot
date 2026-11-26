@@ -1857,6 +1857,10 @@ export async function runSmithBatch(
                 stopTravel();
             }
             travelTicks += s.tick() - start;
+            // The world route can use a teleport's runes or a jewellery charge. The kit that the batch must keep is the
+            // pack at the bank.
+            kit.clear();
+            for (const i of inv()) if (!material.has(i.id)) kit.set(i.id, (kit.get(i.id) ?? 0) + i.count);
         }
         try {
             route = smithStageRoute(state()!.player!);
