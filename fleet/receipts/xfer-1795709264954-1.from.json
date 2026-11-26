@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795709264954-1",
+ "account": "WellHung",
+ "partner": "RearEntry",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "f16003f7-cb94-48db-8e10-e87063ea041a",
+ "count": 0,
+ "ok": false,
+ "at": 1795709358988,
+ "detail": "Error: sender pack full: need 135 slots for Rune essence, 28 free",
+ "logout": {
+  "attemptId": "1795709352447-0000023560-0000000001",
+  "at": 1795709358977,
+  "sha256": "389c4c74f939e6f389d22d9c0e37860617a178112caba962e9675f7badca9507"
+ },
+ "screen": false
+}
