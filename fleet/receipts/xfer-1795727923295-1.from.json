@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727923295-1",
  "account": "Hocuspokeus",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "84e756a1-c4fb-4735-8c2e-b963b0b68a4c",
- "count": 0,
- "ok": false,
- "at": 1795728057386,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795728085150,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795728066899
+ },
+ "logout": {
+  "attemptId": "1795728057394-0000021092-0000000001",
+  "at": 1795728085137,
+  "sha256": "9ad34411989cceda6285d03fbaceb7faeb364ca4f336e6c965eeff795a3130ed"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727904555-1",
  "account": "Swordinhand",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "a231af73-fcb1-49a6-87a6-9d5dd00132dd",
- "count": 0,
- "ok": false,
- "at": 1795728053456,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795728082811,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795728062411
+ },
+ "logout": {
+  "attemptId": "1795728053465-0000016392-0000000001",
+  "at": 1795728082731,
+  "sha256": "365d44d164370ac0e11993bbb2a3ac8cfc97a69e2a5152c028324934ecc391fd"
+ },
+ "screen": true
 }
