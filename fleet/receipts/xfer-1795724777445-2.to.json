@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795724777445-2",
+ "account": "MineYourBiz",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 9,
+ "claim": "40a701c8-3132-4054-bfa8-81a3878d4e2c",
+ "count": 0,
+ "ok": false,
+ "at": 1795725383429,
+ "detail": "trade claimed"
+}

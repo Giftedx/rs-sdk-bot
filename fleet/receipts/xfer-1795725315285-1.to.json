@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725315285-1",
+ "account": "mmtha0205",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8257,
+ "claim": "99251075-0b0d-4707-8f27-cd7fa65cf2c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795725440122,
+ "detail": "trade claimed"
+}

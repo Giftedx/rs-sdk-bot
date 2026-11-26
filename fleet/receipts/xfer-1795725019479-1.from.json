@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725019479-1",
  "account": "Woodpecker",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 2,
  "claim": "a21636b2-1233-4707-8589-f0b1700f3b54",
- "count": 0,
- "ok": false,
- "at": 1795725295677,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795725418999,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795725405459
+ },
+ "logout": {
+  "attemptId": "1795725295685-0000023816-0000000001",
+  "at": 1795725418987,
+  "sha256": "31821a4a177567f7282a38f0bbdf4370028983da8faf91e67365b0b5e9cdcdf2"
+ },
+ "screen": true
 }
