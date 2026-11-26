@@ -7,6 +7,7 @@ export interface Item {
     cost: number; // static config value; the Equipment and Bank boards score this, not market price
     members: boolean;
     tradeable: boolean;
+    stackable: boolean; // one pack slot holds any count; engine default false (ObjType.ts), content writes stackable=yes
     src: string; // the cost= line (or the header when cost is absent)
     def: string; // the [debugname] header line
 }
@@ -31,6 +32,7 @@ export function buildItems(blocks: ConfigBlock[], pack: Map<number, string>): It
             cost: Number(b.props.cost?.[0] ?? 1), // engine default when cost= is absent
             members: b.props.members?.[0] === 'yes',
             tradeable: b.props.tradeable?.[0] !== 'no', // engine default true (ObjType.ts:181); content only writes =no
+            stackable: b.props.stackable?.[0] === 'yes',
             src: `${b.file}:${costLine ?? b.line}`,
             def: `${b.file}:${b.line}`,
         });

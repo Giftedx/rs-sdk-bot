@@ -27,8 +27,14 @@ import {
     type WorkerWorldView,
 } from '../../workers/src/contracts';
 import { questSweepCoins, questSweepNeeds } from '../../workers/src/quest/bank-needs';
-import { isCooldownActive } from './contracts';
+import { loadTravel } from '../../core/src/travel';
+import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
+import { noRouteForActivity, noRouteMessage, noRouteTo } from './no-route';
+
+// The no-route facts of a brain AccountState (outcome-classifier.ts). A bare WorkerAccountView has none.
+const accountNoRoutes = (acct: WorkerAccountView): readonly NoRouteFact[] | undefined =>
+    (acct as { readonly noRoutes?: readonly NoRouteFact[] }).noRoutes;
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const COINS_ITEM_ID = 995;
@@ -691,12 +697,13 @@ export function evaluateTileReachability(
         ferryFareHint?: number;
         requireSamePlaneWithoutWorld?: boolean;
         allowUnknownPos?: boolean;
+        boatEastFromKandarin?: boolean;
         _acctCache?: AccountLookupCache;
     } = {},
 ): TileReachabilityResult {
     const cache = opts._acctCache;
     if (cache && !world.world) {
-        const key = `${target.x}:${target.z}:${target.level}:${opts.ferryFareHint ?? 0}:${opts.allowUnknownPos ? 1 : 0}:${opts.requireSamePlaneWithoutWorld ? 1 : 0}`;
+        const key = `${target.x}:${target.z}:${target.level}:${opts.ferryFareHint ?? 0}:${opts.allowUnknownPos ? 1 : 0}:${opts.requireSamePlaneWithoutWorld ? 1 : 0}:${opts.boatEastFromKandarin ? 1 : 0}`;
         const hit = cache.tileReach.get(key);
         if (hit) return hit;
         const res = evaluateTileReachabilityUncached(acct, target, world, opts, cache);
@@ -716,6 +723,9 @@ function evaluateTileReachabilityUncached(
         ferryFareHint?: number;
         requireSamePlaneWithoutWorld?: boolean;
         allowUnknownPos?: boolean;
+        // The worker takes the boats east from Kandarin even with no route to Ardougne North: the quest sweep's
+        // crossEast (workers/src/quest/sweep-travel.ts) sails from Brimhaven for each start that eastOfArdougne names.
+        boatEastFromKandarin?: boolean;
     },
     cache?: AccountLookupCache,
 ): TileReachabilityResult {
@@ -754,6 +764,19 @@ function evaluateTileReachabilityUncached(
     }
 
     // Pure offline reachability & ferry fare evaluation when World graph is omitted.
+    // The account's own route search found no route to a tile near the target from where it stands (no-route.ts).
+    const noRoutes = accountNoRoutes(acct);
+    const searched = noRouteTo(noRoutes, acct.pos, target, world.at);
+    if (searched) {
+        return {
+            reachable: false,
+            travelCoins: 0,
+            travelTicks: 0,
+            reason: 'no_route',
+            message: `${noRouteMessage(acct.name, searched)}; target ${target.x},${target.z},${target.level} is near it`,
+        };
+    }
+
     if (opts.requireSamePlaneWithoutWorld && acct.pos.level !== target.level) {
         return {
             reachable: false,
@@ -818,7 +841,10 @@ function evaluateTileReachabilityUncached(
         fare = Math.max(fare, 10);
     }
     // Between the east mainland and Ardougne the worker's walk needs both boat fares before it moves (./ferry-fare.ts).
-    fare = Math.max(fare, ferryFallbackFare(acct.pos, target));
+    // From Kandarin it walks to Ardougne North first. With no route there, it walks its own route and takes no boat.
+    const pos = acct.pos;
+    const staged = opts.boatEastFromKandarin ? () => true : (t: Tile) => !noRouteTo(noRoutes, pos, t, world.at);
+    fare = Math.max(fare, ferryFallbackFare(pos, target, loadTravel, staged));
 
     const sameBand = (acct.pos.z >= 6400) === (target.z >= 6400);
     const normZ = (z: number) => (z >= 6400 ? z - 6400 : z);
@@ -1009,6 +1035,10 @@ export interface PreflightSpec {
     readonly includeBankCoins?: boolean;
     readonly requireTrustedBankCoins?: boolean;
     readonly routeBudgetMs?: number;
+    // The activity this preflight is for: refused while the account's search for it found no route (no-route.ts).
+    readonly activityId?: string;
+    // The worker takes the boats east from Kandarin (quest sweep, evaluateTileReachability).
+    readonly boatEastFromKandarin?: boolean;
 }
 
 export function evaluatePreflight(
@@ -1216,6 +1246,7 @@ export function evaluatePreflight(
             ferryFareHint: spec.ferryFareHint,
             requireSamePlaneWithoutWorld: spec.requireSamePlaneWithoutWorld,
             allowUnknownPos: spec.allowUnknownPos,
+            boatEastFromKandarin: spec.boatEastFromKandarin,
             _acctCache,
         });
         travelCoins = reach.travelCoins;
@@ -1229,6 +1260,16 @@ export function evaluatePreflight(
                 message: reach.message,
             });
         }
+    }
+    const searched = spec.activityId ? noRouteForActivity(accountNoRoutes(acct), acct.pos, spec.activityId, world.at) : undefined;
+    if (searched && !blockers.some(b => b.kind === 'unreachable_tile')) {
+        blockers.push({
+            kind: 'unreachable_tile',
+            target: searched.to,
+            from: acct.pos,
+            reason: 'no_route',
+            message: noRouteMessage(acct.name, searched),
+        });
     }
 
     const totalCoinNeed = coinsRequired + travelCoins;
@@ -1300,6 +1341,7 @@ interface StaticActivityPreflight {
     readonly combatSurvivability: CombatSurvivabilityFloor | undefined;
     readonly spotId: string | undefined;
     readonly maxConcurrentAccounts: number | undefined;
+    readonly boatEastFromKandarin: boolean;
     readonly questSweep: { readonly slug: string; readonly name: string } | undefined;
 }
 
@@ -1329,6 +1371,7 @@ const staticPreflightCache = new WeakMap<object, StaticActivityPreflight>();
 
 function extractStaticActivityPreflight(activity: {
     readonly id?: string;
+    readonly workerId?: string;
     readonly skill?: string;
     readonly skills?: readonly string[];
     readonly spotId?: string;
@@ -1396,6 +1439,7 @@ function extractStaticActivityPreflight(activity: {
             : undefined,
         spotId: activity.spotId,
         maxConcurrentAccounts: activity.maxConcurrentAccounts,
+        boatEastFromKandarin: activity.workerId === 'quest',
         questSweep: cfg.mode === 'sweep' && typeof cfg.questSlug === 'string'
             ? { slug: cfg.questSlug, name: typeof cfg.questName === 'string' ? cfg.questName : cfg.questSlug }
             : undefined,
@@ -1408,6 +1452,7 @@ export function activityPreflightFromConfig(
     acct: WorkerAccountView,
     activity: {
         readonly id?: string;
+        readonly workerId?: string;
         readonly skill?: string;
         readonly skills?: readonly string[];
         readonly spotId?: string;
@@ -1458,6 +1503,8 @@ export function activityPreflightFromConfig(
             combatSurvivability: base.combatSurvivability,
             spotId: base.spotId,
             maxConcurrentAccounts: base.maxConcurrentAccounts,
+            ...(activity.id ? { activityId: activity.id } : {}),
+            ...(base.boatEastFromKandarin ? { boatEastFromKandarin: true } : {}),
         },
         world,
         opts?._acctCache,

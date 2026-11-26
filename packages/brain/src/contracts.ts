@@ -21,6 +21,7 @@ import {
     type WorkerTile,
     type WorkerWorldView,
 } from '../../workers/src/contracts';
+import { isNoRouteFact, type NoRouteFact } from './no-route';
 
 // ============================================================================
 // Section 3.1: Account Lifecycle, Roles, AccountState, WorldSnapshot & Holds
@@ -71,6 +72,8 @@ export interface SystemHold {
     readonly expiresAt: number;
 }
 
+export type { NoRouteFact };
+
 export type AccountSkillState = WorkerSkillState;
 export type AccountQuestState = WorkerQuestState;
 export type AccountBankState = WorkerBankView;
@@ -100,6 +103,7 @@ export interface AccountState extends WorkerAccountView {
     readonly activeJob?: AccountActiveJob;
     readonly cooldowns?: Readonly<Record<string, number>>;
     readonly systemHolds?: readonly SystemHold[];
+    readonly noRoutes?: readonly NoRouteFact[];
     readonly lastLoginAttemptAt?: number;
     readonly lastSettledTransferAt?: number;
 }
@@ -1047,6 +1051,16 @@ function pushAccountStateErrors(v: unknown, errors: string[], prefix = ''): void
             const holds = v.systemHolds;
             for (let i = 0; i < holds.length; i++) {
                 pushSystemHoldErrors(holds[i], errors, `${prefix}systemHolds[${i}]: `);
+            }
+        }
+    }
+    if (v.noRoutes !== undefined) {
+        if (!Array.isArray(v.noRoutes)) errors.push(`${prefix}noRoutes must be an array`);
+        else {
+            for (let i = 0; i < v.noRoutes.length; i++) {
+                if (!isNoRouteFact(v.noRoutes[i])) {
+                    errors.push(`${prefix}noRoutes[${i}] must hold from, to, activityId, observedAt and expiresAt`);
+                }
             }
         }
     }

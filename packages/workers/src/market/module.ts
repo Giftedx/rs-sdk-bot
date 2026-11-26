@@ -864,6 +864,19 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 if (isStopped() || r.stop === 'stopped' || r.stop === 'interrupted') {
                     return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop ?? 'stopped', detail: r.summary };
                 }
+                // A planned order that ended short with stock on the shelf (a tick cap, a full pack) is a
+                // supply shortfall that the planner replans from the new bank stock, not a venue fault.
+                if (shopCfg.fillOrder && r.stop !== 'stock-wait' && shopCfg.itemId !== undefined && Number.isFinite(r.maxItems)) {
+                    return {
+                        kind: 'missing_supply',
+                        activityId,
+                        account: session.name,
+                        ticksElapsed,
+                        durationMs: ms(),
+                        missing: [{ itemId: shopCfg.itemId, required: Math.max(1, r.maxItems - r.boughtTotal), available: 0 }],
+                        summary: r.summary,
+                    };
+                }
                 return {
                     kind: 'market_unavailable',
                     activityId,

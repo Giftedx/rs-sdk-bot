@@ -77,6 +77,7 @@ export {
     gearFileExists,
     HIGH_LEVEL,
     isItemStackable,
+    itemStackable,
     itemByDebugName,
     itemById,
     levelForXp,

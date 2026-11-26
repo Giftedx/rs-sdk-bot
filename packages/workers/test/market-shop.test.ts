@@ -845,4 +845,7 @@ test('a planned order passes only with every unit bought or its stock target met
     expect(shopOrderShortText(0, 2, 'stock-wait')).toBe('order short bought=0/2: shop out of stock');
     expect(shopOrderShortText(0, 1, 'coin-reserve')).toBe('order short bought=0/1: insufficient coins');
     expect(shopOrderShortText(0, Infinity, 'stock-wait')).toBe('order short bought=0/target: shop out of stock');
+    // 435 of 2000 bought before the 3000-tick cap: the shop had stock, so a supply shortfall, not a venue fault.
+    expect(shopOrderShortText(435, 2000, 'cap', 314)).toBe('order short itemId=314 need=1565 bought=435/2000: missing supply after stop=cap');
+    expect(shopOrderShortText(0, 1, 'pack-full')).toBe('order short need=1 bought=0/1: missing supply after stop=pack-full');
 });
