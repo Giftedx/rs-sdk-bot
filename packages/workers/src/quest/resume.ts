@@ -329,10 +329,12 @@ const DS_PLANK = 960, DS_NAILS = 1539;
 
 // Quest items (quest_dragon.obj tradeable=no) that the account got before a stage and still needs. Oziach does not give
 // a second Melzar's key while one is in the bank (oziach.rs2:122). Pieces 1 and 3 and the shield come before the ship,
-// piece 2 and the map at 70 (Wormbrain, then the join, crandor_map.rs2:34-45); the map goes to Ned at 80.
+// piece 2 and the map at 70 (Wormbrain, then the join, crandor_map.rs2:34-45); the map goes to Ned at 80. At 21-23 an
+// account can hold piece 1 or the shield in any order: the maze chest gives no piece while one is banked
+// (melzars_maze.rs2:160), so a banked one comes back to the pack.
 export function dragonHeld(stage: number): readonly number[] {
-    if (stage === 20 || stage === 22) return [MELZAR_KEY];
-    if (stage === 21 || stage === 23) return [MELZAR_KEY, DS_PART3, DS_PART1, ANTIDRAGON_SHIELD];
+    if (stage === 20) return [MELZAR_KEY];
+    if (stage >= 21 && stage <= 23) return [MELZAR_KEY, DS_PART3, DS_PART1, ANTIDRAGON_SHIELD];
     if (stage === 30) return [DS_PART1, DS_PART3, ANTIDRAGON_SHIELD];
     if (stage === 70) return [DS_PART1, DS_PART2, DS_PART3, DS_MAP, ANTIDRAGON_SHIELD];
     if (stage === 80 || stage === 90) return [ANTIDRAGON_SHIELD];

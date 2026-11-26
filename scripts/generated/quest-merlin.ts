@@ -40,6 +40,13 @@ const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk
 try {
     const FROM = q.stageFrom('MC_FROM');
     console.log(`MC_FROM ${FROM}`);
+    // A resumed account can wear Excalibur. The Lady offers no second one while one is worn (lady_of_the_lake.rs2:4),
+    // and the crystal takes it from the pack, so it comes off first.
+    const wornSword = q.s.sdk.getEquipment().find((e) => e.id === ITEM.excalibur);
+    if (wornSword) {
+        await q.s.bot.unequipItem(wornSword);
+        if (!await q.waitUntil(() => q.has(ITEM.excalibur), 8)) await q.fail('excalibur did not come off');
+    }
     const STOP = Number(process.env.MC_STOP || 99);
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+merlin/i) > 0) questDone = true; });

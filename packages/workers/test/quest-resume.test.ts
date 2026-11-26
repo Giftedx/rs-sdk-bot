@@ -457,7 +457,7 @@ describe('dragon', () => {
 
         test('held quest items and spent preset items follow the server scripts', () => {
             expect(dragonHeld(10)).toEqual([]);
-            expect(dragonHeld(22)).toEqual([1542]);
+            expect(dragonHeld(22)).toEqual([1542, 1537, 1535, 1540]);
             expect(dragonHeld(21)).toEqual([1542, 1537, 1535, 1540]);
             expect(dragonHeld(70)).toEqual([1535, 1536, 1537, 1538, 1540]);
             expect(dragonHeld(90)).toEqual([1540]);
@@ -470,7 +470,7 @@ describe('dragon', () => {
         });
 
         test('the sweep resumes at the stage that live runs left, and refuses a complete journal', () => {
-            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 22)).toEqual({ kind: 'resume', from: 3, spent: [], held: [1542], extra: [] });
+            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 22)).toEqual({ kind: 'resume', from: 3, spent: [], held: [1542, 1537, 1535, 1540], extra: [] });
             expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 90)).toEqual({ kind: 'resume', from: 15, spent: [1907, 1791, 301, 950, 995], held: [1540], extra: [] });
             expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 100)).toEqual({ kind: 'refuse', reason: 'refused: Dragon Slayer journal stage 100 is complete' });
             expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 24)).toEqual({ kind: 'refuse', reason: 'refused: Dragon Slayer journal stage 24 has no resume from the start tile' });
