@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719193723,
+ "at": 1795719213941,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,9 +62,9 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-81-p97 ITEM_ID=440 QUANTITY=81 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-162-p517 ITEM_ID=453 QUANTITY=162 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=81 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-83-p97 ITEM_ID=440 QUANTITY=83 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-166-p517 ITEM_ID=453 QUANTITY=166 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=83 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -75,7 +75,7 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
+   "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "ranged-camp"
@@ -83,13 +83,13 @@
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army"
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
   },
   {
    "account": "Pocketrocket",
@@ -100,28 +100,12 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "49"
+    "BATCH_UNITS": "278"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "army"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "air"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
   },
   {
    "account": "Fingersmith",
@@ -172,51 +156,67 @@
    "role": "auto"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
+   "account": "PickpockDick",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "sweep",
+    "arena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "49"
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:arena",
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Wandwaver",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "sweep",
+    "magearena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "49"
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:magearena",
    "role": "army"
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "sweep",
+    "tree"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "49"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:tree",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "crest"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
    "role": "army"
   },
   {
@@ -247,21 +247,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=70 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=1 -- crafting inventory identify:dwarf_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:267",
    "role": "army"
   }
  ],
