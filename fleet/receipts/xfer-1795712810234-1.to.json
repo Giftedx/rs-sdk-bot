@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795712810234-1",
+ "account": "Swordinhand",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harralander",
+ "requested": 1,
+ "claim": "fb6be4e3-1f41-444b-bfcc-122f4788ac57",
+ "count": 0,
+ "ok": false,
+ "at": 1795713186447,
+ "detail": "trade claimed"
+}
