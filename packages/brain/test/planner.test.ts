@@ -784,7 +784,9 @@ test('planner excludes quest activities from combat_readiness/skill, selects low
     }
 
     // Quest Watchtower requires Mining 40; unlocking Mining from level 1 must pick gather:mining-ore, never gather:mining-loot.
-    const watchtowerPlan = planAccount(minerBot, {
+    // The bank holds the quest items that the sweep cannot buy or gather (dragon bones, a guam leaf, ground bat bones).
+    const watchtowerBot = { ...minerBot, bank: { ...minerBot.bank, items: { ...minerBot.bank.items, 536: 1, 249: 1, 2391: 1 } } };
+    const watchtowerPlan = planAccount(watchtowerBot, {
         world,
         activities,
         demands: [{

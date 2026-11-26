@@ -81,6 +81,22 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         expect(short.kind === 'missing_supply' && short.missing).toEqual([{ itemId: 1985, required: 1, available: 0 }]);
     });
 
+    test('the Death Plateau slug "death" names a quest, not a death', () => {
+        // Live: Stirmypot, end "blocked after 2 runs", RESULT text of the supervised quest sweep.
+        const plateau = classifyRawWorkerExit({
+            activityId: 'quest:death', account: 'Stirmypot', exitCode: 1, status: 'fail', reason: 'blocked after 2 runs',
+            detail: 'RESULT fail quest-sweep death missing 2064:1,2351:1 (unsold; others in shops)',
+            stdout: 'RESULT fail quest-sweep death missing 2064:1,2351:1 (unsold; others in shops)',
+        });
+        expect(plateau.kind).toBe('missing_supply');
+        expect(plateau.kind === 'missing_supply' && plateau.missing.map((m) => m.itemId)).toEqual([2064, 2351]);
+        const named = (text: string) => classifyRawWorkerExit({ activityId: 'quest:death', account: 'Bot1', exitCode: 1, status: 'fail', reason: 'stopped after 1 runs', stdout: text }).kind;
+        expect(named('RESULT fail walk denulth approach: quest corridor exhausted bounded retries script=scripts/generated/quest-death.ts')).toBe('worker_defect');
+        expect(named('RESULT fail Death Plateau journal stage unknown')).toBe('worker_defect');
+        expect(named('RESULT fail quest-sweep death died=true at=2860,3590,0')).toBe('death');
+        expect(named('RESULT fail quest-sweep death: you are dead')).toBe('death');
+    });
+
     test('classifyRawWorkerExit maps raw process exits to all 8 valid RunOutcome kinds', () => {
         const cases: Array<Parameters<typeof classifyRawWorkerExit>[0]> = [
             { activityId: 'a:1', account: 'Bot1', exitCode: 0, status: 'done', ticksElapsed: 100, unitsCompleted: 20, xpGained: { Woodcutting: 500 } },

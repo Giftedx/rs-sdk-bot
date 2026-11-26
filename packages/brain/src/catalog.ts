@@ -1392,9 +1392,12 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 // packages/workers/src/quest/sweep.ts): it stages the preset's items from the bank, shops and gathering,
                 // walks to the start tile and reads a started journal before the script runs. The sweep has no route to
                 // dwarfcannon.ts or waterfall.ts, so those two run their scripts alone.
+                // The preflight of a sweep quest asks for the items and coins that the sweep can take only from the bank
+                // (packages/brain/src/preflight.ts questSweepRequirements). The sweep spends the coins down to 0, so the
+                // quest keeps no operating float.
                 ...(meta.folder === 'quest_mcannon' || meta.folder === 'quest_waterfall'
                     ? { script: `scripts/generated/${meta.folder === 'quest_mcannon' ? 'dwarfcannon.ts' : 'waterfall.ts'}` }
-                    : { mode: 'sweep' }),
+                    : { mode: 'sweep', operatingCoinFloat: 0 }),
                 questResumable: questResumable(slug),
             },
             baselineRate: {
