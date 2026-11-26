@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, grailFrom, grailJournalStage, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, grailFrom, grailJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
 
 const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
@@ -274,5 +274,28 @@ describe('grail journal stage', () => {
         expect(resumeStart(grail, 'Holy Grail', 8)).toEqual({ kind: 'resume', from: 7, spent: [35, 1333], held: [15, 16], extra: [] });
         expect(resumeStart(grail, 'Holy Grail', 9)).toEqual({ kind: 'resume', from: 8, spent: [35, 1333], held: [15, 16, 19], extra: [] });
         expect(resumeStart(grail, 'Holy Grail', 6)).toEqual({ kind: 'refuse', reason: 'refused: Holy Grail journal stage 6 has no resume from the start tile' });
+    });
+});
+
+describe('merlin journal stage', () => {
+    test('the journal of each %arthur case names its stage', () => {
+        const k = constants(`${QUESTS}/quest_arthur/configs/quest_arthur.constant`, 'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant');
+        const cases = journalCases(`${QUESTS}/quest_arthur/scripts/arthur_journal.rs2`);
+        expect(cases.map((c) => c.labels[0])).toEqual([
+            'arthur_not_started', 'arthur_started', 'arthur_spoken_gawain', 'arthur_spoken_lancelot', 'arthur_spoken_morgan_lefaye',
+            'arthur_excalibur_bound', 'arthur_freed_merlin', 'arthur_complete',
+        ]);
+        // Stage 4 holds both lines of each if/else pair of arthur_journal.rs2:45-63 here; the parser reads neither.
+        for (const c of cases) expect([c.labels[0], merlinJournalStage(c.text)]).toEqual([c.labels[0], k[c.labels[0]!]]);
+        expect(merlinJournalStage("Merlin's Crystal")).toBeUndefined();
+    });
+
+    test('the varp stage maps to the script milestone, and the held and spent items follow the stage', () => {
+        const merlin = QUEST_RESUME.merlin!;
+        expect(merlin.key).toBe('arthur');
+        expect([0, 1, 2, 3, 4, 5, 6].map((s) => resumeFrom(merlin, s))).toEqual([0, 1, 2, 3, 4, 8, 9]);
+        expect(resumeStart(merlin, "Merlin's Crystal", 4)).toEqual({ kind: 'resume', from: 4, spent: [], held: [32, 38, 35], extra: [] });
+        expect(resumeStart(merlin, "Merlin's Crystal", 5)).toEqual({ kind: 'resume', from: 8, spent: [30], held: [35], extra: [] });
+        expect(resumeStart(merlin, "Merlin's Crystal", 6)).toEqual({ kind: 'resume', from: 9, spent: [30, 2309], held: [], extra: [] });
     });
 });

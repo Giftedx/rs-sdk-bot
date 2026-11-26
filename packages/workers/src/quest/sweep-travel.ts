@@ -256,6 +256,49 @@ export async function leaveHazeelCave(
     return up ? { ok: true } : { ok: false, detail: `hazeel cave stairs climb unobserved at ${where()}` };
 }
 
+// Keep Le Faye with its jetty: the walls (loc 1911) of maps/m43_53.jm2 enclose x 2764-2776, z 3395-3409, and the
+// jetty is 2777-2780,3399-3402. The walker has no way out (live Merlin's Crystal runs that ended there logged in at
+// 2768,3409 and 2771,3409, and every walk failed with "no route"). The keep crate on the jetty (loc 64 at 2779,3401,
+// op 2, "Yes.") ships the player to the Catherby pier with no varp check (quest_arthur.rs2:38-66), as quest-merlin.ts
+// leaves the keep.
+export const inKeepLeFaye = (p: { worldX: number; worldZ: number; level: number }) =>
+    p.level === 0 && p.worldX >= 2764 && p.worldX <= 2780 && p.worldZ >= 3395 && p.worldZ <= 3409;
+
+export async function leaveKeepLeFaye(s: Session): Promise<{ ok: boolean; detail?: string }> {
+    const pos = () => s.sdk.getState()?.player;
+    const where = () => {
+        const p = pos();
+        return p ? `${p.worldX},${p.worldZ},${p.level}` : 'unknown';
+    };
+    const p0 = pos();
+    if (!p0 || !inKeepLeFaye(p0)) return { ok: true };
+    const from = where();
+    const near = (x: number, z: number, tol: number) => {
+        const p = pos();
+        return !!p && p.level === 0 && Math.abs(p.worldX - x) <= tol && Math.abs(p.worldZ - z) <= tol;
+    };
+    const landed = () => near(2802, 3441, 3);
+    for (let i = 0; i < 3 && !landed(); i++) {
+        await s.direct({ type: 'walkTo', x: 2778, z: 3401, running: true, reason: 'SDK' });
+        await waitUntil(s, () => near(2778, 3401, 1), { timeoutTicks: 30 });
+        await s.direct({ type: 'interactLoc', x: 2779, z: 3401, locId: 64, optionIndex: 2, reason: 'SDK' });
+        for (let k = 0; k < 120 && !landed(); k++) {
+            const dlg: any = s.sdk.getDialog();
+            if (dlg?.isOpen && !dlg.isWaiting) {
+                if ((dlg.options ?? []).some((o: any) => /^yes\.?$/i.test(o.text))) await s.sdk.clickDialogByText(/^yes\.?$/i);
+                else await s.sdk.sendClickDialog(0);
+            }
+            await waitTicks(s, 1);
+        }
+    }
+    for (let k = 0; k < 6 && s.sdk.getDialog()?.isOpen; k++) {
+        await s.sdk.sendClickDialog(0);
+        await waitTicks(s, 1);
+    }
+    console.log(`QUEST_SWEEP_KEEP_LE_FAYE_EXIT ${JSON.stringify({ from, ok: landed(), at: where() })}`);
+    return landed() ? { ok: true } : { ok: false, detail: `keep le faye crate to catherby unobserved at ${where()}` };
+}
+
 const inMournerHq = (p: { worldX: number; worldZ: number; level: number }) =>
     p.level === 0 && p.worldX >= 2539 && p.worldX <= 2557 && p.worldZ >= 3321 && p.worldZ <= 3330;
 type ExitPoint = Tile & { tol?: number };

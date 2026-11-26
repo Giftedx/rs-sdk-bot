@@ -104,6 +104,7 @@ import {
     heckelIO,
     leaveFortress,
     leaveHazeelCave,
+    leaveKeepLeFaye,
     leaveStronghold,
     leaveWestArdougne,
     manorIO,
@@ -711,6 +712,8 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
         if (!cave.ok) return fail(cave.detail!);
         const westArdougne = await leaveWestArdougne(s);
         if (!westArdougne.ok) return fail(westArdougne.detail!);
+        const keep = await leaveKeepLeFaye(s);
+        if (!keep.ok) return fail(keep.detail!);
         const { goTo } = await import('../../../core/src/walk');
         const { wayDown: wd, downward: dn, SWEEP_PLAN_BUDGET_MS: spb } = await import('./sweep-plan');
         for (let i = 0; i < 4 && (st()?.player?.level ?? 0) > 0; i++) {

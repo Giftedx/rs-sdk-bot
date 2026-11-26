@@ -1860,6 +1860,24 @@ return [
     scriptArgs: ['imp', 'journal is started and quest-imp.ts has no resume stage'], timeoutMs: 120_000,
     presetConfig: {...PRESETS.quest_imp!, varps: {...PRESETS.quest_imp!.varps, 160: 1}},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_ENTRY .*"journal":"started".*"entry":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+  // Merlin's Crystal through the quest sweep with the quest pack banked. `resume-s4`: from the Catherby bank at
+  // %arthur (varp 14) = 4 and bit 1 of varp 15 (the black candle asked for), the state that live runs left at "fail
+  // talk candle maker 2": the script starts at the candle maker, and one talk trades the wax (no Arthur, knights, crate
+  // or Mordred). `resume-s3-keep`: at 3 inside Keep Le Faye (2768,3409), where live runs that failed "step protect
+  // from melee on" left Dipstick and InTheSack: the sweep leaves by the keep crate to Catherby, banks, and the script
+  // starts at the Catherby crate back to the keep.
+  {key: 'extra:sweep-merlin-resume-s4', script: 'scripts/aio-quester.ts', preset: 'quest_merlin', scriptArgs: ['sweep', 'merlin'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_merlin!, position: {x: 2809, z: 3439, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_merlin!.varps, 14: 4, 15: 0b10},
+      bank: [...(PRESETS.quest_merlin!.inventory ?? []), {id: 995, count: PRESETS.quest_merlin!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^MC_FROM 4$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":4/m.test(s)
+      && /^MC_ALTAR_WORDS false$/m.test(s) && /^MILESTONE 5 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE [1-4] /m.test(s)},
+  {key: 'extra:sweep-merlin-resume-s3-keep', script: 'scripts/aio-quester.ts', preset: 'quest_merlin', scriptArgs: ['sweep', 'merlin'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_merlin!, position: {x: 2768, z: 3409, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_merlin!.varps, 14: 3},
+      bank: [...(PRESETS.quest_merlin!.inventory ?? []), {id: 995, count: PRESETS.quest_merlin!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_KEEP_LE_FAYE_EXIT .*"ok":true/m.test(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^MC_FROM 3$/m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":3/m.test(s) && /^MILESTONE 4 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE [1-3] /m.test(s)},
   // Holy Grail through the quest sweep from the Seers' Village bank with the quest pack banked, at %grail (varp 5) = 4:
   // the crone spoken to, no napkin or whistle (live TrouserSnake and UnderMyKilt hold neither). The sweep reads the
   // stage from the journal, and the script starts at Galahad: no King Arthur, Merlin or Entrana. `resume-s4` has

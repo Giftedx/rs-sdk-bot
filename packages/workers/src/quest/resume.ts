@@ -203,6 +203,29 @@ export function grailExtra(stage: number): readonly { id: number; count: number 
     return stage >= 2 && stage <= 7 ? [{ id: 995, count: 500 }] : [];
 }
 
+// Merlin's Crystal: %arthur (varp 14), quests/quest_arthur/configs/quest_arthur.constant:1-7 and quest.constant:4
+// (complete 7). The journal (arthur_journal.rs2, questlist:arthur) also reads bit 0 of %excalibur_components_progress
+// (varp 15) and the pack at stage 4 (arthur_journal.rs2:45-63); the stage comes from the one line that only that
+// stage shows, from the highest stage down.
+export function merlinJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return 7;
+    if (/Now that Merlin is freed I should speak to King Arthur/i.test(text)) return 6;
+    if (/I should free Merlin by using Excalibur on the crystal/i.test(text)) return 5;
+    if (/To bind Thrantax to my will I will need the following/i.test(text)) return 4;
+    if (/There might be a way to enter with a delivery by sea/i.test(text)) return 3;
+    if (/Gawain think this was the work of Morgan Le Faye/i.test(text)) return 2;
+    if (/I should ask the other Knights if they have any advice/i.test(text)) return 1;
+    if (/I can start this quest by speaking to King Arthur/i.test(text)) return 0;
+    return undefined;
+}
+
+// quest-merlin.ts MC_FROM is a milestone: %arthur 1-4 the same, 5 (Thrantax bound) 8, 6 (Merlin free, King Arthur
+// only) 9. %arthur 4 covers milestones 4-7: the script skips the candle maker for a held candle, the Lady for a held
+// Excalibur and the chaos altar when the journal names its words.
+const MERLIN_FROM: readonly number[] = [0, 1, 2, 3, 4, 8, 9];
+const MERLIN_WAX = 30, MERLIN_LIT_CANDLE = 32, MERLIN_EXCALIBUR = 35, MERLIN_UNLIT_CANDLE = 38, MERLIN_BREAD = 2309;
+
 const SQUIRE_PIE = 2325;
 
 export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
@@ -216,6 +239,16 @@ export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
     // The mouse hole takes the cheese before the magnet unlocks the back door (quest_ball.rs2:80-86, 111-112). The
     // cupboard gives a magnet and the fountain a shed key only when the pack and the bank hold none (:67-70, :163-165),
     // so the sweep withdraws a banked one.
+    // The candles and Excalibur are tradeable=no (quest_arthur.obj:16,63,94): an earlier run at stage 4 can have made
+    // the candle (candle_maker.rs2:11) or got Excalibur (beggar.rs2:122), and the sweep withdraws a banked one. A banked
+    // Excalibur also hides the Lady's offer (lady_of_the_lake.rs2:4). The candle maker takes the wax before Thrantax
+    // (candle_maker.rs2:10), the beggar the bread before the crystal (beggar.rs2:114); at stage 5 the bread stays
+    // staged, so a lost Excalibur is got again.
+    merlin: {
+        key: 'arthur', title: /Merlin's Crystal/i, stage: merlinJournalStage, complete: 7, from: (stage) => MERLIN_FROM[stage],
+        held: (stage) => (stage === 4 ? [MERLIN_LIT_CANDLE, MERLIN_UNLIT_CANDLE, MERLIN_EXCALIBUR] : stage === 5 ? [MERLIN_EXCALIBUR] : []),
+        spent: (stage) => (stage >= 6 ? [MERLIN_WAX, MERLIN_BREAD] : stage === 5 ? [MERLIN_WAX] : []),
+    },
     grail: { key: 'grail', title: /Holy Grail/i, stage: grailJournalStage, complete: 10, from: grailFrom, held: grailHeld, spent: grailSpent, extra: grailExtra },
     ball: {
         key: 'ball', title: /Witch's House/i, stage: ballJournalStage, complete: 7,

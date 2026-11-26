@@ -1332,6 +1332,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         // Fire Blast (Magic 59) is the weakest spell of a bench case (extra:sweep-arena-after-grandtree, Magic 73). Live
         // accounts with Prayer 1 failed at "step protect from melee on" by Jeremy's cell.
         arena: { Magic: 59, Prayer: 43 },
+        // quest-merlin.ts turns on Protect from Melee for Sir Mordred and the chaos altar and fails when it will not
+        // hold (live InTheSack, Prayer 1: "fail step protect from melee on").
+        merlin: { Prayer: 43 },
         horror: { Magic: 75 },
         magearena: { Magic: 60 },
         hero: { Cooking: 53, Fishing: 53, Herblore: 25, Mining: 50 },
