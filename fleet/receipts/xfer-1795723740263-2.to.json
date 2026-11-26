@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723740263-2",
  "account": "Unsheathed",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "1c46d886-1744-4bea-bdcd-ad443ee9b7da",
- "count": 0,
- "ok": false,
- "at": 1795724388656,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795724434251,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795724433492
+ },
+ "logout": {
+  "attemptId": "1795724388664-0000029936-0000000001",
+  "at": 1795724434242,
+  "sha256": "dbb1e4cd3da7d2037878997596cf9f5e7c4a1356a3bbe9f781e5421ed22aef89"
+ },
+ "screen": true
 }
