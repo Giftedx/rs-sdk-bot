@@ -791,6 +791,32 @@ export async function runSplash(
             label: 'splash staff',
         });
     }
+    // A site without a bank takes its runes from a bank in reach of the start, so runes that the
+    // planner staged into the bank do not end the run on an empty pack. Wind Strike covers every
+    // planned cast when the bank holds no runes for the debuff spells.
+    if (!site.bank && !affordable() && !onTutorialIsland(st()?.player) && typeof s.bot?.openBank === 'function') {
+        const generation = observe()?.generation ?? 0;
+        const opened = await s.bot.openBank().catch(() => undefined);
+        if (opened?.success && (await waitUntil(s, () => !!st()?.bank?.isOpen && (observe()?.generation ?? 0) > generation, { timeoutTicks: 20 }))) {
+            try {
+                const free = activeFreeRunes();
+                const plan = splashPlan(xp(), o.target, free);
+                const strike = SPLASH_SPELLS[SPLASH_SPELLS.length - 1]!.runes as Readonly<Record<number, number>>;
+                for (const id of runeIds) {
+                    const wanted = free.has(id) ? 0 : Math.max(plan.runes[id] ?? 0, plan.casts * (strike[id] ?? 0));
+                    const want = Math.min(Math.max(0, wanted - countItems(inv(), id)), countItems(observe()?.items ?? [], id));
+                    const before = countItems(inv(), id);
+                    if (want < 1) continue;
+                    const row = (st()?.bank?.items ?? []).find(i => i.id === id);
+                    if (!row || !(await s.bot.withdrawItem(row, want, { asNote: false })).success || !(await waitUntil(s, () => countItems(inv(), id) >= before + want, { timeoutTicks: 10 }))) {
+                        throw Error(`splash: withdraw ${want}x${id} failed`);
+                    }
+                }
+            } finally {
+                await closeBank();
+            }
+        }
+    }
     if (!site.bank && onTutorialIsland(st()?.player)) {
         const exitStop = () => ended || !!o.stop?.() || s.tick() - start >= o.cap;
         if (o.leaveStarter) {

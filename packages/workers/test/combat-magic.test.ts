@@ -1473,3 +1473,31 @@ describe('combatWorkerModule magic and prayer modes', () => {
         expect(outcome.activityId).toBe('combat:magic-splash-coop');
     });
 });
+
+test('the coop site takes Wind Strike runes from a bank in reach when the pack has none', async () => {
+    const coop = SPLASH_SITES.coop!;
+    const bank = () => [
+        { id: MIND, name: 'Mind rune', count: 40, slot: 0 },
+        { id: AIR, name: 'Air rune', count: 40, slot: 1 },
+    ];
+    const f = bankedSplashFixture(1, bank(), { worldX: coop.tile.x, worldZ: coop.tile.z });
+    const close = f.s.bot.closeBank;
+    let staged = false;
+    f.s.bot.closeBank = async () => { staged = true; return close(); };
+    try {
+        // CoinCock: Magic 1, an empty pack and SPLASH_SITE=coop ended at once with stop=supplies.
+        const res = await runSplash(f.s, { target: 19, cap: 500, site: coop, stop: () => staged, walkTo: f.walkTo });
+        expect(res.stop).not.toBe('supplies');
+        expect(f.withdraws.map(w => w.id).sort()).toEqual([AIR, MIND].sort());
+        expect(f.s.sdk.getInventory().find((i: { id: number }) => i.id === MIND)?.count).toBeGreaterThan(0);
+    } finally {
+        f.end();
+    }
+    const empty = bankedSplashFixture(1, [], { worldX: coop.tile.x, worldZ: coop.tile.z });
+    try {
+        expect((await runSplash(empty.s, { target: 19, cap: 500, site: coop, stop: () => false, walkTo: empty.walkTo })).stop).toBe('supplies');
+        expect(empty.withdraws).toEqual([]);
+    } finally {
+        empty.end();
+    }
+});

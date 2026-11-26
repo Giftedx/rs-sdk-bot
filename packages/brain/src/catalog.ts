@@ -17,7 +17,8 @@ import {
 import { DEFAULT_FOOD_TYPE, foodRule } from '../../workers/src/bank-artisan/cooking';
 import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
 import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
-import { itemMagicRecipe } from '../../workers/src/bank-artisan/magic';
+import { itemMagicRecipe, nativeTeleport } from '../../workers/src/bank-artisan/magic';
+import { nativeNpcSpell } from '../../core/src/magic-data';
 import { smeltRecipe, smithRecipe } from '../../workers/src/bank-artisan/smithing';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
 import { fileStatStamp, readJsonStatCached } from './json-cache';
@@ -385,6 +386,14 @@ const cookFoodSeed = (): Partial<SkillerSeed> => {
     };
 };
 
+// A magic step names the inputs of the spell its default arguments cast, one cast per unit,
+// so the planner stages them (or drops the step) before a run that would stop on supplies.
+const spellInputs = (runes: Readonly<Record<number, number>>): readonly ActivityIO[] =>
+    Object.entries(runes).filter(([, n]) => n > 0).map(([id, n]) => ({ itemId: Number(id), countPerUnit: n }));
+const itemSpellSeed = (mode: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(itemMagicRecipe(mode).inputs) });
+const teleportSeed = (name: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(nativeTeleport(name).runes) });
+const npcSpellSeed = (name: string) => (): Partial<SkillerSeed> => ({ inputs: spellInputs(nativeNpcSpell(name).runes) });
+
 const SKILLER_SPECS: readonly SkillerSeed[] = [
     // Fishing
     { skill: 'fishing', method: 'shark', script: 'scripts/aio-skiller.ts', label: 'Harpoon and cook sharks at Catherby', location: HUB_TILES.catherby, spotId: 'catherby-sharks', maxConcurrentAccounts: 6, xpPerTick: 28, unitsPerTick: 0.08, gpPerTick: 4, minBatchUnits: 26, requiredLevel: 76, outputs: [{ itemId: 385, countPerUnit: 1 }] },
@@ -456,17 +465,17 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'runecraft', method: 'specialist', script: 'scripts/runecraft-specialist.ts', label: 'Runecraft 1-99 specialist route', location: HUB_TILES.falador_east, xpPerTick: 900, unitsPerTick: 4.5, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     // Magic
     { skill: 'magic', method: 'order', script: 'scripts/magic-order.ts', label: 'Magic teleport and enchantment training order', location: HUB_TILES.varrock_west, xpPerTick: 95, unitsPerTick: 0.25, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 1, coinsRequired: 300, defaultEnv: { TARGET_LEVEL: '55', CAP: '3000' } },
-    { skill: 'magic', method: 'items', script: 'scripts/aio-skiller.ts', label: 'Alch, Superheat, and Jewellery Enchanting', location: HUB_TILES.draynor, xpPerTick: 325, unitsPerTick: 0.25, gpPerTick: -2, minBatchUnits: 25, requiredLevel: 7, defaultArgs: ['enchant:sapphire_ring', '-', '50', '1200'] },
+    { skill: 'magic', method: 'items', script: 'scripts/aio-skiller.ts', label: 'Alch, Superheat, and Jewellery Enchanting', location: HUB_TILES.draynor, xpPerTick: 325, unitsPerTick: 0.25, gpPerTick: -2, minBatchUnits: 25, requiredLevel: 7, defaultArgs: ['enchant:sapphire_ring', '-', '50', '1200'], resolve: itemSpellSeed('enchant:sapphire_ring') },
     { skill: 'magic', method: 'npc', script: 'scripts/aio-skiller.ts', label: 'Combat/curse spell casting on NPCs', location: HUB_TILES.lumbridge, xpPerTick: 75, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 1 },
-    { skill: 'magic', method: 'teleport', script: 'scripts/aio-skiller.ts', label: 'Repeated teleport spell training', location: HUB_TILES.varrock_west, xpPerTick: 310, unitsPerTick: 0.25, gpPerTick: -5, minBatchUnits: 25, requiredLevel: 25, defaultArgs: ['varrock', '50', '1200'] },
+    { skill: 'magic', method: 'teleport', script: 'scripts/aio-skiller.ts', label: 'Repeated teleport spell training', location: HUB_TILES.varrock_west, xpPerTick: 310, unitsPerTick: 0.25, gpPerTick: -5, minBatchUnits: 25, requiredLevel: 25, defaultArgs: ['varrock', '50', '1200'], resolve: teleportSeed('varrock') },
     { skill: 'magic', method: 'trip', script: 'scripts/aio-skiller.ts', label: 'Bank-staged magic training trip', location: HUB_TILES.varrock_west, xpPerTick: 290, unitsPerTick: 0.22, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 25 },
     { skill: 'magic', method: 'orbs', script: 'scripts/aio-skiller.ts', label: 'Bank-to-obelisk orb charging trip', location: HUB_TILES.varrock_west, xpPerTick: 160, unitsPerTick: 0.08, gpPerTick: 8, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '3000'], defaultEnv: { ORB_TRIP: '1' } },
     { skill: 'magic', method: 'orbs-at-site', script: 'scripts/aio-skiller.ts', label: 'At-obelisk orb charging batch', location: HUB_TILES.catherby, xpPerTick: 250, unitsPerTick: 0.22, gpPerTick: 10, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '1200'] },
     { skill: 'magic', method: 'bones', script: 'scripts/aio-skiller.ts', label: 'Bones to Bananas conversion', location: HUB_TILES.draynor, xpPerTick: 150, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 15 },
     { skill: 'magic', trainingSkill: 'Runecraft', method: 'earth-production', script: 'scripts/aio-skiller.ts', label: 'Earth rune production for magic/superheat', location: HUB_TILES.varrock_east, spotId: 'earth-altar', maxConcurrentAccounts: 4, xpPerTick: 32, unitsPerTick: 0.2, gpPerTick: 2, minBatchUnits: 27, requiredSkills: { Runecraft: 9 }, requiredQuests: ['runemysteries'], requiredTools: [1440], inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 557, countPerUnit: 1 }], defaultArgs: ['craft', '2000'] },
     { skill: 'magic', method: 'alch-train', script: 'scripts/aio-skiller.ts', label: 'Low/High Alchemy bank training at Ardougne', location: HUB_TILES.ardougne_north, xpPerTick: 325, unitsPerTick: 0.2, gpPerTick: -2, minBatchUnits: 50, requiredLevel: 21, defaultArgs: ['55', '3000'], inputs: [{ itemId: 561, countPerUnit: 1 }, { itemId: 314, countPerUnit: 1 }] },
-    { skill: 'magic', method: 'splash', script: 'scripts/aio-skiller.ts', label: 'Curse splash over Ardougne cow fence', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, xpPerTick: 145, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 19, defaultArgs: ['55', '3000'] },
-    { skill: 'magic', method: 'splash-coop', script: 'scripts/aio-skiller.ts', label: 'Lumbridge chicken coop Wind Strike/Confuse splash', location: HUB_TILES.lumbridge, spotId: 'lumbridge-coop', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 1, defaultArgs: ['19', '3000'], defaultEnv: { SPLASH_SITE: 'coop' } },
+    { skill: 'magic', method: 'splash', script: 'scripts/aio-skiller.ts', label: 'Curse splash over Ardougne cow fence', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, xpPerTick: 145, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 19, defaultArgs: ['55', '3000'], resolve: npcSpellSeed('curse') },
+    { skill: 'magic', method: 'splash-coop', script: 'scripts/aio-skiller.ts', label: 'Lumbridge chicken coop Wind Strike/Confuse splash', location: HUB_TILES.lumbridge, spotId: 'lumbridge-coop', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 1, defaultArgs: ['19', '3000'], defaultEnv: { SPLASH_SITE: 'coop' }, resolve: npcSpellSeed('wind_strike') },
     { skill: 'magic', method: 'specialist', script: 'scripts/magic-specialist.ts', label: 'Magic 1-99 specialist route', location: HUB_TILES.varrock_west, xpPerTick: 1400, unitsPerTick: 0.6, gpPerTick: 0, minBatchUnits: 50, requiredLevel: 1 },
     // Prayer
     { skill: 'prayer', method: 'bury', script: 'scripts/aio-skiller.ts', label: 'Bury banked bones for Prayer XP', location: HUB_TILES.varrock_west, xpPerTick: 600, unitsPerTick: 0.45, gpPerTick: -10, minBatchUnits: 28, requiredLevel: 1, inputs: [{ itemId: 536, countPerUnit: 1, reserve: 6 }], defaultEnv: { BONE_ID: '536' } },
