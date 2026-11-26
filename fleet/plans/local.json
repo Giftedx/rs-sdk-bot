@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795726497149,
+ "at": 1795726519848,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Spitroaster",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -72,38 +72,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-market.ts ORDER_KEY=brain-315-10-p7 ITEM_ID=315 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7 -- ge-buy",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- cannon"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "army"
   },
   {
    "account": "KnightRider",
@@ -176,6 +145,37 @@
   },
   {
    "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
+   "role": "army"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-14-p97 ITEM_ID=440 QUANTITY=14 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
    "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
@@ -185,37 +185,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:dwarfcannon",
-   "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-14-p97 ITEM_ID=440 QUANTITY=14 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:steelrod:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:steelrod:item:2353",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- cannon"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
   },
   {
@@ -231,6 +200,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:mineshafted:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
    "role": "army"
   },
   {
@@ -272,6 +256,23 @@
    "role": "army"
   },
   {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:steelrod:item:2353",
+    "BATCH_UNITS": "14",
+    "ORE_RESERVE": "0"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:steelrod:item:2353",
+   "role": "helper"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
@@ -284,6 +285,36 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:FishAndChips BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:YewGotWood BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:YewGotWood",
    "role": "auto"
   }
  ],
@@ -310,6 +341,7 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "undermykilt",
   "woodpecker"
  ],
