@@ -1836,7 +1836,7 @@ return [
   // bars only from the bank (packages/workers/src/quest/bank-needs.ts), so the quest preflight names 2351:2 and the
   // planner smelts them before the quest. The step texts are the chain.ts command that the swarm runs for that plan
   // (packages/fleet/src/worker-dispatch.ts dispatchAccountPlan); the sweep then finds the bars in the bank. Half of the
-  // iron ore fails at the furnace (smelting.rs2:202), and 8 ore made 1 bar on seed 7, so the bank holds 16. chain.ts
+  // iron ore fails at the furnace (smelting.rs2:202), and 8 ore can make fewer than 2 bars, so the bank holds 16. chain.ts
   // prints each child line after "  | ".
   {key: 'extra:chain-squire-smelt-bars', script: 'scripts/chain.ts', preset: 'quest_squire', timeoutMs: 600_000,
     scriptArgs: ['scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=2 ORE_RESERVE=0 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 -- smithing smelt 1000 iron',

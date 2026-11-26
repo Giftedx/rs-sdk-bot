@@ -82,7 +82,7 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
     });
 
     test('the Death Plateau slug "death" names a quest, not a death', () => {
-        // Live: Stirmypot, end "blocked after 2 runs", RESULT text of the supervised quest sweep.
+        // The supervisor end line and the RESULT text of a supervised quest sweep.
         const plateau = classifyRawWorkerExit({
             activityId: 'quest:death', account: 'Stirmypot', exitCode: 1, status: 'fail', reason: 'blocked after 2 runs',
             detail: 'RESULT fail quest-sweep death missing 2064:1,2351:1 (unsold; others in shops)',

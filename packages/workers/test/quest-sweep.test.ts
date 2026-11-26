@@ -2223,7 +2223,7 @@ test('prayer potions ride as food when base Prayer covers the points the quest u
 });
 test('a base Prayer level that covers a fight quest restores drained points at the altar instead of staging potions', async () => {
  const {prayerWanted,PRAYER_QUESTS}=await import('../src/quest/sweep-plan');
- // Live: Fingerblastr (Prayer 84, 0 points) "quest-sweep tree missing 2434:2"; Pocketpython (Prayer 72, 1 point) "arena missing 2434:3".
+ // A covered level with drained points restores at the altar.
  expect(prayerWanted('tree',84)).toBe(PRAYER_USED.tree!+PRAYER_MARGIN);
  expect(prayerShort(0,84,prayerWanted('tree',84)!)).toBe(true);
  expect(prayerShort(84,84,prayerWanted('tree',84)!)).toBe(false);
