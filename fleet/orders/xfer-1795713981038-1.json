@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795713981038-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Fingersmith",
+  "item": "Feather",
+  "count": 1970,
+  "itemId": 314,
+  "start": 1795713981038,
+  "end": 1795714881038,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
