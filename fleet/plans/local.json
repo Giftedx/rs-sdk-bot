@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795714238574,
+ "at": 1795714254542,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1040",
+    "MAX_ITEMS": "964",
     "COIN_RESERVE": "1000",
-    "FLOAT": "210000",
+    "FLOAT": "194800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1040"
+    "BATCH_UNITS": "964"
    },
    "enabled": true,
    "repeat": false,
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "94",
+    "MAX_ITEMS": "85",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20800",
+    "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "94"
+    "BATCH_UNITS": "85"
    },
    "enabled": true,
    "repeat": false,
@@ -296,27 +296,18 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
+    "sweep",
+    "dragon"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
+    "DEMAND_ID": "goal:quest_board:dragon",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   }
  ],
