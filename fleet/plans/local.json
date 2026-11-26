@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795713028754,
+ "at": 1795713070734,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,22 +60,16 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -313,19 +307,6 @@
    "role": "auto"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/generated/quest-dragon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -374,50 +355,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:892",
    "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1311",
-    "ITEMS": "Steel 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1311",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
   }
  ],
  "army": [
@@ -432,8 +369,10 @@
   "billionaire",
   "dipstick",
   "fatstack",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmthv2350",
   "oreelse",
   "pocketpool",

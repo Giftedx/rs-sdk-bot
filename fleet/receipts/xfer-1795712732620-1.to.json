@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795712732620-1",
+ "account": "Wandwaver",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 13,
+ "claim": "3b2791a7-a4e8-426d-ae0f-6889baa146cd",
+ "count": 0,
+ "ok": false,
+ "at": 1795713064399,
+ "detail": "trade claimed"
+}
