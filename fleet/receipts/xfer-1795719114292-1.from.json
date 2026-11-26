@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795719114292-1",
+ "account": "Earlyshooter",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 6,
+ "claim": "1cace1d2-ae73-4184-8c06-e82ebac5cfd0",
+ "count": 0,
+ "ok": false,
+ "at": 1795719434600,
+ "detail": "trade claimed"
+}
