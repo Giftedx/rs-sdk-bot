@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795712810234-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Swordinhand",
+  "item": "Harralander",
+  "count": 1,
+  "itemId": 255,
+  "start": 1795712810234,
+  "end": 1795713710234,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

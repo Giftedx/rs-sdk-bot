@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712304485-2",
  "account": "Swordinhand",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "4e54c299-5144-4116-a05a-5f20f37e2135",
- "count": 0,
- "ok": false,
- "at": 1795712795887,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795712805243,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795712804467
+ },
+ "logout": {
+  "attemptId": "1795712795898-0000018124-0000000001",
+  "at": 1795712805233,
+  "sha256": "9e7f6b65a4d5d713735972150b79d8e3aa620946e879981aa833c93012764a66"
+ },
+ "screen": true
 }
