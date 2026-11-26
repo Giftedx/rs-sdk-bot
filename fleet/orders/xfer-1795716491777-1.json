@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795716491777-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "Shaftsinker",
+  "item": "Dragon bones",
+  "count": 78,
+  "itemId": 536,
+  "start": 1795716491777,
+  "end": 1795717391777,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
