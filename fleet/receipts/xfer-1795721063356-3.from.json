@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721063356-3",
  "account": "KnightRider",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "003fd490-7e0c-42ee-b7e8-0d032b482ca6",
- "count": 0,
- "ok": false,
- "at": 1795721355624,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795721434011,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795721417328
+ },
+ "logout": {
+  "attemptId": "1795721355632-0000017908-0000000001",
+  "at": 1795721434000,
+  "sha256": "bb2981b1197a31d7d2651a4822a7b29c24ff0b6033c64d426743da41c77d3b4b"
+ },
+ "screen": true
 }

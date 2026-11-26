@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795721063356-3",
+ "account": "Unsheathed",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "04b40d5f-94d6-4057-bf98-8ab2c3434c92",
+ "count": 1,
+ "ok": true,
+ "at": 1795721435611,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795721434842
+ },
+ "logout": {
+  "attemptId": "1795721422790-0000027176-0000000001",
+  "at": 1795721435599,
+  "sha256": "144eb740ce8cc68aca994dd503d8b4d6dcb155bef0165080381bf2154172cbe7"
+ },
+ "screen": true
+}

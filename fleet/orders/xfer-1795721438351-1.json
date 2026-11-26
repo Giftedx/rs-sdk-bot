@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795721438351-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "BowBeforeMe",
+  "item": "Prayer potion(3)",
+  "count": 2,
+  "itemId": 139,
+  "start": 1795721438351,
+  "end": 1795722338351,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
