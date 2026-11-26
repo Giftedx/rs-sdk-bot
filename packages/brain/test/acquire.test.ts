@@ -179,6 +179,17 @@ test('hub_banker never picks a party that cannot pay the two boat fares to the h
     const paid = resolve(recipient(0), donor(60));
     expect(paid.step?.source).toBe('hub_banker');
     expect(paid.step?.donorAccount).toBe('Bigpackage');
+
+    // East of White Wolf Mountain, inside the Kandarin box: with a recorded no-route to Ardougne North the walk east
+    // takes no boat (test/ferry-fare.test.ts), so a donor with 0 coins there can still trade at Varrock West.
+    const from = { x: 2793, z: 3516, level: 0 };
+    const stranded = (noRoute: boolean): AccountState => ({
+        ...donor(0),
+        pos: from,
+        ...(noRoute ? { noRoutes: [{ from, to: { x: 2619, z: 3332, level: 0 }, activityId: 'gather:x', observedAt: NOW - 1000, expiresAt: NOW + 3_600_000 }] } : {}),
+    });
+    expect(resolve(recipient(0), stranded(false)).step?.source).not.toBe('hub_banker');
+    expect(resolve(recipient(0), stranded(true)).step?.source).toBe('hub_banker');
 });
 
 test('hub_banker never picks a donor whose only copy is worn', () => {
