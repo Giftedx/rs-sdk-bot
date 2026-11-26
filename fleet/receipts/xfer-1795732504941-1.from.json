@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732504941-1",
  "account": "CoinCock",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "4e241dad-dfff-45fa-a459-065d1050f6b3",
- "count": 0,
- "ok": false,
- "at": 1795732799373,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795732826516,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795732807788
+ },
+ "logout": {
+  "attemptId": "1795732799406-0000026304-0000000001",
+  "at": 1795732826506,
+  "sha256": "37dfb3b62b40008114aa1e4346cc41f99cf94202a87f2832dd1b1f2132a1cf45"
+ },
+ "screen": true
 }
