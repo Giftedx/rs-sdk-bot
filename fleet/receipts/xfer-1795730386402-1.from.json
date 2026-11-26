@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795730386402-1",
+ "account": "ChaosInPants",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "0ce290d2-0857-4ad6-b3fe-59eae180bd93",
+ "count": 135,
+ "ok": true,
+ "at": 1795730859483,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 135,
+  "after": 0
+ },
+ "bank": {
+  "count": 135,
+  "at": 1795730840307
+ },
+ "logout": {
+  "attemptId": "1795730831255-0000025644-0000000001",
+  "at": 1795730859400,
+  "sha256": "f2497f8c9b3789acda47eca45d9b18a9564e8de3f747ffbd71d6f14e83eb1666"
+ },
+ "screen": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795730085452-1",
+ "account": "Moneyshot",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 19,
+ "claim": "000876b5-078b-4ef9-af4a-92d7f9c9e856",
+ "count": 19,
+ "ok": true,
+ "at": 1795730754277,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 19
+ },
+ "bank": {
+  "count": 19,
+  "at": 1795730753457
+ },
+ "logout": {
+  "attemptId": "1795730694548-0000025720-0000000001",
+  "at": 1795730754244,
+  "sha256": "c426b2fb68f2edfce401932f112d30fcbf7c0e1e5cd7773c19c3dcb1dcf70653"
+ },
+ "screen": true
+}

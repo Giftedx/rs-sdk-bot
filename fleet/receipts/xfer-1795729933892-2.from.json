@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795729933892-2",
+ "account": "Woodpecker",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 1,
+ "claim": "21e88fcb-6fa9-46e6-89df-e71edcf26cf6",
+ "count": 0,
+ "ok": false,
+ "at": 1795730834356,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795730800442-0000012784-0000000001",
+  "at": 1795730834210,
+  "sha256": "d04f71b117e8d9847735cdb3f9e8d95bcb22f202b217fb4e1918854851f50f2b"
+ },
+ "screen": false
+}

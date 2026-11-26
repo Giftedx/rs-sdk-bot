@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795730863043-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "KnightRider",
+  "item": "Unfinished potion",
+  "count": 1,
+  "itemId": 93,
+  "start": 1795730863043,
+  "end": 1795731763043,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

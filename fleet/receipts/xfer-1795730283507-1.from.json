@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795730283507-1",
  "account": "Swordinhand",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "2c829b57-075f-4629-91ee-0b9676a96646",
- "count": 0,
- "ok": false,
- "at": 1795730563977,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795730696604,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795730674275
+ },
+ "logout": {
+  "attemptId": "1795730564000-0000024300-0000000001",
+  "at": 1795730696589,
+  "sha256": "a40dcb75c7201e228bf8654e46a523aaa20e3b6628c1bcefd2898f4243df3642"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795730085452-1",
  "account": "YewFirst",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 19,
  "claim": "9b1331aa-d2d1-47f8-9741-795d825eb8aa",
- "count": 0,
- "ok": false,
- "at": 1795730578619,
- "detail": "trade claimed"
+ "count": 19,
+ "ok": true,
+ "at": 1795730752677,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 19,
+  "after": 0
+ },
+ "bank": {
+  "count": 19,
+  "at": 1795730741611
+ },
+ "logout": {
+  "attemptId": "1795730578671-0000030252-0000000001",
+  "at": 1795730752625,
+  "sha256": "cd4182118c5d0e90e1456fe3665a7b33e5b5664d16bcf8dc03d85e12660402ce"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795730863043-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "Woodpecker",
+  "item": "Logs",
+  "count": 29,
+  "itemId": 1511,
+  "start": 1795730863043,
+  "end": 1795731763043,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

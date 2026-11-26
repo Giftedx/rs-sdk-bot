@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795730283507-1",
+ "account": "Magicwanda",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "259cbe30-8766-4a67-ad85-b94f8e1880ba",
+ "count": 1,
+ "ok": true,
+ "at": 1795730698234,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795730697506
+ },
+ "logout": {
+  "attemptId": "1795730685168-0000011488-0000000001",
+  "at": 1795730698202,
+  "sha256": "83743b4eb37b5701888b6bb9ea8493c033302d4f61f6cc843c2c16020708a006"
+ },
+ "screen": true
+}

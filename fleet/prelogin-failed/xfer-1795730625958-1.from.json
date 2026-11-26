@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795730625958-1",
+ "role": "from",
+ "account": "Shaftsinker",
+ "partner": "mmtha0205",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795730734346,
+ "detail": "Error: fleet trade claim held for order xfer-1795729889066-1"
+}
