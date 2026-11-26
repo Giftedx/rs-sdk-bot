@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795717597439-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Unsheathed",
+  "item": "Ranarr weed",
+  "count": 1,
+  "itemId": 257,
+  "start": 1795717597439,
+  "end": 1795718497439,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
