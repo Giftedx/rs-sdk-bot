@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710905196-1",
  "account": "Fingerblastr",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 1,
  "claim": "5f57b5ad-186a-4733-9fd4-5a4f1dee8fd2",
- "count": 0,
- "ok": false,
- "at": 1795710995156,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795711240478,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795711222550
+ },
+ "logout": {
+  "attemptId": "1795710995175-0000003164-0000000001",
+  "at": 1795711240461,
+  "sha256": "57d4deefefbdb16de7bee5c173fb41796b0865c7c1ee54e0ef120ab84ad103a1"
+ },
+ "screen": true
 }

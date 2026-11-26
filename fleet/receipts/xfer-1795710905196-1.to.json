@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710905196-1",
+ "account": "OreElse",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "7f353ba4-b48e-4882-a7f2-9233575f3ecc",
+ "count": 1,
+ "ok": true,
+ "at": 1795711242141,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795711241362
+ },
+ "logout": {
+  "attemptId": "1795711229706-0000007252-0000000001",
+  "at": 1795711242129,
+  "sha256": "7c506b2dbc86fb02ca97f250b18391904e6dc227848319cdccb12301db0bac9e"
+ },
+ "screen": true
+}
