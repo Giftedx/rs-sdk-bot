@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728129322-2",
  "account": "Wandwaver",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 6,
  "claim": "f6a773b4-6716-47e5-9f83-6dd4a3ae3a73",
- "count": 0,
- "ok": false,
- "at": 1795728677351,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795728689524,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795728688787
+ },
+ "logout": {
+  "attemptId": "1795728677485-0000004476-0000000001",
+  "at": 1795728689514,
+  "sha256": "f1b1582f858a14350db398aafcf2681a942500efde6e41268fd4ee6ae4d00afc"
+ },
+ "screen": true
 }
