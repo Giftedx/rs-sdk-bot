@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723699800-1",
  "account": "Magicwanda",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Earth talisman",
  "requested": 1,
  "claim": "2fb99ff6-a011-40d6-87b8-516d4a026975",
- "count": 0,
- "ok": false,
- "at": 1795724142279,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795724368274,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795724359101
+ },
+ "logout": {
+  "attemptId": "1795724142287-0000026324-0000000001",
+  "at": 1795724368262,
+  "sha256": "44fadfcc78b00ee2968956fefc7886c4f36f203a89053ceaee38239be982ff89"
+ },
+ "screen": true
 }
