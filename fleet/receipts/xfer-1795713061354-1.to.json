@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795713061354-1",
  "account": "Hocuspokeus",
  "partner": "Billionaire",
@@ -12,6 +12,12 @@
  "claim": "ccdef0ee-0a2e-4167-bfdd-3c9106e085dc",
  "count": 0,
  "ok": false,
- "at": 1795713264951,
- "detail": "trade claimed"
+ "at": 1795713323184,
+ "detail": "Error: route to 2617, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795713264958-0000011540-0000000001",
+  "at": 1795713323175,
+  "sha256": "54305008077e54de96e7a80c6aea67213fd5fdb2423ddffad99dc7153068d3d8"
+ },
+ "screen": false
 }
