@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716314124-1",
+ "account": "Shaftsinker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 3,
+ "claim": "af3fc3c9-4f40-4400-ac3d-2abdabd3043f",
+ "count": 0,
+ "ok": false,
+ "at": 1795716353726,
+ "detail": "trade claimed"
+}
