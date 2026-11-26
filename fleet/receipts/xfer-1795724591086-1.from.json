@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724591086-1",
  "account": "Woodenstaff",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 8010,
  "claim": "299021e9-dc05-42af-831e-536e6b2fb951",
- "count": 0,
- "ok": false,
- "at": 1795724740568,
- "detail": "trade claimed"
+ "count": 8010,
+ "ok": true,
+ "at": 1795724867842,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8010,
+  "after": 0
+ },
+ "bank": {
+  "count": 7510,
+  "at": 1795724840292
+ },
+ "logout": {
+  "attemptId": "1795724740577-0000020940-0000000001",
+  "at": 1795724867830,
+  "sha256": "74f8441afcbd00ee308ed708af4dfbf017ff6bd3f106759b289332899b5e2d87"
+ },
+ "screen": true
 }

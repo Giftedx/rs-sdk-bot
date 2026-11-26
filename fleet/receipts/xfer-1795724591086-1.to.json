@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795724591086-1",
+ "account": "TheFullMonty",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8010,
+ "claim": "1a37065e-9412-46ec-a301-4d44779c3187",
+ "count": 8010,
+ "ok": true,
+ "at": 1795724869434,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 190,
+  "after": 8200
+ },
+ "bank": {
+  "count": 8010,
+  "at": 1795724868675
+ },
+ "logout": {
+  "attemptId": "1795724846748-0000002416-0000000001",
+  "at": 1795724869422,
+  "sha256": "5b97f34d9667752be09b256db2fb5c3d4ca32c1e24b1f4e3e12a1e1d1009a4d9"
+ },
+ "screen": true
+}
