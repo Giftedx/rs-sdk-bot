@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795722141703,
+ "at": 1795722155051,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1710 TARGET_COUNT=171 PRODUCT_TARGET=171 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1670 TARGET_COUNT=167 PRODUCT_TARGET=171 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=171 -- cooking food"
    ],
    "env": {
@@ -72,38 +72,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop2 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-1-p224 ITEM_ID=2351 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "army"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "auto"
   },
   {
    "account": "Fingerblastr",
@@ -136,6 +104,25 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:mineshafted:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   }
  ],
  "army": [
