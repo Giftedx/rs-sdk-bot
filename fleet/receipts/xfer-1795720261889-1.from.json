@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720261889-1",
+ "account": "YewFirst",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 123,
+ "claim": "9eac0dce-d144-4f37-aa6a-3133d5b25b65",
+ "count": 0,
+ "ok": false,
+ "at": 1795720570756,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720293437-1",
+ "account": "BoneToPick",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 100,
+ "claim": "b069c041-b9ea-4c3a-9647-66ffa43c79e3",
+ "count": 0,
+ "ok": false,
+ "at": 1795720578210,
+ "detail": "trade claimed"
+}
