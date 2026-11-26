@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795712099157,
+ "at": 1795712109918,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -110,7 +110,7 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
+   "account": "Kiltlifter",
    "script": "scripts/generated/quest-dragon.ts",
    "args": [],
    "env": {
@@ -120,6 +120,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:dragon",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "41"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -214,21 +229,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-438-32-p23 ITEM_ID=438 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=32 -- smithing smelt 1500 bronze"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
   }
  ],
  "army": [
