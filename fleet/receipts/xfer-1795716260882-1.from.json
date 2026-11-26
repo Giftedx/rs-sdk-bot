@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795716260882-1",
  "account": "Billionaire",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 925,
  "claim": "d9aba3b3-ce5d-486e-b96e-ef0ac577229e",
- "count": 0,
- "ok": false,
- "at": 1795716395682,
- "detail": "trade claimed"
+ "count": 925,
+ "ok": true,
+ "at": 1795716675458,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 925,
+  "after": 0
+ },
+ "bank": {
+  "count": 925,
+  "at": 1795716582715
+ },
+ "logout": {
+  "attemptId": "1795716395691-0000019264-0000000001",
+  "at": 1795716675446,
+  "sha256": "65a299591af254d569c2d9b15d5582ca2802f23c947f86b1e0f0fea9f710ab84"
+ },
+ "screen": true
 }
