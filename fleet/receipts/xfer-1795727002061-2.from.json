@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727002061-2",
+ "account": "Quickhandjob",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "fb02ee8f-36cd-4c68-8bfd-d13b2e831c8c",
+ "count": 0,
+ "ok": false,
+ "at": 1795727550319,
+ "detail": "trade claimed"
+}

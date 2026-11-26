@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727305044-1",
  "account": "YewFirst",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 27,
  "claim": "2e22c0e6-436f-465c-8bec-26cf4a83a1c3",
- "count": 0,
- "ok": false,
- "at": 1795727435497,
- "detail": "trade claimed"
+ "count": 27,
+ "ok": true,
+ "at": 1795727534382,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 27,
+  "after": 0
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795727442836
+ },
+ "logout": {
+  "attemptId": "1795727435505-0000002968-0000000001",
+  "at": 1795727534368,
+  "sha256": "d34be4fbc72b2f3b3f26b66d93c2d439ae418e9070dc46158bba9e5c1a708a57"
+ },
+ "screen": true
 }
