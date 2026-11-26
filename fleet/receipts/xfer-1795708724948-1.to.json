@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795708724948-1",
  "account": "Wandwanker",
  "partner": "Abracadickra",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 60,
  "claim": "39de68b1-2938-40af-a3f3-7d338e72f7fc",
- "count": 0,
- "ok": false,
- "at": 1795708896217,
- "detail": "trade claimed",
+ "count": 60,
+ "ok": true,
+ "at": 1795708911414,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Staff of air",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795708910647
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795708910261
+ },
+ "logout": {
+  "attemptId": "1795708896229-0000023648-0000000001",
+  "at": 1795708911403,
+  "sha256": "f047ed9d2f02e6f6eb68752c5ac3452fed5246dd24bac9a3fb545aad601a2c06"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795708922714-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 3,
+  "itemId": 213,
+  "start": 1795708922714,
+  "end": 1795709822714,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
