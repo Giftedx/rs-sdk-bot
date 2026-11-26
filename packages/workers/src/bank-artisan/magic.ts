@@ -389,14 +389,34 @@ export async function stageSpellInputs(
     s: Session,
     perCast: Record<number, number>,
     maximum: number,
-    o: { deposit?: readonly number[]; stop?: () => boolean } = {},
+    o: { deposit?: readonly number[]; stop?: () => boolean; settleTicks?: number } = {},
 ): Promise<{ casts: number; banked: boolean }> {
     const inv = () => s.sdk.getInventory();
     const observe = s.bankObservation?.bind(s);
     if (!observe || o.stop?.() || maximum < 1 || typeof s.bot?.openBank !== 'function') return { casts: 0, banked: false };
+    // The engine refuses a bank booth click while the last spell's delay runs, and the SDK then
+    // waits its whole timeout: the trace of bench extra:magic-enchant-banked has the last cast at
+    // t=86 and "OpLoc ok=false delayed=true" at t=88. Wait out the delay, then close any modal
+    // (a level-up message) as the bank trip runner does before each open.
+    const state = () => s.sdk.getState();
+    if ((o.settleTicks ?? 0) > 0) await waitTicks(s, o.settleTicks!);
+    await s.sdk.sendCloseModal();
     const generation = observe()?.generation ?? 0;
-    const opened = await s.bot.openBank().catch(() => undefined);
-    if (!opened?.success || !await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (observe()?.generation ?? 0) > generation, { timeoutTicks: 15 })) {
+    const opened = await s.bot.openBank().catch((e: unknown) => ({ success: false, message: String(e) }));
+    const fresh = !!opened?.success && await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (observe()?.generation ?? 0) > generation, { timeoutTicks: 15 });
+    if (!fresh) {
+        const st = state() as { player?: { worldX: number; worldZ: number }; dialog?: unknown; interface?: unknown; nearbyLocs?: { name?: string; distance?: number }[]; gameMessages?: { text: string }[] } | undefined;
+        console.log('SPELL_STAGE ' + JSON.stringify({
+            opened: false,
+            message: (opened as { message?: string } | undefined)?.message ?? '',
+            bankOpen: !!s.sdk.getState()?.bank?.isOpen,
+            at: st?.player ? [st.player.worldX, st.player.worldZ] : null,
+            dialog: st?.dialog ?? null,
+            interface: st?.interface ?? null,
+            booths: (st?.nearbyLocs ?? []).filter(l => /bank/i.test(l.name ?? '')).map(l => [l.name, l.distance]).slice(0, 3),
+            messages: (st?.gameMessages ?? []).slice(-3).map(m => m.text),
+            tick: s.tick(),
+        }));
         return { casts: 0, banked: false };
     }
     try {
@@ -404,7 +424,10 @@ export async function stageSpellInputs(
             const row = inv().find(i => i.id === id);
             if (row) await depositObserved(s, row);
         }
-        const n = stagedSpellCasts(perCast, maximum, inv(), observe()?.items ?? [], Math.max(0, 28 - inv().length), id => spellInputStackable(s.client, id));
+        const bank = observe()?.items ?? [];
+        const free = Math.max(0, 28 - inv().length);
+        const n = stagedSpellCasts(perCast, maximum, inv(), bank, free, id => spellInputStackable(s.client, id));
+        console.log('SPELL_STAGE ' + JSON.stringify({ opened: true, maximum, casts: n, free, bank: Object.fromEntries(Object.keys(perCast).map(id => [id, stackCount(bank, Number(id))])), tick: s.tick() }));
         for (const [key, each] of Object.entries(perCast)) {
             const id = Number(key);
             const before = stackCount(inv(), id);
@@ -453,7 +476,8 @@ export async function runItemMagicBanked(s: Session, recipe: ItemMagicRecipe, o:
         let held = spellCastsHeld(perCast, counts());
         if (held < 1) {
             stages++;
-            held = (await stageSpellInputs(s, perCast, o.count - casts, { deposit: [recipe.product], stop: o.stop })).casts;
+            const settleTicks = casts > 0 ? spellDelay(recipe.name) + 1 : 0;
+            held = (await stageSpellInputs(s, perCast, o.count - casts, { deposit: [recipe.product], stop: o.stop, settleTicks })).casts;
             if (held < 1) {
                 stop = 'supplies';
                 break;
@@ -461,8 +485,11 @@ export async function runItemMagicBanked(s: Session, recipe: ItemMagicRecipe, o:
         }
         const r = await runItemMagic(s, recipe, { count: Math.min(held, o.count - casts), cap: Math.max(1, o.cap - (s.tick() - start)), members: o.members, stop: o.stop });
         casts += r.casts;
-        if (r.casts === 0 || (!r.ok && r.stop !== 'supplies')) {
-            stop = r.casts === 0 ? 'supplies' : r.stop;
+        // runItemMagic keeps stop=target only when it cast its count; a pack that ran short after
+        // some casts stages again, and every other stop (cap, stopped, session ended) ends the run.
+        if (r.stop === 'supplies' && r.casts > 0) continue;
+        if (r.stop !== 'target') {
+            stop = r.stop;
             break;
         }
     }

@@ -25,6 +25,7 @@ function bankSession(bankStart: Record<number, number>) {
     let generation = 0;
     let open = false;
     let casts = 0;
+    let lastCast = -100;
     let inv: { id: number; count: number; slot: number; name: string }[] = [];
     const bank: Record<number, number> = { ...bankStart };
     const listeners = new Set<() => void>();
@@ -51,11 +52,18 @@ function bankSession(bankStart: Record<number, number>) {
             getEquipment: () => [],
             getSkillXp: () => xp,
             getSkill: () => ({ level: 99 }),
+            sendCloseModal: async () => ({ success: true }),
         },
         bankObservation: () => ({ generation, items: bankItems(), at: tick }),
         bot: {
             dismissBlockingUI: async () => {},
-            openBank: async () => { open = true; generation++; return { success: true }; },
+            // The engine refuses a booth click while the last spell delay runs (bench trace: OpLoc delayed=true).
+            openBank: async () => {
+                if (tick - lastCast < 3) return { success: false, message: 'Timeout waiting for bank interface to open' };
+                open = true;
+                generation++;
+                return { success: true };
+            },
             closeBank: async () => { open = false; return { success: true }; },
             withdrawItem: async (row: { id: number }, n: number) => {
                 if ((bank[row.id] ?? 0) < n) return { success: false };
@@ -84,6 +92,7 @@ function bankSession(bankStart: Record<number, number>) {
                 if (row.count === 0) inv = inv.filter(x => x !== row);
             }
             xp += 17;
+            lastCast = tick;
             casts++;
             return { success: true };
         },
@@ -161,4 +170,15 @@ describe('bank staging for pack spells', () => {
     test('the enchant recipe costs one ring, one cosmic and one water rune per cast', () => {
         expect(itemSpellCosts(itemMagicRecipe('enchant:sapphire_ring'), [])).toEqual({ [RING]: 1, [COSMIC]: 1, [WATER]: 1 });
     });
+});
+
+test('a run that hits its tick cap reports cap, not supplies', async () => {
+    const f = bankSession({ [RING]: 5, [COSMIC]: 5, [WATER]: 5 });
+    try {
+        const out = await runItemMagicBanked(f.s, f.r, { count: 5, cap: 1 });
+        expect(out.ok).toBe(false);
+        expect(out.stop).toBe('cap');
+    } finally {
+        f.stop();
+    }
 });
