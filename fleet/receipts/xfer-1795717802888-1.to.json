@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717802888-1",
  "account": "Magicwanda",
  "partner": "Packhorse",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 135,
  "claim": "4b522ff2-bdd4-47e6-a3cf-e49c29ccf92a",
- "count": 0,
- "ok": false,
- "at": 1795718107919,
- "detail": "trade claimed"
+ "count": 135,
+ "ok": true,
+ "at": 1795718200550,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 135
+ },
+ "bank": {
+  "count": 135,
+  "at": 1795718199854
+ },
+ "logout": {
+  "attemptId": "1795718107927-0000026412-0000000001",
+  "at": 1795718200535,
+  "sha256": "2f2d96c310851d887841306de05c8d97b538722e94ab2659e02c88476ce2f9a4"
+ },
+ "screen": true
 }
