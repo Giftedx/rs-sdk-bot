@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795732504941-1",
+ "account": "CoinCock",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "4e241dad-dfff-45fa-a459-065d1050f6b3",
+ "count": 0,
+ "ok": false,
+ "at": 1795732799373,
+ "detail": "trade claimed"
+}

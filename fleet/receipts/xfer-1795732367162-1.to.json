@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732367162-1",
  "account": "MineYourBiz",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 40,
  "claim": "ba166ce0-84a4-4d93-a12f-9413ee7a4592",
- "count": 0,
- "ok": false,
- "at": 1795732625700,
- "detail": "trade claimed"
+ "count": 40,
+ "ok": true,
+ "at": 1795732793725,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 60
+ },
+ "bank": {
+  "count": 40,
+  "at": 1795732792983
+ },
+ "logout": {
+  "attemptId": "1795732625709-0000021816-0000000001",
+  "at": 1795732793711,
+  "sha256": "b7d81edbf1d38704cc9f53d6916ce40ae9832d42fbfcd7eaf0d4885f0f414188"
+ },
+ "screen": true
 }
