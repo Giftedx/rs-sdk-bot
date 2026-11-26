@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722576328-2",
+ "account": "TheFullMonty",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "6fd6850c-ed73-4e1b-81af-74f99fb4c851",
+ "count": 0,
+ "ok": false,
+ "at": 1795722723813,
+ "detail": "trade claimed"
+}

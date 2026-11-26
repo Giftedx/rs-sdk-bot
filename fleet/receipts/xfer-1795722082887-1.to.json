@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722082887-1",
  "account": "Fatstack",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 8150,
  "claim": "cbf42c8c-817c-4cb4-964e-a04ba9d8a591",
- "count": 0,
- "ok": false,
- "at": 1795722537172,
- "detail": "trade claimed"
+ "count": 8150,
+ "ok": true,
+ "at": 1795722627525,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 8170
+ },
+ "bank": {
+  "count": 8150,
+  "at": 1795722626802
+ },
+ "logout": {
+  "attemptId": "1795722537190-0000008724-0000000001",
+  "at": 1795722627517,
+  "sha256": "f046c7384f0b55ef7a0f3ae17a570d69ad9691ec870c62479d07e508881121e9"
+ },
+ "screen": true
 }

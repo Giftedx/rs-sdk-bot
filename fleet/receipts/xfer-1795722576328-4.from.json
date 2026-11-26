@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722576328-4",
+ "account": "Billionaire",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "1c777d6f-0b22-4c8e-8c5f-bc7290558b6b",
+ "count": 0,
+ "ok": false,
+ "at": 1795722738780,
+ "detail": "trade claimed"
+}

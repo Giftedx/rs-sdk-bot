@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795722665816-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Earlyshooter",
+  "to": "Woodpecker",
+  "item": "Iron bar",
+  "count": 3,
+  "itemId": 2351,
+  "start": 1795722665816,
+  "end": 1795723565816,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
