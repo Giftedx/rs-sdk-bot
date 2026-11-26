@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727305745,
+ "at": 1795727341769,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,42 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "iron"
-   ],
-   "env": {
-    "BAR_TYPE": "iron",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-26-p97 ITEM_ID=440 QUANTITY=26 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=26 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "helper"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
@@ -110,22 +74,7 @@
    "role": "auto"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=16 PRODUCT_TARGET=26 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=26 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
+   "account": "Packhorse",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -138,7 +87,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "helper"
   },
   {
    "account": "Fatstack",
@@ -188,8 +137,8 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=5 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=5 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -197,6 +146,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "feathers"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lochnessrod:item:314",
    "role": "army"
   },
   {
@@ -236,6 +201,25 @@
    "role": "auto"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
@@ -271,22 +255,6 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1117 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=29 TARGET_COUNT=1 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-2-p224 ITEM_ID=2351 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1309",
-   "role": "army"
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
@@ -300,22 +268,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=25 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy shantayshop 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
   }
  ],
  "army": [
@@ -329,6 +281,7 @@
   "bigpackage",
   "billionaire",
   "dipstick",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
@@ -342,7 +295,9 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "undermykilt"
+  "undermykilt",
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
