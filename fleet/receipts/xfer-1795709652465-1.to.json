@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795709652465-1",
  "account": "TheFullMonty",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "1d18f46a-1281-41fa-96a6-cfc6b2bef573",
- "count": 0,
- "ok": false,
- "at": 1795709886566,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795709952932,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795709952264
+ },
+ "logout": {
+  "attemptId": "1795709886574-0000029464-0000000001",
+  "at": 1795709952924,
+  "sha256": "4ad7bff7fd26436581b8ec14584943e0feff1e7f9a8d91b9ce88552c47c50416"
+ },
+ "screen": true
 }

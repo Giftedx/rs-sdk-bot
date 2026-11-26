@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795709850501-1",
+ "account": "SporranDip",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "dd445671-05d2-4c22-9bad-ad826f93727f",
+ "count": 1,
+ "ok": true,
+ "at": 1795709980944,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795709980220
+ },
+ "logout": {
+  "attemptId": "1795709970155-0000029596-0000000001",
+  "at": 1795709980931,
+  "sha256": "d39b718cd17f1397877831c2889e51886b90715cf7767649a44598f04724d28d"
+ },
+ "screen": true
+}
