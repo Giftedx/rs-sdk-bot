@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
-import { labelAreas, readLabels, separated, writeLabels } from '../src/components';
+import { eitherWay, labelAreas, readLabels, separated, writeLabels } from '../src/components';
 
 const directory = mkdtempSync(join(tmpdir(), 'areas-'));
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
@@ -23,6 +23,30 @@ test('a wall makes two areas and the leg across it is refused', () => {
 test('a gap joins the areas', () => {
     expect(grid(true).areas).toBe(1);
     expect(separated(grid(true), { level: 0, x: 1, z: 1 }, { level: 0, x: 6, z: 1 }, 0)).toBe(false);
+});
+
+test('a one-way gap joins the areas when labelled either way', () => {
+    // The gap at z=7 lets a step west (dx -1) through and refuses a step east, as a one-way door does.
+    const oneWay = (_l: number, x: number, z: number, dx: number) => !(dx !== 0 && Math.min(x, x + dx) === 3 && !(z === 7 && dx < 0));
+    const east = { level: 0, x: 6, z: 7 }, west = { level: 0, x: 1, z: 7 };
+    // The flood starts on the west side (zone order): it cannot step east, so the plain labels split the rooms.
+    expect(labelAreas([[0, 0, 0]], () => true, oneWay).areas).toBe(2);
+    const g = labelAreas([[0, 0, 0]], () => true, eitherWay(() => true, oneWay));
+    expect(g.areas).toBe(1);
+    expect(separated(g, east, west, 0)).toBe(false);
+    expect(separated(g, west, east, 0)).toBe(false);
+    // With the step back only at the gap's tiles, the gap still joins the rooms; a one-way step elsewhere does not.
+    expect(labelAreas([[0, 0, 0]], () => true, eitherWay(() => true, oneWay, (_l, x, z) => z === 7 && (x === 3 || x === 4))).areas).toBe(1);
+    expect(labelAreas([[0, 0, 0]], () => true, eitherWay(() => true, oneWay, (_l, _x, z) => z === 0)).areas).toBe(2);
+});
+
+test('a step back is taken only from a walkable tile', () => {
+    // Column x=4 is closed ground; the grid allows a step off it but not onto it.
+    const closed = (_l: number, x: number) => x !== 4;
+    const step = (_l: number, x: number, _z: number, dx: number) => x + dx !== 4;
+    const g = labelAreas([[0, 0, 0]], closed, eitherWay(closed, step));
+    expect(g.areas).toBe(2);
+    expect(separated(g, { level: 0, x: 1, z: 1 }, { level: 0, x: 6, z: 1 }, 0)).toBe(true);
 });
 
 test('a target near the map edge or on another level is never refused', () => {
@@ -153,11 +177,16 @@ test('the flat labels give the answers of a Map of zone arrays for 20,000 sample
 });
 
 test('SharedArrayBuffer-backed labels preserve area and separated checks across attachSharedLabels', async () => {
-    const { attachSharedLabels, shareLabels } = await import('../src/components');
+    const { attachSharedLabels, getBuiltAreas, restoreBuiltAreas, shareLabels } = await import('../src/components');
     const g = grid(false);
     const shared = shareLabels(g);
     expect(shared).not.toBeNull();
-    const attached = attachSharedLabels(shared!);
+    // attachSharedLabels publishes these test labels to mapAreas; the map labels come back at the end of the test.
+    const prior = getBuiltAreas();
+    try { checkAttached(attachSharedLabels(shared!), g); } finally { restoreBuiltAreas(prior); }
+});
+
+function checkAttached(attached: ReturnType<typeof labelAreas>, g: ReturnType<typeof labelAreas>) {
     expect(attached.areas).toBe(g.areas);
     expect(attached.tiles).toBe(g.tiles);
     expect(attached.zones.size).toBe(g.zones.size);
@@ -169,7 +198,7 @@ test('SharedArrayBuffer-backed labels preserve area and separated checks across 
         (_l, x, z, dx) => !(x === 0 && z === 0) && !(x + dx === 0 && z === 0) && !(dx !== 0 && Math.min(x, x + dx) === 3));
     expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 2, z: 2 }, 0)).toBe(false);
     expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 6, z: 2 }, 0)).toBe(true);
-});
+}
 
 test('writeLabels cleans up temporary files if rename fails', async () => {
     const fs = await import('node:fs');

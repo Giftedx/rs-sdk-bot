@@ -166,6 +166,9 @@ export function attachSharedLabels(s: SharedLabels): Labels {
 }
 
 export const getBuiltAreas = (): Labels | undefined => built;
+// Puts back the labels a caller took with getBuiltAreas; undefined leaves none, so the next mapAreas reads the map.
+// A test that attaches labels of its own restores the map labels, which later tests in the same process use.
+export const restoreBuiltAreas = (l: Labels | undefined): void => { built = l; };
 
 // The labels over one flat array. null when two zones have one key. The table holds at least twice as many slots as zones.
 function flat(keys: Int32Array, cells: Uint16Array | Int32Array, areas: number, tiles: number): Labels | null {
@@ -241,6 +244,20 @@ function readExact(fd: number, into: Uint8Array, position: number): boolean {
     }
     return true;
 }
+
+// A step test that joins two tiles when a step between them is allowed in either direction. The flood of labelAreas
+// takes each tile once, so with a one-way step (a door policy `whenAxis` block, door-policy.ts directionalMasks) it
+// would label the two sides apart when it reaches the refused side first, and a walk out through the door would be
+// refused. The step back is tried only where `oneWay` holds for either tile (default: every tile), so the rest of the
+// map keeps the plain step of mapAreas. It needs a walkable tile to start from: the grid allows a step off a closed
+// tile (danger ground, danger/tiles.ts) onto open ground, and without the check the flood would cross closed ground.
+export const eitherWay = (
+    walkable: (l: number, x: number, z: number) => boolean,
+    canStep: (l: number, x: number, z: number, dx: number, dz: number) => boolean,
+    oneWay: (l: number, x: number, z: number) => boolean = () => true,
+) => (l: number, x: number, z: number, dx: number, dz: number): boolean =>
+    canStep(l, x, z, dx, dz)
+    || ((oneWay(l, x, z) || oneWay(l, x + dx, z + dz)) && walkable(l, x + dx, z + dz) && canStep(l, x + dx, z + dz, -dx, -dz));
 
 // True when no walk can join `from` to `to`: the areas at the start share none with the areas at the end.
 // An unwalkable start (a stair or ladder tile) counts its neighbours. An end with `size` (a loc to operate)

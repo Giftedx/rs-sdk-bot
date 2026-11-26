@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
-import { accountForSdk, registerRouteActor, withDoorPolicy } from '../door-policy';
-import { labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, guardRoute, guardWalk } from '../danger';
+import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
+import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
+import { activeDanger, guardRoute, guardWalk, pack } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { cheb, tileKey, worldRepoRoot, type DoorBlock, type PathLength, type Tile } from './model';
@@ -82,8 +82,12 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         scopeNulls.delete(prefix);
         const zones: [number, number, number][] = [];
         for (const k of areas.zones.keys()) zones.push([k >>> 28, ((k >>> 14) & 0x3fff) << 3, (k & 0x3fff) << 3]);
-        const labels = scoped(blocked, () => labelAreas(zones, (l, x, z) => (pf as any).isTileWalkable(l, x, z),
-            (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)));
+        // eitherWay: a one-way door of the policy joins its two sides, so a walk out through it is never refused.
+        const walkable = (l: number, x: number, z: number): boolean => (pf as any).isTileWalkable(l, x, z);
+        const oneWay = new Set(directionalMasks(blocked).map(m => pack(m.level, m.x, m.z)));
+        const labels = scoped(blocked, () => labelAreas(zones, walkable,
+            eitherWay(walkable, (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL),
+                (l, x, z) => oneWay.has(pack(l, x, z)))));
         if (scopeLabels.size >= SCOPE_LABEL_KEEP) scopeLabels.delete(scopeLabels.keys().next().value!);
         scopeLabels.set(prefix, labels);
     };
