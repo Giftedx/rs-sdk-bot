@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717814250,
+ "at": 1795717840772,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,23 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
+   "account": "Pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "1353"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "Pullmybow",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -72,10 +88,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:elena",
-   "role": "army"
+   "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "YewGotWood",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -89,38 +105,6 @@
    "repeat": false,
    "goal": "goal:quest_board:tree",
    "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "ball"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "auto"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1740"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
   },
   {
    "account": "OreElse",
@@ -212,7 +196,7 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "Quickhandjob",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -225,6 +209,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:magearena",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "ball"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ball",
    "role": "army"
   }
  ],
