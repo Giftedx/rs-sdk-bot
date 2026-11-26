@@ -15,9 +15,10 @@ test('the river log edges start beside the log and land 4 tiles across, or on th
 });
 
 // The client scene keeps the log on level 1 under the bridge flag, so the state's loc list never shows it.
-function fixture(t: Travel, end: { x: number; z: number } | null) {
+function fixture(t: Travel, end: { x: number; z: number } | null, hp: number | null = 99) {
     let tick = 0;
-    const calls: any[] = [], state: any = { player: { worldX: t.from!.x, worldZ: t.from!.z, level: 0 }, nearbyLocs: [], dialog: { isOpen: false, isWaiting: false, options: [] } };
+    const skills = hp === null ? [] : [{ name: 'Hitpoints', level: hp, baseLevel: 99 }];
+    const calls: any[] = [], state: any = { player: { worldX: t.from!.x, worldZ: t.from!.z, level: 0 }, skills, nearbyLocs: [], dialog: { isOpen: false, isWaiting: false, options: [] } };
     const s: any = {
         sdk: { getState: () => state, getDialog: () => state.dialog, sendClickDialog: async () => ({ success: true }) },
         tick: () => tick,
@@ -34,6 +35,19 @@ test('the walker sends the log op by id and tile, and a crossing or a slip to th
         expect(await f.run()).toMatchObject({ ok: true });
         expect(f.calls).toEqual([{ type: 'interactLoc', x: t.run.how === 'loc' ? t.run.at!.x : 0, z: 3049, locId: 2332, optionIndex: 1, reason: 'SDK' }]);
     }
+});
+
+// A slip deals floor(current hitpoints * 6 / 100) + 1 (shortcuts.rs2:89): 1 hitpoint dies, 2 keep 1.
+test('the walker does not start the log at a hitpoint level a slip would kill, or with hitpoints unseen', async () => {
+    expect(west.slipDamage).toEqual({ percent: 6, plus: 1 });
+    for (const hp of [1, null]) {
+        const f = fixture(west, { x: 2906, z: 3049 }, hp);
+        expect(await f.run()).toMatchObject({ ok: false, reason: 'precondition' });
+        expect(f.calls).toEqual([]);
+    }
+    const f = fixture(west, { x: 2906, z: 3049 }, 2);
+    expect(await f.run()).toMatchObject({ ok: true });
+    expect(f.calls).toHaveLength(1);
 });
 
 test('a log crossing that leaves the player on the near bank fails', async () => {

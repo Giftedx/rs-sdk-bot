@@ -31,6 +31,7 @@ export interface Travel {
     from: Tile | null;                   // null: from anywhere outside the Wilderness
     to: Tile;                            // where the player stands after it, on the ground
     slips?: Tile[];                      // exact tiles a failed Agility roll ends on, on the far side of the crossing
+    slipDamage?: { percent: number; plus: number }; // a slip deals floor(current hitpoints * percent / 100) + plus
     coins: number;                       // coins the account must hold
     needs: TravelNeed[];
     runes: { item: string; count: number }[];
@@ -42,11 +43,12 @@ export interface Travel {
 // jungle east of the river (the Karamja shipyard side) to the land west of it. Its shortcuts.json rows are not
 // usable: the interpreter takes the player tile to be the loc tile, so they land 2903 and 2911 on level 1, where the
 // log lies under the bridge flag. From the tile next to the log the player moves 2 + 2 tiles across on level 0. A
-// failed roll (6% of hitpoints + 1 damage) washes the player to $fail_end_coord on the far bank, never back. The
-// client scene keeps the log on level 1, so the state's loc list never shows it (quest-tbwt-owned.ts trioLogLoc).
+// failed roll washes the player to $fail_end_coord on the far bank, never back, for floor(hitpoints * 6 / 100) + 1
+// damage (stat(hitpoints) is the current level): 1 hitpoint dies. The client scene keeps the log on level 1, so the
+// state's loc list never shows it (quest-tbwt-owned.ts trioLogLoc).
 const riverLog = (from: Tile, at: Tile, to: Tile, slip: Tile): Travel => ({
     id: `loc:zq_logbalance@${at.x},${at.z},${at.level}>${to.x},${to.z}`, kind: 'shortcut', name: 'zq_logbalance op1',
-    from, to, slips: [slip], coins: 0, needs: [], runes: [],
+    from, to, slips: [slip], slipDamage: { percent: 6, plus: 1 }, coins: 0, needs: [], runes: [],
     run: { how: 'loc', loc: 'zq_logbalance', op: 1, option: null, id: 2332, at, unlisted: true }, cost: 8,
 });
 const ground = (x: number, z: number): Tile => ({ x, z, level: 0 });

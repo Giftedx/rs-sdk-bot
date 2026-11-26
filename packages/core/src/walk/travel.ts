@@ -173,6 +173,13 @@ async function travelLocLeg(
     };
     if (stop()) return fail('aborted', 'stopped before location travel');
     if (railing && landed()) return { ok: true, ticks: s.tick() - start };
+    if (t.slipDamage) {
+        // A slip must leave the player alive: refuse at a hitpoint level the slip's damage would take to 0.
+        const hp = st()?.skills?.find((k: { name?: string }) => k.name === 'Hitpoints')?.level;
+        if (typeof hp !== 'number') return fail('precondition', `hitpoints not observed before ${run.loc}`);
+        const damage = Math.floor(hp * t.slipDamage.percent / 100) + t.slipDamage.plus;
+        if (hp <= damage) return fail('precondition', `a slip on ${run.loc} deals ${damage} at ${hp} hitpoints`);
+    }
     await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
     // The river log's slip takes about 12 ticks from the click (shortcuts.rs2:65-89).
     await answerTravelDialog(s, b, choices, short ? landed : () => arrived() || slipped(), stop, t.slips?.length ? 40 : 20);
