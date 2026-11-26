@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795726701870-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "MineYourBiz",
+  "item": "Emerald ring",
+  "count": 1,
+  "itemId": 1639,
+  "start": 1795726701870,
+  "end": 1795727601870,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795726701870-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Swordinhand",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 207,
+  "start": 1795726701870,
+  "end": 1795727601870,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
