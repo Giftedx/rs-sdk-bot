@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715895118,
+ "at": 1795715910755,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "334",
+    "MAX_ITEMS": "326",
     "COIN_RESERVE": "1000",
-    "FLOAT": "68800",
+    "FLOAT": "67200",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "334"
+    "BATCH_UNITS": "326"
    },
    "enabled": true,
    "repeat": false,
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1494",
+    "MAX_ITEMS": "1838",
     "COIN_RESERVE": "1000",
-    "FLOAT": "300800",
+    "FLOAT": "369600",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1494"
+    "BATCH_UNITS": "1838"
    },
    "enabled": true,
    "repeat": false,
@@ -134,7 +134,7 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -159,42 +159,29 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Moneyshot",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "ore"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
   },
   {
    "account": "Billionaire",
@@ -207,14 +194,14 @@
    "env": {
     "ITEM_ID": "39",
     "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "60",
+    "MAX_ITEMS": "45",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "60"
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
@@ -222,42 +209,92 @@
    "role": "army"
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "ore"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "120",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "120"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "death"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:death",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "priestperil"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "auto"
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-quester.ts -- sweep priestperil",
+    "scripts/aio-market.ts ORDER_KEY=brain-315-10-p7 ITEM_ID=315 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7 -- ge-buy",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 -- shade"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:dragon BATCH_UNITS=1 -- sweep dragon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -296,19 +333,20 @@
    "role": "auto"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "account": "Stirmypot",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=4 -- crafting inventory identify:kwuarm"
+    "sweep",
+    "magearena"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
+   "goal": "goal:quest_board:magearena",
+   "role": "auto"
   }
  ],
  "army": [
@@ -337,6 +375,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
