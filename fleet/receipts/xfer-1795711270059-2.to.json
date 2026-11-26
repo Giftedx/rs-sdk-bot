@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711270059-2",
  "account": "Earlyshooter",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Sapphire ring",
  "requested": 1,
  "claim": "5b076f23-a0af-4ae2-927d-673619cf0d44",
- "count": 0,
- "ok": false,
- "at": 1795711500418,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795711578525,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795711577723
+ },
+ "logout": {
+  "attemptId": "1795711500426-0000027672-0000000001",
+  "at": 1795711578516,
+  "sha256": "f2b0abf7492cea0baa3b68eddb421b13065392c9820be58ca4fbdb9afea3a243"
+ },
+ "screen": true
 }
