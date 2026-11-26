@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733247884-1",
  "account": "Fingersmith",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 70,
  "claim": "b829d54f-bebd-482d-b8a9-07e5d1361053",
- "count": 0,
- "ok": false,
- "at": 1795733591484,
- "detail": "trade claimed"
+ "count": 70,
+ "ok": true,
+ "at": 1795733609288,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 490,
+  "after": 560
+ },
+ "bank": {
+  "count": 70,
+  "at": 1795733608598
+ },
+ "logout": {
+  "attemptId": "1795733591492-0000021832-0000000001",
+  "at": 1795733609276,
+  "sha256": "338d80786193bb3727c3b08d8f77228a430cd130213eab8c61e03d529e831acf"
+ },
+ "screen": true
 }

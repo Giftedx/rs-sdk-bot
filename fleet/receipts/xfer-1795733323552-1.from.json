@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733323552-1",
  "account": "BackdoorMan",
  "partner": "BowBeforeMe",
@@ -10,15 +10,37 @@
  "item": "Iron ore",
  "requested": 20,
  "claim": "b94fa4a7-6025-43c1-af9d-0efa312f84db",
- "count": 0,
- "ok": false,
- "at": 1795733594724,
- "detail": "trade claimed",
+ "count": 20,
+ "ok": true,
+ "at": 1795733624201,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Coal",
    "requested": 40,
-   "count": 0
+   "count": 40,
+   "inventory": {
+    "before": 40,
+    "after": 0
+   },
+   "bank": {
+    "count": 40,
+    "at": 1795733604935
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795733604116
+ },
+ "logout": {
+  "attemptId": "1795733594734-0000027092-0000000001",
+  "at": 1795733624074,
+  "sha256": "c2d6d4e5a085c7825408308dedc726abf5ee07d457d61eb66ac32c56f3abf3c2"
+ },
+ "screen": true
 }

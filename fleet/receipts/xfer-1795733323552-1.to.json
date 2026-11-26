@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795733323552-1",
+ "account": "BowBeforeMe",
+ "partner": "BackdoorMan",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 20,
+ "claim": "84023771-915c-429b-a61c-aab307595f4a",
+ "count": 20,
+ "ok": true,
+ "at": 1795733626086,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Coal",
+   "requested": 40,
+   "count": 40,
+   "inventory": {
+    "before": 0,
+    "after": 40
+   },
+   "bank": {
+    "count": 40,
+    "at": 1795733625444
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795733624922
+ },
+ "logout": {
+  "attemptId": "1795733611175-0000017612-0000000001",
+  "at": 1795733626071,
+  "sha256": "da7eced1f3b4cf1c43a7e878c01b29570875dde3f34bd63060ee69b85b19165a"
+ },
+ "screen": true
+}

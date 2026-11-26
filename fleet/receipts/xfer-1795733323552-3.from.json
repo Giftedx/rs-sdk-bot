@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733323552-3",
  "account": "Pocketpython",
  "partner": "WellHung",
@@ -10,15 +10,33 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "5683edd2-432b-4d66-8a9e-fb04b771265b",
- "count": 0,
- "ok": false,
- "at": 1795733504029,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795733634487,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Unicorn horn",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795733511735
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795733504037-0000024980-0000000001",
+  "at": 1795733634475,
+  "sha256": "1199121200656524f2fe6e155b9ef6ab630405a309796c08f7c7705d810f16f1"
+ },
+ "screen": true
 }
