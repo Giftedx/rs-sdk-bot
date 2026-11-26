@@ -42,6 +42,8 @@ import {
     type AccountLookupCache,
     type ItemMeta,
 } from './preflight';
+import { ferryFallbackFare } from './ferry-fare';
+import { noRouteTo, type NoRouteFact } from './no-route';
 import { readJsonStatCached } from './json-cache';
 import { RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
 
@@ -704,6 +706,30 @@ export function resolveAcquireItem(
                 if (!reachDonor.reachable) {
                     if (!skipDiag) rejectReason = reachDonor.message ?? `donor ${donor.name} cannot reach ${hub}`;
                     continue;
+                }
+                // The trade worker's walk takes both boat fares between the east mainland and Ardougne before it
+                // moves (./ferry-fare.ts, workers/src/logistics/walk.ts ferryWalk). A party that owns fewer coins
+                // ends its trade at the first bank: "ferry needs 60 coins and the bank holds 0".
+                // With a recorded no-route to Ardougne North, the walk takes no boat east from Kandarin, as in
+                // evaluateTileReachability (./preflight.ts).
+                const hubFare = (party: AccountState): number => {
+                    const pos = party.pos;
+                    if (!pos) return 0;
+                    const facts: readonly NoRouteFact[] | undefined = party.noRoutes;
+                    return ferryFallbackFare(pos, hubTile, undefined, (t) => !noRouteTo(facts, pos, t, world.at));
+                };
+                const recipFare = hubFare(acct);
+                if (recipFare > coinBalance.totalUnreserved) {
+                    if (!skipDiag) rejectReason = `recipient owns ${coinBalance.totalUnreserved} coins and the ferry to ${hub} needs ${recipFare}`;
+                    continue;
+                }
+                const donorFare = hubFare(donor);
+                if (donorFare > 0) {
+                    const donorCoins = availableSpendableCoins(donor, world, 0, { includeBank: true, requireTrustedBank: true }).totalUnreserved;
+                    if (donorFare > donorCoins) {
+                        if (!skipDiag) rejectReason = `donor ${donor.name} owns ${donorCoins} coins and the ferry to ${hub} needs ${donorFare}`;
+                        continue;
+                    }
                 }
                 const sameSideBonus = donor.side === acct.side ? 0 : 120;
                 const ticks = Math.max(45, reachRecip.travelTicks + reachDonor.travelTicks + 35 + sameSideBonus);

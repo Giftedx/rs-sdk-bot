@@ -153,6 +153,45 @@ test('AcquireItem preserves operating coin float (~1,000 gp) and falls through w
     expect(res.candidates.map((c) => c.source)).toEqual(['hub_banker', 'craft_gather']);
 });
 
+test('hub_banker never picks a party that cannot pay the two boat fares to the hub', () => {
+    // Live: "fleet-trade ... failed 0/918: Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0".
+    const RAW_SHARK = 383;
+    const req = { itemId: RAW_SHARK, quantity: 50, operatingCoinFloat: 1000 };
+    const world = (accounts: Record<string, AccountState>): WorldSnapshot => ({
+        schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts,
+    });
+    const recipient = (coins: number) => makeAcct({
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: coins ? { 995: coins } : {},
+        bank: { items: {}, observedAt: NOW - 10_000, trusted: true },
+    });
+    const donor = (coins: number) => makeAcct({
+        name: 'Bigpackage',
+        pos: { x: 2619, z: 3332, level: 0 },
+        inventory: {},
+        bank: { items: coins ? { [RAW_SHARK]: 300, 995: coins } : { [RAW_SHARK]: 300 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const resolve = (r: AccountState, d: AccountState) => resolveAcquireItem(r, req, { world: world({ Packhorse: r, Bigpackage: d }), activities: [], marketQuotes: {} });
+
+    // The hub is Varrock West, beside the recipient. The donor crosses from Ardougne.
+    const broke = resolve(recipient(0), donor(59));
+    expect(broke.step?.source).not.toBe('hub_banker');
+    const paid = resolve(recipient(0), donor(60));
+    expect(paid.step?.source).toBe('hub_banker');
+    expect(paid.step?.donorAccount).toBe('Bigpackage');
+
+    // East of White Wolf Mountain, inside the Kandarin box: with a recorded no-route to Ardougne North the walk east
+    // takes no boat (test/ferry-fare.test.ts), so a donor with 0 coins there can still trade at Varrock West.
+    const from = { x: 2793, z: 3516, level: 0 };
+    const stranded = (noRoute: boolean): AccountState => ({
+        ...donor(0),
+        pos: from,
+        ...(noRoute ? { noRoutes: [{ from, to: { x: 2619, z: 3332, level: 0 }, activityId: 'gather:x', observedAt: NOW - 1000, expiresAt: NOW + 3_600_000 }] } : {}),
+    });
+    expect(resolve(recipient(0), stranded(false)).step?.source).not.toBe('hub_banker');
+    expect(resolve(recipient(0), stranded(true)).step?.source).toBe('hub_banker');
+});
+
 test('hub_banker never picks a donor whose only copy is worn', () => {
     // The trade worker gives from the bank and the pack only (`stock short: <item> 0 banked + 0 held`).
     const RUNE_SCIMITAR = 1333;
