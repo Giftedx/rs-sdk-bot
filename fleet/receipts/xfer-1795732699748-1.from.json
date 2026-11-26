@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732699748-1",
  "account": "Fingerblastr",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 3,
  "claim": "88690e47-66dc-4c22-92e3-ee4debf6fbbb",
- "count": 0,
- "ok": false,
- "at": 1795732978488,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795733021706,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795732988159
+ },
+ "logout": {
+  "attemptId": "1795732978497-0000016380-0000000001",
+  "at": 1795733021691,
+  "sha256": "f78770d13d192b0395588a3cf26ee2305f41c200cd16622046a26208bcd48e62"
+ },
+ "screen": true
 }

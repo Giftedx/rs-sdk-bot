@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795732699748-1",
+ "account": "SporranBulge",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 3,
+ "claim": "b01b9bd1-ffd5-47ee-b26c-09a4295254d7",
+ "count": 3,
+ "ok": true,
+ "at": 1795733023348,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795733022591
+ },
+ "logout": {
+  "attemptId": "1795733009947-0000028368-0000000001",
+  "at": 1795733023330,
+  "sha256": "bc16c353b554a0f654fd092b24f8cfbaec20dff3c024c755a23cd193111d45a8"
+ },
+ "screen": true
+}
