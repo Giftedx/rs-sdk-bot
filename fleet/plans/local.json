@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795716208526,
+ "at": 1795716225120,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,11 +59,36 @@
    "role": "pvp"
   },
   {
-   "account": "Fingerblastr",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
     "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "95",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "95"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
@@ -81,31 +106,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1313",
    "role": "army"
   },
   {
@@ -186,31 +186,6 @@
    "role": "auto"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1436",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "289200",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1436"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -281,6 +256,26 @@
    "role": "army"
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -289,20 +284,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1311",
-    "ITEMS": "Steel 2h sword",
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1311",
+    "DEMAND_ID": "campaign:haggis:item:1313",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "campaign:haggis:item:1313",
    "role": "auto"
   },
   {
