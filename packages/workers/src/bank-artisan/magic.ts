@@ -23,6 +23,7 @@ import {
     CONTENT_DIR,
     FIRE_PER,
     HIGH_LEVEL,
+    itemStackable,
     KNOWLEDGE_DIR,
     packMap,
     readSkillLevels,
@@ -334,20 +335,9 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
 
 // ---- Bank staging for spells cast from the pack ----
 
-const SPELL_RUNE_IDS: ReadonlySet<number> = new Set([554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565, 566]);
-
-// The client item type decides stackability. Without it the runes and coins stack and other
-// spell inputs (rings, amulets, ores, bones) take one slot each.
-export function spellInputStackable(client: unknown, id: number): boolean {
-    const objType = (client as { objType?: (id: number) => { stackable?: unknown } | undefined } | undefined)?.objType;
-    if (typeof objType === 'function') {
-        try {
-            const value = objType.call(client, id)?.stackable;
-            if (typeof value === 'boolean') return value;
-        } catch { /* fall back to the rune list */ }
-    }
-    return SPELL_RUNE_IDS.has(id) || id === 995;
-}
+// The client item type decides stackability. Without it the knowledge build decides: runes and
+// coins stack, and other spell inputs (rings, amulets, ores, bones) take one slot each.
+export const spellInputStackable = itemStackable;
 
 const stackCount = (items: readonly { id: number; count: number }[], id: number) => items.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
 

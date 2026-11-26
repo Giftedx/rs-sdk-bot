@@ -130,7 +130,7 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
             const r = f.record;
             return {
                 src: r.def,
-                label: `${r.id} ${r.debugname} name=${r.name} cost=${r.cost} members=${r.members} tradeable=${r.tradeable}`,
+                label: `${r.id} ${r.debugname} name=${r.name} cost=${r.cost} members=${r.members} tradeable=${r.tradeable} stackable=${r.stackable}`,
                 ok: () => {
                     const b = blockAt(r.def);
                     return b.header === `[${r.debugname}]`
@@ -138,7 +138,8 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
                         && (b.props.name ?? r.debugname) === r.name
                         && Number(b.props.cost ?? 1) === r.cost
                         && (b.props.members === 'yes') === r.members
-                        && (b.props.tradeable !== 'no') === r.tradeable;
+                        && (b.props.tradeable !== 'no') === r.tradeable
+                        && (b.props.stackable === 'yes') === r.stackable;
                 },
             };
         }

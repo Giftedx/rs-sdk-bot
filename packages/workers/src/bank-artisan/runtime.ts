@@ -16,7 +16,7 @@ import {
 } from '../../../core/src/bank-trip';
 import { knownBanks } from '../../../core/src/trip';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
-import { isItemStackable, REPO_ROOT } from './catalog';
+import { itemStackable, REPO_ROOT } from './catalog';
 import { isStopFilePresent } from '../stop';
 
 export type BankSpot = Tile;
@@ -310,7 +310,7 @@ export async function runArtisanBankProfile(
             const free = Math.max(0, 28 - inv().length);
             const batch = Math.min(
                 j.target - completed,
-                fittingBankBatch(p.inputs, p.tools, j.batch, free, isItemStackable, p.outputs),
+                fittingBankBatch(p.inputs, p.tools, j.batch, free, id => itemStackable(s.client, id), p.capacityOutputs),
             );
             if (batch < 1) throw Error('no fitting bank batch capacity');
             for (const [idStr, perUnit] of Object.entries(p.inputs)) {
