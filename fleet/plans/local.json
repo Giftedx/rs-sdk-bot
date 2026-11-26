@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795715650995,
+ "at": 1795715664941,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Moneyshot",
+   "account": "Unsheathed",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -69,43 +69,18 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "66",
+    "MAX_ITEMS": "16",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "66"
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "32",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "32"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -203,16 +178,41 @@
     "3000"
    ],
    "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "50",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "50"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "80",
+    "MAX_ITEMS": "112",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "112"
    },
    "enabled": true,
    "repeat": false,
@@ -237,6 +237,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1313",
    "role": "army"
   },
   {
@@ -265,47 +290,6 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "dragon"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -328,6 +312,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1937",
+   "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "dragon"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   },
   {
@@ -356,20 +356,29 @@
    "role": "army"
   },
   {
-   "account": "Earlyshooter",
-   "script": "scripts/aio-quester.ts",
+   "account": "Woodpecker",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "sweep",
-    "death"
+    "shop-buy",
+    "archeryshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:death",
+    "ITEM_ID": "837",
+    "ITEMS": "Crossbow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:837",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:death",
-   "role": "auto"
+   "goal": "campaign:haggis:item:837",
+   "role": "army"
   }
  ],
  "army": [
@@ -396,7 +405,6 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
