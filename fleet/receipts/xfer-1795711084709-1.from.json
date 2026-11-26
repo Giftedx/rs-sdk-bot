@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795711084709-1",
  "account": "MineYourBiz",
  "partner": "Wandwaver",
@@ -12,6 +12,12 @@
  "claim": "94cc7748-ab0a-47a1-aa82-64d26caf86c6",
  "count": 0,
  "ok": false,
- "at": 1795711155025,
- "detail": "trade claimed"
+ "at": 1795711245703,
+ "detail": "Error: sender pack full: need 62 slots for Raw lobster, 28 free",
+ "logout": {
+  "attemptId": "1795711155053-0000015456-0000000001",
+  "at": 1795711245692,
+  "sha256": "e0797adddf2d847518d06a204f5bc0554c17f0a8df2c84e063b885d5faaf1406"
+ },
+ "screen": false
 }

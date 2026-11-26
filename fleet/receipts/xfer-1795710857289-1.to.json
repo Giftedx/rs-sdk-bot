@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710857289-1",
  "account": "Shaftsinker",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 52,
  "claim": "672f571e-983d-4aa7-be3e-986cc4a842fd",
- "count": 0,
- "ok": false,
- "at": 1795711170962,
- "detail": "trade claimed"
+ "count": 52,
+ "ok": true,
+ "at": 1795711269299,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 52
+ },
+ "bank": {
+  "count": 52,
+  "at": 1795711268596
+ },
+ "logout": {
+  "attemptId": "1795711170971-0000020012-0000000001",
+  "at": 1795711269288,
+  "sha256": "e0a0389bac0dcc2a2ddf3b709e5a49b9b3f5db083d42a8c6c2647f714592be6b"
+ },
+ "screen": true
 }
