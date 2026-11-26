@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795732495496,
+ "at": 1795732519017,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2180 TARGET_COUNT=218 PRODUCT_TARGET=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -71,6 +71,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:103 BATCH_UNITS=1 -- crafting inventory brew:unf_avantoe_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:103",
    "role": "army"
   },
   {
@@ -132,6 +147,21 @@
    "role": "army"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -162,26 +192,6 @@
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
    "role": "auto"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
   },
   {
    "account": "mmtha0205",
@@ -333,21 +343,6 @@
    "resources": [
     "chickens"
    ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:hiltsdeep:item:563 BATCH_UNITS=20 BANK_PACK=1 -- druid"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:hiltsdeep:item:563",
-   "role": "army"
   }
  ],
  "army": [
