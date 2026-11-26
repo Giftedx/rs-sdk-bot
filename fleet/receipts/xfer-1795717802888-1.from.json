@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717802888-1",
+ "account": "Packhorse",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "a53bba69-cc71-48c7-aa2b-eb7bb680fc1f",
+ "count": 0,
+ "ok": false,
+ "at": 1795717933052,
+ "detail": "trade claimed"
+}

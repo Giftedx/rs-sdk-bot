@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717924637,
+ "at": 1795717937508,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,22 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "326"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
    "account": "Pullmybow",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -105,6 +89,22 @@
    "repeat": false,
    "goal": "goal:quest_board:tree",
    "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   },
   {
    "account": "OreElse",
@@ -143,22 +143,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "helper"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
   },
   {
    "account": "Swordinhand",
@@ -212,6 +196,21 @@
    "role": "army"
   },
   {
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 -- magic items enchant:sapphire_ring - 1 1200",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto"
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -226,6 +225,21 @@
    "repeat": false,
    "goal": "goal:quest_board:ball",
    "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 -- sweep itwatchtower"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:itwatchtower",
+   "role": "army"
   }
  ],
  "army": [
@@ -238,6 +252,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -249,7 +264,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",

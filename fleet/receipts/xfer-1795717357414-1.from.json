@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717357414-1",
  "account": "Woodpecker",
  "partner": "Nockitoff",
@@ -10,15 +10,37 @@
  "item": "Cosmic rune",
  "requested": 1,
  "claim": "d13e39e2-d1f2-471b-a600-7e1cdab94205",
- "count": 0,
- "ok": false,
- "at": 1795717733370,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795717930165,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Sapphire ring",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795717908224
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795717907848
+ },
+ "logout": {
+  "attemptId": "1795717733379-0000011376-0000000001",
+  "at": 1795717930156,
+  "sha256": "c3084294e6a1d57f0f8de55097ccd6866aa75bcd01923cdf366bae24a7a4942f"
+ },
+ "screen": true
 }
