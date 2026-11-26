@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718461810,
+ "at": 1795718499546,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -143,21 +143,6 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=78 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
@@ -175,12 +160,13 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/magic-order.ts",
-   "args": [],
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
    "env": {
+    "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
     "DEMAND_ID": "goal:pk_army:FishAndChips",
     "BATCH_UNITS": "250"
    },
@@ -204,52 +190,6 @@
    "repeat": false,
    "goal": "goal:quest_board:arena",
    "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "ball"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "auto"
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "auto"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "helper"
   }
  ],
  "army": [
