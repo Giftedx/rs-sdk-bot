@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725425240-1",
+ "account": "WellHung",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 1,
+ "claim": "666fec2e-6740-4a4e-831d-b0cad39c2098",
+ "count": 1,
+ "ok": true,
+ "at": 1795725655396,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795725654633
+ },
+ "logout": {
+  "attemptId": "1795725645691-0000014360-0000000001",
+  "at": 1795725655386,
+  "sha256": "98f4eb53a14a633923a8f6f9549b49e7c1ff68f0a976625b47ede854eec95a95"
+ },
+ "screen": true
+}
