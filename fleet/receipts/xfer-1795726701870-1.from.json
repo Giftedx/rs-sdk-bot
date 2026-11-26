@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795726701870-1",
  "account": "Moneyshot",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 1,
  "claim": "4b652563-2f8a-4270-8cde-14c9ef6d3426",
- "count": 0,
- "ok": false,
- "at": 1795726803651,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795726885720,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795726871644
+ },
+ "logout": {
+  "attemptId": "1795726803660-0000025832-0000000001",
+  "at": 1795726885601,
+  "sha256": "9c25bc951776629fb1e1e492b15ca7b6baf7fa56b27c1f36cab703323d6d0bb6"
+ },
+ "screen": true
 }

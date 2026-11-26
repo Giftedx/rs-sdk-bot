@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795726876836-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "CoinCock",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795726876836,
+  "end": 1795727776836,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
