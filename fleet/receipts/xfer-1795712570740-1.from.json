@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795712570740-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 5,
+ "claim": "e0d2cfaa-8b2d-4e30-a103-88989a00c8de",
+ "count": 0,
+ "ok": false,
+ "at": 1795712984887,
+ "detail": "trade claimed"
+}

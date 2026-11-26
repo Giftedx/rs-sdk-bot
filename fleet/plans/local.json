@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795712923026,
+ "at": 1795712998512,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -192,31 +192,6 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "525",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "107000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "525"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -267,66 +242,11 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-438-4-p23 ITEM_ID=438 QUANTITY=4 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=4 -- smithing smelt 1500 bronze"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
     "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "13",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "13"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -344,32 +264,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:39",
-   "role": "auto"
+   "role": "army"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "ITEM_ID": "1315",
-    "ITEMS": "Mithril 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1315",
-    "BATCH_UNITS": "1"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "4"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1315",
-   "role": "auto"
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
   },
   {
    "account": "Billionaire",
@@ -383,6 +299,56 @@
    "repeat": false,
    "goal": "goal:quest_board:dragon",
    "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "98",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21600",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "98"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
   }
  ],
  "army": [
@@ -392,11 +358,13 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "ballspinner",
   "bigpackage",
   "dipstick",
   "fatstack",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mmthv2350",
   "oreelse",
   "pocketpool",
