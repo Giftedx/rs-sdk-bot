@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721269116,
+ "at": 1795721295332,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,21 +185,6 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-536-6-p7074 ITEM_ID=536 QUANTITY=6 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=85 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
   },
   {
    "account": "Quickhandjob",
@@ -398,6 +383,22 @@
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
    "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "chompybird"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:chompybird",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:chompybird",
+   "role": "army"
   }
  ],
  "army": [
@@ -410,7 +411,6 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
