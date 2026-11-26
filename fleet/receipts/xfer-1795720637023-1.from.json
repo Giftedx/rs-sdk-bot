@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720637023-1",
  "account": "Spitroaster",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "535a8797-2ddb-472b-a590-17e82a4ca470",
- "count": 0,
- "ok": false,
- "at": 1795720829491,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795720913011,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795720838478
+ },
+ "logout": {
+  "attemptId": "1795720829499-0000026708-0000000001",
+  "at": 1795720912674,
+  "sha256": "667a10a174ed732078c631f422089f874a6e31eb3a3436e0141acc2ad62b5d8a"
+ },
+ "screen": true
 }
