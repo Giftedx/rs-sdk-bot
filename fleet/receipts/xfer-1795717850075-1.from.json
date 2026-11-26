@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795717850075-1",
  "account": "Earlyshooter",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 4,
  "claim": "67361c09-918c-4345-9d2e-50c23313583d",
- "count": 0,
- "ok": false,
- "at": 1795718154906,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795718235009,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795718164611
+ },
+ "logout": {
+  "attemptId": "1795718154914-0000015708-0000000001",
+  "at": 1795718234988,
+  "sha256": "74b7f326864ba40953ea6f795d456a4835cbcaee0c6b1b807b0bd77e0d919f49"
+ },
+ "screen": true
 }
