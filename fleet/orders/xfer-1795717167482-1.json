@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795717167482-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "FishAndChips",
+  "item": "Arrow shaft",
+  "count": 500,
+  "itemId": 52,
+  "start": 1795717167482,
+  "end": 1795718067482,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
