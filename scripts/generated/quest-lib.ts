@@ -907,8 +907,20 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (!Number.isSafeInteger(from) || from < 0) throw Error(`Invalid ${env}: ${raw}`);
         return from;
     };
+    // The same for a script whose stages have names: the env override is a name, the sweep's stage an index in names.
+    const stageName = <T extends string>(env: string, names: readonly T[]): T => {
+        const raw = process.env[env];
+        if (raw !== undefined) {
+            if (!names.includes(raw as T)) throw Error(`Invalid ${env}: ${raw}`);
+            return raw as T;
+        }
+        const at = (s as { questFrom?: number }).questFrom ?? 0;
+        const name = names[at];
+        if (name === undefined) throw Error(`Invalid ${env} stage index: ${at}`);
+        return name;
+    };
     return {
-        stageFrom,
+        stageFrom, stageName,
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose, strengthStyle, styleOnly,
         blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, attack, useOnLoc, useOnNpc, useOnItem,
         step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,

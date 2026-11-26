@@ -246,6 +246,11 @@ describe('catalog-worker parity', () => {
         expect(horror.config.requiredQuests).toContain('barcrawl');
         expect((horror.config.requiredSkills as Record<string, number>)?.Magic).toBe(75);
 
+        // quest-arena.ts fights under Protect from Melee with fire spells.
+        const arena = catalog.require('quest:arena').config.requiredSkills as Record<string, number>;
+        expect(arena.Prayer).toBe(43);
+        expect(arena.Magic).toBe(59);
+
         const mm = catalog.require('quest:mm');
         expect(mm.config.requiredQuests).toContain('grandtree');
         expect(mm.config.requiredQuests).toContain('tree');

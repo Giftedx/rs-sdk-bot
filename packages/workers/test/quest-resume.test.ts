@@ -2,8 +2,55 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { questEntry, questResumable, QUEST_RESUME, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
+
+const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
+
+// The `^name = value` constants of the given .constant files.
+function constants(...files: string[]): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const f of files) {
+        for (const m of readFileSync(join(REPO_ROOT, f), 'utf8').matchAll(/^\^(\w+)\s*=\s*(-?\d+)\s*$/gm)) out[m[1]!] = Number(m[2]);
+    }
+    return out;
+}
+
+// The journal text of each `case` of a server journal's switch, as the client receives it: the string literals of its
+// `$text = "..."` and `append($text, "...")` lines in order, colour tags and | line breaks included.
+function journalCases(file: string): { labels: string[]; text: string }[] {
+    const src = readFileSync(join(REPO_ROOT, file), 'utf8');
+    return src.split(/\n\s*case /).slice(1).map((part) => ({
+        labels: [...part.slice(0, part.indexOf(':')).matchAll(/\^(\w+)/g)].map((m) => m[1]!),
+        text: [...part.matchAll(/(?:\$text = |append\(\$text, )"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]!).join(''),
+    }));
+}
+
+describe('arena journal stage', () => {
+    test('the journal of each %arenaquest case names its stage', () => {
+        const k = constants(`${QUESTS}/quest_arena/configs/quest_arena.constant`, 'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant');
+        const cases = journalCases(`${QUESTS}/quest_arena/scripts/arena_journal.rs2`);
+        expect(cases.length).toBe(14);
+        for (const c of cases) {
+            for (const label of c.labels) {
+                const stage = k[label];
+                expect(stage).toBeNumber();
+                expect([label, arenaJournalStage(c.text)]).toEqual([label, Math.min(stage!, 14)]);
+            }
+        }
+        expect(arenaJournalStage('Fight Arena')).toBeUndefined();
+    });
+
+    test('the script goes on from the start tile before the ogre and after Bouncer, and refuses in the arena', () => {
+        expect([0, 1, 2, 3, 5].map(arenaFrom)).toEqual([0, 1, 2, 3, 5]);
+        expect([6, 8, 9, 10, 11].map(arenaFrom)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+        expect([12, 13].map(arenaFrom)).toEqual([12, 12]);
+        const arena = QUEST_RESUME.arena!;
+        expect(resumeStart(arena, 'Fight Arena', 3)).toEqual({ kind: 'resume', from: 3, spent: [], held: [] });
+        expect(resumeStart(arena, 'Fight Arena', 6)).toEqual({ kind: 'refuse', reason: 'refused: Fight Arena journal stage 6 has no resume from the start tile' });
+        expect(resumeStart(arena, 'Fight Arena', 14)).toEqual({ kind: 'refuse', reason: 'refused: Fight Arena journal stage 14 is complete' });
+    });
+});
 
 // The string literals of squire_journal.rs2 in the order they appear, as the client receives them: colour tags and |
 // line breaks included.

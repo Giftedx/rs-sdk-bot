@@ -1328,6 +1328,10 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     }
 
     const EXTRA_QUEST_SKILLS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+        // quest-arena.ts kills the ogre, scorpion and Bouncer with fire spells under Protect from Melee (Prayer 43);
+        // Fire Blast (Magic 59) is the weakest spell a bench run has proved (extra:sweep-arena-after-grandtree). Live
+        // accounts with Prayer 1 failed at "step protect from melee on" by Jeremy's cell.
+        arena: { Magic: 59, Prayer: 43 },
         horror: { Magic: 75 },
         magearena: { Magic: 60 },
         hero: { Cooking: 53, Fishing: 53, Herblore: 25, Mining: 50 },

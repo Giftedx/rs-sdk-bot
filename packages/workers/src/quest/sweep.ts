@@ -16,7 +16,7 @@ import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { QUEST_NAMES } from './chain';
 import { fireRunesFor } from './fire-spells';
 import { dashThroughDoor, inGhostBasement, leaveGhostBasement, retainedGhostBankSkull, retainedGhostSkull } from './helpers';
-import { questEntry } from './resume';
+import { questEntry, resumeStart } from './resume';
 import {
     NATURE_REF,
     registerQuestRuntime,
@@ -502,6 +502,8 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
         return finish([s], false, `quest-sweep ${quest} ${why}`);
     };
     let handed = false;
+    // Quest items of a resumed stage that the script needs (packages/workers/src/quest/resume.ts QuestResume.held).
+    let held: readonly number[] = [];
     try {
         const st = () => s.sdk.getState();
         if (!(await waitUntil(s, () => !!st()?.player, { timeoutTicks: 20 }))) return fail('entry state unavailable');
@@ -529,14 +531,15 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             if (entry.kind === 'resume') {
                 const r = entry.resume;
                 const stage = await readQuestJournalStage({ s, waitUntil: (f, ticks) => waitUntil(s, f, { timeoutTicks: ticks }) }, r.key, r.title, r.stage);
-                if (stage >= r.complete) return fail(`refused: ${questName} journal stage ${stage} is complete`);
-                const spent = r.spent?.(stage) ?? [];
-                for (const id of spent) {
+                const start = resumeStart(r, questName, stage);
+                console.log(`QUEST_SWEEP_RESUME ${JSON.stringify({ quest, stage, ...start })}`);
+                if (start.kind === 'refuse') return fail(start.reason);
+                for (const id of start.spent) {
                     base.delete(id);
                     food.delete(id);
                 }
-                (s as { questFrom?: number }).questFrom = stage;
-                console.log(`QUEST_SWEEP_RESUME ${JSON.stringify({ quest, stage, spent })}`);
+                held = start.held;
+                (s as { questFrom?: number }).questFrom = start.from;
             }
         }
         const baseLevel = (name: string) => st()?.skills?.find((k: any) => k.name === name)?.baseLevel ?? 1;
@@ -729,6 +732,7 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             }
         }
         const pack = (): Item[] => (st()?.inventory ?? []).map((i: any) => ({ id: i.id, count: i.count }));
+        const heldMissing = (): number[] => held.filter((id) => countItems(pack(), id) === 0 && !s.sdk.getEquipment().some((e) => e.id === id));
         const seekGhostSkull = quest === 'priest' && ghostState() === 'started' && s.sdk.getEquipment().some((i) => i.id === 552);
         const skill = (name: string) => st()?.skills?.find((k: any) => k.name === name)?.baseLevel ?? 1;
         const tradeableId = (id: number) => (catalogItem(id) as { tradeable?: boolean } | undefined)?.tradeable;
@@ -741,6 +745,7 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             bare ||
             seekGhostSkull ||
             WORN_KIT[quest]?.some((i) => !i.required && !s.sdk.getEquipment().some((e) => e.id === i.id)) ||
+            heldMissing().length ||
             plan(need, pack(), []).missing.length ||
             foodShort(food, pack(), need) ||
             questSkillTraining(quest, skill)
@@ -820,6 +825,10 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             const meal = mealPlan(food, pack(), rows(), p.withdraw, need);
             p.withdraw.push(...meal);
             for (const id of QUEST_KEEP[quest] ?? []) if (countItems(pack(), id) === 0 && countItems(rows(), id) > 0) p.withdraw.push({ id, count: 1 });
+            for (const id of heldMissing()) {
+                if (countItems(rows(), id) > 0 && !p.withdraw.some((w) => w.id === id)) p.withdraw.push({ id, count: 1 });
+            }
+            if (held.length) console.log(`QUEST_SWEEP_HELD ${JSON.stringify({ held, missing: heldMissing(), banked: heldMissing().filter((id) => countItems(rows(), id) > 0) })}`);
             if (seekGhostSkull && retainedGhostBankSkull(ghostState(), pack(), s.sdk.getEquipment(), rows())) p.withdraw.push({ id: 553, count: 1 });
             const ranked = (d: string, at: Tile) =>
                 sellersByTravel(sellersByDistance(d, at), at, preset.position, accountOf(s)).map((n) => ({ npc: n.npc, npcId: n.npcId, tile: n.tile }));

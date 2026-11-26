@@ -1825,6 +1825,22 @@ return [
         bank: [...(PRESETS.quest_squire!.inventory ?? [])]},
       pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && new RegExp(`^SQUIRE_FROM ${stage}$`, 'm').test(s) && /^MILESTONE 100 /m.test(s)
         && (stage === 0 ? /^MILESTONE 1 /m.test(s) : /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s))} as BenchCase)),
+  // Fight Arena through the quest sweep from the Ardougne south bank with the quest pack banked, at %arenaquest
+  // (varp 17) = 3 in the worn Khazard helmet and armour: the state that live runs left at "fail talk barman" (no coins
+  // then; the sweep stages the preset's 20). The sweep reads the stage from the journal, and the script starts at the
+  // barman: no Lady Servil, no chest and no first guard talk.
+  {key: 'extra:sweep-arena-resume-s3', script: 'scripts/aio-quester.ts', preset: 'quest_arena', scriptArgs: ['sweep', 'arena'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2655, z: 3283, level: 0}, inventory: [], coins: 0, varps: {...PRESETS.quest_arena!.varps, 17: 3},
+      equipment: [...(PRESETS.quest_arena!.equipment ?? []), {id: 74, count: 1, slot: 0}, {id: 75, count: 1, slot: 4}],
+      bank: [...(PRESETS.quest_arena!.inventory ?? []), {id: 995, count: PRESETS.quest_arena!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^ARENA_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":3/m.test(s)
+      && /^MILESTONE 4 /m.test(s) && /^MILESTONE complete /m.test(s) && !/^MILESTONE ([123]|armour again) /m.test(s)},
+  // Fight Arena at %arenaquest = 6: the account stands in the arena with the ogre, so the sweep refuses by name after
+  // the journal read, before a bank walk.
+  {key: 'extra:sweep-arena-resume-s6-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_arena',
+    scriptArgs: ['arena', 'journal stage 6 has no resume from the start tile'], timeoutMs: 120_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2590, z: 3160, level: 0}, varps: {...PRESETS.quest_arena!.varps, 17: 6}},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_RESUME .*"stage":6.*"kind":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
   // Witch's House on a started journal (%ballquest, varp 226, = 1): quest-ball.ts has no resume stage, so the sweep
   // refuses at entry, before a bank walk, with the text the supervisor ends the job on (live: "fail step cheese",
   // then "fail talk boy 1" on each next login). The sweep ends RESULT fail by design, so the case runs it through
