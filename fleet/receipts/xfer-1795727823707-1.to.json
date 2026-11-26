@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727823707-1",
  "account": "TossTheCaber",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 26,
  "claim": "283d4ea9-9b19-4006-aab9-1eb6e234d8dd",
- "count": 0,
- "ok": false,
- "at": 1795728088711,
- "detail": "trade claimed"
+ "count": 26,
+ "ok": true,
+ "at": 1795728165575,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 26
+ },
+ "bank": {
+  "count": 26,
+  "at": 1795728164787
+ },
+ "logout": {
+  "attemptId": "1795728088720-0000018716-0000000001",
+  "at": 1795728165563,
+  "sha256": "672235e061bb2608b3eee70031c387def511f1691ebfa7a5a590ae551ecb56f3"
+ },
+ "screen": true
 }
