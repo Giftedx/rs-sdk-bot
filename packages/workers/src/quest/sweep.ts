@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { accountOf, finish, finishHooks, getWorld, openBot } from '../../../core/src/bot';
-import { ARROWS, BOWS, NPC_SOURCES, gatherItems, magicKit, rangedKit, arrowsFor, castsFor } from '../../../core/src/gather';
+import { ARROWS, BOWS, NPC_SOURCES, TINDERBOX, gatherItems, magicKit, rangedKit, arrowsFor, castsFor } from '../../../core/src/gather';
 import type { Session } from '../../../core/src/inprocess';
 import { productionStopRequested } from '../../../core/src/production-life';
 import { readQuestJournalStage } from '../../../core/src/quest-journal';
@@ -66,6 +66,7 @@ import {
     itemIdOf,
     jailerBowKit,
     keepsItem,
+    lightPlan,
     manorFoodNeed,
     manorPoisonNeed,
     mealPlan,
@@ -106,6 +107,7 @@ import {
     leaveHazeelCave,
     leaveKeepLeFaye,
     leaveStronghold,
+    lightAtBank,
     leaveWestArdougne,
     manorIO,
     planTeleportRunes,
@@ -829,6 +831,13 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 console.log(`QUEST_SWEEP_BARE ${JSON.stringify({ worn: worn.map((i) => i.id), left: s.sdk.getEquipment().length, pack: pack().map((i) => i.id) })}`);
             }
             const rows = (): Item[] => (st()?.bank?.items ?? []).map((i: any) => ({ id: i.id, count: i.count }));
+            // A lit light source that the quest pack needs and that the account can light from an unlit one: before the
+            // plan, so that the plan finds it in the pack and sends no gather to a candle spawn.
+            const lights = lightPlan(need, pack(), rows());
+            if (lights.length) {
+                const unlit = await lightAtBank(s, lights, need.has(TINDERBOX));
+                if (unlit) return fail(unlit);
+            }
             if (quest === 'scorpion') base = scorpionAntipoisonNeeds(base, pack(), rows());
             wornKit = wornKitPlan(quest, base, pack(), rows(), s.sdk.getEquipment());
             need = wornKit.need;

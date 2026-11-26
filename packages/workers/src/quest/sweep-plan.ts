@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { deadlyTo, loadHunters } from '../../../core/src/danger';
-import { ARROWS, BOWS, BUCKET, LOC_SOURCES, MILK, NPC_SOURCES, PICK_SOURCES, gatherPlan, type Gather } from '../../../core/src/gather';
+import { ARROWS, BOWS, BUCKET, LOC_SOURCES, MILK, NPC_SOURCES, PICK_SOURCES, TINDERBOX, gatherPlan, type Gather } from '../../../core/src/gather';
 import { selectGiantArrows, selectGiantBow } from '../../../core/src/ranged-tiers';
 import { sellersByDistance, shopSellers } from '../../../core/src/shop-index';
 import { crossesSea, locsByDistance, SEA, spawnsByDistance } from '../../../core/src/spawn-index';
@@ -222,6 +222,30 @@ export function toolPlan(
         [...pack, ...questWithdraw, ...worn],
         bank.map((i) => ({ id: i.id, count: i.count - taken(i.id) })).filter((i) => i.count > 0),
     );
+}
+
+// A lit light source and the unlit one that a tinderbox lights: the light_source_unlit objs and their `product` param
+// (quest_arthur.obj unlit_candle, unlit_black_candle; firemaking.obj torch_unlit). The tinderbox's opheldu with one
+// swaps it for its product (skill_firemaking/scripts/firemaking.rs2:26, light_source.rs2 ignite_light_source), and the
+// tinderbox stays. No shop sells a lit one; candle shops sell the unlit candle.
+export const LIGHT_SOURCES: Readonly<Record<number, number>> = { 33: 36, 32: 38, 594: 596 };
+export type LightStep = { lit: number; unlit: number; count: number };
+
+// The lit light sources that the sweep lights at the bank: the count of each that the quest pack needs beyond the
+// pack and the bank, up to the unlit ones that the pack and the bank hold beyond the pack's own need. It needs a
+// tinderbox in the pack or the bank. A short light source with no unlit one goes to the gather plan (a lit candle
+// lies in the Ardougne monastery, maps/m40_50.jm2, nearer the Ardougne banks than any candle shop).
+export function lightPlan(need: ReadonlyMap<number, number>, pack: readonly Item[], bank: readonly Item[]): LightStep[] {
+    const owned = (id: number) => countItems(pack, id) + countItems(bank, id);
+    if (owned(TINDERBOX) === 0) return [];
+    const out: LightStep[] = [];
+    for (const [key, unlit] of Object.entries(LIGHT_SOURCES)) {
+        const lit = Number(key);
+        const short = (need.get(lit) ?? 0) - owned(lit);
+        const count = Math.min(short, owned(unlit) - (need.get(unlit) ?? 0));
+        if (count > 0) out.push({ lit, unlit, count });
+    }
+    return out;
 }
 
 export const QUEST_KEEP: Record<string, number[]> = {
