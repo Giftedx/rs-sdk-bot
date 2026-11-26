@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710662477-1",
  "account": "Kiltlifter",
  "partner": "Wandwaver",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 50,
  "claim": "072053b8-d48d-4a97-80ad-5b1b1b1530b3",
- "count": 0,
- "ok": false,
- "at": 1795710762796,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795710902960,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9093,
+  "after": 9043
+ },
+ "logout": {
+  "attemptId": "1795710762804-0000006560-0000000001",
+  "at": 1795710902951,
+  "sha256": "eec7b2fd72a96c5f6394969bd5d87c6c02491309e88903d04fad53fbab1a6dc9"
+ },
+ "screen": true
 }

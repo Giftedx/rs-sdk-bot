@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710662477-1",
+ "account": "Wandwaver",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 50,
+ "claim": "93bab7fe-a3f2-468f-88bd-e0f1e29ce337",
+ "count": 50,
+ "ok": true,
+ "at": 1795710904502,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 60
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795710903753
+ },
+ "logout": {
+  "attemptId": "1795710894105-0000020724-0000000001",
+  "at": 1795710904477,
+  "sha256": "84f6d62e48cc34351a0a476c08f5b07e7f97dd7ebe7b162824939c4527b006a9"
+ },
+ "screen": true
+}

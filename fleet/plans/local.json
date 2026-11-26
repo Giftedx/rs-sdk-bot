@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795710871942,
+ "at": 1795710906446,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -117,7 +117,7 @@
    ]
   },
   {
-   "account": "MineYourBiz",
+   "account": "Kiltlifter",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -133,6 +133,37 @@
    "resources": [
     "ardougne-imps"
    ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=8 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fletching TARGET_LEVEL=10 -- fletching worker",
+    "scripts/generated/quest-desertrescue.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -395,7 +426,6 @@
   "fatstack",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "moneyshot",
   "pocketpool",
   "pocketpython",
