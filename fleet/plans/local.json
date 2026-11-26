@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795734098122,
+ "at": 1795734172273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,15 +75,18 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "fluffs"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
+    "DEMAND_ID": "goal:quest_board:fluffs",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "goal:quest_board:fluffs",
    "role": "army"
   },
   {
@@ -252,15 +255,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "fluffs"
+    "barcrawl"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:fluffs",
+   "goal": "goal:quest_board:barcrawl",
    "role": "helper"
   },
   {
@@ -304,38 +307,6 @@
    "role": "auto"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:fluffs",
-   "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -352,7 +323,22 @@
    "role": "auto"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=10 TARGET_COUNT=29 CAP=1000 -- fletching shafts",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
+  },
+  {
+   "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -365,7 +351,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
+   "role": "helper"
   }
  ],
  "army": [
@@ -378,7 +364,7 @@
   "ballspinner",
   "bigpackage",
   "dipstick",
-  "fingersmith",
+  "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
@@ -389,6 +375,7 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",

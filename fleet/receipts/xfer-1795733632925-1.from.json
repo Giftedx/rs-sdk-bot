@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733632925-1",
  "account": "Fingersmith",
  "partner": "RearEntry",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 260,
  "claim": "e318ab41-600f-4104-b2ab-9ebfd9498a9b",
- "count": 0,
- "ok": false,
- "at": 1795734036041,
- "detail": "trade claimed"
+ "count": 260,
+ "ok": true,
+ "at": 1795734164466,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 260,
+  "after": 0
+ },
+ "bank": {
+  "count": 260,
+  "at": 1795734045304
+ },
+ "logout": {
+  "attemptId": "1795734036050-0000026964-0000000001",
+  "at": 1795734164456,
+  "sha256": "16fcf8df35a971f97cec8da2179799cb9433e6e3239052dc4fd6a04ea2cc03fd"
+ },
+ "screen": true
 }
