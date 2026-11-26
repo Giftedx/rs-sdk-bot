@@ -169,7 +169,7 @@ test('hub_banker never picks a party that cannot pay the two boat fares to the h
         name: 'Bigpackage',
         pos: { x: 2619, z: 3332, level: 0 },
         inventory: {},
-        bank: { items: { [RAW_SHARK]: 300, ...(coins ? { 995: coins } : {}) }, observedAt: NOW - 10_000, trusted: true },
+        bank: { items: coins ? { [RAW_SHARK]: 300, 995: coins } : { [RAW_SHARK]: 300 }, observedAt: NOW - 10_000, trusted: true },
     });
     const resolve = (r: AccountState, d: AccountState) => resolveAcquireItem(r, req, { world: world({ Packhorse: r, Bigpackage: d }), activities: [], marketQuotes: {} });
 
