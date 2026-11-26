@@ -412,10 +412,14 @@ export async function runInventoryBank(
         reserve?: number;
         inputReserves?: Readonly<Record<number, number>>;
         members?: boolean;
+        // The bank total of the product that the order's consumer needs. The run makes only the
+        // units the bank lacks, so a chain rerun after a later step failed does not repeat it.
+        productTarget?: number;
         stop?: () => boolean;
     },
 ) {
     const reserves = productionInputReserves(r, o.reserve, o.inputReserves);
+    if (o.productTarget !== undefined && (!Number.isSafeInteger(o.productTarget) || o.productTarget < 1)) throw Error('invalid production stock target');
     if (r.members && !o.members) throw Error('production recipe requires confirmed members world');
     if (!await waitUntil(s, () => !!s.sdk.getState()?.player && !!s.sdk.getSkill(r.skill) && (s.sdk.getSkill('Hitpoints')?.level ?? 0) > 0, { timeoutTicks: 10 })) {
         throw Error('production state unavailable');
@@ -464,6 +468,19 @@ export async function runInventoryBank(
             throw Error('production fresh bank unknown');
         }
     };
+    let maximum = o.maximum;
+    if (o.productTarget !== undefined) {
+        await open();
+        const units = r.productUnits ?? 1;
+        const owned = (s.bankObservation?.()?.items ?? []).filter(i => i.id === r.product).reduce((n, i) => n + i.count, 0);
+        maximum = Math.min(o.maximum, Math.ceil(Math.max(0, o.productTarget - owned) / units) * units);
+        if (maximum < 1) {
+            await s.bot.closeBank();
+            const met = { ok: true, recipe: r.name, made: 0, banked: 0, losses: 0, attempts: 0, ticks: 0, failure: '-' };
+            console.log('MICROBOT_PRODUCTION ' + JSON.stringify({ ...met, productTarget: o.productTarget, owned }));
+            return met;
+        }
+    }
     const result = await runInventoryProduction(
         {
             tick: () => s.tick(),
@@ -526,7 +543,7 @@ export async function runInventoryBank(
             },
         },
         r,
-        { ...o, maxAttempts: o.maxAttempts ?? o.maximum },
+        { ...o, maximum, maxAttempts: o.maxAttempts ?? maximum },
     );
     if (stopped()) {
         result.ok = false;
@@ -538,7 +555,7 @@ export async function runInventoryBank(
 
 registerDefaultInventoryBankRunner(runInventoryBank);
 
-const PRODUCTION_CLI_KEYS = new Set(['MAX_MAKE', 'CAP', 'MAX_ATTEMPTS', 'ORDER_MODE', 'RAW_RESERVE', 'MEMBERS', 'INPUT_RESERVES']);
+const PRODUCTION_CLI_KEYS = new Set(['MAX_MAKE', 'CAP', 'MAX_ATTEMPTS', 'ORDER_MODE', 'RAW_RESERVE', 'MEMBERS', 'INPUT_RESERVES', 'PRODUCT_TARGET']);
 
 export function parseProductionCli(argv: readonly string[], env: Readonly<Record<string, string | undefined>> = {}) {
     const overrides: Record<string, string> = {};
@@ -569,6 +586,7 @@ export function parseProductionCli(argv: readonly string[], env: Readonly<Record
         reserve,
         inputReserves,
         members: effective.MEMBERS === '1',
+        ...(effective.PRODUCT_TARGET ? { productTarget: Number(effective.PRODUCT_TARGET) } : {}),
     };
 }
 
@@ -585,6 +603,7 @@ export async function runProductionCli(botName: string, restArgs: readonly strin
             reserve: cli.reserve,
             inputReserves: cli.inputReserves,
             members: cli.members,
+            productTarget: cli.productTarget,
             stop: () => stop,
         });
         await finish([s], result.ok, JSON.stringify(result));

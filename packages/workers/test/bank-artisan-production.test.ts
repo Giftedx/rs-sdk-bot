@@ -283,3 +283,28 @@ test('CLI KEY=VALUE args parse autopilot production options, preserve pure-env d
  expect(()=>parseProductionCli(['bun','scripts/microbot-production.ts','Actor','strip:swamp-toad','UNKNOWN_KEY=1'])).toThrow('unsupported production cli argument');
  expect(()=>parseProductionCli(['bun','scripts/microbot-production.ts','Actor','strip:swamp-toad','bare-token'])).toThrow('unsupported production cli argument');
 });
+
+// The supervisor reruns a whole chain after a later step fails: with the stock target, a production
+// step of the rerun makes only what the bank lacks.
+for(const [label,banked,target,expected] of [['a banked product that meets the target makes nothing',7,1,0],['a partly banked product makes only the rest',2,5,3]] as const)test('stock target: '+label,async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='pie-shell')!;
+ let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,bankOpen=false,withdrawals=0;const callbacks=new Set<()=>void>();
+ const stock=new Map([...r.inputs.map(i=>[i.id,i.units*10] as [number,number]),...r.tools.map(id=>[id,1] as [number,number]),[r.product,banked] as [number,number]]);
+ const bankItems=()=>[...stock].filter(([,count])=>count>0).map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const add=(id:number,n:number)=>{const p=pack.find(i=>i.id===id);if(p)p.count+=n;else pack.push({id,count:n,slot:pack.length,name:'item-'+id});};
+ const effect=()=>{tick++;for(const i of r.inputs)add(i.id,-i.units);add(r.product,r.productUnits??1);};
+ const s={name:'fixture',tick:()=>tick,ended:new Promise(()=>{}),onTick:(f:()=>void)=>{callbacks.add(f);return()=>callbacks.delete(f);},
+  sdk:{getInventory:()=>pack.filter(i=>i.count>0),getSkill:()=>({level:99}),getSkillXp:()=>100+tick,getDialog:()=>({isOpen:false}),
+   getState:()=>({player:{lifeId:1},inventory:pack.filter(i=>i.count>0),bank:{isOpen:bankOpen,noteMode:false,items:bankItems()},interface:{isOpen:false}}),
+   sendUseItemOnItem:async()=>{effect();return{success:true};},sendUseItem:async()=>{effect();return{success:true};},sendClickComponent:async()=>{effect();return{success:true};}},
+  bankObservation:()=>({generation,items:bankItems().map(({slot,...i})=>i)}),
+  bot:{openBank:async()=>{bankOpen=true;generation++;return{success:true};},closeBank:async()=>{bankOpen=false;},
+   withdrawItem:async(t:{id:number},n:number)=>{withdrawals++;stock.set(t.id,stock.get(t.id)!-n);add(t.id,n);generation++;return{success:true};},
+   depositItem:async(item:{id:number})=>{const p=pack.find(i=>i.id===item.id)!;stock.set(p.id,(stock.get(p.id)??0)+p.count);p.count=0;generation++;return{success:true};}},
+  direct:async()=>({success:true})};
+ const timer=setInterval(()=>{tick++;for(const f of callbacks)f();},1);
+ const result=await runInventoryBank(s as any,r,{maximum:7,cap:400,productTarget:target}).finally(()=>clearInterval(timer));
+ expect(result).toMatchObject({ok:true,made:expected,banked:expected,failure:'-'});
+ expect(stock.get(r.product)).toBe(banked+expected);
+ if(expected===0)expect(withdrawals).toBe(0);
+});

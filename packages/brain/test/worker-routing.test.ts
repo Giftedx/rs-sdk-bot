@@ -639,3 +639,26 @@ test('a market work step keeps a partial purchase: no fill order, no stock targe
     expect(work.env.FLOAT).toBeDefined();
     expect(work.env.STOP_AT_TARGET).toBe('1');
 });
+
+test('a production acquire names its owned total, so its inventory run makes only what the bank lacks', () => {
+    const catalog = createActivityCatalog();
+    const cut = catalog.list().find((a) => a.config?.aioRoute === 'crafting:inventory' && JSON.stringify(a.config?.defaultArgs) === '["cut-diamond"]');
+    if (!cut) throw Error('cut-diamond activity missing');
+    const step = resolvePlannedStepWorkerRoute('Abracadickra', {
+        stepKind: 'acquire',
+        source: 'craft_gather',
+        itemId: 1601,
+        quantity: 7,
+        stockTarget: 7,
+        estimatedTicks: 120,
+        estimatedCoinCost: 0,
+        coinFloatPreserved: 1000,
+        activityId: cut.id,
+    }, { catalog });
+    expect(step.env.MAX_MAKE).toBe('7');
+    expect(step.env.PRODUCT_TARGET).toBe('7');
+    const noTarget = resolvePlannedStepWorkerRoute('Abracadickra', {
+        stepKind: 'acquire', source: 'craft_gather', itemId: 1601, quantity: 7, estimatedTicks: 120, estimatedCoinCost: 0, coinFloatPreserved: 1000, activityId: cut.id,
+    }, { catalog });
+    expect(noTarget.env.PRODUCT_TARGET).toBeUndefined();
+});
