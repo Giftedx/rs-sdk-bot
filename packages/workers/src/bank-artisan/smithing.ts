@@ -1836,8 +1836,30 @@ export async function runSmithBatch(
             else throw Error(`smith refused: ${r.quest} quest completion unobserved`);
         }
         let route: ReturnType<typeof smithStageRoute>;
+        const staged = () => {
+            try {
+                return smithStageRoute(state()!.player!);
+            } catch {
+                return null;
+            }
+        };
+        // A start away from the three smith banks walks to Varrock West bank by the world route first, as the smelt
+        // batch walks to Al Kharid bank.
+        if (!io && !staged()) {
+            const ac = new AbortController();
+            const stopTravel = s.onTick(() => {
+                if (over()) ac.abort('smith travel deadline/stop');
+            });
+            try {
+                const there = await goTo(s, await getWorld(), { x: SMITH_BANK.x, z: SMITH_BANK.z, level: 0 }, accountOf(s), { legTimeoutTicks: 100, signal: ac.signal });
+                if (!there.ok) throw Error(`smith refused: travel to Varrock West bank failed: ${there.detail}`);
+            } finally {
+                stopTravel();
+            }
+            travelTicks += s.tick() - start;
+        }
         try {
-            route = smithStageRoute(p0);
+            route = smithStageRoute(state()!.player!);
         } catch (error) {
             throw Error('smith refused: ' + (error as Error).message);
         }
