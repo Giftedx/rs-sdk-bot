@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795716943628-1",
+ "account": "Hocuspokeus",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "d321bb98-1bfb-4031-8b4e-39beeb847b04",
+ "count": 0,
+ "ok": false,
+ "at": 1795717022309,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795717012923-0000021968-0000000001",
+  "at": 1795717022226,
+  "sha256": "3a3d246b7e86bd64f9e6c2bcd423a7569c38aac6a369159d5c00f8ca78073d02"
+ },
+ "screen": false
+}

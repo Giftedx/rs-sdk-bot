@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716345453-2",
+ "account": "Moneyshot",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "0936ebe0-25f5-4065-a06b-86f76e5b75df",
+ "count": 0,
+ "ok": false,
+ "at": 1795716992583,
+ "detail": "trade claimed"
+}

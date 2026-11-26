@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795716491777-1",
+ "account": "Shaftsinker",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 78,
+ "claim": "2ee1dd94-3f88-4991-a70c-53b4e576c0d5",
+ "count": 78,
+ "ok": true,
+ "at": 1795716993809,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 78
+ },
+ "bank": {
+  "count": 78,
+  "at": 1795716993109
+ },
+ "logout": {
+  "attemptId": "1795716982892-0000025644-0000000001",
+  "at": 1795716993798,
+  "sha256": "1286328bfb8ecfd3d42710bdc85df2afd4ecbd04785aae7f5b0ffcaea13199c9"
+ },
+ "screen": true
+}
