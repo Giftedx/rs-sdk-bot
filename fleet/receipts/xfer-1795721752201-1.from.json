@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721752201-1",
  "account": "Fingersmith",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 300,
  "claim": "2215bb49-c64e-42c6-9052-98d0b5931308",
- "count": 0,
- "ok": false,
- "at": 1795721957716,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795722088773,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795721967708
+ },
+ "logout": {
+  "attemptId": "1795721957979-0000013752-0000000001",
+  "at": 1795722088764,
+  "sha256": "cb259324b782e6c81a76a805ed94a9f9cf9ee442b735a18cbb3317ce22c50d79"
+ },
+ "screen": true
 }

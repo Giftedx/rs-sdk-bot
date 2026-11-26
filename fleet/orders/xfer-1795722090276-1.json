@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795722090276-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewGotWood",
+  "to": "Billionaire",
+  "item": "Coins",
+  "count": 7185,
+  "itemId": 995,
+  "start": 1795722090276,
+  "end": 1795722990276,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
