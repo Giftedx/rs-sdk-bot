@@ -5,6 +5,6 @@
  "account": "YewFirst",
  "partner": "CoinCock",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795735277802,
+ "at": 1795735441679,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
