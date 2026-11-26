@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795716265922,
+ "at": 1795716283049,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "95",
+    "MAX_ITEMS": "92",
     "COIN_RESERVE": "1000",
-    "FLOAT": "21000",
+    "FLOAT": "20400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "95"
+    "BATCH_UNITS": "92"
    },
    "enabled": true,
    "repeat": false,
@@ -84,28 +84,28 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "72",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "47",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "20800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "72"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -113,24 +113,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "34",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "34"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:39",
    "role": "army"
   },
   {
@@ -170,28 +170,43 @@
    "role": "auto"
   },
   {
-   "account": "SporranDip",
+   "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "885",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "297",
     "COIN_RESERVE": "1000",
-    "FLOAT": "356000",
+    "FLOAT": "61400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "885"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "297"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=40 -- crafting inventory identify:ranarr_weed",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:259 BATCH_UNITS=2 -- crafting inventory identify:irit_leaf"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
    "role": "army"
   },
   {
@@ -203,20 +218,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "102",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "74",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "102"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "74"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
@@ -224,24 +239,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "fishingshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "301",
-    "ITEMS": "Lobster pot",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "92",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:301",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "92"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:301",
+   "goal": "campaign:haggis:item:562",
    "role": "auto"
   },
   {
@@ -265,44 +280,28 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
+   "account": "Fingersmith",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "runeshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "16",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "auto"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
