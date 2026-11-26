@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723281663-2",
+ "account": "Fingerblastr",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "d1a0db2e-0e8c-4b0a-9b00-37ed5490e61d",
+ "count": 0,
+ "ok": false,
+ "at": 1795723922741,
+ "detail": "trade claimed"
+}

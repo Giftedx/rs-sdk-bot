@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723573070-1",
+ "account": "SporranBulge",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 65,
+ "claim": "d4bb19b7-18a2-448b-af8d-d5fedd291743",
+ "count": 65,
+ "ok": true,
+ "at": 1795723975568,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 65,
+  "after": 0
+ },
+ "bank": {
+  "count": 65,
+  "at": 1795723920362
+ },
+ "logout": {
+  "attemptId": "1795723911594-0000022080-0000000001",
+  "at": 1795723975465,
+  "sha256": "7694d766f364349e7e3d4ef3d525b3c892fee2008da64b3380c9ee011d85cf29"
+ },
+ "screen": true
+}
