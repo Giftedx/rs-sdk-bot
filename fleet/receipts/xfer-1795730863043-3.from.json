@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795730863043-3",
  "account": "Billionaire",
  "partner": "Unsheathed",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "287457f9-c66c-48f3-9d4b-104bc2b15b3f",
- "count": 0,
- "ok": false,
- "at": 1795731185781,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795731219481,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7412,
+  "after": 7352
+ },
+ "logout": {
+  "attemptId": "1795731185790-0000022716-0000000001",
+  "at": 1795731219463,
+  "sha256": "31b4df5bf70adac7d914bf542c8a56c45164c73b6a222e9645e5111a5574fbc6"
+ },
+ "screen": true
 }

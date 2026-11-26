@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795730869413-1",
  "account": "Moneyshot",
  "partner": "BoneToPick",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "74b78a48-9269-4f05-a37d-42d88c9c967b",
- "count": 0,
- "ok": false,
- "at": 1795731143120,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795731218579,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1760,
+  "after": 1700
+ },
+ "logout": {
+  "attemptId": "1795731143146-0000019308-0000000001",
+  "at": 1795731218565,
+  "sha256": "96badc83a0e47a107384a962d32904354de2fe28dbbc5faceb49722fbda20df7"
+ },
+ "screen": true
 }
