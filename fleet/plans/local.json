@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795726055463,
+ "at": 1795726071833,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -161,22 +161,6 @@
    "role": "helper"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-14-p97 ITEM_ID=440 QUANTITY=14 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:steelrod:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:steelrod:item:2353",
-   "role": "army"
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
@@ -192,7 +176,7 @@
    "role": "auto"
   },
   {
-   "account": "Woodenstaff",
+   "account": "MineYourBiz",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-quester.ts -- sweep elena",
@@ -204,30 +188,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
-   "role": "auto"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Woodenstaff",
    "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
@@ -237,7 +201,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:dwarfcannon",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "FishAndChips",
@@ -255,13 +219,19 @@
    "role": "auto"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {},
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Magicwanda BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
+   "goal": "goal:pk_army:Magicwanda",
    "role": "auto"
   },
   {
@@ -307,6 +277,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"
