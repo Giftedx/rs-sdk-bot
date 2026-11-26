@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795737187512,
+ "at": 1795737216432,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,7 +74,7 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "WellHung",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -87,23 +87,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "helper"
   },
   {
    "account": "Billionaire",
@@ -201,17 +185,53 @@
   },
   {
    "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "grind:unicorn_horn"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:235",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=10 STOCK_TARGET=10 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=10 -- crafting jewellery-trip"
+    "scripts/aio-market.ts ITEM_ID=1597 \"ITEMS=Necklace mould\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy craftingshop2 3000",
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_necklace TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=goal:supply_chain:1656 BATCH_UNITS=1 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1637",
+   "goal": "goal:supply_chain:1656",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:103 BATCH_UNITS=6 -- crafting inventory brew:unf_avantoe_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:103",
    "role": "army"
   },
   {
@@ -250,24 +270,20 @@
    "role": "army"
   },
   {
-   "account": "WellHung",
-   "script": "scripts/aio-skiller.ts",
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
+    "sweep",
+    "barcrawl"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:235",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "helper"
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
   },
   {
    "account": "BoneToPick",
@@ -391,7 +407,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
