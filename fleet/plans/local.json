@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723318439,
+ "at": 1795723357548,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,22 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -187,7 +171,7 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "OreElse",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -200,6 +184,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
    "role": "army"
   },
   {
@@ -220,13 +219,17 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-536-7-p7074 ITEM_ID=536 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=97 -- prayer bury"
+    "prayer",
+    "bury"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BONE_ID": "536",
+    "TRAIN_SKILL": "Prayer",
+    "TARGET_LEVEL": "70",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "90"
    },
    "enabled": true,
    "repeat": false,
