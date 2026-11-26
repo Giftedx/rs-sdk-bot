@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728713566-2",
  "account": "Fingerblastr",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 4,
  "claim": "61925948-2ad7-4889-9af3-a329873d3f3c",
- "count": 0,
- "ok": false,
- "at": 1795729190459,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795729211090,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795729196741
+ },
+ "logout": {
+  "attemptId": "1795729190468-0000027872-0000000001",
+  "at": 1795729211080,
+  "sha256": "bcf52a35cde81c709575b5c878b8aff2106e96cf15a14d3b190ed83cb69126dc"
+ },
+ "screen": true
 }
