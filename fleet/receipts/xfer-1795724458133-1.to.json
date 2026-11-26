@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795724458133-1",
+ "account": "Billionaire",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 6960,
+ "claim": "fd524a80-4cf9-4891-bc2d-65dbf8c85c7c",
+ "count": 0,
+ "ok": false,
+ "at": 1795724570679,
+ "detail": "trade claimed"
+}
