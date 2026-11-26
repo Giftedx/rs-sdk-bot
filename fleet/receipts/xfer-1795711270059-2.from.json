@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711270059-2",
+ "account": "Woodpecker",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 1,
+ "claim": "5b755d4b-b7a1-49dd-842d-1c8b4bfc500b",
+ "count": 0,
+ "ok": false,
+ "at": 1795711347811,
+ "detail": "trade claimed"
+}

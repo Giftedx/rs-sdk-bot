@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795711286540,
+ "at": 1795711351533,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,28 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army",
-   "resources": [
-    "khazard-troopers"
-   ]
   },
   {
    "account": "Woodenstaff",
@@ -211,38 +189,28 @@
    "role": "helper"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=1 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=8 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=1 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=2 -- crafting jewellery-trip"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1643",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "Billionaire",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -260,7 +228,7 @@
    ]
   },
   {
-   "account": "Billionaire",
+   "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "imp"
@@ -276,6 +244,26 @@
    "resources": [
     "ardougne-imps"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:harralander"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "65"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:265",
+   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -308,60 +296,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-druid.ts --",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=103 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "splash",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [
@@ -371,8 +305,8 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "bigpackage",
   "bowbeforeme",
-  "dipstick",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -381,6 +315,7 @@
   "moneyshot",
   "pocketpool",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",

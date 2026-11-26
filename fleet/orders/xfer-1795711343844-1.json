@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795711343844-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Fatstack",
+  "item": "Herb",
+  "count": 7,
+  "itemId": 215,
+  "start": 1795711343844,
+  "end": 1795712243844,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
