@@ -220,6 +220,11 @@ export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
     return built;
 }
 let staffs: { rune: string; staffs: string[] }[] = [];
+// Whether a worn staff gives this rune (knowledge/teleports.json `staffs`, read by loadTravel): a cast takes none of it
+// from the pack, so a route needs none of it held (travelAllowed) and a bank stop takes none (trip.ts itemsFor).
+export function staffCovers(rune: string, worn: readonly string[] | undefined): boolean {
+    return !!worn?.length && staffs.some(s => s.rune === rune && s.staffs.some(st => worn.includes(st)));
+}
 
 // The completion value of a quest varp (knowledge/quests.json).
 let completeByVarp: Map<string, number> | undefined;
@@ -246,7 +251,7 @@ export function travelAllowed(t: Travel, a: Account): boolean {
         else if (!a.worn?.includes(n.worn)) return false;
     }
     for (const r of t.runes) {
-        if (staffs.some(s => s.rune === r.item && s.staffs.some(st => a.worn?.includes(st)))) continue;
+        if (staffCovers(r.item, a.worn)) continue;
         if (count(r.item) < r.count) return false;
     }
     if (t.run.how === 'rub' && !t.run.items.some(i => count(i) > 0)) return false;
