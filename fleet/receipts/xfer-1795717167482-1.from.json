@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795717167482-1",
  "account": "Fingerblastr",
  "partner": "FishAndChips",
@@ -12,6 +12,16 @@
  "claim": "d766e850-0122-415f-bb5f-50db6013e53c",
  "count": 0,
  "ok": false,
- "at": 1795717274079,
- "detail": "trade claimed"
+ "at": 1795717417012,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 500,
+  "at": 1795717401081
+ },
+ "logout": {
+  "attemptId": "1795717274089-0000027528-0000000001",
+  "at": 1795717416998,
+  "sha256": "338250fcb7422ce0346e385ba0c958ae83c8b7fc17430874040f736a26b9c481"
+ },
+ "screen": false
 }
