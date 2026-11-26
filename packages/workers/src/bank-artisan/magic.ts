@@ -238,6 +238,31 @@ export function itemSpellEffect(
     return xpAfter > xpBefore ? 'cast' : 'invalid';
 }
 
+// Wields the pack's best elemental staff for the spell's runes, so the spell costs no runes the staff gives.
+export async function equipItemSpellStaff(s: Session, recipe: ItemMagicRecipe, members: boolean, over: () => boolean = () => false) {
+    if (typeof s.bot?.equipItem !== 'function') return;
+    const state = () => s.sdk.getState();
+    const inv = () => s.sdk.getInventory();
+    const spellRunes: number[] = [];
+    for (const [idStr, rawCount] of Object.entries(recipe.inputs)) {
+        const id = Number(idStr);
+        const used = rawCount - (id === recipe.target ? 1 : 0);
+        for (let k = 0; k < used; k++) spellRunes.push(id);
+    }
+    const eq = (state()?.equipment ?? []) as readonly { id: number; slot: number }[];
+    const staff = bestElementalStaffForRunes([...inv(), ...eq.filter(e => e.slot === 3).map(e => ({ id: e.id, count: 1 }))], readSkillLevels(s.sdk), {
+        runeIds: spellRunes,
+        members,
+    }).current;
+    if (staff && !eq.some(e => e.slot === 3 && e.id === staff.item.id)) {
+        const held = inv().find(i => i.id === staff.item.id);
+        if (held) {
+            await s.bot.equipItem(held);
+            await waitUntil(s, () => over() || (state()?.equipment ?? []).some(e => e.slot === 3 && e.id === staff.item.id), { timeoutTicks: 4 });
+        }
+    }
+}
+
 export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { count: number; cap: number; members?: boolean; stop?: () => boolean }) {
     if (!Number.isSafeInteger(o.count) || o.count < 1 || o.count > 10000 || !Number.isSafeInteger(o.cap) || o.cap < 1 || o.cap > 100000) {
         throw Error('invalid finite magic limits');
@@ -264,26 +289,7 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
     }
     const life = watchProductionLife(s, o.stop);
     const over = () => ended || life.stopped() || s.tick() - start >= o.cap;
-    if (typeof s.bot?.equipItem === 'function') {
-        const spellRunes: number[] = [];
-        for (const [idStr, rawCount] of Object.entries(recipe.inputs)) {
-            const id = Number(idStr);
-            const used = rawCount - (id === recipe.target ? 1 : 0);
-            for (let k = 0; k < used; k++) spellRunes.push(id);
-        }
-        const eq = (state()?.equipment ?? []) as readonly { id: number; slot: number }[];
-        const staff = bestElementalStaffForRunes([...inv(), ...eq.filter(e => e.slot === 3).map(e => ({ id: e.id, count: 1 }))], readSkillLevels(s.sdk), {
-            runeIds: spellRunes,
-            members: o.members ?? false,
-        }).current;
-        if (staff && !eq.some(e => e.slot === 3 && e.id === staff.item.id)) {
-            const held = inv().find(i => i.id === staff.item.id);
-            if (held) {
-                await s.bot.equipItem(held);
-                await waitUntil(s, () => over() || (state()?.equipment ?? []).some(e => e.slot === 3 && e.id === staff.item.id), { timeoutTicks: 4 });
-            }
-        }
-    }
+    await equipItemSpellStaff(s, recipe, o.members ?? false, over);
     while (casts < o.count) {
         if (over()) {
             stop = ended ? 'session ended' : life.stopped() ? 'stopped' : 'cap';
@@ -472,6 +478,8 @@ export async function runItemMagicBanked(s: Session, recipe: ItemMagicRecipe, o:
             stop = 'stopped';
             break;
         }
+        // A pack staff pays its runes, so wield it before the costs decide what to stage.
+        await equipItemSpellStaff(s, recipe, o.members ?? false, () => !!o.stop?.());
         const perCast = itemSpellCosts(recipe, s.sdk.getState()?.equipment ?? [], o.members ?? false);
         let held = spellCastsHeld(perCast, counts());
         if (held < 1) {

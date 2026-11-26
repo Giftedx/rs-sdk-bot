@@ -15,10 +15,11 @@ const RING = 1637;
 const COSMIC = 564;
 const WATER = 555;
 const NAMES: Record<number, string> = { 1637: 'Sapphire ring', 2550: 'Ring of recoil', 564: 'Cosmic rune', 555: 'Water rune', 563: 'Law rune', 556: 'Air rune', 554: 'Fire rune' };
-const stacks = (id: number) => id !== 1637 && id !== 2550;
+const STAFF_OF_WATER = 1383;
+const stacks = (id: number) => id !== 1637 && id !== 2550 && id !== STAFF_OF_WATER;
 
 // A session with a bank in reach: the pack starts empty and every withdrawal and deposit is observed.
-function bankSession(bankStart: Record<number, number>) {
+function bankSession(bankStart: Record<number, number>, packStart: { id: number; count: number }[] = []) {
     const r = itemMagicRecipe('enchant:sapphire_ring');
     let tick = 0;
     let xp = 0;
@@ -26,7 +27,9 @@ function bankSession(bankStart: Record<number, number>) {
     let open = false;
     let casts = 0;
     let lastCast = -100;
-    let inv: { id: number; count: number; slot: number; name: string }[] = [];
+    let inv: { id: number; count: number; slot: number; name: string }[] = packStart.map((p, slot) => ({ ...p, slot, name: NAMES[p.id] ?? String(p.id) }));
+    let eq: { id: number; slot: number; count: number }[] = [];
+    const staffWorn = () => eq.some(e => e.slot === 3 && e.id === STAFF_OF_WATER);
     const bank: Record<number, number> = { ...bankStart };
     const listeners = new Set<() => void>();
     const freeSlot = () => { for (let i = 0; i < 28; i++) if (!inv.some(x => x.slot === i)) return i; return -1; };
@@ -47,9 +50,9 @@ function bankSession(bankStart: Record<number, number>) {
         onTick: (f: () => void) => { listeners.add(f); return () => listeners.delete(f); },
         client: { objType: (id: number) => ({ stackable: stacks(id) }) },
         sdk: {
-            getState: () => ({ player: { worldX: 3185, worldZ: 3436, lifeId: 1, isDead: false }, equipment: [], inventory: inv, bank: { isOpen: open, items: bankItems() } }),
+            getState: () => ({ player: { worldX: 3185, worldZ: 3436, lifeId: 1, isDead: false }, equipment: eq, inventory: inv, bank: { isOpen: open, items: bankItems() } }),
             getInventory: () => inv,
-            getEquipment: () => [],
+            getEquipment: () => eq,
             getSkillXp: () => xp,
             getSkill: () => ({ level: 99 }),
             sendCloseModal: async () => ({ success: true }),
@@ -57,6 +60,11 @@ function bankSession(bankStart: Record<number, number>) {
         bankObservation: () => ({ generation, items: bankItems(), at: tick }),
         bot: {
             dismissBlockingUI: async () => {},
+            equipItem: async (row: { id: number }) => {
+                inv = inv.filter(x => x.id !== row.id);
+                eq = [{ id: row.id, slot: 3, count: 1 }];
+                return { success: true };
+            },
             // The engine refuses a booth click while the last spell delay runs (bench trace: OpLoc delayed=true).
             openBank: async () => {
                 if (tick - lastCast < 3) return { success: false, message: 'Timeout waiting for bank interface to open' };
@@ -86,7 +94,7 @@ function bankSession(bankStart: Record<number, number>) {
             if (!target) return { success: false };
             target.id = r.product;
             target.name = NAMES[r.product]!;
-            for (const id of [COSMIC, WATER]) {
+            for (const id of staffWorn() ? [COSMIC] : [COSMIC, WATER]) {
                 const row = inv.find(x => x.id === id)!;
                 row.count--;
                 if (row.count === 0) inv = inv.filter(x => x !== row);
@@ -178,6 +186,18 @@ test('a run that hits its tick cap reports cap, not supplies', async () => {
         const out = await runItemMagicBanked(f.s, f.r, { count: 5, cap: 1 });
         expect(out.ok).toBe(false);
         expect(out.stop).toBe('cap');
+    } finally {
+        f.stop();
+    }
+});
+
+test('a pack Staff of water pays the water runes, so a pack without water runes still enchants', async () => {
+    // The old pack runner equipped the staff before its costs; the banked runner must too.
+    const f = bankSession({}, [{ id: RING, count: 1 }, { id: RING, count: 1 }, { id: COSMIC, count: 2 }, { id: STAFF_OF_WATER, count: 1 }]);
+    try {
+        const out = await runItemMagicBanked(f.s, f.r, { count: 2, cap: 400 });
+        expect(out).toMatchObject({ ok: true, casts: 2, stages: 0 });
+        expect(f.s.sdk.getEquipment()).toEqual([{ id: STAFF_OF_WATER, slot: 3, count: 1 }]);
     } finally {
         f.stop();
     }
