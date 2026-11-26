@@ -374,8 +374,13 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
                 'RESULT fail login: Error: no worker progress: release peer state unknown; verify offline before rollout chain rounds=1 ok=0 failed=1',
                 'RESULT fail Error: fleet account claim held by swarm',
                 'RESULT fail login: Error: fleet trade claim held for order xfer-1795716345453-2',
-                'RESULT fail Error: cargo stopped',
+                'RESULT fail magic-order stop requested level=15 target=56 casts=11 spent=0 chain rounds=1 ok=0 failed=1',
             ];
+            // A lost session writes this text too, and a saved record has no supervisor end reason: it stays.
+            first.applyOutcome(
+                { kind: 'worker_defect', activityId: 'real:1', account: 'HelperA', ticksElapsed: 1, faultSignature: 'SessionLost', detail: 'RESULT fail {"ok":false,"failure":"production session stopped"}', logPath: 'x.log' },
+                { now: NOW },
+            );
             gate.forEach((detail, i) => first.applyOutcome(
                 { kind: 'worker_defect', activityId: `gate:${i}`, account: 'HelperA', ticksElapsed: 1, faultSignature: detail, detail, logPath: 'x.log' },
                 { now: NOW },
@@ -384,9 +389,9 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
                 { kind: 'worker_defect', activityId: 'real:0', account: 'HelperA', ticksElapsed: 1, faultSignature: 'DoorStuck', detail: 'RESULT fail door stayed closed', logPath: 'x.log' },
                 { now: NOW },
             );
-            expect(first.quarantinedDefects(NOW + 1).length).toBe(5);
+            expect(first.quarantinedDefects(NOW + 1).length).toBe(6);
             const reloaded = new OutcomeClassifier({ root: dir });
-            expect(reloaded.quarantinedDefects(NOW + 1).map((d) => d.activityId)).toEqual(['real:0']);
+            expect(reloaded.quarantinedDefects(NOW + 1).map((d) => d.activityId).sort()).toEqual(['real:0', 'real:1']);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

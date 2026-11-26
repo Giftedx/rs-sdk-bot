@@ -219,8 +219,10 @@ export const isClaimHeldResult = (result: string) => CLAIM_HELD_RE.test(result);
 // smelt send guard "owner/life/stop unavailable".
 const STOP_RESULT_RE = /\bstop file\b|\bstopped\b|\bstop requested\b|\/stop unavailable\b/;
 export const isStopResult = (result: string) => STOP_RESULT_RE.test(result);
-// A saved defect has no end reason of its supervisor, so only a text that names the stop as the failure counts there.
-const STOP_FAILURE_RE = /\bstop file\b|^RESULT fail stopped\b|\b(?:cargo|session|herblore) stopped\b|\bstop requested\b|\/stop unavailable\b/;
+// A saved defect has no end reason of its supervisor, so only a text that a stop request alone writes counts there.
+// "production session stopped", "herblore stopped" and the smelt send guard also name an ended session or a changed
+// life: such a record keeps its quarantine.
+const STOP_FAILURE_RE = /\bstop file\b|\bstop requested\b/;
 // A result line that a gate wrote: a release hold, a held claim or a stop. Such a line is no worker defect.
 export const isGateHeldResult = (result: string) => isWorkerReleaseHold(result) || isClaimHeldResult(result) || STOP_FAILURE_RE.test(result);
 
