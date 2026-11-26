@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795710171040-1",
  "account": "Quickhandjob",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Raw lobster",
  "requested": 28,
  "claim": "17ecc3e9-9a80-4f67-9014-6a560ce97202",
- "count": 0,
- "ok": false,
- "at": 1795710309866,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795710387418,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28,
+  "after": 0
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795710336984
+ },
+ "logout": {
+  "attemptId": "1795710309875-0000024136-0000000001",
+  "at": 1795710387407,
+  "sha256": "dd332bee563b3e23a3180398fa104091a6eebcc31eb1ec69df8aea373ee0991a"
+ },
+ "screen": true
 }

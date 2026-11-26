@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710171040-1",
+ "account": "Moneyshot",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 28,
+ "claim": "fd061735-8943-41c5-acc6-46d7d157756b",
+ "count": 28,
+ "ok": true,
+ "at": 1795710388925,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795710388192
+ },
+ "logout": {
+  "attemptId": "1795710349274-0000023936-0000000001",
+  "at": 1795710388913,
+  "sha256": "b76392cb162879015f0b523c316216267ad8fc0bb84101d038da0cd4b4dee59d"
+ },
+ "screen": true
+}
