@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711886206-3",
+ "account": "Woodenstaff",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 27,
+ "claim": "24436739-762d-4b3d-acb7-5c64fae513af",
+ "count": 0,
+ "ok": false,
+ "at": 1795712142771,
+ "detail": "trade claimed"
+}
