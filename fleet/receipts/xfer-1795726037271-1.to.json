@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795726037271-1",
+ "account": "YewGotWood",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "054679df-96c0-4c85-bc69-90e1116d3a2f",
+ "count": 0,
+ "ok": false,
+ "at": 1795726236813,
+ "detail": "trade claimed"
+}
