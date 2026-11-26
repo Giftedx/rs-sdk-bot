@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795709264954-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "WellHung",
+  "to": "RearEntry",
+  "item": "Rune essence",
+  "count": 135,
+  "itemId": 1436,
+  "start": 1795709264954,
+  "end": 1795710164954,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
