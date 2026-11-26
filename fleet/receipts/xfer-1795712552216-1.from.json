@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795712552216-1",
+ "account": "Unsheathed",
+ "partner": "Packhorse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 35,
+ "claim": "fb6c5841-af13-4e3e-8ea4-cb38996e52ce",
+ "count": 0,
+ "ok": false,
+ "at": 1795712736396,
+ "detail": "Error: sender pack full: need 35 slots for Iron ore, 28 free",
+ "logout": {
+  "attemptId": "1795712728965-0000006296-0000000001",
+  "at": 1795712736387,
+  "sha256": "53652943091573844444ffed25e0026c482aefc984eb2d317782d7e7a859ff4d"
+ },
+ "screen": false
+}

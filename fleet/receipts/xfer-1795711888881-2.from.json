@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711888881-2",
+ "account": "BoneToPick",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "f1949a51-5a31-401a-b3bf-f245264781fd",
+ "count": 0,
+ "ok": false,
+ "at": 1795712767421,
+ "detail": "trade claimed"
+}
