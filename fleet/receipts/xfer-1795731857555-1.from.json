@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795731857555-1",
+ "account": "Quickhandjob",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "e98a9e4e-64c2-4bb0-b862-599612b52ba5",
+ "count": 0,
+ "ok": false,
+ "at": 1795732185231,
+ "detail": "trade claimed"
+}

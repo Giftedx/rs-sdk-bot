@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795731898823-1",
+ "account": "KnightRider",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "681f1744-d564-4884-a53b-a4dd3b05a3f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795732180128,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795732171809-0000029732-0000000001",
+  "at": 1795732180118,
+  "sha256": "b37be5a26867a299a961c324e8cbcc86e725fc0824b09048ee0f76e4c9548916"
+ },
+ "screen": false
+}
