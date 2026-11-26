@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711886206-1",
  "account": "Packhorse",
  "partner": "Pocketpython",
@@ -10,15 +10,37 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "86036e58-a336-414b-8fb8-7e4ff3ec01da",
- "count": 0,
- "ok": false,
- "at": 1795712302987,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795712365647,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Unicorn horn",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795712311289
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795712310501
+ },
+ "logout": {
+  "attemptId": "1795712302996-0000019840-0000000001",
+  "at": 1795712365636,
+  "sha256": "f12d7eeef857360e62f2cc4b48b4ecff5c5079e29767a252b9cada5b3bde1851"
+ },
+ "screen": true
 }
