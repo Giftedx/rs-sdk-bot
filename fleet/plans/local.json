@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719632134,
+ "at": 1795719647518,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,54 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -193,6 +145,38 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
     "tree"
    ],
    "env": {
@@ -202,37 +186,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "ball"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "auto"
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Earlyshooter",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Earlyshooter",
    "role": "auto"
   },
   {
@@ -267,17 +220,18 @@
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
+    "sweep",
+    "ball"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:magearena",
+   "goal": "goal:quest_board:ball",
    "role": "helper"
   },
   {
@@ -294,6 +248,51 @@
    "repeat": false,
    "goal": "goal:pk_army:TossTheCaber",
    "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
+  },
+  {
+   "account": "AFKnight",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:AFKnight",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:AFKnight",
+   "role": "auto"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
+   "role": "helper"
   }
  ],
  "army": [
@@ -319,7 +318,9 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpool",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",

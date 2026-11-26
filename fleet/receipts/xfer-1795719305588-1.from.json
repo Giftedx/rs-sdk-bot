@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795719305588-1",
+ "account": "Magicwanda",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 2,
+ "claim": "f53574d7-9aa5-461f-92c7-de085e6b1835",
+ "count": 0,
+ "ok": false,
+ "at": 1795719647483,
+ "detail": "trade claimed"
+}
