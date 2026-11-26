@@ -35,6 +35,7 @@ import {
     COW_NORTH_BANK,
     finishActionSession,
     installSpellLocBridge,
+    nearestBank,
     productionStopRequested,
     runArtisanBankProfile,
     watchProductionLife,
@@ -2610,6 +2611,23 @@ export function castsHeld(mode: 'low-alch' | 'high-alch', carried: readonly Alch
     return Math.min(invCount(carried, NATURE), invCount(carried, item), staff ? Infinity : Math.floor(invCount(carried, FIRE) / FIRE_PER[mode]));
 }
 
+// A stop requested while the alch run stages. runAlch reports it as stop=stopped, not as a failure.
+export class AlchStopError extends Error {}
+
+// The bank where the alch run stages. The Wind Strike phase casts at STRIKE.spot beside the Ardougne north bank, so an
+// account that still needs strike casts stages there. Any other account alchs where it stands: it stages at the bank it
+// stands at (an upper-floor bank too), else at the nearest ground-floor bank, because the stage walk has no floor.
+export function alchStageBank(p: { worldX: number; worldZ: number; level: number }, magicXp: number, target: number) {
+    if (strikeCasts(magicXp, target) > 0) return { x: COW_NORTH_BANK.x, z: COW_NORTH_BANK.z, level: 0, name: 'Ardougne north' };
+    const here = nearestBank({ x: p.worldX, z: p.worldZ, level: p.level });
+    const b = atBank(p, here) ? here : nearestBank({ x: p.worldX, z: p.worldZ, level: 0 });
+    return { x: b.x, z: b.z, level: b.level, name: `${b.x},${b.z}` };
+}
+
+function atBank(p: { worldX: number; worldZ: number; level: number } | null | undefined, b: { x: number; z: number; level: number }) {
+    return !!p && p.level === b.level && Math.max(Math.abs(p.worldX - b.x), Math.abs(p.worldZ - b.z)) <= 3;
+}
+
 export async function stageAlch(
     s: Session,
     o: { target: number; item: number; walk: (x: number, z: number) => Promise<boolean>; stop?: () => boolean },
@@ -2619,9 +2637,12 @@ export async function stageAlch(
     const inv = () => s.sdk.getInventory();
     const carried = () => [...inv(), ...(state()?.equipment ?? [])];
     if (!await waitUntil(s, () => !!state()?.player && s.sdk.getSkillXp('Magic') !== null, { timeoutTicks: 15 })) throw new Error('alch stage: position unknown');
-    if (!atNorthBank(state()?.player)) {
-        if (o.stop?.()) throw new Error('alch stage: stop requested');
-        if (!(await o.walk(COW_NORTH_BANK.x, COW_NORTH_BANK.z)) || !atNorthBank(state()?.player)) throw new Error('alch stage: walk to Ardougne north bank failed');
+    const stageBank = alchStageBank(state()!.player!, s.sdk.getSkillXp('Magic') ?? 0, o.target);
+    if (!atBank(state()?.player, stageBank)) {
+        if (o.stop?.()) throw new AlchStopError('alch stage: stop requested');
+        const walked = await o.walk(stageBank.x, stageBank.z);
+        if (o.stop?.()) throw new AlchStopError('alch stage: stop requested');
+        if (!walked || !atBank(state()?.player, stageBank)) throw new Error(`alch stage: walk to the ${stageBank.name} bank failed`);
     }
     const observe = s.bankObservation?.bind(s);
     const generation = observe?.()?.generation ?? 0;
@@ -2631,7 +2652,7 @@ export async function stageAlch(
     }
     const keep = new Set<number>([NATURE, FIRE, o.item, STRIKE.mind, STRIKE.air, ...FIRE_STAVES]);
     for (const row of [...inv()].filter(i => !keep.has(i.id))) {
-        if (o.stop?.()) throw new Error('alch stage: stop requested');
+        if (o.stop?.()) throw new AlchStopError('alch stage: stop requested');
         const id = row.id;
         const before = invCount(inv(), id);
         if (before < 1) continue;
@@ -2642,7 +2663,7 @@ export async function stageAlch(
     const magicXp = s.sdk.getSkillXp('Magic') ?? 0;
     const plan = alchStagePlan({ ...alchCasts(magicXp, o.target), strike: strikeCasts(magicXp, o.target) }, carried(), observe()?.items ?? [], o.item);
     for (const want of plan.take) {
-        if (o.stop?.()) throw new Error('alch stage: stop requested');
+        if (o.stop?.()) throw new AlchStopError('alch stage: stop requested');
         const row = (state()?.bank?.items ?? []).find(i => i.id === want.id);
         const before = invCount(inv(), want.id);
         if (!row || !(await s.bot.withdrawItem(row, want.count, { asNote: false })).success || !await waitUntil(s, () => invCount(inv(), want.id) >= before + want.count, { timeoutTicks: 10 })) {
@@ -2816,8 +2837,11 @@ export async function runAlch(
             if (s.sdk.getState()?.dialog?.isOpen) throw new Error('alch: level-up dialog stayed open');
         }
     } catch (e) {
-        failure = e instanceof Error ? e.message : String(e);
-        stop = 'failure';
+        if (e instanceof AlchStopError) stop = 'stopped';
+        else {
+            failure = e instanceof Error ? e.message : String(e);
+            stop = 'failure';
+        }
     }
     if (!failure && stop === 'supplies' && casts['low-alch'] + casts['high-alch'] + casts.strike === 0) {
         failure = 'no alch progress: the bank holds no supplies for one cast';

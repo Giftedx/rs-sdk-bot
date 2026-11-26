@@ -108,6 +108,9 @@ type Run = {
     demandId?: string;
     workerRelease?: string;
     baseline?: RunTelemetryBaseline;
+    // The brain plan started this run. `finite` marks a brain job with a restart limit (quest, market, chain, walk).
+    brain?: boolean;
+    finite?: boolean;
 };
 
 export type SavedRun = Run & { key: string };
@@ -609,6 +612,64 @@ export const SWARM_STOP = {
     lease: 'fleet controller lease unavailable',
     drain: DRAIN_STOP_TEXT,
 } as const;
+
+export const BRAIN_RUN_MIN_MS = 10 * 60_000;
+export const BRAIN_DROP_CYCLES = 2;
+
+// The reason the swarm keeps a brain-started run that the current brain plan gives no worker job, or undefined when
+// the swarm stops it. A brain cycle can empty a running account's plan for one cycle (slot pressure, saturated demand,
+// a spot cap, a re-plan with other acquire sources); a stop then throws away the work done. A finite job runs to its
+// end. A repeating job is stopped only after it ran BRAIN_RUN_MIN_MS and BRAIN_DROP_CYCLES brain cycles in a row
+// dropped it. A stop of all runs, a disabled brain, a hand job, an open hold, an end record, a session recovery or a
+// fleet trade for the account, or an idle reason that brainSoftIdle refuses (death, owner pause, trade, protection, a
+// system hold) stops the run as before.
+export const BRAIN_SOFT_IDLE: ReadonlySet<string> = new Set([
+    'max_bots_limit', 'spot_capacity_full', 'demand_saturated', 'idle', 'no_matching_demand_or_activity', 'missing_food_supply',
+]);
+// Planner blocker reasons: the re-plan of a running account excludes hub_banker supply, so it can fail to rebuild the
+// plan that started the run. These reasons say nothing about the safety of the running worker.
+const BRAIN_SOFT_IDLE_PREFIXES = ['unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:'] as const;
+export function brainSoftIdle(reason: string | undefined): boolean {
+    return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || BRAIN_SOFT_IDLE_PREFIXES.some(p => reason.startsWith(p));
+}
+export function brainDropKeep(o: {
+    run: Pick<Run, 'accounts' | 'started' | 'brain' | 'finite'>;
+    now: number;
+    dropCycles: number;
+    stopAll: boolean;
+    brainActive: boolean;
+    handAccount: (account: string) => boolean;
+    held: (account: string) => boolean;
+    ended: (account: string) => boolean;
+    replacement: (account: string) => SelectedBrainDispatch['mode'] | undefined;
+    idleReason: (account: string) => string | undefined;
+}): string | undefined {
+    if (!o.run.brain || o.stopAll || !o.brainActive) return undefined;
+    for (const a of o.run.accounts) {
+        if (o.handAccount(a) || o.held(a) || o.ended(a)) return undefined;
+        const mode = o.replacement(a);
+        if (mode === 'session_recovery' || mode === 'fleet_trade') return undefined;
+        if (!brainSoftIdle(o.idleReason(a))) return undefined;
+    }
+    if (o.run.finite) return 'finite job runs to its end';
+    if (o.now - o.run.started < BRAIN_RUN_MIN_MS) return `run younger than ${BRAIN_RUN_MIN_MS / 60_000} min`;
+    if (o.dropCycles < BRAIN_DROP_CYCLES) return `dropped for ${o.dropCycles} of ${BRAIN_DROP_CYCLES} brain cycles`;
+    return undefined;
+}
+
+// Counts the brain cycles in a row that dropped each run. A run that the plan holds again, or that ended, leaves the map.
+export function countBrainDrops(
+    drops: Map<string, { cycles: number; cycleAt: number }>,
+    droppedKeys: ReadonlySet<string>,
+    cycleAt: number,
+): void {
+    for (const key of [...drops.keys()]) if (!droppedKeys.has(key)) drops.delete(key);
+    for (const key of droppedKeys) {
+        const d = drops.get(key);
+        if (!d) drops.set(key, { cycles: 1, cycleAt });
+        else if (d.cycleAt !== cycleAt) { d.cycles++; d.cycleAt = cycleAt; }
+    }
+}
 
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
@@ -1434,6 +1495,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const brainCycleMs = Number.isFinite(brainCycleMsRaw) && brainCycleMsRaw >= 1000 ? brainCycleMsRaw : DEFAULT_BRAIN_CYCLE_MS;
     let lastBrainResult: BrainCycleResult | null = null;
     let lastBrainAt = 0;
+    // The accounts of the current tick's brain jobs (start() marks their runs) and the drop count of each brain run.
+    let brainDispatchedNow: ReadonlySet<string> = new Set();
+    const brainDrops = new Map<string, { cycles: number; cycleAt: number }>();
     let lastBrainPlanMtime = -1;
     let brainDirty = true;
 
@@ -1662,6 +1726,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             ...(job.demandId ? { demandId: job.demandId } : {}),
             ...(workRelease ? { workerRelease: workRelease } : {}),
             ...(baseline ? { baseline } : {}),
+            ...(brainDispatchedNow.has(accounts[0]!.toLowerCase())
+                ? { brain: true, ...(job.maxRestarts !== undefined ? { finite: true } : {}) }
+                : {}),
         };
         runs.set(p.key, run); saveRuns();
         console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
@@ -1726,6 +1793,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const combinedJobs: Job[] = [...plan.jobs];
         const brainRecoveryRows: Record<string, unknown>[] = [];
         const brainDispatchedAccounts = new Set<string>();
+        brainDispatchedNow = brainDispatchedAccounts;
+        const brainModes = new Map<string, SelectedBrainDispatch['mode']>();
         const brainEnabled = !plan.boundedRecovery && !plan.boundedInspection;
         if (brainEnabled) {
             try {
@@ -1789,6 +1858,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         const acctState = brainResult.world.accounts[acctName.toLowerCase()];
                         const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
                         const { selected, job: brainJob } = brainJobFor(acctName, dispatched, accountSteps, acctState?.role);
+                        brainModes.set(acctName.toLowerCase(), selected.mode);
                         if (selected.mode === 'session_recovery') {
                             brainRecoveryRows.push({
                                 account: acctName,
@@ -1908,9 +1978,39 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             if (resolved.length) persistEnded(deathsFile, ended);
         }
 
-        for (const r of runs.values()) {
+        const droppedRuns = new Set<string>();
+        for (const [key, r] of runs) if (r.brain && !overlappingRun(planned, r.accounts)) droppedRuns.add(key);
+        countBrainDrops(brainDrops, droppedRuns, lastBrainAt);
+        const handAccounts = new Set(plan.jobs.flatMap(j => j.accounts ?? (j.account ? [j.account] : [])).map(a => a.toLowerCase()));
+        const brainIdle = (a: string): string | undefined => {
+            const plans = lastBrainResult?.fleetPlan.accountPlans ?? {}, lower = a.toLowerCase();
+            return (plans[a] ?? Object.entries(plans).find(([n]) => n.toLowerCase() === lower)?.[1])?.idleReason;
+        };
+        for (const [key, r] of runs) {
             if (!overlappingRun(planned, r.accounts) || stopAll) {
+                const kept = stopAll ? undefined : brainDropKeep({
+                    run: r, now: Date.now(), dropCycles: brainDrops.get(key)?.cycles ?? 0, stopAll,
+                    brainActive: brainEnabled && lastBrainResult !== null,
+                    handAccount: a => handAccounts.has(a.toLowerCase()),
+                    held: a => holds.some(h => h.account.toLowerCase() === a.toLowerCase() && !h.restored),
+                    ended: a => { const end = endedMapByLower(ended).get(a.toLowerCase())?.[1]; return !!end && end.at >= r.started; },
+                    replacement: a => brainModes.get(a.toLowerCase()),
+                    idleReason: brainIdle,
+                });
+                if (kept) {
+                    for (const a of r.accounts) {
+                        brainRecoveryRows.push({
+                            account: a, script: '', goal: r.demandId ?? r.activityId, enabled: true, repeat: !r.finite,
+                            state: `running; brain plan dropped it, kept: ${kept}`, since: r.started,
+                        });
+                    }
+                    continue;
+                }
                 for (const a of r.accounts) {
+                    if (r.brain && !stopAll && !existsSync(stopFile(a))) {
+                        const mode = brainModes.get(a.toLowerCase());
+                        console.log(`SWARM drop ${a} ${mode && mode !== 'none' ? mode : brainIdle(a) ?? 'no brain plan'} after ${Math.round((Date.now() - r.started) / 1000)}s`);
+                    }
                     writeSwarmStop(stopFile(a), SWARM_STOP.removed);
                     stopFlagsPresent.add(a.toLowerCase());
                 }

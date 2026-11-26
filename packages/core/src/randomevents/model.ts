@@ -152,7 +152,8 @@ export interface WatcherContext {
     tick(): number;
     log(line: string): void;
     say(name: string, action: string, extra?: string): void;
-    send(a: Act): void;
+    /** Resolves false when the client rejects the action. */
+    send(a: Act): Promise<boolean>;
     canSend(): boolean;
     getPf(): PathFinder | null;
     getIfReader(): IfReader | null;

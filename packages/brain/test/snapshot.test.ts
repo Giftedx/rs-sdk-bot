@@ -531,3 +531,12 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(accountDiags.mightyrod?.reason).toBe('swarm.json owner hold');
     });
 });
+
+test('an account in walled West Ardougne before Biohazard needs location recovery; after Biohazard it is idle', () => {
+    const hq = { x: 2546, z: 3325, level: 0 };
+    const base = { name: 'KnightRider', protectedClock: false, logoutProofState: 'confirmed' as const, statusSettledOffline: true, pos: hq };
+    expect(classifyAccountLifecycle({ ...base, quests: { elena: 'complete', biohazard: 'started' } })).toBe('needs_location_recovery');
+    expect(classifyAccountLifecycle({ ...base, quests: { Biohazard: 'complete' } })).toBe('idle');
+    // East Ardougne, outside the wall, stays a safe hub.
+    expect(classifyAccountLifecycle({ ...base, pos: { x: 2617, z: 3333, level: 0 }, quests: {} })).toBe('idle');
+});

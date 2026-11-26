@@ -284,6 +284,45 @@ export function scorpionAntipoisonNeeds(
 export const QUEST_FINDS: Record<string, readonly number[]> = { mm: [3183], druidspirit: [2952] };
 export const prayerCovers = (quest: string, prayer: number) =>
     PRAYER_USED[quest] !== undefined && prayer >= PRAYER_USED[quest]! + PRAYER_MARGIN;
+// The prayer potions a quest's sweep stages for an account at this base Prayer level: the preset's count, or 0 when the
+// level covers the fights (prayerCovers). No shop sells them, so a planner gives the quest to an account that holds
+// this many in its bank, or supplies them first; the sweep otherwise fails at the bank with "missing 2434:<n>".
+export const prayerPotionDemand = (quest: string, prayer: number): number => {
+    if (PRAYER_USED[quest] === undefined || prayerCovers(quest, prayer)) return 0;
+    const need = needs(presetFor(quest));
+    return PRAYER_POTIONS.reduce((n, id) => n + (need.get(id) ?? 0), 0);
+};
+// The hitpoints that a quest script's own fight costs a live account (the presets are all 99 in rune armour and carry
+// 0 to 2 meals): Biohazard's sick mourner took 54 from a 31-hitpoint account in melee, the Paterdomus Temple guardian
+// killed an 18-hitpoint account. The sweep stages the meals that cover the cost beyond half the base hitpoints, and
+// fails at the bank when the bank and the pack hold fewer.
+export const QUEST_FIGHT_DAMAGE: Record<string, number> = { biohazard: 80, priestperil: 60 };
+export const MEAL_HEAL = 12;
+export const LOBSTER = 379;
+export const fightMeals = (quest: string, maxHp: number): number => {
+    const damage = QUEST_FIGHT_DAMAGE[quest];
+    return damage === undefined ? 0 : Math.max(0, Math.ceil((damage - Math.floor(maxHp / 2)) / MEAL_HEAL));
+};
+// The food plan with the fight's meals: the preset's meal raised to fightMeals, or lobsters for a preset with none
+// (mealPlan withdraws other meals for a short one).
+export function withFightMeals(food: ReadonlyMap<number, number>, quest: string, maxHp: number): Map<number, number> {
+    const out = new Map(food);
+    const meals = fightMeals(quest, maxHp);
+    if (!meals) return out;
+    const meal = [...out.keys()].find((id) => MEAL_SET.has(id)) ?? LOBSTER;
+    out.set(meal, Math.max(out.get(meal) ?? 0, meals));
+    return out;
+}
+// The meals that the pack and the planned withdrawals hold beyond the quest items, short of the fight's meals.
+export function fightMealsShort(meals: number, pack: readonly Item[], withdraw: readonly Item[], need: ReadonlyMap<number, number> = new Map()): number {
+    let held = 0;
+    for (let i = 0; i < MEALS.length; i++) {
+        const id = MEALS[i]!;
+        const s = countItems(pack, id) + countItems(withdraw, id) - (need.get(id) ?? 0);
+        if (s > 0) held += s;
+    }
+    return Math.max(0, meals - held);
+}
 export const FIRE_QUESTS = new Set(['tree', 'grandtree', 'arena']);
 export const BUILD_PACK: Record<string, Item[]> = {
     upass: [
@@ -372,8 +411,8 @@ export const QUEST_PICKUPS: Record<string, Item[]> = {
         { id: 431, count: 1 },
     ],
 };
-export const QUEST_ARROWS: Record<string, number> = { merlin: 40, prince: 30, hazeelcult: 20, scorpion: 40 };
-export const QUEST_CASTS: Record<string, number> = { hazeelcult: 12, prince: 15, scorpion: 30 };
+export const QUEST_ARROWS: Record<string, number> = { merlin: 40, prince: 30, hazeelcult: 20, scorpion: 40, biohazard: 20 };
+export const QUEST_CASTS: Record<string, number> = { hazeelcult: 12, prince: 15, scorpion: 30, biohazard: 12 };
 
 export function jailerBowKit(
     quest: string,

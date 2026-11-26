@@ -1,7 +1,8 @@
 import {expect,test} from 'bun:test';
 import {runShafts} from '../src/bank-artisan';
 
-function fixture(mode='ok',logs=25){
+function fixture(mode='ok',logs=25,at={x:3092,z:3243}){
+ let pos={...at};
  let tick=0,xp=0,open=false,generation=0,calls=0,stopped=false;
  const bank:any[]=[{id:1511,name:'Logs',count:logs,slot:0},{id:946,name:'Knife',count:1,slot:1}];
  let inventory:any[]=[{id:995,name:'Coins',count:20,slot:0}];const listeners=new Set<()=>void>();
@@ -10,7 +11,7 @@ function fixture(mode='ok',logs=25){
  const s:any={name:'test',tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),
   bankObservation:()=>open?{generation,items:bank}:undefined,
   sdk:{getInventory:()=>inventory,getEquipment:()=>[],getSkill:()=>({level:10,baseLevel:10}),getSkillXp:()=>xp,
-   getState:()=>({player:{worldX:3092,worldZ:3243,level:0,lifeId:1,respawnCount:0},bank:{isOpen:open,items:open?bank:[]}})},
+   getState:()=>({player:{worldX:pos.x,worldZ:pos.z,level:0,lifeId:1,respawnCount:0},bank:{isOpen:open,items:open?bank:[]}})},
   bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},
    withdrawItem:async(i:any,n:number)=>{i.count-=n;add(inventory,i.id,i.name,n);return{success:true};},
    depositItem:async(i:any)=>{const n=i.count;add(bank,i.id,i.name,n);inventory=inventory.filter(row=>row.id!==i.id);return{success:true};},
@@ -19,7 +20,7 @@ function fixture(mode='ok',logs=25){
     inventory.find(i=>i.id===1511).count--;inventory=inventory.filter(i=>i.count>0);
     if(mode!=='debit-only'){add(inventory,52,'Arrow shaft',15);xp+=125;}
     if(mode==='stop')stopped=true;return{success:true};}}};
- return{s,bank,inv:()=>inventory,calls:()=>calls,stop:()=>stopped,close:()=>clearInterval(timer)};
+ return{s,bank,moveTo:(x:number,z:number)=>{pos={x,z};},inv:()=>inventory,calls:()=>calls,stop:()=>stopped,close:()=>clearInterval(timer)};
 }
 test('25 owned normal logs become375 banked shafts through the crafting dialog; unrelated kit is conserved',async()=>{
  const f=fixture();try{const r=await runShafts(f.s,{cap:1000,maximum:25,reserve:0});
@@ -55,4 +56,20 @@ test('an owner pause permits no further bank action: no withdrawal, and no clean
   const r=await runShafts(during.s,{cap:1000,maximum:25,reserve:0,pause:during.stop});expect(r.ok).toBe(false);expect(r.stop).toBe('stopped');expect(during.calls()).toBe(1);
   expect(during.inv().find(i=>i.id===52)?.count).toBe(15);expect(during.bank.some(i=>i.id===52)).toBe(false);
  }finally{during.close();}
+});
+
+test('a start away from a bank walks to the nearest bank first; a failed walk is a refusal and a stop on it is a stop',async()=>{
+ // Live: "START 3289 3294 0" (Al Kharid mine) then SHAFT_BANK {"stop":"input-insufficient","failure":"Error: shafts bank unavailable"}.
+ const failed=fixture('ok',25,{x:3289,z:3294});const asked:any[]=[];try{
+  const r=await runShafts(failed.s,{cap:1000,maximum:25,reserve:0,travel:async to=>{asked.push(to);return{ok:false,detail:'test route end'};}});
+  expect(asked).toEqual([{x:3254,z:3420,level:0}]);expect(r.ok).toBe(false);expect(r.stop).toBe("refused");expect(r.failure).toContain("shafts walk to the bank at 3254,3420 failed");
+ }finally{failed.close();}
+ let stopped=false;const halted=fixture('ok',25,{x:3289,z:3294});try{
+  const r=await runShafts(halted.s,{cap:1000,maximum:25,reserve:0,stop:()=>stopped,travel:async()=>{stopped=true;return{ok:false,detail:'aborted'};}});
+  expect(r.stop).toBe('stopped');expect(r.failure).toContain('stopped during the walk');
+ }finally{halted.close();}
+ const walked=fixture('ok',25,{x:3289,z:3294});try{
+  const r=await runShafts(walked.s,{cap:1000,maximum:25,reserve:0,travel:async to=>{walked.moveTo(to.x,to.z);return{ok:true};}});
+  expect(r.ok).toBe(true);expect(r.banked).toBe(375);
+ }finally{walked.close();}
 });

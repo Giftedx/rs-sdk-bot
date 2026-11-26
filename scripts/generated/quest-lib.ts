@@ -253,6 +253,33 @@ export const teleportRefusal = (comp: string, magic: number, laws: number, level
     if (laws < 1) return 'no law rune';
     return undefined;
 };
+// The teleports a retreat casts, in order: the first that the pack, a worn staff and the Magic level allow. A spell that
+// a quest locks (Ardougne before Plague City) gives a message and no jump, and the retreat goes on to its walk.
+export const RETREAT_TELEPORTS: readonly string[] = ['magic:varrock_teleport', 'magic:lumbridge_teleport', 'magic:falador_teleport', 'magic:camelot_teleport', 'magic:ardougne_teleport'];
+export const retreatTeleport = (comps: readonly string[], canCast: (comp: string) => boolean): string | undefined => comps.find(canCast);
+// A quest's retreat teleports: its own exit spell first, none while it holds an item that a teleport destroys.
+export const retreatTeleportsFor = (first: string | undefined, blocked: boolean): readonly string[] =>
+    blocked ? [] : first ? [first, ...RETREAT_TELEPORTS.filter(c => c !== first)] : RETREAT_TELEPORTS;
+// The walk tiles of a retreat: straight away from the foe first, then the seven other directions, each at RETREAT_TILES,
+// half of it and 8 tiles. The client refuses a tile with no path ("Failed to walk"), so the retreat sends the next one.
+export const retreatTiles = (at: { x: number; z: number }, foe: { x: number; z: number } | undefined, far = 30): { x: number; z: number }[] => {
+    let dx = foe ? Math.sign(at.x - foe.x) : 1, dz = foe ? Math.sign(at.z - foe.z) : 0;
+    if (!dx && !dz) dx = 1;
+    const ring: [number, number][] = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+    const start = ring.findIndex(([x, z]) => x === dx && z === dz);
+    const order = [0, 1, 7, 2, 6, 3, 5, 4].map(k => ring[(start + k) % 8]!);
+    const out: { x: number; z: number }[] = [];
+    for (const d of [far, Math.ceil(far / 2), 8]) for (const [x, z] of order) out.push({ x: at.x + x * d, z: at.z + z * d });
+    return out;
+};
+// The fail message of a retreat: a death names the death and the hitpoints the retreat started at, never the
+// hitpoints after the respawn.
+export const retreatFailure = (label: string, died: boolean, hpAtStart: number, maxHp: number, how: string): string =>
+    died ? `died during ${label} (retreat from hp ${hpAtStart} of ${maxHp}, ${how})` : `retreat during ${label}: hp ${hpAtStart} of ${maxHp}, no food, ${how}`;
+// Why a fight the quest script starts must not start: under half the base hitpoints with no food to eat. The retreat
+// then has hitpoints left for a teleport cast or a walk.
+export const fightRefusal = (hp: number, maxHp: number, food: boolean): string | undefined =>
+    !food && hp < Math.ceil(maxHp / 2) ? `hp ${hp} of ${maxHp}, no food` : undefined;
 export { fireSpell } from '../fire-spells';
 export let bursts = 0;
 // A planned conversation token: 'R' continue, 'F' fence to the next tick, or a choice component id.
@@ -373,7 +400,7 @@ export async function fightForDrop(io: DropFightIO, ticks: number): Promise<Drop
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
 // and end() log them out too.
-export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean; burst?: boolean; keepAlive?: boolean } = {}) {
+export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; retreatTeleports?: () => readonly string[]; name?: string; others?: () => Session[]; resend?: boolean; burst?: boolean; keepAlive?: boolean } = {}) {
     const CAP = opts.cap ?? 3000;
     const BURST = process.env.Q_BURST !== '0' && (opts.burst ?? process.env.Q_BURST === '1');
     if (BURST) noteBursts();
@@ -530,8 +557,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const dispose = async () => { await sustain.settle(); off(); restoreBurstHooks?.(); };
     const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session||opts.keepAlive)throw Error(message); return finish(all(), false, message); };
     // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
-    // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
-    // the server's 16 ticks after combat (logout.rs2 p_preventlogout), and the run fails with the retreat. Demon Slayer on
+    // base level, at least 5) with no food left to eat, the bot teleports out or walks up to RETREAT_TILES away from
+    // whatever hits it (retreat below), waits for the server's 16 ticks after combat (logout.rs2 p_preventlogout), and
+    // the run fails with the retreat. Demon Slayer on
     // an 81-hitpoint, Attack 6 account went from 81 to 0 over 300 ticks at Delrith with no food and no such rule.
     const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
@@ -548,18 +576,65 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // and the trial passes) switches the retreat off for its length.
     let lowHpPlanned = false;
     const planLowHp = (on: boolean): void => { lowHpPlanned = on; };
+    // The retreat, in order: a teleport the pack allows (retreatTeleports, else RETREAT_TELEPORTS); a walk tile that the
+    // client accepts (retreatTiles: in a closed room, such as the Biohazard mourner room behind its door, the straight
+    // tile has no path and the client refuses it); with no tile accepted, the foe attacked back, because auto retaliate
+    // is off and a bot that stands still takes every hit.
     const retreat = async (label: string): Promise<never> => {
         const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
-        const foe = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0] ?? npcs.sort((a, b) => a.distance - b.distance)[0];
-        let dx = foe ? Math.sign(p.worldX - foe.x) : 1, dz = foe ? Math.sign(p.worldZ - foe.z) : 0;
-        if (!dx && !dz) dx = 1;
-        const to = { x: p.worldX + dx * RETREAT_TILES, z: p.worldZ + dz * RETREAT_TILES };
-        console.log(`RETREAT hp ${hp()} of ${maxHp()} at ${T()} ${p.worldX},${p.worldZ},${p.level} foe=${foe ? `${foe.name}@${foe.x},${foe.z}` : '-'} to=${to.x},${to.z}`);
-        for (let i = 0; i < 3 && !stats.died; i++) {
-            await s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
-            if (await waitUntil(s, () => stats.died || (!pos()?.combat?.inCombat && T() - lastHitAt > COMBAT_LOGOUT_TICKS), { timeoutTicks: 40 })) break;
+        const hostile = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0];
+        const foe = hostile ?? npcs.sort((a, b) => a.distance - b.distance)[0];
+        const hpAtStart = hp();
+        console.log(`RETREAT hp ${hpAtStart} of ${maxHp()} at ${T()} ${p.worldX},${p.worldZ},${p.level} foe=${foe ? `${foe.name}@${foe.x},${foe.z}` : '-'}`);
+        const safe = () => stats.died || (!pos()?.combat?.inCombat && T() - lastHitAt > COMBAT_LOGOUT_TICKS);
+        let how = 'no teleport, no walk, no foe';
+        const tele = retreatTeleport(opts.retreatTeleports?.() ?? RETREAT_TELEPORTS, canCast);
+        if (tele && !stats.died) {
+            const at0 = pos();
+            const jumped = (): boolean => { const q = pos(); return !!q && !!at0 && (q.level !== at0.level || Math.max(Math.abs(q.worldX - at0.worldX), Math.abs(q.worldZ - at0.worldZ)) > 20); };
+            lastCastAt = T();
+            await s.direct({ type: 'clickComponent', componentId: componentId(tele), reason: 'SDK' });
+            await waitUntil(s, () => stats.died || jumped(), { timeoutTicks: 8 });
+            lastCastAt = T();
+            console.log(`RETREAT_TELEPORT ${JSON.stringify({ label, comp: tele, jumped: jumped(), died: stats.died, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
+            if (jumped() && !stats.died) return fail(retreatFailure(label, false, hpAtStart, maxHp(), `teleported by ${tele}`));
+            how = `${tele} gave no jump`;
         }
-        return fail(`retreat during ${label}: hp ${hp()} of ${maxHp()}, no food`);
+        let to: { x: number; z: number } | undefined;
+        for (const t of retreatTiles({ x: p.worldX, z: p.worldZ }, foe && { x: foe.x, z: foe.z }, RETREAT_TILES)) {
+            if (stats.died) break;
+            const r: any = await s.direct({ type: 'walkTo', x: t.x, z: t.z, running: true, reason: 'SDK' });
+            if (r && r.success === false) continue;
+            to = t;
+            break;
+        }
+        if (to) {
+            how = `walked to ${to.x},${to.z}`;
+            for (let i = 0; i < 3 && !stats.died; i++) {
+                if (i > 0) await s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
+                if (await waitUntil(s, safe, { timeoutTicks: 40 })) break;
+            }
+        } else if (hostile && !stats.died) {
+            // Only an NPC in combat: the nearest bystander (a banker, a quest NPC) is never attacked.
+            how = 'no walk tile accepted, fought back';
+            const present = (): any => (st()?.nearbyNpcs ?? []).find((n: any) => n.index === hostile.index);
+            for (let i = 0; i < 40 && !stats.died && present(); i++) {
+                await attackNpc(present());
+                await waitUntil(s, () => stats.died || !present(), { timeoutTicks: 5 });
+            }
+            if (!stats.died) await waitUntil(s, safe, { timeoutTicks: 40 });
+        }
+        return fail(retreatFailure(label, stats.died, hpAtStart, maxHp(), how));
+    };
+    // Before a fight the quest script starts: a fight under half the base hitpoints with no food fails the run here,
+    // before the first blow, not at the retreat floor in the fight.
+    const fightReady = async (label: string): Promise<void> => {
+        await guard(label);
+        const refusal = fightRefusal(hp(), maxHp(), foodLeft());
+        // In a fight (a later round of a fight loop) the logout waits out the combat window while the foe hits, so the
+        // bot retreats first.
+        if (refusal && (pos()?.combat?.inCombat || (lastHitAt >= 0 && T() - lastHitAt <= COMBAT_LOGOUT_TICKS))) await retreat(`${label} (no fight at ${refusal})`);
+        if (refusal) await fail(`${label}: no fight at ${refusal}`);
     };
     const guard = async (label: string): Promise<void> => {
         if(opts.stop?.())await fail(`stopped during ${label}`);
@@ -923,7 +998,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         stageFrom, stageName,
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose, strengthStyle, styleOnly,
         blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, attack, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc, fightReady,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };

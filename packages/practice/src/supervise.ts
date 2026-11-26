@@ -145,6 +145,10 @@ const DEATH_LINE_RE = /^(?:\s*\|\s*)?DEATH at=/;
 export const isDeathLine = (line: string) => DEATH_LINE_RE.test(line);
 export const diedInRun = (stdout: string) => lastMatchingLine(stdout, isDeathLine) !== undefined;
 
+// The openBot flee guard (packages/core/src/bot/open.ts) stops the session `fled at low hitpoints: ...`, and the combat
+// workers put `fled=true` in their RESULT. pk-spar's `fled=<count>` is a fight tally, not a flee stop.
+export const isFleeStop = (result: string) => /^RESULT fail\b/.test(result) && /\bfled=true\b|fled at low hitpoints/.test(result);
+
 export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
@@ -261,6 +265,9 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (/died=true|RESULT fail died/.test(result) || diedInRun(r.stdout)) return { reason: 'died', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
+        // A flee stop leaves the account at low hitpoints with no food next to the same monsters. A restart logs in at
+        // that HP and fights again, so a heal or resupply job must run first.
+        if (isFleeStop(result)) return { reason: 'stopped', runs };
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
         // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
         if (isEntryRefusal(result) || isNamedRefusal(result)) return { reason: 'refused', runs };

@@ -8,7 +8,7 @@
 // areas/area_ardougne_west/scripts/{omart,kilron,doors,mourner}.rs2, areas/area_ardougne_east/scripts/king_lathas.rs2.
 // Untradeable (quest_biohazard.obj): birdfeed, pigeons, key, distillator, the three vials, sample, touch paper,
 // doctors' gown, so the bot collects them itself.
-import { openQuest } from './quest-lib';
+import { openQuest, retreatTeleportsFor } from './quest-lib';
 
 const ELENA = { x: 2592, z: 3336 };
 const JERICO = { x: 2612, z: 3324 };
@@ -37,7 +37,9 @@ const CASTLE_STAIRS = { id: 1722, x: 2571, z: 3295 };      // stairs -> stairsto
 const ITEM = { gown: 426, robe: 428, doctor: 430, feed: 422, pigeons: 424, apple: 1984, key: 423, distillator: 420,
     ethenea: 415, honey: 416, broline: 417, sample: 418, paper: 419 };
 
-const q = await openQuest({ cap: 5000, burst: true });
+// A teleport destroys the plague sample (skill_magic/scripts/spells/teleport.rs2:94-97), so a retreat with the sample
+// walks; before it, the Ardougne teleport (the quest's own exit from the HQ) comes first.
+const q = await openQuest({ cap: 5000, burst: true, retreatTeleports: (): readonly string[] => retreatTeleportsFor('magic:ardougne_teleport', q.has(ITEM.sample)) });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -142,12 +144,19 @@ try {
         await q.climb('hq stairs', () => q.findLoc(l => l.id === HQ_STAIRS.id && l.distance <= 15) ?? HQ_STAIRS, /climb-up|^climb$/i, () => q.lvl() === 1);
         await q.walk('to up door', [{ x: UP_DOOR.x - 1, z: UP_DOOR.z, tol: 0 }]);
         await cross('up door', UP_DOOR, /^open$/i, () => x() >= UP_DOOR.x);
+        // The fight uses the account's kit (q.attackNpc): the sweep brings the strike spell's staff and runes for a
+        // Magic-over-Attack account (QUEST_CASTS biohazard), or the bow and arrows for a Ranged one. A Strength 1 melee
+        // account hit for about 1 and took 54 damage over 280 ticks to its death. A cast does not repeat, so the loop
+        // calls again every 5 ticks.
         for (let i = 0; i < 6 && !q.has(ITEM.key); i++) {
-            await q.guard('sick mourner');
+            await q.fightReady('sick mourner');
             const m = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^mourner$/i.test(n.name) && n.combatLevel === 13).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (!m) { await q.waitTicks(2); continue; }
-            await q.attack(m);
-            await q.waitUntil(() => q.has(ITEM.key) || !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === m.index), 60);
+            const here = (): any => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.index === m.index);
+            for (let k = 0; k < 12 && !q.has(ITEM.key) && here(); k++) {
+                await q.attackNpc(here());
+                await q.waitUntil(() => q.has(ITEM.key) || !here(), 5);
+            }
             await q.waitUntil(() => q.has(ITEM.key), 4);
         }
         if (!q.has(ITEM.key)) await q.fail('no mourner key');

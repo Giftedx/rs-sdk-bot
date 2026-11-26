@@ -2,14 +2,14 @@
 // Usage: [MODE: arrows | headless | steel | shafts | bows] [TIP_TYPE: rune | adamant | mithril | steel]
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, finish, countItems, settle } from '../../../core/src/bot';
+import { accountOf, getWorld, openBot, finish, countItems, settle } from '../../../core/src/bot';
 import { longbowIds } from '../../../core/src/content-facts';
 import { depositObserved, depositPack } from '../../../core/src/deposit';
 import { killTree } from '../../../core/src/proc';
 import { statusReadDirs } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { knownBanks } from '../../../core/src/trip';
-import { sessionWalker, walkPath } from '../../../core/src/walk';
+import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { CONTENT_DIR, packMap, REPO_ROOT } from './catalog';
 import { productionStopRequested } from './runtime';
@@ -23,7 +23,15 @@ const KNIFE = 946;
 
 export async function runShafts(
     s: Session,
-    o: { cap: number; maximum: number; reserve: number; bankKnife?: boolean; stop?: () => boolean; pause?: () => boolean },
+    o: {
+        cap: number;
+        maximum: number;
+        reserve: number;
+        bankKnife?: boolean;
+        stop?: () => boolean;
+        pause?: () => boolean;
+        travel?: (to: { x: number; z: number; level: number }) => Promise<{ ok: boolean; detail?: string }>;
+    },
 ) {
     if (![o.cap, o.maximum, o.reserve].every(Number.isSafeInteger) || o.cap < 1 || o.maximum < 1 || o.maximum > 25 || o.reserve < 0) {
         throw Error('shafts requires positive CAP, MAX_MAKE1..25 logs and nonnegative LOG_RESERVE');
@@ -100,7 +108,27 @@ export async function runShafts(
     };
     try {
         if (inv().some(i => /logs/i.test(i.name) && i.id !== LOG)) throw Error('shafts unrelated held logs or notes');
-        await open();
+        // A start away from a bank (for example a mine) walks to the nearest bank first. A stop during that walk is a
+        // stop, and a failed walk is a refusal, not a log shortage.
+        const p = s.sdk.getState()?.player;
+        const bank = p && !s.sdk.getState()?.bank.isOpen ? nearestBankStand(p) : undefined;
+        if (p && bank && cheb(bank, p) > 2) {
+            const moved = await walkToShaftsBank(s, bank, () => over() || !!o.pause?.(), o.travel);
+            if (o.stop?.() || o.pause?.()) {
+                stop = 'stopped';
+                throw Error('shafts stopped during the walk to the bank');
+            }
+            if (!moved.ok) {
+                stop = 'refused';
+                throw Error(`shafts walk to the bank at ${bank.x},${bank.z} failed: ${moved.detail ?? 'no detail'}`);
+            }
+        }
+        try {
+            await open();
+        } catch (e) {
+            stop = 'refused';
+            throw e;
+        }
         initial = totals();
         await deposit();
         planned = Math.max(0, Math.min(o.maximum, bankCount(LOG) - o.reserve));
@@ -201,11 +229,33 @@ export async function runShafts(
 // ---- Arrows, Headless Arrows, and Oak Bows (fletch-arrows.ts) ----
 
 export const BANK_WALK_LIMIT = 80;
-const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) =>
-    Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
+function cheb(a: { x: number; z: number }, p: { worldX: number; worldZ: number }) {
+    return Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
+}
 
 export function nearestBankStand(p: { worldX: number; worldZ: number; level: number }, banks = knownBanks()) {
     return banks.filter(b => b.level === p.level).sort((a, b) => cheb(a, p) - cheb(b, p))[0];
+}
+
+// A near bank is a local walk. A far bank takes the world route, which uses ships and other transport.
+async function walkToShaftsBank(
+    s: Session,
+    bank: { x: number; z: number; level: number },
+    halt: () => boolean,
+    travel?: (to: { x: number; z: number; level: number }) => Promise<{ ok: boolean; detail?: string }>,
+): Promise<{ ok: boolean; detail?: string }> {
+    if (travel) return travel(bank);
+    const p = s.sdk.getState()!.player!;
+    if (cheb(bank, p) <= BANK_WALK_LIMIT) return walkPath(await sessionWalker(s), [{ ...bank, tol: 1 }], { maxTicks: 400, stop: halt });
+    const ac = new AbortController();
+    const off = s.onTick(() => {
+        if (halt()) ac.abort('shafts travel stop');
+    });
+    try {
+        return await goTo(s, await getWorld(), bank, accountOf(s), { legTimeoutTicks: 100, signal: ac.signal });
+    } finally {
+        off();
+    }
 }
 
 export interface HeadlessOptions {

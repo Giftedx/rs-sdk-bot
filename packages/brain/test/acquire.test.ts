@@ -677,3 +677,32 @@ test('a shop with no seller tile is no source', () => {
     const tiled = resolveAcquireItem(acct, { itemId: 1931, quantity: 1, allowedSources: ['npc_shop'] }, { world, customShops: [{ ...shop, tile: { x: 3093, z: 3245, level: 0 } }] });
     expect(tiled.step?.shopId).toBe('tileless_test_shop');
 });
+
+test('a market acquire step names its market activity, so a failed chain buy reaches the outcome classifier', () => {
+    const acct = makeAcct();
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
+    const shop = { shop: 'fish_test_shop', itemId: 383, stock: 50, restockTicks: 10, cost: 250, tile: { x: 3093, z: 3245, level: 0 } };
+    const viaShop = resolveAcquireItem(acct, { itemId: 383, quantity: 5, allowedSources: ['npc_shop'] }, { world, customShops: [shop] });
+    expect(viaShop.step?.source).toBe('npc_shop');
+    expect(viaShop.step?.activityId).toBe('market:shop-buy');
+    const viaGe = resolveAcquireItem(acct, { itemId: 383, quantity: 5, allowedSources: ['ge'] }, { world, marketQuotes: { 383: { ask: 400, sell: 380, trades: 15 } } });
+    expect(viaGe.step?.source).toBe('ge');
+    expect(viaGe.step?.activityId).toBe('market:ge-buy');
+});
+
+test('a shop whose restock wait exceeds one shop-buy run is no source for a full order, and caps a partial order', () => {
+    const acct = makeAcct();
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
+    // The Ardougne gem stall shape: 2 on the shelf, a restock each 15000 ticks.
+    const stall = { shop: 'slow_test_stall', itemId: 383, stock: 2, restockTicks: 15_000, cost: 250, tile: { x: 3093, z: 3245, level: 0 } };
+    const full = resolveAcquireItem(acct, { itemId: 383, quantity: 10, allowedSources: ['npc_shop'] }, { world, customShops: [stall] });
+    expect(full.ok).toBe(false);
+    expect(full.skippedReasons.some((r) => r.source === 'npc_shop' && /restock wait 60000 .* > cap 3000/.test(r.reason))).toBe(true);
+    const partial = resolveAcquireItem(acct, { itemId: 383, quantity: 10, allowPartial: true, allowedSources: ['npc_shop'] }, { world, customShops: [stall] });
+    expect(partial.step?.shopId).toBe('slow_test_stall');
+    expect(partial.step?.quantity).toBe(2);
+    expect(partial.step?.estimatedCoinCost).toBe(500);
+    const shelf = resolveAcquireItem(acct, { itemId: 383, quantity: 2, allowedSources: ['npc_shop'] }, { world, customShops: [stall] });
+    expect(shelf.step?.shopId).toBe('slow_test_stall');
+    expect(shelf.step?.quantity).toBe(2);
+});

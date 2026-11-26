@@ -713,10 +713,31 @@ export function combatPotionSession(s: CombatSession, stop: () => boolean, cap: 
                 && client.npc?.[n.index]?.type?.id === n.id
                 && n.optionsWithIndex.some(o => o.opIndex === 3 && /^bank$/i.test(o.text)),
         ) === true;
+    // The option text of an interactNpc action, from the NPC that the action names. Undefined when the NPC or the
+    // option is not observed.
+    const npcOption = (a: any): string | undefined =>
+        s.sdk.getState()?.nearbyNpcs?.find(n => n.index === a?.npcIndex)?.optionsWithIndex?.find(o => o.opIndex === a?.optionIndex)?.text;
+    // Cleanup refuses new combat and potions only. The bank-return route talks to ship and travel NPCs (Talk-to, Travel,
+    // Pay-fare), so an interactNpc whose observed option is not Attack passes. An unobserved option is refused, and a
+    // Bank option passes only on a checked banker (bankAction).
+    const combatAction = (a: any) => {
+        const type = String(a?.type ?? '');
+        if (/Player/.test(type) || /^spellOn(Npc|Player)$/i.test(type)) return true;
+        if (type === 'interactNpc') {
+            if (bankAction(a)) return false;
+            const option = npcOption(a)?.trim();
+            return option === undefined || /^(attack|bank)$/i.test(option);
+        }
+        return false;
+    };
     const checkAction = (a: any) => {
         check();
-        if (cleanup && ((/Npc|Player|[Ss]pell/.test(a?.type ?? '') && !bankAction(a)) || (a?.type === 'useInventoryItem' && isPotion(a.slot)))) {
-            throw Error('combat cleanup refuses new paid combat/potion');
+        if (cleanup && (combatAction(a) || (a?.type === 'useInventoryItem' && isPotion(a.slot)))) {
+            const npc = s.sdk.getState()?.nearbyNpcs?.find(n => n.index === a?.npcIndex);
+            throw Error(
+                'combat cleanup refuses new paid combat/potion '
+                + JSON.stringify({ type: a?.type, npc: npc?.id, option: a?.type === 'interactNpc' ? (npcOption(a) ?? null) : undefined, slot: a?.slot }),
+            );
         }
     };
     const sdk = new Proxy(s.sdk, {

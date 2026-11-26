@@ -2044,9 +2044,16 @@ export async function runRangedStarter(
     const life = player()?.lifeId;
     const stopped = () => stopRequested() || hp() < 6 || player()?.isDead === true || player()?.lifeId !== life;
     let ok = false;
+    // A start that is not a fresh Tutorial Island account can never run this route. The result names it as no
+    // progress, so the supervisor blocks the job and does not log the account in again for it.
+    const tutorial = player();
+    if (!freshRangedStart(tutorial, ranged(), xp())) {
+        const refused = `no ranged-starter progress: fresh tutorial start required, not ${tutorial?.worldX},${tutorial?.worldZ},${tutorial?.level} ranged=${ranged()} xp=${xp()}`;
+        console.error(refused);
+        await settle([sess], false, refused);
+        return false;
+    }
     try {
-        const tutorial = player();
-        check(freshRangedStart(tutorial, ranged(), xp()), 'fresh tutorial start required');
         if (!leaveStarter) throw Error('ranged-starter requires leaveStarter callback for Tutorial Island');
         await leaveStarter(session, stopped);
         const p = player();

@@ -2382,3 +2382,34 @@ test('Ikov runs bare with excess food trimmed, and newly mapped quests enforce W
  const {QUEST_FINDS}=await import('../src/quest/sweep');
  expect(QUEST_FINDS.druidspirit).toEqual([2952]);
 });
+
+import {fightMeals,withFightMeals,fightMealsShort,prayerPotionDemand,QUEST_CASTS as CASTS,crossesWilderness} from '../src/quest/sweep';
+test('a quest fight stages meals for the live account hitpoints, not the all-99 preset', () => {
+ // Stirmypot: 31 hitpoints; the preset carried 2 lobsters and the sweep withdrew none.
+ expect(fightMeals('biohazard',31)).toBe(6);
+ expect(fightMeals('priestperil',18)).toBe(5);
+ expect(fightMeals('imp',10)).toBe(0);
+ const food=withFightMeals(new Map([[379,2],[563,4],[555,4]]),'biohazard',31);
+ expect(food.get(379)).toBe(6);
+ expect(food.get(563)).toBe(4);
+ // Priest in Peril's preset has no meal: lobsters stand in.
+ expect(withFightMeals(new Map([[563,2]]),'priestperil',18).get(379)).toBe(5);
+ expect(withFightMeals(new Map([[379,2]]),'imp',10).get(379)).toBe(2);
+ expect(fightMealsShort(6,[{id:379,count:2}],[{id:385,count:3}])).toBe(1);
+ expect(fightMealsShort(6,[{id:379,count:2}],[{id:379,count:4}])).toBe(0);
+ expect(fightMealsShort(0,[],[])).toBe(0);
+});
+test('Biohazard brings strike casts for a Magic account', () => {
+ expect(CASTS['biohazard']).toBe(12);
+});
+test('prayer potion demand is the preset count unless Prayer covers the fights', () => {
+ expect(prayerPotionDemand('tree',1)).toBeGreaterThan(0);
+ expect(prayerPotionDemand('tree',99)).toBe(0);
+ expect(prayerPotionDemand('imp',1)).toBe(0);
+});
+test('a surface walk whose straight line enters the Wilderness goes to the router', () => {
+ // Lumbridge to Drezel's 3440,9893 walked as a surface tile went through Wilderness level 56.
+ expect(crossesWilderness({x:3222,z:3218},{x:3249,z:3965})).toBe(true);
+ expect(crossesWilderness({x:3222,z:3218},{x:3210,z:3424})).toBe(false);
+ expect(crossesWilderness({x:3100,z:3500},{x:3100,z:3519})).toBe(false);
+});

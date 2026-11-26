@@ -485,10 +485,19 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
     // Enforce 1-per-venue concurrency for market shop-buy (itemId + shopId) and GE-buy (itemId + ge)
     // within a single scheduling cycle so accounts do not dogpile shared NPC shop stock or GE asks.
+    // A chain buys its inputs through acquire and gear_upgrade steps, so those venues count as well.
     const allocatedMarketVenues = new Set<string>();
     const planMarketVenues = (plan: AccountPlan): string[] => {
         const venues: string[] = [];
         for (const st of plan.steps) {
+            if (st.stepKind === 'acquire' || st.stepKind === 'gear_upgrade') {
+                if (st.source === 'npc_shop' && typeof st.shopId === 'string' && st.shopId.length > 0) {
+                    venues.push(marketCooldownKey(st.itemId, `shop:${st.shopId}`));
+                } else if (st.source === 'ge') {
+                    venues.push(marketCooldownKey(st.itemId, 'ge'));
+                }
+                continue;
+            }
             if (st.stepKind !== 'work' || !st.config) continue;
             const itemId = st.config.itemId;
             if (typeof itemId !== 'number' || !Number.isFinite(itemId)) continue;

@@ -2583,6 +2583,35 @@ export async function runGoldfarmKnights(s: Session, cfg: NormalizedGatherConfig
     }
 }
 
+// The entry walk of the stable knights farm: nothing when the start is in the market, else the world route to the
+// market bank. Thieving below 55 does not walk: the farm refuses it anyway.
+export async function goldfarmEntryTravel(
+    s: Session,
+    cfg: NormalizedGatherConfig,
+    stop: () => boolean,
+): Promise<{ ok: boolean; stopped: boolean; detail: string }> {
+    const p = s.sdk.getState()?.player;
+    const thieving = s.sdk.getSkill('Thieving')?.baseLevel ?? 0;
+    if (!p || thieving < 55 || !/start in Ardougne market/.test(farmStartProblem(p, thieving) ?? '')) return { ok: true, stopped: false, detail: '' };
+    const to = { x: BANK_SPOT.x, z: BANK_SPOT.z, level: 0 };
+    const walk = cfg.deps?.walkTargetPersist
+        ? undefined
+        : async (tile: Tile & { level: number }) => {
+              const cancel = new AbortController();
+              const off = s.onTick(() => {
+                  if (stop()) cancel.abort('stop requested');
+              });
+              try {
+                  return await goTo(s, await getWorld(), tile, accountOf(s), { maxRetriesPerLeg: 2, legTimeoutTicks: 150, signal: cancel.signal });
+              } finally {
+                  off();
+              }
+          };
+    const r: { ok: boolean; reason?: string; detail?: string } = stop() ? { ok: false, detail: 'stop requested' } : await defaultWalkTargetPersist(s, to, 4, cfg.deps, walk);
+    if (stop()) return { ok: false, stopped: true, detail: 'stop requested' };
+    return { ok: r.ok, stopped: false, detail: `${r.reason ?? '-'} ${r.detail ?? '-'}` };
+}
+
 export async function runGoldfarmStableSession(
     s: Session,
     cfg: NormalizedGatherConfig,
@@ -2597,6 +2626,11 @@ export async function runGoldfarmStableSession(
     if (!(await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0, { timeoutTicks: 40 }))) {
         throw Error('no goldfarm progress: entry state deadline');
     }
+    // A start outside the Ardougne market (for example the north trade hub or Varrock) walks the world route to the
+    // market bank first, as the knights farm does. A stop during that walk ends the run as stopped.
+    const travelled = await goldfarmEntryTravel(s, cfg, stop);
+    if (travelled.stopped) throw Error('goldfarm stopped during the walk to the Ardougne market');
+    if (!travelled.ok) throw Error(`no goldfarm progress: travel to the Ardougne market failed: ${travelled.detail}`);
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;

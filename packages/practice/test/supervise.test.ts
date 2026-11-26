@@ -582,3 +582,21 @@ test('a run that the swarm drain-stopped ends as release-paused; an owner stop s
         expect(participantsDrainStopped(['Nobody'], root)).toBe(false);
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test('a flee stop ends the job: a restart would log in at low hitpoints with no food next to the same monsters', async () => {
+    const { isFleeStop } = await import('../src/supervise');
+    const staffstiffy = 'RESULT fail ticks=307 kills=1 looted=0 bankTrips=1 walkTicks=245 hp=2 maximum=200 fled=true endTicks=51 endUnderAttack=true endLeft=false endQuiet=true endTiles=0 endEats=0 logout=confirmed logoutTries=1';
+    const magicwanda = 'RESULT fail Error: combat potion consumer original owner/life/stop fled=true';
+    expect(isFleeStop(staffstiffy)).toBe(true);
+    expect(isFleeStop(magicwanda)).toBe(true);
+    expect(isFleeStop('RESULT fail fled at low hitpoints: flee_guard id=13 at=3109,3148 ticks=40')).toBe(true);
+    expect(isFleeStop('RESULT fail spar-batch fights=4 kills=1 deaths=0 escapes=0 fled=2 draws=1')).toBe(false);
+    expect(isFleeStop('RESULT ok kills=5 fled=true')).toBe(false);
+    for (const line of [staffstiffy, magicwanda]) {
+        let n = 0;
+        const r = await supervise({ run: async () => { n++; return { stdout: ['LEDGER ticks=900 xp=40 inventory=2 idle=10', line].join('\n'), exitCode: 1 }; },
+            stopped: () => false, pause: async () => { throw Error('must not log in again after a flee stop'); }, maxRestarts: 20 });
+        expect(r).toEqual({ reason: 'stopped', runs: 1 });
+        expect(n).toBe(1);
+    }
+});

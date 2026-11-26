@@ -39,6 +39,14 @@ import {
     cowReleased,
     cowRoutePoints,
     combatBankWalk,
+    combatFailDetail,
+    combatFoodByHeal,
+    combatFoodHeld,
+    combatFoodWanted,
+    combatLifeWatch,
+    combatNoFood,
+    combatOutOfFood,
+    combatPrayerShort,
     combatStallWords,
     combatStopEnd,
     cowStopControl,
@@ -135,6 +143,26 @@ test('Draynor wizard threshold follows its hunt3 plus one tile; jail guards and 
 
 test('bootstrap chicken demand is finite and invalid demand fails before game actions',async()=>{
  for(const rawChicken of [-1,13,1.5,NaN])await expect(trainChickens({} as any,1800,'draynor',13,{rawChicken})).rejects.toThrow('0..12');
+});
+
+test('a start away from the chicken bank walks the world route to it, and a stop on that walk is a stop',async()=>{
+    // Live: "START 2615 3332 0" then "training requires draynor bank start" (Ardougne north trade hub).
+    const run=async(stopOnTravel:boolean)=>{
+        let tick=0,stopped=false;const listeners=new Set<()=>void>();const asked:any[]=[];
+        const timer=setInterval(()=>{tick++;for(const f of [...listeners])f();},1);
+        const session:any={name:'chicken-far',tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},ended:new Promise(()=>{}),
+            sdk:{getState:()=>({player:{worldX:2615,worldZ:3332,level:0,combatLevel:3},nearbyNpcs:[],bank:{items:[]}}),getSkill:()=>({level:10,baseLevel:10}),getSkillXp:()=>0,getInventory:()=>[],getEquipment:()=>[]},
+            bot:{openBank:async()=>{throw Error('bank opened before the walk');}}};
+        try{
+            const err=await trainChickens(session,400,'draynor',13,{stop:()=>stopped,travel:async to=>{asked.push(to);if(stopOnTravel)stopped=true;return{ok:false,detail:'test route end'};}}).then(()=>'resolved',e=>String(e));
+            return{err,asked};
+        }finally{clearInterval(timer);}
+    };
+    const failed=await run(false);
+    expect(failed.asked).toEqual([{x:3092,z:3243,level:0}]);
+    expect(failed.err).toContain('training travel to the draynor bank failed: test route end');
+    const stopped=await run(true);
+    expect(stopped.err).toContain('training stopped during the walk to the draynor bank');
 });
 
 test('Ardougne is a local bank-to-farm profile and requires a bounded Strength goal',()=>{
@@ -629,25 +657,66 @@ test('a session stall stop names the stall in the result, so the supervisor bloc
  }
 });
 
+// Porksword and Quiverfull walked back toward the wizards after each death until the session stop arrived, 184 ticks
+// later. An open-ended run has no potion session, so only the life fields show the death.
+test('the loop ends at the first tick of a death and the result says died=true, also without a potion session',async()=>{
+ const g=genericCombat();let walks=0;g.player.worldX=3222;g.player.worldZ=3218;
+ for(let i=0;i<5;i++)g.s.sdk.getInventory().push({id:385,name:'Shark',count:1,slot:i});
+ const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,env:{},stop:()=>false,
+  walk:async()=>{walks++;g.player.lifeId=2;g.player.respawnCount=1;return false;}});
+ expect(walks).toBe(1);expect(r.ok).toBe(false);expect(r.detail).toContain('died=true');expect(r.detail).not.toContain('travel blocked');
+ const quiet=genericCombat(),watch=combatLifeWatch(quiet.s);expect(watch()).toBe(false);quiet.player.isDead=true;expect(watch()).toBe(true);
+});
+
+// Unsheathed and Shaftsinker entered the Black Knights with 0 Prayer points and took every hit with no protection.
+test('a Black Knight run with too few Prayer points refuses before it walks or banks; with enough points it walks',async()=>{
+ for(const points of [0,24,25]){
+  const g=genericCombat();let walks=0;g.player.worldX=2946;g.player.worldZ=3368;
+  for(let i=0;i<10;i++)g.s.sdk.getInventory().push({id:385,name:'Shark',count:1,slot:i});
+  g.s.sdk.getSkill=(name:string)=>name==='Hitpoints'?{name,level:80,baseLevel:80,experience:0}:name==='Prayer'?{name,level:points,baseLevel:47,experience:0}:undefined;
+  const r=await runGenericCombatSession(g.s,{target:'taverley_black_knight',cap:1000,env:{},stop:()=>false,walk:async()=>{walks++;return false;}});
+  expect(r.ok).toBe(false);
+  if(points<25){
+   expect(walks).toBe(0);expect(r.detail).toContain(`Prayer points ${points} below 25`);
+   expect(isNoProgressFailure(`RESULT fail ${r.detail}`)).toBe(true);
+  }else{expect(walks).toBe(3);expect(r.detail).toContain('travel blocked');}
+ }
+});
+
+test('the run food is PLAIN_FOOD by heal, it leaves the fight with no food at the eat level, and a no-food refusal keeps its words',()=>{
+ const order=combatFoodByHeal();expect(order[0]).toBe(385);expect(order).toContain(329);expect(order).toContain(315);
+ expect(order).not.toContain(1891);expect(order).not.toContain(2309);
+ expect(combatFoodHeld([{id:329,count:1},{id:1891,count:1},{id:385,count:2}])).toBe(3);
+ expect(combatFoodWanted(CONFIGS.wizard!)).toBe(5);expect(combatFoodWanted(CONFIGS.chaos_wine!)).toBe(0);
+ // defaultEatAt(81) is 40: at or below it with no food the run leaves the fight; with food the eat guard eats.
+ expect(combatOutOfFood(40,81,0)).toBe(true);expect(combatOutOfFood(41,81,0)).toBe(false);expect(combatOutOfFood(10,81,1)).toBe(false);expect(combatOutOfFood(0,81,0)).toBe(false);
+ expect(combatPrayerShort('taverley_black_knight',9,CONFIGS.taverley_black_knight!.prayer,'leave')).toContain('below 10');
+ expect(combatPrayerShort('taverley_black_knight',10,CONFIGS.taverley_black_knight!.prayer,'leave')).toBeUndefined();
+ expect(combatPrayerShort('wizard',0,CONFIGS.wizard!.prayer,'enter')).toBeUndefined();
+ expect(combatFailDetail(Error(combatNoFood('giant',8)))).toBe(combatNoFood('giant',8));
+ expect(combatFailDetail(Error('combat travel blocked'))).toBe('Error: combat travel blocked');
+});
+
 test('the tick cap that stops a full-pack bank walk ends the run as capped, not as a throw',async()=>{
  const g=genericCombat(28);let walks=0;
  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,env:{},walk:async()=>{walks++;g.setTick(1001);return false;},stop:()=>false});
  expect(walks).toBe(1);expect(r.detail).toContain('capped=true');expect(r.detail).not.toContain('bank return unavailable');expect(r.bankTrips).toBe(0);
 });
 
-// A generic combat session at the Draynor bank (the wizard bank) with a bank that opens, takes deposits and holds no food.
+// A generic combat session at the Draynor bank (the wizard bank) with a bank that opens, takes deposits and holds `food`.
 // The walk hook moves the player to the goal tile. Ticks advance on a timer.
-function bankingCombat(pack:{id:number;name:string}[]){
- let tick=0,generation=0,open=false;const listeners=new Set<()=>void>(),bank:{id:number;name:string;count:number}[]=[];
+function bankingCombat(pack:{id:number;name:string}[],food:{id:number;name:string;count:number}[]=[]){
+ let tick=0,generation=0,open=false;const listeners=new Set<()=>void>(),bank:{id:number;name:string;count:number}[]=food.map(f=>({...f}));
  const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);
  const player:any={worldX:3092,worldZ:3243,level:0,lifeId:1,respawnCount:0,isDead:false,combat:{inCombat:false,targetType:'none',targetIndex:-1}};
  const inventory=pack.map((p,slot)=>({...p,count:1,slot}));
  const s:any={name:'full-pack',client:{selfSlot:1,executeBotAction:()=>({success:true}),npc:{}},tick:()=>tick,ended:new Promise(()=>{}),
   onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>({generation,items:bank}),direct:async()=>({success:true}),
-  sdk:{getState:()=>({player,inventory,equipment:[],nearbyNpcs:[],nearbyLocs:[],groundItems:[],bank:{isOpen:open},interface:{isOpen:false}}),getInventory:()=>inventory,
+  sdk:{getState:()=>({player,inventory,equipment:[],nearbyNpcs:[],nearbyLocs:[],groundItems:[],bank:{isOpen:open,items:bank},interface:{isOpen:false}}),getInventory:()=>inventory,
    getSkill:(name:string)=>name==='Hitpoints'?{name,level:50,baseLevel:50,experience:0}:undefined,getStateAge:()=>0,sendCloseModal:async()=>{open=false;}},
   bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeInterface:async()=>{open=false;return{success:true};},
-   withdrawItem:async()=>({success:false}),pickupItem:async()=>({success:false}),
+   withdrawItem:async(row:{id:number},n:number)=>{const b=bank.find(i=>i.id===row.id&&i.count>=n);if(!open||!b)return{success:false};b.count-=n;
+    for(let i=0;i<n;i++)inventory.push({id:b.id,name:b.name,count:1,slot:inventory.length});generation++;return{success:true};},pickupItem:async()=>({success:false}),
    depositItem:async(row:{id:number;name:string})=>{let n=0;for(let i=inventory.length-1;i>=0;i--)if(inventory[i]!.id===row.id){n+=inventory[i]!.count;inventory.splice(i,1);}
     bank.push({id:row.id,name:row.name,count:n});generation++;return{success:true};}}};
  const walk=async(x:number,z:number)=>{player.worldX=x;player.worldZ=z;return true;};
@@ -666,11 +735,37 @@ test('a bank trip that leaves the pack full of items that are not loot ends the 
 });
 
 test('a bank trip that frees the pack goes on with the job',async()=>{
- const g=bankingCombat(Array.from({length:27},()=>({id:1444,name:'Water talisman'})));
+ const g=bankingCombat(Array.from({length:27},()=>({id:1444,name:'Water talisman'})),[{id:385,name:'Shark',count:20}]);
  try{
   const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{},walk:g.walk,stop:()=>false});
-  expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no combat progress');
-  expect(g.inventory).toEqual([]);expect(g.bank).toEqual([{id:1444,name:'Water talisman',count:27}]);
+  expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no combat progress');expect(r.detail).not.toContain('no food');
+  expect(g.inventory.map(i=>i.name)).toEqual(Array(5).fill('Shark'));
+  expect(g.bank).toEqual([{id:385,name:'Shark',count:15},{id:1444,name:'Water talisman',count:27}]);
+ }finally{g.stop();}
+});
+
+// FishAndChips banked 64 Salmon and fought the hill giants with an empty pack: the run withdrew only Shark or Lobster,
+// and only on a later full-pack trip. Unsheathed fought Black Knights with cake, which the eat guard never eats.
+test('a fight job withdraws any PLAIN_FOOD from the bank before its first fight, the highest heal first',async()=>{
+ const g=bankingCombat([],[{id:333,name:'Trout',count:3},{id:329,name:'Salmon',count:64}]);
+ try{
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{},walk:g.walk,stop:()=>false});
+  expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no food');
+  expect(g.inventory.map(i=>i.name)).toEqual(Array(5).fill('Salmon'));expect(g.bank[1]).toEqual({id:329,name:'Salmon',count:59});
+ }finally{g.stop();}
+ // The giant row asks for 8 food, the Black Knight site 10.
+ expect(combatFoodWanted(CONFIGS.giant!)).toBe(8);expect(combatFoodWanted(CONFIGS.taverley_black_knight!)).toBe(10);
+});
+
+test('a fight job with no food in the bank or the pack ends with RESULT fail no food before the first fight',async()=>{
+ // Cake and bread are no PLAIN_FOOD: the eat guard never eats them.
+ const g=bankingCombat([{id:1891,name:'Cake'}],[{id:2309,name:'Bread',count:10}]);
+ try{
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{},walk:g.walk,stop:()=>false});
+  expect(r.ok).toBe(false);expect(r.kills).toBe(0);expect(r.bankTrips).toBe(1);
+  expect(r.detail.startsWith(combatNoFood('wizard',5))).toBe(true);
+  // packages/practice/src/supervise.ts ends the job on this text, so no restart walks back with no food.
+  expect(/RESULT fail no food/.test(`RESULT fail ${r.detail}`)).toBe(true);
  }finally{g.stop();}
 });
 

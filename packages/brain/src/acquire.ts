@@ -55,6 +55,19 @@ const EMPTY_DONORS: readonly AccountState[] = [];
 export const DEFAULT_ANTI_PING_PONG_MS = RECEIVED_ITEM_HOLD_MS;
 export const GE_LIMIT_BUFFER = 1.15;
 export const DEFAULT_MAX_GE_ASK_FLOOR_GP = 25_000;
+// The tick cap of a planned shop-buy run (worker-routing.ts npc_shop args). A shop whose travel and restock waits
+// exceed it cannot fill the order in one run.
+export const SHOP_BUY_CAP_TICKS = 3000;
+// The activity that a market acquire step is charged to. A failed shop or GE buy inside a chain then reaches the
+// outcome classifier, which sets the venue cooldown (fleet/src/swarm.ts chainOutcomeActivity).
+export const SHOP_BUY_ACTIVITY_ID = 'market:shop-buy';
+export const GE_BUY_ACTIVITY_ID = 'market:ge-buy';
+
+// The ticks the shop needs to restock the item (knowledge/shops.json), or undefined if no row names it.
+export function shopRestockTicks(itemId: number, shopId: string): number | undefined {
+    const row = (loadShopCatalogByItem().get(itemId) ?? EMPTY_SHOPS).find((s) => s.shop === shopId);
+    return row?.restockTicks ?? undefined;
+}
 
 export function isValidGeAskQuote(
     quote: MarketQuote | undefined,
@@ -492,21 +505,37 @@ export function resolveAcquireItem(
                     if (!skipDiag) shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
                     continue;
                 }
-                const restockCycles = Math.max(0, Math.ceil(req.quantity / Math.max(1, shop.stock)) - 1);
-                const restockWait = restockCycles * Math.max(5, shop.restockTicks ?? 30);
-                const buyTicks = Math.max(10, travelTicks + Math.ceil(req.quantity / 10) + restockWait + 15);
-                if (!bestShopStep || totalCost < bestShopStep.estimatedCoinCost
-                    || (totalCost === bestShopStep.estimatedCoinCost && buyTicks < bestShopStep.estimatedTicks)) {
+                const stockPerCycle = Math.max(1, shop.stock);
+                const restockTicks = Math.max(5, shop.restockTicks ?? 30);
+                const restockWaitFor = (qty: number) => Math.max(0, Math.ceil(qty / stockPerCycle) - 1) * restockTicks;
+                const runTicksFor = (qty: number) => travelTicks + Math.ceil(qty / 10) + restockWaitFor(qty) + 15;
+                // One run must fill the order. A partial order takes what the shop restocks inside the cap; a full
+                // order goes to the next source (the Ardougne gem stall restocks its 2 sapphires each 15000 ticks).
+                let shopQty = req.quantity;
+                if (runTicksFor(shopQty) > SHOP_BUY_CAP_TICKS) {
+                    const cycles = Math.floor((SHOP_BUY_CAP_TICKS - travelTicks - 15 - Math.ceil(shopQty / 10)) / restockTicks) + 1;
+                    const fits = Math.max(0, Math.min(shopQty, cycles * stockPerCycle));
+                    if (req.allowPartial !== true || fits < 1) {
+                        if (!skipDiag) shopRejectReason = `shop ${shop.shop} restock wait ${restockWaitFor(shopQty)} + travel ${travelTicks} > cap ${SHOP_BUY_CAP_TICKS} ticks`;
+                        continue;
+                    }
+                    shopQty = fits;
+                }
+                const shopCost = Math.ceil(shop.cost * shopQty);
+                const buyTicks = Math.max(10, runTicksFor(shopQty));
+                if (!bestShopStep || shopCost < bestShopStep.estimatedCoinCost
+                    || (shopCost === bestShopStep.estimatedCoinCost && buyTicks < bestShopStep.estimatedTicks)) {
                     bestShopStep = {
                         stepKind: 'acquire',
                         source: 'npc_shop',
                         itemId: req.itemId,
                         ...(itemName ? { itemName } : {}),
-                        quantity: req.quantity,
+                        quantity: shopQty,
                         estimatedTicks: buyTicks,
-                        estimatedCoinCost: totalCost,
+                        estimatedCoinCost: shopCost,
                         coinFloatPreserved: operatingFloat,
                         shopId: shop.shop,
+                        activityId: SHOP_BUY_ACTIVITY_ID,
                         venueKey: marketCooldownKey(req.itemId, `shop:${shop.shop}`),
                     };
                 }
@@ -595,6 +624,7 @@ export function resolveAcquireItem(
                     estimatedTicks: Math.max(25, reach.travelTicks + 30),
                     estimatedCoinCost: totalCost,
                     coinFloatPreserved: operatingFloat,
+                    activityId: GE_BUY_ACTIVITY_ID,
                     venueKey: marketCooldownKey(req.itemId, 'ge'),
                 },
                 source,

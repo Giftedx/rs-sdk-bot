@@ -514,6 +514,38 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'foraging', method: 'crystal-chest', script: 'scripts/aio-skiller.ts', label: 'Open Taverley crystal chests from Falador West', location: HUB_TILES.falador_west, xpPerTick: 0, unitsPerTick: 0.02, gpPerTick: 10, minBatchUnits: 1, requiredLevel: 1, outputs: [{ itemId: 1631, countPerUnit: 1 }], inputs: [{ itemId: 989, countPerUnit: 1 }] },
 ];
 
+// The druid, unicorn and wizard floors count and stage only shark and lobster. The generic combat bank step
+// (packages/workers/src/combat/melee-gather.ts runGenericCombatSession) withdraws the highest heal first, and 5 pieces
+// of a low-heal fish do not keep a weak account alive. The Hill Giant runner (GIANT_SITE) withdraws only shark.
+const GENERIC_COMBAT_FOOD_IDS: readonly number[] = [385, 379];
+const SHARK_ONLY_FOOD_IDS: readonly number[] = [385];
+
+// Fighter and boss targets with no brain combatSurvivability floor. packages/brain/test/catalog-survivability.test.ts
+// fails on any other fighter or boss row without a floor. Chickens hit 0 or 1. The cow runner refuses before the fight
+// without held trout or cake (melee-gather.ts "cow prerequisite"). The Ranged workers (workers/src/combat/ranged.ts)
+// withdraw only trout or salmon and refuse without them, so a brain food floor would stage food that they never take.
+// The imp and chompy runners take no bank food. The starter, loot and specialist routes own their food and targets.
+// The Fishing Trawler is not a fight.
+export const COMBAT_FLOOR_EXEMPT_TARGETS: ReadonlySet<string> = new Set([
+    'chicken',
+    'cow',
+    'imp',
+    'chompy',
+    'chompy-at-site',
+    'ranged',
+    'ranged-gather',
+    'ranged-camp',
+    'ranged-starter',
+    'loot-trip',
+    'ranged-specialist',
+    'attack-specialist',
+    'specialist-hp',
+    'specialist-strength',
+    'specialist-defence',
+    'boss-trawler',
+    'boss-trawler-at-site',
+]);
+
 interface FighterSeed {
     readonly target: string;
     readonly script: string;
@@ -538,10 +570,10 @@ interface FighterSeed {
 const FIGHTER_SPECS: readonly FighterSeed[] = [
     { target: 'chicken', script: 'scripts/aio-fighter.ts', label: 'Train melee on Lumbridge/Ardougne chickens', location: HUB_TILES.draynor, spotId: 'chickens', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Strength'], xpPerTick: 38, unitsPerTick: 0.14, gpPerTick: 0.5, minBatchUnits: 20, outputs: [{ itemId: 314, countPerUnit: 10 }, { itemId: 526, countPerUnit: 1 }] },
     { target: 'cow', script: 'scripts/aio-fighter.ts', label: 'Fight Ardougne cows for melee XP and cowhides', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 52, unitsPerTick: 0.12, gpPerTick: 2.5, minBatchUnits: 25, outputs: [{ itemId: 1739, countPerUnit: 1 }, { itemId: 2132, countPerUnit: 1 }, { itemId: 526, countPerUnit: 1 }] },
-    { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, combatSurvivability: { minHitpoints: 20, minFoodCount: 5 }, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
-    { target: 'unicorn', script: 'scripts/aio-fighter.ts', label: 'Kill Edgeville unicorns for unicorn horns', location: HUB_TILES.edgeville, spotId: 'edgeville-unicorns', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 45, unitsPerTick: 0.06, gpPerTick: 3, minBatchUnits: 10, outputs: [{ itemId: 237, countPerUnit: 1 }] },
-    { target: 'wizard', script: 'scripts/aio-fighter.ts', label: 'Kill Wizards Tower wizards for water talismans', location: HUB_TILES.wizards_tower, spotId: 'wizards-tower', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 55, unitsPerTick: 0.09, gpPerTick: 2, minBatchUnits: 15, outputs: [{ itemId: 1444, countPerUnit: 0.05 }] },
-    { target: 'giant', script: 'scripts/aio-fighter.ts', label: 'Fight Hill Giants for big bones, limpwurts, and runes', location: HUB_TILES.edgeville, spotId: 'hill-giants', maxConcurrentAccounts: 4, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.06, gpPerTick: 6, minBatchUnits: 20, combatSurvivability: { minHitpoints: 25, minFoodCount: 8 }, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 225, countPerUnit: 0.3 }, { itemId: 561, countPerUnit: 0.5 }, { itemId: 564, countPerUnit: 0.3 }] },
+    { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS }, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
+    { target: 'unicorn', script: 'scripts/aio-fighter.ts', label: 'Kill Edgeville unicorns for unicorn horns', location: HUB_TILES.edgeville, spotId: 'edgeville-unicorns', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 45, unitsPerTick: 0.06, gpPerTick: 3, minBatchUnits: 10, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS }, outputs: [{ itemId: 237, countPerUnit: 1 }] },
+    { target: 'wizard', script: 'scripts/aio-fighter.ts', label: 'Kill Wizards Tower wizards for water talismans', location: HUB_TILES.wizards_tower, spotId: 'wizards-tower', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 55, unitsPerTick: 0.09, gpPerTick: 2, minBatchUnits: 15, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS }, outputs: [{ itemId: 1444, countPerUnit: 0.05 }] },
+    { target: 'giant', script: 'scripts/aio-fighter.ts', label: 'Fight Hill Giants for big bones, limpwurts, and runes', location: HUB_TILES.edgeville, spotId: 'hill-giants', maxConcurrentAccounts: 4, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.06, gpPerTick: 6, minBatchUnits: 20, combatSurvivability: { minHitpoints: 25, minFoodCount: 8, foodIds: SHARK_ONLY_FOOD_IDS }, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 225, countPerUnit: 0.3 }, { itemId: 561, countPerUnit: 0.5 }, { itemId: 564, countPerUnit: 0.3 }] },
     { target: 'trooper', script: 'scripts/aio-fighter.ts', label: 'Train melee/Ranged/HP on Khazard troopers', location: HUB_TILES.khazard_field, spotId: 'khazard-troopers', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged'], xpPerTick: 165, unitsPerTick: 0.05, gpPerTick: 1, minBatchUnits: 20, combatSurvivability: { minHitpoints: 35, minDefence: 20, minFoodCount: 10 }, defaultEnv: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '90', CAP: '3000' } },
     { target: 'fire-giant', script: 'scripts/aio-fighter.ts', label: 'Fight Fire Giants in Waterfall Dungeon', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 210, unitsPerTick: 0.03, gpPerTick: 12, minBatchUnits: 15, riskPerHour: 0.08, requiredQuests: ['waterfall'], combatSurvivability: { minHitpoints: 50, minDefence: 40, minFoodCount: 12 }, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 1333, countPerUnit: 0.02 }] },
     { target: 'fire-combat', script: 'scripts/aio-fighter.ts', label: 'Fire Giant safespot/melee trip', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Ranged', skills: ['Ranged', 'Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 190, unitsPerTick: 0.03, gpPerTick: 10, minBatchUnits: 15, riskPerHour: 0.05, requiredQuests: ['waterfall'], combatSurvivability: { minHitpoints: 50, minDefence: 40, minFoodCount: 12 } },
@@ -1365,6 +1397,18 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     const EXTRA_QUEST_PREREQS: Readonly<Record<string, readonly string[]>> = {
         biohazard: ['elena'],
     };
+    // Quest scripts that fight with melee and no HP or food check before the attack: quest-priestperil.ts kill() on the
+    // Temple guardian, quest-biohazard.ts on the sick mourner, dwarfcannon.ts at the goblin railings. Their only guard
+    // is the flee at 30% HP, one hit at 10 to 18 max HP (live deaths at 18 HP to the Temple guardian, 31 HP with
+    // Strength 1 to the Mourner, 10 HP at the railings). The floor refuses weak accounts and stages food in the bank.
+    const QUEST_FIGHT_FLOORS: Readonly<Record<string, {
+        readonly skills?: Readonly<Record<string, number>>;
+        readonly survivability: CombatSurvivabilityFloor;
+    }>> = {
+        priestperil: { skills: { Attack: 20, Strength: 20 }, survivability: { minHitpoints: 30, minFoodCount: 6 } },
+        biohazard: { skills: { Attack: 10, Strength: 10 }, survivability: { minHitpoints: 25, minFoodCount: 8 } },
+        dwarfcannon: { survivability: { minHitpoints: 20, minFoodCount: 5 } },
+    };
 
     for (const [slug, meta] of [...questBySlug.entries()].sort(([a], [b]) => a.localeCompare(b))) {
         const aioKey = `quester:quest:${slug}`;
@@ -1377,6 +1421,10 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             requiredSkills[titleCase(sk)] = lvl;
         }
         for (const [sk, lvl] of Object.entries(EXTRA_QUEST_SKILLS[slug] ?? {})) {
+            requiredSkills[sk] = Math.max(requiredSkills[sk] ?? 1, lvl);
+        }
+        const fight = QUEST_FIGHT_FLOORS[slug];
+        for (const [sk, lvl] of Object.entries(fight?.skills ?? {})) {
             requiredSkills[sk] = Math.max(requiredSkills[sk] ?? 1, lvl);
         }
         const requiredQuests = [...new Set([...(QUEST_PREREQUISITES[slug] ?? []), ...(EXTRA_QUEST_PREREQS[slug] ?? [])])];
@@ -1396,6 +1444,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 questPoints: meta.qp,
                 ...(Object.keys(requiredSkills).length > 0 ? { requiredSkills } : {}),
                 ...(requiredQuests.length > 0 ? { requiredQuests } : {}),
+                ...(fight ? { combatSurvivability: fight.survivability } : {}),
                 // A quest-<slug>.ts quest runs through the quest sweep (aio-quester sweep <slug>,
                 // packages/workers/src/quest/sweep.ts): it stages the preset's items from the bank, shops and gathering,
                 // walks to the start tile and reads a started journal before the script runs. The sweep has no route to

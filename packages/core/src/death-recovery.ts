@@ -5,8 +5,11 @@
 // wears again what it wore. Then the session ends as a death, as before: the controller decides what runs next.
 // It does not go back into the Wilderness (a player kill gives the items to the killer), past the despawn, or when
 // a hunting NPC stronger than the bot stands near the tile (lootRisk in loot.ts). `DEATH_RECOVERY <result> ...`.
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { lootRisk, unitValue, type LootTables } from './loot';
 import { wildernessLevel } from './prayer-guard';
+import { targetsMe } from './randomevents/model';
 import { waitUntil, type TickSource } from './ticks';
 
 export type Tile = { x: number; z: number; level: number };
@@ -40,7 +43,8 @@ export function deathPlan(d: DeathSnapshot, now: number, at: { x: number; z: num
     if (wildernessLevel(d.at.x, d.at.z) > 0) return 'wilderness';
     if (d.pack.length === 0 && d.worn.length === 0) return 'nothing';
     const left = d.tick + DROP_TICKS - PICKUP_MARGIN - now;
-    if (left <= 0 || (at.level === d.at.level && cheb(at, d.at) > left * RUN_TILES_PER_TICK)) return 'too-far';
+    // The flat distance is a lower bound on the walk on any level: a death tile upstairs is no nearer.
+    if (left <= 0 || cheb(at, d.at) > left * RUN_TILES_PER_TICK) return 'too-far';
     return null;
 }
 
@@ -129,8 +133,11 @@ export const FLEE_HP = 0.3;
 // ---- death cause ----
 // The damage the player took in the last CAUSE_TICKS ticks, by source, from the state's combat events. On a death
 // openBot logs `DEATH at=x,z,level wild=N hp=h/max by=<source> taken=<damage> hits=<n> script=<file>`: the source
-// that did the most damage, so each death can be fixed by its cause.
+// that did the most damage, so each death can be fixed by its cause. The client can miss hitsplats, so `taken` is
+// the larger of the hitsplat damage and the Hitpoints the player lost in the same ticks, and with no hitsplat in the
+// window `by` names the last NPC that attacked the player in ATTACKER_TICKS ticks.
 export const CAUSE_TICKS = 20;
+export const ATTACKER_TICKS = 100;
 // A seen event key is kept this many ticks, above the state's combat event expiry (50 ticks), so an event that the
 // state still holds is never counted again.
 const SEEN_TICKS = 60;
@@ -146,18 +153,36 @@ export function sourceName(st: any, type: string, index: number): string {
 export function damageLog() {
     const hits: Hit[] = [];
     const seen = new Map<string, number>();
+    // Hitpoints lost per tick, from the player's hp; the last hp read; the last NPC that attacked the player.
+    const drops: { tick: number; damage: number }[] = [];
+    let lastHp: number | undefined;
+    let attacker: { tick: number; source: string } | undefined;
+    let lastTick = 0;
     return {
-        // Reads the new damage_taken events of a tick.
+        // Reads the new damage_taken events, the Hitpoints and the attackers of a tick.
         read(st: any) {
+            const tick = st?.tick ?? 0;
+            lastTick = tick;
+            const hp = st?.player?.hp;
+            if (typeof hp === 'number' && Number.isFinite(hp)) {
+                if (lastHp !== undefined && hp < lastHp) drops.push({ tick, damage: lastHp - hp });
+                lastHp = hp;
+            }
+            const near = (st?.nearbyNpcs ?? []).filter((n: any) => n && targetsMe(st, n))
+                .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+            if (near) attacker = { tick, source: sourceName(st, 'npc', near.index) };
             for (const e of st?.combatEvents ?? []) {
                 if (e?.type !== 'damage_taken') continue;
                 const key = e.observationId !== undefined ? `o${e.observationId}` : `${e.tick}:${e.sourceType}:${e.sourceIndex}:${e.damage}`;
                 if (seen.has(key)) continue;
                 seen.set(key, e.tick ?? st?.tick ?? 0);
-                hits.push({ tick: e.tick ?? st.tick ?? 0, damage: e.damage ?? 0, source: sourceName(st, e.sourceType, e.sourceIndex) });
+                const hit = { tick: e.tick ?? st.tick ?? 0, damage: e.damage ?? 0, source: sourceName(st, e.sourceType, e.sourceIndex) };
+                hits.push(hit);
+                if (!attacker || hit.tick >= attacker.tick) attacker = { tick: hit.tick, source: hit.source };
             }
-            const now = st?.tick ?? 0;
+            const now = tick;
             while (hits.length && now - hits[0]!.tick > CAUSE_TICKS) hits.shift();
+            while (drops.length && now - drops[0]!.tick > CAUSE_TICKS) drops.shift();
             for (const [key, tick] of seen) if (Math.abs(now - tick) > SEEN_TICKS) seen.delete(key);
         },
         // The death line's cause fields.
@@ -165,9 +190,25 @@ export function damageLog() {
             const by = new Map<string, number>();
             for (const h of hits) by.set(h.source, (by.get(h.source) ?? 0) + h.damage);
             const top = [...by].sort((a, b) => b[1] - a[1])[0];
-            return `by=${top?.[0] ?? 'unknown'} taken=${hits.reduce((n, h) => n + h.damage, 0)} hits=${hits.length}`;
+            const last = attacker && lastTick - attacker.tick <= ATTACKER_TICKS ? attacker.source : undefined;
+            const taken = Math.max(hits.reduce((n, h) => n + h.damage, 0), drops.reduce((n, h) => n + h.damage, 0));
+            return `by=${top?.[0] ?? last ?? 'unknown'} taken=${taken} hits=${hits.length}`;
         },
     };
+}
+
+// The alert line of a live death, in the .practice/alerts.jsonl format of scripts/monitor.ts. openBot writes it
+// itself, so a death makes an alert when no monitor runs.
+export type DeathAlert = { at: number; level: 'error'; key: string; text: string; bot: string };
+export const deathAlert = (bot: string, line: string, at: number): DeathAlert =>
+    ({ at, level: 'error', key: `died-${bot}-${at}`, bot, text: `${bot} died: ${line.slice(0, 160)}` });
+export function appendDeathAlert(root: string, alert: DeathAlert): boolean {
+    try {
+        const prac = join(root, '.practice');
+        mkdirSync(prac, { recursive: true });
+        appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify(alert) + '\n');
+        return true;
+    } catch { return false; }
 }
 
 export const deathLine = (d: DeathSnapshot | null, hp: string, cause: string, script: string) =>

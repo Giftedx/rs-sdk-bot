@@ -28,7 +28,8 @@ export interface ActionGate {
     isExclusive(): boolean;
     holding(): boolean;
     lastAction(): string | null;
-    send(a: Act): void;
+    /** Resolves false when the client rejects the action (success false) or the send throws. */
+    send(a: Act): Promise<boolean>;
     canSend(): boolean;
     flush(): void;
     expireHeld(tick: number, holdLimit: number): void;
@@ -192,9 +193,10 @@ export function createActionGate(opts: GateOptions): ActionGate {
     let lastSendTick = -1;
     const send = (a: Act) => {
         lastSendTick = s.tick();
-        void rawDirect({ reason: 'random-event', ...a }).then((r: any) => {
-            if (r && r.success === false) log(`EVENT ${activeName() ?? 'watcher'} send-failed t=${s.tick()} ${a.type}: ${r.message ?? ''}`);
-        }, () => {});
+        return Promise.resolve(rawDirect({ reason: 'random-event', ...a })).then((r: any) => {
+            if (r && r.success === false) { log(`EVENT ${activeName() ?? 'watcher'} send-failed t=${s.tick()} ${a.type}: ${r.message ?? ''}`); return false; }
+            return true;
+        }, () => false);
     };
 
     return {

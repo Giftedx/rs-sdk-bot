@@ -849,3 +849,15 @@ test('a planned order passes only with every unit bought or its stock target met
     expect(shopOrderShortText(435, 2000, 'cap', 314)).toBe('order short itemId=314 need=1565 bought=435/2000: missing supply after stop=cap');
     expect(shopOrderShortText(0, 1, 'pack-full')).toBe('order short need=1 bought=0/1: missing supply after stop=pack-full');
 });
+
+test('a shop walk with no route ends the run with the start and target that the brain records as a no-route fact', async () => {
+    const { shopNoRouteError } = await import('../src/market/shop-buy');
+    const { parseNoRoute } = await import('../../brain/src/no-route');
+    const here = { worldX: 2546, worldZ: 3325, level: 0 };
+    const err = shopNoRouteError({ reason: 'precondition', detail: 'no route to 2654,3283,0' }, here);
+    expect(err?.message).toBe('shop travel failed: position=2546,3325,0; no route to 2654,3283,0');
+    expect(parseNoRoute(`RESULT fail ${String(err)}`)).toEqual({ from: { x: 2546, z: 3325, level: 0 }, to: { x: 2654, z: 3283, level: 0 } });
+    // A search over budget or any other walk failure can pass on a retry: the walk goes on.
+    expect(shopNoRouteError({ reason: 'precondition', detail: 'no route (search over 45000 ms) to 2654,3283,0' }, here)).toBeNull();
+    expect(shopNoRouteError({ reason: 'timeout', detail: 'leg timed out' }, here)).toBeNull();
+});

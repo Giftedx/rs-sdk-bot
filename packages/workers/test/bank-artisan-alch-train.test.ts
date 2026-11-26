@@ -57,3 +57,29 @@ test('below Magic 21 the stage adds mind and air runes for the Wind Strike start
     expect(plan.take).toEqual([{ id: STRIKE.mind, count: n + STRIKE.spare }, { id: STRIKE.air, count: 20 }, { id: NATURE, count: 5 }, { id: FEATHER, count: 5 }, { id: FIRE, count: 21 }]);
     expect(alchStagePlan({ low: 2, high: 3, strike: 0 }, [], [{ id: STRIKE.mind, count: 500 }, { id: NATURE, count: 9 }, { id: FEATHER, count: 9 }, { id: FIRE, count: 99 }], FEATHER).take.some(t => t.id === STRIKE.mind)).toBe(false);
 });
+
+test('an account past the Wind Strike phase stages at its nearest bank; a stop on the stage walk is a stop, not a failure', async () => {
+    // Live: "START 3185 3436 0" (Varrock West bank), 319 move ticks to Ardougne, then ALCH_RESULT {"stop":"failure","failure":"alch stage: stop requested"}.
+    const { alchStageBank, runAlch, stageAlch } = await import('../src/bank-artisan/magic');
+    const varrockWest = { worldX: 3185, worldZ: 3436, level: 0 };
+    expect(alchStageBank(varrockWest, xpForLevel(31), 55)).toMatchObject({ x: 3185, z: 3440 });
+    expect(alchStageBank(varrockWest, xpForLevel(5), 55)).toMatchObject({ x: 2619, z: 3332 });
+    const session = (stopAfterWalk: boolean) => {
+        let stopped = false;
+        const asked: number[][] = [];
+        const s: any = {
+            name: 'alch-far', tick: () => 0, onTick: () => () => {}, ended: new Promise(() => {}),
+            sdk: { getState: () => ({ player: varrockWest, equipment: [], bank: { isOpen: false, items: [] } }), getInventory: () => [], getSkillXp: () => xpForLevel(31), getSkill: () => ({ level: 31, baseLevel: 31 }) },
+            bot: { openBank: async () => { throw Error('bank opened before the stage walk'); } },
+        };
+        const walk = async (x: number, z: number) => { asked.push([x, z]); if (stopAfterWalk) stopped = true; return false; };
+        return { s, asked, walk, stop: () => stopped };
+    };
+    const failed = session(false);
+    await expect(stageAlch(failed.s, { target: 55, item: FEATHER, walk: failed.walk, stop: failed.stop })).rejects.toThrow('alch stage: walk to the 3185,3440 bank failed');
+    expect(failed.asked).toEqual([[3185, 3440]]);
+    const halted = session(true);
+    const r = await runAlch(halted.s, { target: 55, cap: 1000, item: 'feather', walk: halted.walk, stop: halted.stop });
+    expect(r.stop).toBe('stopped');
+    expect(r.failure).toBe('');
+});

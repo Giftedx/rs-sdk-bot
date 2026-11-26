@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defaultActivityCatalog } from '../src/catalog';
 import type { AccountState, NoRouteFact, WorldSnapshot } from '../src/contracts';
-import { NO_ROUTE_TTL_MS, noRouteState, parseNoRoute } from '../src/no-route';
+import { enclosedAt, NO_ROUTE_TTL_MS, noRouteState, parseNoRoute } from '../src/no-route';
 import { OutcomeClassifier } from '../src/outcome-classifier';
 import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability } from '../src/preflight';
 
@@ -205,4 +205,58 @@ test('an operator resume clears the account no-route facts', () => {
     const resume = { schemaVersion: 1, id: 'cmd-1', issuedAt: NOW, issuedBy: 'test', kind: 'resume_account', account: 'MeatNTwoVeg' } as const;
     expect(classifier.applyOperatorCommand(resume, NOW)).toBe(true);
     expect(classifier.applyToSnapshot(world(meat()), NOW).accounts.MeatNTwoVeg!.noRoutes).toBeUndefined();
+});
+
+// KnightRider, shut in the West Ardougne Mourner HQ (.practice/swarm-logs/KnightRider.log, .practice/fleet-agent.log).
+const MOURNER_HQ = { x: 2546, z: 3325, level: 0 };
+const KARAMJA_JIMINUA = { x: 2767, z: 3122, level: 0 };
+const ARDOUGNE_HUB = { x: 2617, z: 3333, level: 0 };
+
+test('a shop buy and a fleet trade with no route from where the run ended each record a no-route fact', () => {
+    const classifier = new OutcomeClassifier({ root, persist: true });
+    const shop = classifier.classifyAndApplyRaw(
+        { activityId: 'market:shop-buy', account: 'KnightRider', exitCode: 1, status: 'fail', reason: 'blocked after 1 runs', detail: 'RESULT fail Error: shop travel failed: position=2546,3325,0; no route to 2767,3122,0', pos: MOURNER_HQ },
+        { now: NOW },
+    );
+    expect(shop.outcome.kind).toBe('worker_defect');
+    expect(shop.defect).toBeUndefined();
+    expect(shop.noRoute).toEqual({ from: MOURNER_HQ, to: KARAMJA_JIMINUA, activityId: 'market:shop-buy', observedAt: NOW, expiresAt: NOW + NO_ROUTE_TTL_MS });
+    const trade = classifier.classifyAndApplyRaw(
+        { activityId: 'logistics:trade', account: 'KnightRider', exitCode: 1, status: 'fail', reason: 'fail', detail: 'RESULT fail fleet-trade xfer-1795730863043-1 failed 0/1: Error: route to 2617, 3333: precondition no route to 2617,3333,0', pos: MOURNER_HQ },
+        { now: NOW },
+    );
+    expect(trade.outcome.kind).toBe('worker_defect');
+    expect(trade.noRoute?.to).toEqual(ARDOUGNE_HUB);
+});
+
+test('an account with no route from its tile to two far-apart places needs location recovery, not a job elsewhere', () => {
+    const knight = (pos: AccountState['pos'], noRoutes?: readonly NoRouteFact[]): AccountState => ({ ...meat(pos, noRoutes), name: 'KnightRider' });
+    expect(enclosedAt([fact('market:shop-buy', KARAMJA_JIMINUA, MOURNER_HQ), fact('logistics:trade', VARROCK_WEST, MOURNER_HQ)], MOURNER_HQ, NOW)?.to).toEqual(VARROCK_WEST);
+    // Two targets in one place say the obstacle is there, not at the start.
+    expect(enclosedAt([fact('market:shop-buy', ARDOUGNE_NORTH, MOURNER_HQ), fact('logistics:trade', ARDOUGNE_MARKET, MOURNER_HQ)], MOURNER_HQ, NOW)).toBeUndefined();
+    // Away from the start, the facts hold nothing.
+    expect(enclosedAt([fact('market:shop-buy', KARAMJA_JIMINUA, MOURNER_HQ), fact('logistics:trade', VARROCK_WEST, MOURNER_HQ)], VARROCK_WEST, NOW)).toBeUndefined();
+
+    const classifier = new OutcomeClassifier({ root, persist: true });
+    for (const [activityId, detail] of [
+        ['market:shop-buy', 'RESULT fail Error: shop travel failed: position=2546,3325,0; no route to 2767,3122,0'],
+        ['market:ge-buy', 'RESULT fail Error: market bank travel failed: position=2546,3325,0 currentHP=10 ticks=3; Error: no route to 3185,3436,0'],
+    ] as const) {
+        classifier.classifyAndApplyRaw({ activityId, account: 'KnightRider', exitCode: 1, status: 'fail', detail, pos: MOURNER_HQ }, { now: NOW });
+    }
+    expect(classifier.applyToAccount(knight(MOURNER_HQ), NOW + 1_000).lifecycle).toBe('needs_location_recovery');
+    expect(classifier.applyToAccount(knight(VARROCK_WEST), NOW + 2_000).lifecycle).toBe('idle');
+});
+
+test('an account at a hub bank with no route to two far-apart places stays idle, since the recovery walk ends there', () => {
+    const classifier = new OutcomeClassifier({ root, persist: true });
+    for (const [activityId, detail] of [
+        ['market:shop-buy', 'RESULT fail Error: shop travel failed: position=3185,3436,0; no route to 2767,3122,0'],
+        ['market:ge-buy', 'RESULT fail Error: market bank travel failed: position=3185,3436,0; Error: no route to 2619,3332,0'],
+    ] as const) {
+        classifier.classifyAndApplyRaw({ activityId, account: 'MeatNTwoVeg', exitCode: 1, status: 'fail', detail, pos: VARROCK_WEST }, { now: NOW });
+    }
+    const atHub = classifier.applyToAccount(meat(VARROCK_WEST), NOW + 1_000);
+    expect(enclosedAt(atHub.noRoutes, VARROCK_WEST, NOW + 1_000)).toBeDefined();
+    expect(atHub.lifecycle).toBe('idle');
 });
