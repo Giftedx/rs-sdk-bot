@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795730869413-1",
+ "account": "Moneyshot",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "74b78a48-9269-4f05-a37d-42d88c9c967b",
+ "count": 0,
+ "ok": false,
+ "at": 1795731143120,
+ "detail": "trade claimed"
+}

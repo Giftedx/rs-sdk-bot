@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795730863043-1",
+ "account": "SporranBulge",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "08ec7070-4877-47f7-b935-2851190490f7",
+ "count": 0,
+ "ok": false,
+ "at": 1795731139813,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795731123845
+ },
+ "logout": {
+  "attemptId": "1795731115548-0000019072-0000000001",
+  "at": 1795731139777,
+  "sha256": "86afb4e0dd791013fbdf5547837a7978e59ef859230f566128ea47f4fdd2918f"
+ },
+ "screen": false
+}

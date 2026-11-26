@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795730863043-1",
+ "account": "KnightRider",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "d236ac1f-0b80-4bd4-a9da-5e2deb4b5b51",
+ "count": 0,
+ "ok": false,
+ "at": 1795731139024,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795731131284-0000002472-0000000001",
+  "at": 1795731139012,
+  "sha256": "19ea98a31b69e56f24c8817d9b4db905d871360b33d9df208a9dcb208a952781"
+ },
+ "screen": false
+}
