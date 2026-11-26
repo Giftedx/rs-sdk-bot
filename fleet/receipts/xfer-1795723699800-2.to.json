@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795723699800-2",
  "account": "Quickhandjob",
  "partner": "ChaosInPants",
@@ -12,6 +12,12 @@
  "claim": "cfaf4e15-f217-434e-9a6b-916e2f0f2344",
  "count": 0,
  "ok": false,
- "at": 1795724546946,
- "detail": "trade claimed"
+ "at": 1795724600267,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795724546955-0000024736-0000000001",
+  "at": 1795724600253,
+  "sha256": "18f217a4813da5db048a9ba418285e84521fe88a70e372a8495d707a675a5fce"
+ },
+ "screen": false
 }
