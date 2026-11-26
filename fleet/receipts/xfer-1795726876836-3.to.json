@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726876836-3",
+ "account": "CoinCock",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "d2ab2333-f385-4a13-9460-22ae0a4d8545",
+ "count": 10,
+ "ok": true,
+ "at": 1795727093996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795727093262
+ },
+ "logout": {
+  "attemptId": "1795727082762-0000026544-0000000001",
+  "at": 1795727093984,
+  "sha256": "4cec223946b37b29860417daf77955a16ab594cb30acdaed0632f038a844f638"
+ },
+ "screen": true
+}
