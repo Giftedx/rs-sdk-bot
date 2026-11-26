@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717789970-1",
+ "account": "mmsmk1232",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 7,
+ "claim": "2180dbb2-b725-461d-a16c-900dca04659e",
+ "count": 0,
+ "ok": false,
+ "at": 1795718121384,
+ "detail": "trade claimed"
+}

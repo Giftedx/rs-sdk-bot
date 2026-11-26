@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795717768730-1",
+ "account": "Unsheathed",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 6,
+ "claim": "50ac28a8-6493-434a-93b4-7739bacdc0ec",
+ "count": 6,
+ "ok": true,
+ "at": 1795718135801,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795718135017
+ },
+ "logout": {
+  "attemptId": "1795718125651-0000022448-0000000001",
+  "at": 1795718135763,
+  "sha256": "cbe1ffa3fc10f0be901b1b5ef5c7b33132ddc9f492bdd98c6de4ce8a9447e7f8"
+ },
+ "screen": true
+}

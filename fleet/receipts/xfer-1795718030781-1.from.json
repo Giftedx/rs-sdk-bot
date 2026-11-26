@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718030781-1",
+ "account": "BowBeforeMe",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 253,
+ "claim": "90874985-0ebb-4288-855c-08805cfa29c6",
+ "count": 253,
+ "ok": true,
+ "at": 1795718083371,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 253,
+  "after": 0
+ },
+ "bank": {
+  "count": 253,
+  "at": 1795718069970
+ },
+ "logout": {
+  "attemptId": "1795718061385-0000016744-0000000001",
+  "at": 1795718083357,
+  "sha256": "5e099ed3c0e72a2d3b6dd29eaa59028936b19a0ffb98642902baa5dc24bf6c0e"
+ },
+ "screen": true
+}

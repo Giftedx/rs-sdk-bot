@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795718030781-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 253,
+  "itemId": 892,
+  "start": 1795718030781,
+  "end": 1795718930781,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

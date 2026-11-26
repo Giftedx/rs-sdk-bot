@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717768730-3",
+ "account": "KnightRider",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "599a4369-e37c-4384-a4cb-c35dc558a108",
+ "count": 0,
+ "ok": false,
+ "at": 1795718101070,
+ "detail": "trade claimed"
+}
