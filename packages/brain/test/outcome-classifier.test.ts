@@ -433,6 +433,9 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
 test('a short planned shop order cools its venue only when the shelf was empty', () => {
     const kind = (status: string) => classifyRawWorkerExit({ activityId: 'market:shop-buy', account: 'Bot1', exitCode: 1, status }).kind;
     expect(kind('RESULT fail order short bought=0/2: shop out of stock ticks=281 boughtTotal=0 stop=stock-wait')).toBe('market_unavailable');
-    expect(kind('RESULT fail order short bought=435/2000: ended on cap ticks=3085 boughtTotal=435 stop=cap')).not.toBe('market_unavailable');
+    const capped = classifyRawWorkerExit({ activityId: 'market:shop-buy', account: 'Bot1', exitCode: 1, status: 'RESULT fail order short itemId=314 need=1565 bought=435/2000: missing supply after stop=cap ticks=3085 boughtTotal=435 stop=cap' });
+    // A capped order with stock on the shelf is a supply shortfall: no venue cooldown, no worker quarantine.
+    expect(capped.kind).toBe('missing_supply');
+    if (capped.kind === 'missing_supply') expect(capped.missing).toEqual([{ itemId: 314, required: 1565, available: 0 }]);
     expect(kind('RESULT fail order short bought=0/1: insufficient coins ticks=99 boughtTotal=0 stop=coin-reserve')).toBe('missing_supply');
 });
