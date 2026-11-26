@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725716023-3",
+ "account": "Fatstack",
+ "partner": "TossTheCaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 2,
+ "claim": "57c6e7f5-c6fc-4a4a-83a7-3b45de8bad45",
+ "count": 0,
+ "ok": false,
+ "at": 1795726208796,
+ "detail": "trade claimed"
+}

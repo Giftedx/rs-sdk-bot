@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725998186-1",
+ "account": "Hocuspokeus",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 918,
+ "claim": "d1b59dfc-64c1-408c-932a-4cc43ae6266a",
+ "count": 0,
+ "ok": false,
+ "at": 1795726226524,
+ "detail": "trade claimed"
+}
