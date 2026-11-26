@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722090276-1",
  "account": "Billionaire",
  "partner": "YewGotWood",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 7185,
  "claim": "740033eb-e0f1-4d6f-b794-3071c7d29eef",
- "count": 0,
- "ok": false,
- "at": 1795722547542,
- "detail": "trade claimed"
+ "count": 7185,
+ "ok": true,
+ "at": 1795722561931,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1015,
+  "after": 8200
+ },
+ "bank": {
+  "count": 7185,
+  "at": 1795722561199
+ },
+ "logout": {
+  "attemptId": "1795722547553-0000021120-0000000001",
+  "at": 1795722561922,
+  "sha256": "cda3e6823c5a6ec11e36ec6b523b1ebadd590461bebf6dd3ac5d03070670f31c"
+ },
+ "screen": true
 }
