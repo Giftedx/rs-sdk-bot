@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795733561333-1",
+ "account": "Swordinhand",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "0523b3f3-b8a6-45c3-9247-d63780885cc6",
+ "count": 0,
+ "ok": false,
+ "at": 1795733816206,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795733660144,
+ "at": 1795733829924,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -77,21 +77,6 @@
    "account": "Billionaire",
    "script": "scripts/pk.ts",
    "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
     "BATCH_UNITS": "7"
@@ -265,6 +250,22 @@
    "role": "helper"
   },
   {
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "fluffs"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:fluffs",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:fluffs",
+   "role": "army"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -306,18 +307,18 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "fluffs"
+    "scripts/aio-market.ts ITEM_ID=557 \"ITEMS=Earth rune\" MAX_ITEMS=3 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=65 CAP=1000 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic orbs water 27 3000"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:fluffs",
+   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   },
   {

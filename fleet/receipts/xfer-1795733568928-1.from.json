@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795733568928-1",
+ "account": "Fingerblastr",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 560,
+ "claim": "d4f2fa94-c3de-4e7e-8229-ca23ccd49493",
+ "count": 0,
+ "ok": false,
+ "at": 1795733772694,
+ "detail": "trade claimed"
+}
