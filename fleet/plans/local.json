@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795722978390,
+ "at": 1795723003587,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,21 +72,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "helper"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-141-p61 ITEM_ID=1436 QUANTITY=141 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=141 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
   },
   {
    "account": "TossTheCaber",
@@ -185,6 +170,21 @@
    "role": "army"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "gang"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "26"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "mmthv2350",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -210,12 +210,12 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
