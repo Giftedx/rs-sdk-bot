@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795729756336,
+ "at": 1795729788467,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -194,28 +194,6 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "sapphire_necklace",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "goal:supply_chain:1656",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1656",
-   "role": "army"
-  },
-  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -274,6 +252,7 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
