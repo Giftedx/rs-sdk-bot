@@ -1,7 +1,7 @@
 // Prepare live RANGED_SPECIALIST_LIVE_KIT shortfalls: buy 1x Leather body at Varrock Thessalia, brew Prayer potions from Ranarr supplies, and decant partial Prayer potions to 4-dose.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
+import { accountOf, finish, getWorld, openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { runDirectChild } from '../packages/core/src/run-child';
@@ -298,7 +298,7 @@ export async function runRangedLivePrep(opts: RangedLivePrepArgs): Promise<void>
         const needLeather = opts.mode === 'all' && (initialTotals.get(LIVE_PREP_IDS.leatherBody) ?? 0) < 1 && (initialTotals.get(LIVE_PREP_IDS.coins) ?? 0) >= 25;
         if (needLeather) {
             await s0.bot.closeBank();
-            await finish([s0], true, 'handoff to Thessalia shop purchase before brew/decant');
+            await settle([s0], true, 'handoff to Thessalia shop purchase before brew/decant');
             activeSession = undefined;
             const shopCall = buildLeatherBodyShopInvocation(opts.account, Math.min(600, opts.cap));
             const out = await runDirectChild([...shopCall.args], { ...process.env, ...shopCall.env });

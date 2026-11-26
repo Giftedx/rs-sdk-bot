@@ -151,7 +151,9 @@ export async function runQuestCookJob(name: string, cap: number, existingSession
         dead ||= !!p && (p.isDead || (life !== undefined && p.lifeId !== life) || (respawns !== undefined && p.respawnCount !== respawns));
     });
     const guard = () => {
-        if (ended || dead || s.tick() >= deadline) throw Error('Cook job stopped/deadline/death');
+        if (dead) throw Error('Cook job death');
+        if (ended) throw Error('Cook job session ended');
+        if (s.tick() >= deadline) throw Error('Cook job deadline');
     };
     const wait = async (pred: () => boolean, ticks: number) => {
         guard();
@@ -382,7 +384,9 @@ export async function runQuestHettyJob(name: string, cap: number, existingSessio
     };
     const stopped = () => unsafe() || s.tick() >= workDeadline;
     const guard = () => {
-        if (stopped()) throw Error('Hetty job stopped/deadline/death');
+        if (ended) throw Error('Hetty job session ended');
+        if (unsafe()) throw Error('Hetty job death');
+        if (s.tick() >= workDeadline) throw Error('Hetty job deadline');
     };
     const observe = async (pred: () => boolean, ticks: number) => {
         guard();

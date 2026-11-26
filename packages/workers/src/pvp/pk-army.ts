@@ -129,7 +129,12 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
         const seen = focus ?? (target ? view.find(x => x.name.toLowerCase() === target.toLowerCase()) : undefined);
         if (target && seen && seen.distance <= 15) {
             stats.fights++;
-            const r = await fightPlayer(s, target, { ...options, allies, stop: () => stopped() || shared.over || (shared.target !== null && shared.target.toLowerCase() !== target.toLowerCase() && !isMulti(p.worldX, p.worldZ)),
+            const r = await fightPlayer(s, target, { ...options, allies, stop: () => {
+                if (stopped() || shared.over) return true;
+                if (shared.target === null || shared.target.toLowerCase() === target.toLowerCase()) return false;
+                const q = me();
+                return !!q && !isMulti(q.worldX, q.worldZ);
+            },
                 log: l => emit({ e: 'follower-fight', name: s.name, line: l }) });
             stats.attacks += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'kill') { stats.kills++; shared.killed.add(target.toLowerCase()); }
@@ -151,7 +156,10 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
         // Keep with the leader.
         const l = leader.sdk.getState()?.player;
         if (l && l.level === p.level && Math.max(Math.abs(l.worldX - p.worldX), Math.abs(l.worldZ - p.worldZ)) > followTiles) {
+            const before = s.tick();
             await walkPath(walker, [{ x: l.worldX, z: l.worldZ, tol: 1 }], { maxTicks: 6, idleMs: 9000 });
+            // A walk that used no tick (no path to the leader) waits one: the loop must not spin.
+            if (s.tick() === before && !await nextTick(s)) break;
             continue;
         }
         if (!await nextTick(s)) break;

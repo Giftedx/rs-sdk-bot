@@ -35,3 +35,10 @@ test('piecePlan crafts single black dragonhide vambraces from 1 hide or leather 
     expect(piecePlan('vambraces', 2, 1, 2, 2, 200)).toEqual({ count: 2, tan: 0, thread: 0, coins: 0 });
     expect(piecePlan('vambraces', 0, 3, 0, 0, 120).count).toBe(1);
 });
+
+test('a missing needle keeps the shop coins out of the tanning budget', () => {
+    // 6 hides and 10 thread: 120 coins tan one set, but a needle buy needs the shop coins too.
+    expect(setPlan(0, 6, 0, 10, 120)).toEqual({ sets: 1, tan: 6, thread: 0, coins: 6 * TAN_COST });
+    expect(setPlan(0, 6, 0, 10, 120, true).sets).toBe(0);
+    expect(setPlan(0, 6, 0, 10, 6 * TAN_COST + SHOP_COINS, true)).toEqual({ sets: 1, tan: 6, thread: 0, coins: 6 * TAN_COST + SHOP_COINS });
+});

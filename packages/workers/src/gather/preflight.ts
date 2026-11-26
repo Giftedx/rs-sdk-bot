@@ -721,7 +721,7 @@ export function gatherEstimate(
                     confidence: 'model',
                 };
             }
-            const profName = cfg.spot ?? cfg.args[0] ?? 'iron_rock_table';
+            const profName = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'PROFILE') ?? 'iron_rock_table';
             const prof = miningProfileByName(profName);
             const unitsPerTick = cfg.method === 'ore' ? 0.12 : prof && prof.level >= 55 ? 0.06 : 0.25;
             const outId = prof?.products[0] ?? 440;
@@ -884,10 +884,11 @@ export function toWorkerOutcome(
         return { kind: 'target_met', ...base };
     }
     const lower = (outcome.detail ?? '').toLowerCase();
-    if (outcome.kind === 'died' || /\bdied\b/.test(lower)) {
+    // Result lines carry `died=false`, `"died":false` and `stop=<reason>` fields; a key token is not an event.
+    if (outcome.kind === 'died' || /\bdied=true\b|"died":true|\bdied\b(?![="])/.test(lower)) {
         return { kind: 'death', ...base, faultSignature: 'gather_death', detail: outcome.detail };
     }
-    if (opts.stopped || outcome.kind === 'aborted' || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b/i.test(outcome.detail ?? '')) {
+    if (opts.stopped || outcome.kind === 'aborted' || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b(?![="])/i.test(outcome.detail ?? '')) {
         return {
             kind: 'session_unsettled',
             ...base,

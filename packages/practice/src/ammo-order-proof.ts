@@ -10,6 +10,7 @@ import {canBind} from './ports';
 import {rsSdkRoot,practiceDir,deliveryLockDir} from './paths';
 import {coordinatorStateFixture} from './coordinator-state-fixture';
 import {killTree} from '../../core/src/proc';
+import {resolveBotEnvPath,simBotsDir} from '../../core/src/practice-paths';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
@@ -50,12 +51,12 @@ export function ammoChildConfiguration(args:string[],env:Record<string,string>,p
 }
 // The shared registration CLI admits only default ports. Keep its session owner
 // and tick wait, with session-check metadata and the generated profile bound to this proof's endpoints.
-export function ammoRegistrationArgs(name:string,p:ProofEndpoints){
+export function ammoRegistrationArgs(name:string,p:ProofEndpoints,envPath=resolveBotEnvPath(name)){
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
     return['--eval',`import {readFileSync} from 'node:fs';
 import {openBot,finish} from './packages/core/src/bot';
 import {waitTicks} from './packages/core/src/ticks';
-const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
+const lines=readFileSync(${JSON.stringify(envPath)},'utf8').split(/\\r?\\n/);
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
 const session=await openBot(${JSON.stringify(name)},{record:{script:'scripts/session-check.ts',argv:[${JSON.stringify(name)}]}});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
@@ -143,11 +144,11 @@ async function run(directory:string){
         const source=workerSourceRevision(),names=[runBotName('itip',1),runBotName('iarr',1)],order='native-'+Date.now(),paths:string[]=[];
         stack=await startAmmoProofStack(endpoints);
         for(const [i,name]of names.entries()){
-            if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
+            if(existsSync(join(simBotsDir(),name))||existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
             const account=await createBot(name);
             writeFileSync(account.envPath,ammoProofAccountEnv(readFileSync(account.envPath,'utf8'),endpoints));
             paths.push(await applyPreset(name,{position:{x:i?3253:3185,z:i?3421:3436,level:0},skills:{Fletching:i?42:1,Hitpoints:i?15:16},inventory:i?[{id:315,count:1},{id:2309,count:1},{id:1349,count:1},{id:1438,count:1}]:[{id:1265,count:1},{id:2347,count:1}],bank:i?[{id:53,count:390}]:[{id:40,count:90},{id:39,count:16}],equipment:i?[{id:1277,count:1,slot:3},{id:1171,count:1,slot:5}]:[]}));
-            const auth=await command(ammoRegistrationArgs(name,endpoints),{},'auth-'+i);
+            const auth=await command(ammoRegistrationArgs(name,endpoints,account.envPath),{},'auth-'+i);
             if(auth.code!==0)throw Error('practice registration failed; see auth logs');
             const ready=await waitPracticeSave(paths[i]!,s=>s.position.x===(i?3253:3185)&&s.position.z===(i?3421:3436)&&s.skills[3]!.level===(i?15:16));
             if(!ready.matched)throw Error('seeded entry state not retained');
@@ -164,11 +165,11 @@ async function run(directory:string){
         await waitPracticeSave(paths[1]!,s=>qty(s,884)===90);copyFileSync(paths[1]!,join(directory,'final.sav'));
         const repeat=await command(args,{HANDOFF_ORDER:order,HANDOFF_ITEM_ID:'40'},'repeat');
         const headlessName=runBotName('hord',1);
-        if(existsSync(join(rsSdkRoot(),'bots',headlessName)))throw Error('practice name already exists');
+        if(existsSync(join(simBotsDir(),headlessName))||existsSync(join(rsSdkRoot(),'bots',headlessName)))throw Error('practice name already exists');
         const account=await createBot(headlessName);
         writeFileSync(account.envPath,ammoProofAccountEnv(readFileSync(account.envPath,'utf8'),endpoints));
         const headlessPath=await applyPreset(headlessName,{position:{x:3185,z:3436,level:0},skills:{Fletching:42,Hitpoints:69},inventory:[{id:1277,count:1},{id:1985,count:3},{id:1171,count:1}],equipment:[{id:841,count:1,slot:3},{id:884,count:58,slot:13}],bank:[{id:1511,count:15},{id:52,count:35},{id:314,count:5705},{id:53,count:300},{id:946,count:1},{id:995,count:331135},{id:1521,count:8951},{id:2353,count:95}]});
-        const auth=await command(ammoRegistrationArgs(headlessName,endpoints),{},'headless-auth');
+        const auth=await command(ammoRegistrationArgs(headlessName,endpoints,account.envPath),{},'headless-auth');
         if(auth.code!==0)throw Error('headless registration failed');
         if(!(await waitPracticeSave(headlessPath,s=>qty(s,53)===300&&qty(s,1511)===15)).matched)throw Error('headless entry state not retained');
         copyFileSync(headlessPath,join(directory,'headless-before.sav'));
@@ -180,11 +181,11 @@ async function run(directory:string){
         const plannedNames=[runBotName('pdon',1),runBotName('prec',1)],plannedOrder='planned-'+Date.now(),plannedPaths:string[]=[];
         const plannedStart=plannedNames.map(()=>({...PLANNED_ENTRY}));
         for(const [i,name]of plannedNames.entries()){
-            if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
+            if(existsSync(join(simBotsDir(),name))||existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
             const planned=await createBot(name);
             writeFileSync(planned.envPath,ammoProofAccountEnv(readFileSync(planned.envPath,'utf8'),endpoints));
             plannedPaths.push(await applyPreset(name,{position:plannedStart[i]!,skills:{Hitpoints:i?47:16},inventory:i?[{id:1891,count:1},{id:1891,count:1},{id:1891,count:1}]:[{id:379,count:1},{id:379,count:1},{id:231,count:1},{id:995,count:100}],bank:i?[{id:995,count:175}]:[{id:379,count:173},{id:995,count:19885}]}));
-            if((await command(ammoRegistrationArgs(name,endpoints),{},'planned-auth-'+i)).code!==0)throw Error('planned registration failed');
+            if((await command(ammoRegistrationArgs(name,endpoints,planned.envPath),{},'planned-auth-'+i)).code!==0)throw Error('planned registration failed');
             if(!(await waitPracticeSave(plannedPaths[i]!,s=>s.position.x===plannedStart[i]!.x&&s.position.z===plannedStart[i]!.z&&s.position.level===plannedStart[i]!.level&&s.skills[3]!.level===(i?47:16))).matched)throw Error('planned entry state not retained');
             copyFileSync(plannedPaths[i]!,join(directory,`planned-before-${i}.sav`));
         }

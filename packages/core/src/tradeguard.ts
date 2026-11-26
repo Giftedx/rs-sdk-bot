@@ -1,5 +1,6 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 import { listedAccounts } from './fleet';
 import { liveStatusDir, simBotsDir, simStatusDir } from './practice-paths';
 
@@ -65,7 +66,10 @@ function readVerifiedEntries(): Record<string, { server: string }> {
     try { version = statSync(verifiedFile).mtimeMs; } catch { /* no verified registry yet */ }
     if (verifiedCache && verifiedCache.version === version) return verifiedCache.entries;
     let entries: Record<string, { server: string }> = {};
-    try { entries = JSON.parse(readFileSync(verifiedFile, 'utf8')); } catch { /* status bootstrap below */ }
+    try { entries = JSON.parse(readFileSync(verifiedFile, 'utf8')); } catch (e) {
+        // A partial or damaged file is read again on the next call; only a missing file is cached as empty.
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return {};
+    }
     verifiedCache = { version, entries };
     return entries;
 }
@@ -73,10 +77,12 @@ function readVerifiedEntries(): Record<string, { server: string }> {
 // Called only after successful game authentication. This proves control, unlike a locally created bot.env.
 export function recordOwnedAccount(name: string, server: string): void {
     let entries: Record<string, { server:string; at:number }> = {};
-    try { entries=JSON.parse(readFileSync(verifiedFile,'utf8')); } catch { /* first verified login */ }
+    try { entries=JSON.parse(readFileSync(verifiedFile,'utf8')); } catch (e) {
+        // Only a missing file is a first verified login. A damaged registry is never replaced with one entry.
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return;
+    }
     entries[name.toLowerCase()]={server:server.toLowerCase(),at:Date.now()};
-    mkdirSync(join(root,'.practice'),{recursive:true});
-    writeFileSync(verifiedFile,JSON.stringify(entries));
+    writeAtomicFile(verifiedFile,JSON.stringify(entries),{ensureDir:true});
     verifiedCache = null;
 }
 

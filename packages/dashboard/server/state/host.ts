@@ -89,19 +89,24 @@ function maybeScanProcs() {
 
 // ---------- pull requests: the bot repository's open and lately merged PRs (gh), every 5 minutes ----------
 // The hosted publisher fetches the same list; the local page reads it from here.
-let prRows: any[] = [];
+let prRows: any[] = [], prsRefreshing = false;
 const getPrRows = () => prRows;
 async function refreshPrs() {
+    if (prsRefreshing) return; // a gh call held on a dead socket must not stack a second one
+    prsRefreshing = true;
     const fields = 'number,title,headRefName,state,isDraft,updatedAt,author,url';
     const list = async (state: string, limit: string) => {
         const p = Bun.spawn(['gh', 'pr', 'list', '--repo', 'Giftedx/rs-sdk-bot', '--state', state, '--limit', limit, '--json', fields], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
-        const text = await new Response(p.stdout).text();
-        if (await p.exited !== 0) throw Error(`gh pr list ${state} failed`);
-        return JSON.parse(text) as any[];
+        const hung = setTimeout(() => { try { p.kill(); } catch { /* exited */ } }, 60_000);
+        try {
+            const [text, code] = await Promise.all([new Response(p.stdout).text(), p.exited]);
+            if (code !== 0) throw Error(`gh pr list ${state} failed`);
+            return JSON.parse(text) as any[];
+        } finally { clearTimeout(hung); }
     };
     try {
         prRows = [...await list('open', '50'), ...await list('merged', '15')].map(r => ({ number: r.number, title: String(r.title ?? ''), branch: String(r.headRefName ?? ''), state: String(r.state ?? ''), draft: r.isDraft === true, updatedAt: String(r.updatedAt ?? ''), author: String(r.author?.login ?? ''), url: String(r.url ?? '') }));
-    } catch { /* gh missing or offline: keep the last list */ }
+    } catch { /* gh missing or offline: keep the last list */ } finally { prsRefreshing = false; }
 }
 
 export {

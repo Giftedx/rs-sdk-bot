@@ -222,8 +222,9 @@ export async function runBlackDragonCamp(s: CombatSession, o: { cap: number; kil
                 }
             } finally {
                 if (alive()) {
+                    const left = !at(SAFE);
                     await backToSafe();
-                    strays--;
+                    if (left) strays--;
                     await pray(false);
                 }
             }
@@ -1658,7 +1659,8 @@ export async function runTrawlerTrip(s: CombatSession, o: { cap: number; stop?: 
 export async function runTrawlerTripCli(args: readonly string[]) {
     let s: CombatSession | undefined;
     try {
-        const [name, cap] = args;
+        const name = args[0];
+        const cap = args.slice(1).find(a => !a.startsWith('--'));
         if (!name) throw Error('account required');
         s = await openBot(name);
         const result = await runTrawlerTrip(s, {
@@ -1689,7 +1691,7 @@ export async function runTrawlerTripCli(args: readonly string[]) {
 
 export async function runTrawlerSupportCli(args: readonly string[], env: Record<string, string | undefined> = process.env) {
     if (args[1] === 'trip') {
-        await runTrawlerTripCli([args[0]!, ...(args[2] ? [args[2]] : [])]);
+        await runTrawlerTripCli([args[0]!, ...args.slice(2)]);
         return;
     }
     const name = args[0];

@@ -45,6 +45,7 @@ try {
     const levels = level(s, 'Crafting') - l0;
     const tl = s.tick();
     let shut = dialogOpen(s) ? 0 : 3;
+    const cleared = shut < 3; // no page open after cutting: the loop does not run and clearTicks is 0
     while (shut < 3 && s.tick() - tl < 120) {
         if (mode === 'click') { if (dialogOpen(s)) await send(s, m, { type: 'clickDialogOption', optionIndex: 0 }); }
         else await send(s, m, { type: 'closeModal' });
@@ -52,7 +53,7 @@ try {
         console.log(`T ${s.tick() - tl} dialog=${dialogOpen(s)}`);
         shut = dialogOpen(s) ? 0 : shut + 1;
     }
-    const clearTicks = s.tick() - tl - (shut >= 3 ? 3 : 0);
+    const clearTicks = s.tick() - tl - (cleared && shut >= 3 ? 3 : 0);
     let boothTicks = -1;
     if (mode === 'booth') boothTicks = await openBank(s, m);
     const line = `LEVELUP mode=${mode} levels=${levels} cutTicks=${cutTicks} clearTicks=${clearTicks} perLevel=${(clearTicks / Math.max(1, levels)).toFixed(2)} boothTicks=${boothTicks} sent=${m.sent}`;

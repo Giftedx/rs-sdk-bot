@@ -594,6 +594,12 @@ test('a death skips the bank return that every input of the new life refuses, an
  expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.detail).toContain('died=true');expect(r.detail).not.toContain('bank return unavailable');
 });
 
+test('a dungeon giant run refuses an UNTIL_ITEM that only the surface giant drops before it walks',async()=>{
+ const g=genericCombat();let walks=0;
+ const r=await runGenericCombatSession(g.s,{target:'giant',cap:1000,maximum:5,untilItemName:'Law rune',env:{},walk:async()=>{walks++;return false;},stop:()=>false});
+ expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.kills).toBe(0);expect(r.detail).toContain('UNTIL_ITEM Law rune is no drop');
+});
+
 test('a flee-guard stop skips the bank return that the guard holds, and the result says fled=true',async()=>{
  const g=genericCombat();let walks=0;
  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,maximum:5,env:{},walk:async()=>{walks++;return false;},stop:()=>true,
@@ -969,6 +975,8 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     const blackId = npcsJson.find(n => n.name === 'Black dragon')!.id;
     expect(genericCombatNpc('taverley_blue_dragon', [{ ...base, id: blueId }])?.id).toBe(blueId);
     expect(genericCombatNpc('taverley_black_dragon', [{ ...base, id: blackId }])?.id).toBe(blackId);
+    const giantId = npcsJson.find(n => n.name === 'Giant')!.id;
+    expect(genericCombatNpc('taverley_giant', [{ ...base, id: giantId }])?.id).toBe(giantId);
 
     const travel = createTaverleyTravel();
     const player = { worldX: 2946, worldZ: 3368, level: 0 };

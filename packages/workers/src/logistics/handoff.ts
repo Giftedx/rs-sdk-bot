@@ -217,9 +217,10 @@ export function createHandoff(allowedIds: readonly number[], root: string) {
         return true;
     };
 
-    async function awaitCollectionOffer(s: Session, from: string, server: string, timeoutTicks: number, targetRoot = dir): Promise<void> {
+    // `since` is the time the receiver asked for the payout; a receipt the giver prepares after it is fresh.
+    async function awaitCollectionOffer(s: Session, from: string, server: string, timeoutTicks: number, targetRoot = dir, since = Date.now()): Promise<void> {
         const p = file(from, s.name, targetRoot);
-        const started = Date.now();
+        const started = since;
         const offered = () => {
             const r = read(p), now = Date.now();
             return r?.state === 'prepared' && typeof r.token === 'string' && r.token.length > 0

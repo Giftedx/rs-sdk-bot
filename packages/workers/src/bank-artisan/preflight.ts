@@ -526,11 +526,16 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'teleport') {
                     const dest = cfg.args[0] ?? 'varrock';
-                    const t = loadMagicMod().nativeTeleport(dest);
+                    const { nativeTeleport, elementalRuneCost } = loadMagicMod();
+                    const t = nativeTeleport(dest);
                     checkSkill(acct, 'Magic', t.level, blockers);
+                    // A wielded staff supplies its elemental runes; a staff is worn only in the weapon slot.
+                    const members = resolveArtisanSetting(cfg, 'MEMBERS') === '1';
+                    const worn = Object.entries(acct.equipment).filter(([, c]) => c > 0).map(([id]) => ({ id: Number(id), slot: 3 }));
                     for (const idStr in t.runes) {
-                        const n = t.runes[Number(idStr)]!;
-                        checkSupply(acct, world, Number(idStr), n, `Rune #${idStr}`, blockers, missingItems);
+                        const full = t.runes[Number(idStr)]!;
+                        const n = Math.min(full, ...worn.map(w => elementalRuneCost(Number(idStr), full, [w], members)));
+                        if (n > 0) checkSupply(acct, world, Number(idStr), n, `Rune #${idStr}`, blockers, missingItems);
                     }
                 } else if (cfg.method === 'orbs' || cfg.method === 'orbs-at-site') {
                     const { orbRecipes } = loadMagicMod();

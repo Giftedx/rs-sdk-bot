@@ -27,10 +27,11 @@ function parseProcTables(linesOf: (rel: string) => string[]): Map<string, ProcRo
     let name = '', die = 0, prev = 0, at = 0, cond = false;
     linesOf(file).forEach((line, i) => {
         const h = line.match(/^\[proc,(\w+)\]/);
-        if (h) { name = h[1]!; die = 0; prev = 0; procTables.set(name, []); return; }
+        if (h) { name = h[1]!; die = 0; prev = 0; at = 0; cond = false; procTables.set(name, []); return; }
         if (!name) return;
         for (const m of line.matchAll(/random\((\d+)\)/g)) die = Math.max(die, Number(m[1]));
-        const t = line.match(/\$random < (\d+)/);
+        // Only an unindented chain branch opens a slot; an indented `$random <` test is a condition inside the current slot.
+        const t = line.match(/^(?:\}?\s*else\s+)?if\s*\(\$random < (\d+)\)/);
         if (t) { prev = at; at = Number(t[1]); cond = false; return; }
         if (/^\s+if\s*\(/.test(line) && !/^\s+if\s*\(\s*map_members\s*=\s*\^true\s*\)\s*\{?\s*$/.test(line)) cond = true;
         const ret = line.match(/return\s*\((?:(\w+),\s*(\d+)|~(\w+))\)/);

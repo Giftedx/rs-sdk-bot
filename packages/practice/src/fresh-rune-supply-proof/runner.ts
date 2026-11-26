@@ -1,6 +1,7 @@
 import {copyFileSync,existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {workerSourceRevision} from '../../../core/src/worker-release';
+import {simBotsDir} from '../../../core/src/practice-paths';
 import {createBot} from '../bots';
 import {readPracticeSave,waitPracticeSave} from '../fleet-player-save';
 import {runBotName} from '../prove';
@@ -12,7 +13,11 @@ import {
 import {freshRuneCommand,withFreshRuneStack} from './stack';
 import {freshRuneStageInput,stagedChecks,verifyFreshRuneAirRecovery,verifyFreshRuneSupply} from './verify';
 
-const stageDeps={stack:withFreshRuneStack,binding:freshRuneBinding,save:engineSave,create:createBot,name:()=>runBotName('flrune',1),command:freshRuneCommand,wait:waitPracticeSave,verify:verifyFreshRuneSupply,recovery:verifyFreshRuneAirRecovery};
+// Fresh rune bindings, diagnostics and register-proof-account.ts read the vendor profile.
+const createVendorBot=(name:string)=>createBot(name,{legacyVendorDir:true});
+// openBot prefers a sim profile, so a leftover one also makes the identity unfresh.
+const profileExists=(name:string)=>existsSync(join(repoRoot,'vendor/rs-sdk/bots',name))||existsSync(join(simBotsDir(repoRoot),name));
+const stageDeps={stack:withFreshRuneStack,binding:freshRuneBinding,save:engineSave,create:createVendorBot,name:()=>runBotName('flrune',1),command:freshRuneCommand,wait:waitPracticeSave,verify:verifyFreshRuneSupply,recovery:verifyFreshRuneAirRecovery};
 
 export async function proveFreshRuneStage(directory:string,stage:FreshRuneStage,deps=stageDeps){
  if(!deps.recovery(directory).ok)throw Error('air recovery gate failed; no full replay');
@@ -30,8 +35,8 @@ export async function proveFreshRuneStage(directory:string,stage:FreshRuneStage,
  const record=await deps.stack(evidenceDir,async budget=>{
   let input:{previous:string|null;inputHash:string|null;records:StageRecord[]}={previous:null,inputHash:null,records:[]};
   if(stage==='start'){
-   const name=deps.name(),save=deps.save(name),botDir=join(repoRoot,'vendor/rs-sdk/bots',name);
-   if(existsSync(save)||existsSync(botDir))throw Error('genuine unclaimed default fixture required');
+   const name=deps.name(),save=deps.save(name);
+   if(existsSync(save)||profileExists(name))throw Error('genuine unclaimed default fixture required');
    writeFileSync(join(directory,'fixture.json'),JSON.stringify({name,saveAbsent:true,credentialsAbsent:true}),{flag:'wx'});
    await deps.create(name);binding=deps.binding(name);
   }else{
@@ -81,12 +86,12 @@ export async function proveFreshRuneSupply(directory:string){
  mkdirSync(directory,{recursive:true});
  if(existsSync(join(directory,'native.json'))||existsSync(join(directory,'before.sav')))throw Error('retain existing proof; use a new delivery directory');
  return withFreshRuneStack(directory,async budget=>{
-  const name=runBotName('flrune',1),botDir=join(repoRoot,'vendor/rs-sdk/bots',name),save=join(repoRoot,'vendor/rs-sdk/server/engine/data/players/main',name.toLowerCase()+'.sav');
-  const saveAbsent=!existsSync(save),credentialsAbsent=!existsSync(botDir);if(!saveAbsent||!credentialsAbsent)throw Error('genuine unclaimed default fixture required');
+  const name=runBotName('flrune',1),save=join(repoRoot,'vendor/rs-sdk/server/engine/data/players/main',name.toLowerCase()+'.sav');
+  const saveAbsent=!existsSync(save),credentialsAbsent=!profileExists(name);if(!saveAbsent||!credentialsAbsent)throw Error('genuine unclaimed default fixture required');
   writeFileSync(join(directory,'fixture.json'),JSON.stringify({name,saveAbsent,credentialsAbsent}),{flag:'wx'});
   budget.check();
-  await createBot(name);
-  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+  const {envPath}=await createVendorBot(name);
+  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
   const codes:Record<string,number>={};
   const command=async(label:string,args:string[],env:Record<string,string>={})=>{
    codes[label]=await freshRuneCommand(directory,budget,label,args,save,env);

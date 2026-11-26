@@ -329,7 +329,8 @@ export async function runCombatOwnedLoadout(s: CombatSession, value: unknown, re
         || state()!.player!.lifeId !== life
         || (state()!.player!.respawnCount ?? 0) !== respawns
         || !here()
-        || (s.sdk.getSkill('Hitpoints')?.level ?? 0) !== hp
+        // A rise is natural regeneration of a member that arrived wounded; only a drop is fatal.
+        || (s.sdk.getSkill('Hitpoints')?.level ?? 0) < hp
         || hp < 1
         || s.sdk.getStateAge() > 5000
         || client.executeBotAction !== executor
@@ -631,6 +632,12 @@ export function reclaimInputs(items: readonly { id: number; count: number }[]) {
     return n(FIRE_PEBBLE) >= 1 && n(FIRE_FOOD) >= 16 && n(FIRE_AMULET) === 0;
 }
 
+// The Fire deposit checks and asset ledgers key bank rows by the held id, but the bank stores a noted item under its base id.
+const fireNotedHeld = (s: CombatSession) => {
+    const client = s.client as { objType?: (id: number) => { certtemplate?: number } | undefined } | undefined;
+    return s.sdk.getInventory().find(i => (client?.objType?.(i.id)?.certtemplate ?? -1) >= 0)?.id;
+};
+
 export async function runFireReclaim(s: CombatSession, o: { cap: number; stop?: () => boolean }) {
     const sess = s as Session;
     const eatHold = holdSessionEater(s.sdk);
@@ -646,6 +653,11 @@ export async function runFireReclaim(s: CombatSession, o: { cap: number; stop?: 
     if (!p0 || p0.level !== 0 || hp() < 60) {
         eatHold.release();
         throw new Error('no fire access progress: require mature Mighty surface HP>=60');
+    }
+    const noted = fireNotedHeld(s);
+    if (noted !== undefined) {
+        eatHold.release();
+        throw new Error(`no fire access progress: noted inventory item ${noted} unsupported`);
     }
     const originalHeld = inv().map(i => ({ id: i.id, count: i.count }));
     const originalWorn = eq().map(i => ({ id: i.id, count: i.count, slot: i.slot }));
@@ -1065,6 +1077,8 @@ export async function runFireCombat(s: CombatSession, o: { cap: number; stop?: (
     try {
         startRoute = fireStartRoute(p0);
         if (!p0) throw Error('no Fire progress: position unknown');
+        const noted = fireNotedHeld(s);
+        if (noted !== undefined) throw Error(`no Fire progress: noted inventory item ${noted} unsupported`);
     } catch (e) {
         eatHold.release();
         throw e;

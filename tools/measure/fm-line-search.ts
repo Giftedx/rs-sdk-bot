@@ -1,6 +1,6 @@
 // Firemaking line search: scan the level-0 map for west-running rows of tiles where a fire can be lit, then join rows
 // with short turns and rank the chains. Deterministic; reads only vendor data.
-// Usage: bun scripts/measure/fm-line-search.ts [--need 157] [--top 10] [--turn 3] [--json out.json]
+// Usage: bun scripts/measure/fm-line-search.ts [--need 157] [--top 10] [--turn 4] [--json out.json]
 //
 // A tile is lightable when skill_firemaking/scripts/firemaking.rs2 ~area_allow_loc_add passes:
 //   - map_locaddunsafe is false: no ACTIVE loc covers the tile (engine ServerOps.ts MAP_LOCADDUNSAFE; LocType.ts

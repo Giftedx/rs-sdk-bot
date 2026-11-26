@@ -36,7 +36,8 @@ const s = await connectInProcess({ name, password, server,
 const t0 = Date.now();
 while (!s.sdk.getState()?.inGame && Date.now() - t0 < 30_000) await Bun.sleep(20);
 const inAt = s.tick();
-const out = s.sdk.getState()?.inGame ? await logoutSession(s) : 'never in game';
-console.log(`CLAIM ticks=${s.tick() - inAt} in_game=${!!s.sdk.getState()} logout=${out}`);
+const reached = !!s.sdk.getState()?.inGame;
+const out = reached ? await logoutSession(s) : 'never in game';
+console.log(`CLAIM ticks=${s.tick() - inAt} in_game=${reached} logout=${out}`);
 await closeWithin([s], 5000);
 process.exit(out === 'logged-out' ? 0 : 1);

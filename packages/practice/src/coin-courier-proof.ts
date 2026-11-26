@@ -8,6 +8,7 @@ import { startStack, PROOF_TICK_MS, type StackOptions } from './stack';
 import { canBind } from './ports';
 import { deliveryLockDir, practiceDir, rsSdkRoot } from './paths';
 import { killTree } from '../../core/src/proc';
+import { simBotsDir } from '../../core/src/practice-paths';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
 import { exactCoinDelta } from '../../workers/src/logistics';
@@ -131,7 +132,7 @@ export async function registerCoinProofAccount(name:string,p:ProofEndpoints,deps
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
     const owned=coinProofEndpoints(p.ports,p.instance);
     if(p.server!==owned.server||p.gateway!==owned.gateway)throw Error('owned practice endpoints required');
-    const text=(deps.readEnv??(file=>readFileSync(file,'utf8')))(join(rsSdkRoot(),'bots',name,'bot.env'));
+    const text=(deps.readEnv??(file=>readFileSync(file,'utf8')))(join(simBotsDir(root),name,'bot.env'));
     const lines=text.split(/\r?\n/),values=(key:string)=>lines.filter(line=>line.startsWith(key+'='));
     if(values('SERVER').length!==1||values('SERVER')[0]!=='SERVER='+p.server||values('GATEWAY_URL').length!==1||values('GATEWAY_URL')[0]!=='GATEWAY_URL='+p.gateway)throw Error('owned practice account required');
     const password=values('PASSWORD').length===1?values('PASSWORD')[0]!.slice('PASSWORD='.length).trim():'';
@@ -208,7 +209,7 @@ async function run(directory: string) {
         const amount = 45000,reserve=5000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
         stack = await startCoinProofStack(endpoints);
         for (const [i, name] of names.entries()) {
-            if (existsSync(join(rsSdkRoot(), 'bots', name))) throw Error('practice name already exists');
+            if (existsSync(join(simBotsDir(workerRoot), name)) || existsSync(join(rsSdkRoot(), 'bots', name))) throw Error('practice name already exists');
             const create=['--eval',`import {readFileSync,writeFileSync} from 'node:fs';
 import {createBot} from './packages/practice/src/bots';
 import {coinProofAccountEnv} from './packages/practice/src/coin-courier-proof';

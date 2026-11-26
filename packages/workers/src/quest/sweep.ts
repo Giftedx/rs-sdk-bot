@@ -921,8 +921,9 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 ) +
                 (quest === 'itgronigen' && eastOfPass(here(), sweepAcct) ? BOAT_FARES : 0);
             if (shop.coins) {
-                const take = shopCoinTake(shop.coins, countItems(pack(), COINS), p.withdraw.find((w) => w.id === COINS)?.count ?? 0, need.get(COINS) ?? 0);
-                if (countItems(rows(), COINS) < take) {
+                const plannedCoins = p.withdraw.find((w) => w.id === COINS)?.count ?? 0;
+                const take = shopCoinTake(shop.coins, countItems(pack(), COINS), plannedCoins, need.get(COINS) ?? 0);
+                if (countItems(rows(), COINS) < take + plannedCoins) {
                     await s.bot.closeBank();
                     return fail(
                         `missing ${COINS}:${take} to buy ${[...shop.buys.map((b) => b.id), ...(heckelDust ? [1975] : [])].join(',')}` +

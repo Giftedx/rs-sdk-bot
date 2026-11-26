@@ -34,7 +34,7 @@ function verify(dir:string){
   helper:saves.slice(1).every((s:any)=>s.skills[20].rawExperience===0),coins:all(995)===25,starter:!!result?.prefix?.starterKit&&Object.entries(result.prefix.starterKit).every(([id,n])=>all(Number(id))===Number(n)+(Number(id)===556?27:Number(id)===559?bodyRunes:0)),
   handoff:result?.craftAfter==='trade-message'&&result?.pipeline===false&&result?.opening==='helper-ack'&&result?.confirmation==='causal',handlers:verifyRunePipeline(join(dir,'handlers')).ok,restock:result?.batches===batches&&result.crew.every((h:any)=>h.refills.length>0),logout:result?.logout===true&&[...stdout.matchAll(/^LOGOUT (.*)$/gm)].reduce((n,m)=>n+(m[1]!.match(/\blogged-out\b/g)??[]).length,0)===helpers+1};
  const master=readFileSync(join(dir,'0-after.sav')),accountTicks=meta.names.map((_:string,i:number)=>readFileSync(join(dir,i+'-after.sav')).readInt32BE(24)-(i?readFileSync(join(dir,i+'-before.sav')).readInt32BE(24):0));
- const report={ok:Object.values(checks).every(Boolean),checks,craftAfter:result?.craftAfter,workerFailure:result?.failure??null,source:meta.source,names:meta.names,tickMs:400,xpRate:25,infiniteRun:true,buildLiveReload:false,levelTicks:saves[0].version===10?master.readInt32BE(master.length-184):null,accountTicks,combinedTicks:accountTicks.reduce((n:number,t:number)=>n+t,0),elapsedMs:meta.elapsedMs,
+ const report={ok:Object.values(checks).every(Boolean),checks,craftAfter:result?.craftAfter,workerFailure:result?.failure??null,source:meta.source,names:meta.names,tickMs:meta.tickMs??TICK_MS,xpRate:25,infiniteRun:true,buildLiveReload:false,levelTicks:saves[0].version===10?master.readInt32BE(master.length-184):null,accountTicks,combinedTicks:accountTicks.reduce((n:number,t:number)=>n+t,0),elapsedMs:meta.elapsedMs,
   scope:'Actual rune-bank-craft CLI, authentic fresh master to99,16 bank carriers, pre-supplied helper kits and positions. No live rank claim.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
@@ -60,7 +60,7 @@ async function run(dir:string){
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},WORKER_TIMEOUT_MS),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
   const code=await child.exited;clearTimeout(timer);clearInterval(floor);await termination;
-  const meta={source,names,freshAbsent,code,timedOut,lowMemory,randomEvents:true,workerCap:WORKER_CAP,workerTimeoutMs:WORKER_TIMEOUT_MS,elapsedMs:Date.now()-started,publications:[] as {name:string;expectedTicks:number;matched:boolean}[]};
+  const meta={source,names,freshAbsent,code,timedOut,lowMemory,randomEvents:true,tickMs:TICK_MS,workerCap:WORKER_CAP,workerTimeoutMs:WORKER_TIMEOUT_MS,elapsedMs:Date.now()-started,publications:[] as {name:string;expectedTicks:number;matched:boolean}[]};
   writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
   for(let i=0;i<paths.length;i++)if(existsSync(paths[i]!)){
    if(code===0){

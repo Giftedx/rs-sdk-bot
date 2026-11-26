@@ -371,11 +371,14 @@ export async function gatherItems(
     const held = (id: number) => count((st()?.inventory ?? []).map((i: any) => ({ id: i.id, count: i.count })), id);
     const here = (): Tile => { const p = st()?.player; return { x: p?.worldX ?? 0, z: p?.worldZ ?? 0, level: p?.level ?? 0 }; };
     // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
-    const targets = new Map(gathers.map(g => [g.id, held(g.id) + g.count]));
+    // Two gathers of one id (an onion asked for and two more for Aggie's dye) add up: each one's target is the start count
+    // plus the counts of that id up to and including it, and the map holds the sum of all of them.
+    const targets = new Map<number, number>();
+    const goals = gathers.map(g => { const t = (targets.get(g.id) ?? held(g.id)) + g.count; targets.set(g.id, t); return t; });
     const ctx: GatherCtx = { s, st, held, here, walk, gathers, targets };
 
-    for (const g of gathers) {
-        const target = targets.get(g.id)!, sources = gatherSources(g, here());
+    for (const [i, g] of gathers.entries()) {
+        const target = goals[i]!, sources = gatherSources(g, here());
         // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
         // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
         const unreachable: Tile[] = [];

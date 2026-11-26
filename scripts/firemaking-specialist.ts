@@ -390,7 +390,8 @@ async function dropNonTinderboxTutorialJunk(main: Session, stop: () => boolean):
         });
         if (toDrop.length === 0) return;
         await Promise.all(toDrop.slice(0, 5).map(it => main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
-        if (toDrop.length > 5) await waitTicks(main, 1);
+        if (toDrop.length <= 5) return;
+        await waitTicks(main, 1);
     }
 }
 
@@ -630,7 +631,7 @@ if (import.meta.main) {
             await main.direct({ type: 'closeModal', reason: 'SDK' });
         }
         stopFlag = true;
-        await Promise.race([helperTail, waitTicks(main, 2).catch(() => {})]);
+        await Promise.race([helperTail.catch(() => {}), waitTicks(main, 2).catch(() => {})]);
         const totalTicks = main.tick() - t0;
         const finalLvl = main.sdk.getSkill('Firemaking')?.baseLevel ?? 0;
         const finalXp = main.sdk.getSkillXp('Firemaking') ?? 0;

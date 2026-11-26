@@ -285,7 +285,7 @@ export async function runAtSiteMining(
         if (!s?.player) throw Error('mining session ended');
         if (d.stop()) throw Error('mining stopped');
         if (d.tick() - start >= o.cap) throw Error('mining tick cap');
-        if (s.player.isDead || s.player.lifeId !== initial.player!.lifeId || s.player.level !== initial.player!.level || miningHp(s) !== miningHp(initial)) {
+        if (s.player.isDead || s.player.lifeId !== initial.player!.lifeId || s.player.level !== initial.player!.level || miningHp(s) < miningHp(initial)) {
             throw Error('mining health or life changed');
         }
         if (
@@ -405,7 +405,7 @@ export async function runDropMining(d: MiningDropDriver, p: MiningProfile, o: Mi
             s.player.isDead ||
             s.player.lifeId !== life ||
             s.player.level !== level ||
-            s.skills.find(k => k.name === 'Hitpoints')?.level !== hp ||
+            (s.skills.find(k => k.name === 'Hitpoints')?.level ?? 0) < (hp ?? 0) ||
             JSON.stringify(s.equipment) !== kit
         ) {
             throw Error('mining drop stopped or life/kit changed');

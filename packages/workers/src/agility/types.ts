@@ -66,6 +66,7 @@ export interface AgilityResult {
     entry: AgilityEntrySummary;
     ticks: number;
     tickets?: number;
+    ticketsGained?: number;
 }
 
 export interface AgilitySessionOutcome {

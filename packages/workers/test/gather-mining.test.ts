@@ -1345,6 +1345,25 @@ test('drop mode preserves configured pickaxe, resumes existing miner and reconci
     expect(f.stats().s.inventory[0].id).toBe(1275);
 });
 
+test('drop mode keeps mining while hitpoints regenerate and stops on damage', async () => {
+    const withHp = (delta: number) => {
+        const f = dropFixture();
+        f.stats().s.skills[1].level = 50;
+        const wait = f.d.wait;
+        const d: MiningDropDriver = {
+            ...f.d,
+            wait: async (testFn, ticks) => {
+                const s = f.stats().s;
+                s.skills[1].level = Math.max(1, Math.min(99, s.skills[1].level + delta));
+                return wait(testFn, ticks);
+            },
+        };
+        return d;
+    };
+    expect((await runDropMining(withHp(1), iron(), { maximum: 1, cap: 100, idleTicks: 50, keep: [1275] })).made).toBe(1);
+    await expect(runDropMining(withHp(-1), iron(), { maximum: 1, cap: 100, idleTicks: 50, keep: [1275] })).rejects.toThrow('life/kit changed');
+});
+
 test('lost drop reply uses one exact receipt while unknown and foreign deltas never retry', async () => {
     const lost = dropFixture('lost');
     expect((await runDropMining(lost.d, iron(), { maximum: 1, cap: 100, idleTicks: 50, keep: [1275] })).made).toBe(1);

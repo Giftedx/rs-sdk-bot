@@ -617,7 +617,7 @@ export interface ParsedCliArgs {
 }
 
 function parseSeedList(raw: string): number[] {
-    const nums = raw.split(',').map(x => Number(x.trim())).filter(Boolean);
+    const nums = raw.split(',').map(x => x.trim()).map(x => (x === '' ? NaN : Number(x)));
     if (!nums.length || nums.some(n => !Number.isSafeInteger(n) || n <= 0)) {
         throw Error(`usage: --seeds requires positive integers (got "${raw}")`);
     }

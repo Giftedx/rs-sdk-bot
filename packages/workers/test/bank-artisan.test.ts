@@ -557,3 +557,15 @@ test('bank-artisan helpers honor caller stop signals and dispatch validates smit
     const orbsDefault = await runArtisan(stopSession, { skill: 'magic', method: 'orbs', stop: () => true });
     expect(orbsDefault.ok).toBe(false);
 }, 20_000);
+
+test('teleport preflight does not ask for the air runes a wielded staff of air supplies', () => {
+    const bank = { items: { 563: 10, 554: 10 }, observedAt: 1, trusted: true };
+    const cfg: ArtisanConfig = { skill: 'magic', method: 'teleport', args: ['varrock'] };
+    const bare = makeAccount({ bank });
+    const bareRes = artisanPreflight(bare, cfg, makeWorld(bare));
+    expect(bareRes.blockers.some(b => b.kind === 'missing_supply' && b.itemId === 556)).toBe(true);
+    const staff = makeAccount({ bank, equipment: { 1381: 1 } });
+    const staffRes = artisanPreflight(staff, cfg, makeWorld(staff));
+    expect(staffRes.blockers.some(b => b.kind === 'missing_supply')).toBe(false);
+    expect(staffRes.missingItems?.some(m => m.itemId === 556)).toBeFalsy();
+});

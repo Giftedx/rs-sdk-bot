@@ -2732,7 +2732,7 @@ export async function runGoldfarmStableSession(
             for (const n of notes()) await depositObserved(s, n);
             const junk = inv().filter(i => !COINS_RE.test(i.name) && !isFoodItem(i) && !notes().some(n => n.slot === i.slot));
             for (const item of [...new Set(junk.map(i => i.name as string))]) {
-                const d = await s.bot.depositItem(new RegExp(`^${item}$`, 'i'), -1);
+                const d = await s.bot.depositItem(new RegExp(`^${item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), -1);
                 if (d.success) console.log(`BANKED unneeded item: ${item}`);
             }
             for (const re of WITHDRAW_FOOD) {
@@ -3254,7 +3254,7 @@ export async function runThievingCli(account: string, cfg: NormalizedGatherConfi
         if (cfg.method === 'pickpocket') {
             const rawPath = cfg.args[0];
             if (!rawPath) throw Error('usage: thieving pickpocket job.json');
-            const raw = readFileSync(rawPath);
+            const raw = rawPath.startsWith('{') ? Buffer.from(rawPath, 'utf8') : readFileSync(rawPath);
             if (raw.length > 32768) throw Error('pickpocket trip file too large');
             validatePickpocketTrip(JSON.parse(raw.toString('utf8')) as PickpocketTrip);
         } else {

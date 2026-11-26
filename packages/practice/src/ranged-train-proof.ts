@@ -10,6 +10,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {simBotsDir} from '../../core/src/practice-paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
@@ -76,7 +77,7 @@ export function verifyRanged(directory:string){
  const refusalIds=new Set([...Object.values(rb.inventories).flat(),...Object.values(ra.inventories).flat()].map(i=>i.id));
  const checks:Record<string,boolean>={...rangedSaveChecks(before,after,rangedResult(log)),...rangedChildChecks(meta.code,meta.timedOut,log),
   stockOnly:rangedResult(log)?.arrowsBought===0&&rangedResult(log)?.shopVisits===0,
-  refusal:meta.refusalCode!==0&&!meta.refusalTimedOut&&/coin reserve short/.test(rl)&&!/^RESULT ok/m.test(rl)
+  refusal:meta.refusalCode!==0&&!meta.refusalTimedOut&&meta.refusalSaved===true&&/coin reserve short/.test(rl)&&!/^RESULT ok/m.test(rl)
    &&(rl.match(/^LOGOUT logged-out$/gm)??[]).length===1&&[...refusalIds].every(id=>total(rb,id)===total(ra,id))&&rb.skills[4]!.xp===ra.skills[4]!.xp,
   refusalHashes:meta.refusalBefore===hash(join(directory,'refusal-before.sav'))&&meta.refusalAfter===hash(join(directory,'refusal-after.sav'))&&meta.refusalLog===hash(join(directory,'refusal.log')),
   source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===150&&meta.xpRate===25,persisted:meta.persisted===true,
@@ -117,8 +118,8 @@ async function run(directory:string){
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'ranged-train'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  const pin=source(),name=runBotName('flrng',1),botDir=join(root,'vendor/rs-sdk/bots',name);
-  if(existsSync(botDir))throw Error('isolated practice identity already exists');
+  const pin=source(),name=runBotName('flrng',1);
+  if(existsSync(join(simBotsDir(root),name))||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('isolated practice identity already exists');
   const options=rangedStackOptions();
   stack=await startStack(options);
   const {envPath}=await createBot(name);
@@ -140,10 +141,13 @@ async function run(directory:string){
   refusalConfig.cmd[4]='800';refusalConfig.env.COIN_RESERVE='999999';
   rangedMemoryFloor(freeGiB(),'before refusal');
   const refusal=Bun.spawn({...refusalConfig,stdout:Bun.file(refusalLog),stderr:Bun.file(join(directory,'refusal.err')),windowsHide:true});
-  let refusalTimedOut=false;const refusalTimer=setTimeout(()=>{refusalTimedOut=true;void killTree(refusal.pid);},60000);
-  const refusalCode=await refusal.exited;clearTimeout(refusalTimer);
+  let refusalTimedOut=false,refusalTermination:Promise<void>|undefined;const refusalTimer=setTimeout(()=>{refusalTimedOut=true;refusalTermination=killTree(refusal.pid);},60000);
+  const refusalCode=await refusal.exited;clearTimeout(refusalTimer);await refusalTermination;
+  // The refusal session logs in, so its logout save can land after the client exits.
+  const refusalEntryLogout=readPracticeSave(join(directory,'refusal-before.sav')).vars[134]??0;
+  const refusalSaved=(await waitPracticeSave(path,s=>(s.vars[134]??0)>refusalEntryLogout,{timeoutMs:15000})).matched;
   copyFileSync(path,join(directory,'refusal-after.sav'));
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,stack:options,name,code,timedOut,refusalCode,refusalTimedOut,persisted:persisted.matched,
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,stack:options,name,code,timedOut,refusalCode,refusalTimedOut,refusalSaved,persisted:persisted.matched,
    refusalBefore:hash(join(directory,'refusal-before.sav')),refusalAfter:hash(join(directory,'refusal-after.sav')),refusalLog:hash(refusalLog),
    before:hash(join(directory,'before.sav')),after:hash(join(directory,'after.sav')),log:hash(log)},null,2));
   return verifyRanged(directory);

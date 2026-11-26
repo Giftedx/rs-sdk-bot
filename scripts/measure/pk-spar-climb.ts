@@ -112,8 +112,10 @@ if (import.meta.main) {
     const batch = async (patch: Profile, run: number, slot: number): Promise<number[] | null> => {
         const seed = firstSeed + run;
         if (!against) return sample(patch, seed, slot);
+        // A seed whose champion run failed gets the champion run again before the candidate spends a bench run.
+        if (!baseline.has(seed)) { const own = await sample({}, seed, slot); if (!own) return null; baseline.set(seed, own); }
         const got = await sample(patch, seed, slot);
-        return got && baseline.has(seed) ? pairedGain(got, baseline.get(seed)!) : null;
+        return got ? pairedGain(got, baseline.get(seed)!) : null;
     };
     // One candidate to its verdict on slot `slot`.
     const evaluate = async (knob: Knob, patch: Profile, slot: number) => {

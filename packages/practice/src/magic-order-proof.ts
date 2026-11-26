@@ -7,11 +7,12 @@ import {createHash,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
 import {startStack,type StackOptions} from './stack';
 import {canBind} from './ports';
-import {deliveryLockDir,rsSdkRoot} from './paths';
+import {deliveryLockDir} from './paths';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {resolveBotEnvPath,simBotsDir} from '../../core/src/practice-paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,alchemyEffect,type RuneCounts} from '../../../scripts/magic-order';
@@ -104,12 +105,12 @@ export function magicChildConfiguration(args:string[],env:Record<string,string>,
 // and tick wait, with the exact generated profile bound to this proof's endpoints. The session is the observe entry
 // scripts/session-check.ts (as in ammoRegistrationArgs): inline code has no script, and the progression session ends
 // a bot with no mapped entry as an unmapped worker.
-export function magicRegistrationArgs(name:string,p:ProofEndpoints){
+export function magicRegistrationArgs(name:string,p:ProofEndpoints,envPath=resolveBotEnvPath(name)){
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
     return['--eval',`import {readFileSync} from 'node:fs';
 import {openBot,finish} from './packages/core/src/bot';
 import {waitTicks} from './packages/core/src/ticks';
-const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
+const lines=readFileSync(${JSON.stringify(envPath)},'utf8').split(/\\r?\\n/);
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
 const session=await openBot(${JSON.stringify(name)},{record:{script:'scripts/session-check.ts',argv:[${JSON.stringify(name)}]}});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
@@ -327,8 +328,8 @@ async function run(directory:string){
   stack=await startMagicProofStack(endpoints);
   const account=async(fixture:Fixture)=>{
    const known=accounts.get(fixture);if(known)return known;
-   const name=runBotName('flmage',accounts.size+1),botDir=join(root,'vendor/rs-sdk/bots',name);
-   if(existsSync(botDir))throw Error('fresh account required');
+   const name=runBotName('flmage',accounts.size+1);
+   if(existsSync(join(simBotsDir(root),name))||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('fresh account required');
    const created=await createBot(name);
    writeFileSync(created.envPath,magicProofAccountEnv(readFileSync(created.envPath,'utf8'),endpoints));
    const a={name,path:await applyPreset(name,FIXTURES[fixture])};
@@ -337,7 +338,7 @@ async function run(directory:string){
     skills[6]=fixture==='varrock'?{level:31,xp:8125}:fixture==='fallback'?{level:70,xp:magicXpForLevel(71)-1}:{level:55,xp:47825};setPracticeSkills(a.path,skills);
    }
    const stamp=statSync(a.path).mtimeMs;
-   const auth=await child(directory,'auth-'+fixture,magicRegistrationArgs(name,endpoints),{},endpoints);
+   const auth=await child(directory,'auth-'+fixture,magicRegistrationArgs(name,endpoints,created.envPath),{},endpoints);
    if(auth.code!==0||auth.timedOut||!loggedOut(readFileSync(join(directory,'auth-'+fixture+'.log'),'utf8')))throw Error('practice registration failed; see auth logs');
    const entry=await waitPracticeSave(a.path,s=>statSync(a.path).mtimeMs>stamp&&fixtureChecks(s,fixture),{timeoutMs:CONFIG.saveWaitMs});
    if(!entry.matched)throw Error('seeded entry state not retained');

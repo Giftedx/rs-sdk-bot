@@ -24,6 +24,7 @@ import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
+import { readStopFile } from '../packages/core/src/practice-paths';
 import { brainPlannedJobs } from '../packages/fleet/src/fleet-sync';
 import { BANK_MEETS, pickOrder, swarmBusy, validOrder, type Order } from '../packages/workers/src/logistics';
 import { makeOrder, orderMeet } from './fleet-order';
@@ -163,7 +164,7 @@ if (import.meta.main) {
     const plan = stageJobs(side);
     const busy = swarmBusy(plan), owned = swarmBusy(plan.filter((j: any) => typeof j?.autopilot === 'string'));
     const fromList = value('--from'), from = fromList ? new Set(fromList.split(',').map(norm)) : undefined;
-    const stopText = (name: string) => { for (const n of [name, name.toLowerCase()]) { try { return readFileSync(join('.practice', `stop-${n}`), 'utf8'); } catch { /* none */ } } return undefined; };
+    const stopText = (name: string) => readStopFile(name, resolve(import.meta.dir, '..'));
     const row = (name: string) => snapshot.find((a: any) => norm(a?.name ?? '') === norm(name));
     const files = (dir: string) => { try { return readdirSync(join(FLEET_DIR(), dir)).filter(f => f.endsWith('.json')).flatMap(f => { const j = readJson(join(FLEET_DIR(), dir, f)); return j ? [j] : []; }); } catch { return []; } };
     // The order that the fleet agent would run first for an account (its lead window included), as the agent picks it.

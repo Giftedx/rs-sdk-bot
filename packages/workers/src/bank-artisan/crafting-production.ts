@@ -1296,6 +1296,9 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
         if (planned && !over()) {
             if (!held(BUCKET) && !held(WATER)) await s.bot.withdrawItem(/^bucket$/i, 1, { asNote: false });
             if (!held(BUCKET) && !held(WATER)) throw new Error('no soft clay progress: owned bucket missing');
+            // One trip: the clay fits only the free pack slots beside the bucket and kept items.
+            planned = Math.min(planned, 28 - inv().length);
+            if (planned < 1) throw new Error('no soft clay progress: no free pack slots');
             await s.bot.withdrawItem(/^clay$/i, planned, { asNote: false });
             if (held(CLAY) !== planned) throw new Error('no soft clay progress: incomplete clay withdrawal');
             await s.bot.closeBank();
@@ -1410,6 +1413,7 @@ function planFor(
     leather: number,
     thread: number,
     coins: number,
+    needle = false,
 ): { count: number; tan: number; thread: number; coins: number } {
     if (![want, hides, leather, thread, coins].every(n => Number.isSafeInteger(n) && n >= 0)) return { count: 0, tan: 0, thread: 0, coins: 0 };
     const totalLeather = pieces.reduce((n, p) => n + p.leather, 0);
@@ -1418,19 +1422,19 @@ function planFor(
     const cost = (n: number) => {
         const tan = Math.max(0, n * totalLeather - leather);
         const buy = Math.max(0, Math.ceil((n * pieces.length) / THREAD_MAKES) + 1 - thread);
-        return { count: n, tan, thread: buy, coins: tan * TAN_COST + (buy > 0 ? SHOP_COINS : 0) };
+        return { count: n, tan, thread: buy, coins: tan * TAN_COST + (buy > 0 || needle ? SHOP_COINS : 0) };
     };
     while (count > 0 && cost(count).coins > coins) count--;
     return cost(count);
 }
 
-export function setPlan(want: number, hides: number, leather: number, thread: number, coins: number): { sets: number; tan: number; thread: number; coins: number } {
-    const r = planFor(SET_PIECES, want, hides, leather, thread, coins);
+export function setPlan(want: number, hides: number, leather: number, thread: number, coins: number, needle = false): { sets: number; tan: number; thread: number; coins: number } {
+    const r = planFor(SET_PIECES, want, hides, leather, thread, coins, needle);
     return { sets: r.count, tan: r.tan, thread: r.thread, coins: r.coins };
 }
 
-export function piecePlan(piece: DhidePiece, want: number, hides: number, leather: number, thread: number, coins: number): { count: number; tan: number; thread: number; coins: number } {
-    return planFor([PIECE_BY_NAME[piece]], want, hides, leather, thread, coins);
+export function piecePlan(piece: DhidePiece, want: number, hides: number, leather: number, thread: number, coins: number, needle = false): { count: number; tan: number; thread: number; coins: number } {
+    return planFor([PIECE_BY_NAME[piece]], want, hides, leather, thread, coins, needle);
 }
 
 export async function runBlackDhideSetsSession(
@@ -1500,8 +1504,8 @@ export async function runBlackDhideSetsSession(
         await go(AL_KHARID_BANK, 'the Al Kharid bank');
         await openBank('stage');
         await bankPack('stage');
-        const plan = planFor(selected, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS));
         const needle = banked(NEEDLE) < 1;
+        const plan = planFor(selected, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS), needle);
         if (plan.count < 1) {
             await closeBank();
             throw Error(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
@@ -1639,8 +1643,8 @@ export async function runBlackDhideSetsCli(
         await go(AL_KHARID_BANK, 'the Al Kharid bank');
         await openBank('stage');
         await bankPack('stage');
-        const plan = planFor(selected!, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS));
         const needle = banked(NEEDLE) < 1;
+        const plan = planFor(selected!, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS), needle);
         if (plan.count < 1) {
             await closeBank();
             await q.fail(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);

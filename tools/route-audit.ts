@@ -40,13 +40,13 @@ export function fixedTiles(text:string,file:string):AuditTarget[]{
     else if(name==='z')z=literal(p.initializer);
     else if(name==='level')level=literal(p.initializer);
    }
-   if(x!==undefined&&z!==undefined)add(x,z,level??0,n.pos);
+   if(x!==undefined&&z!==undefined)add(x,z,level??0,n.getStart(source));
   }else if(ts.isArrayLiteralExpression(n)&&(n.elements.length===2||n.elements.length===3)){
    const x=literal(n.elements[0]),z=literal(n.elements[1]),level=n.elements.length===3?literal(n.elements[2]):0;
-   if(x!==undefined&&z!==undefined&&x>=1024&&z>=1024&&level!==undefined)add(x,z,level,n.pos);
+   if(x!==undefined&&z!==undefined&&x>=1024&&z>=1024&&level!==undefined)add(x,z,level,n.getStart(source));
   }else if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)){
    const fn=n.expression.text;
-   if(fn==='walk'||fn==='go'||fn==='walkTo')add(literal(n.arguments[0]),literal(n.arguments[1]),0,n.pos);
+   if(fn==='walk'||fn==='go'||fn==='walkTo')add(literal(n.arguments[0]),literal(n.arguments[1]),0,n.getStart(source));
   }
   ts.forEachChild(n,visit);
  };

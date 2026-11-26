@@ -614,7 +614,8 @@ async function executeMagicLoop(
  const preArenaTicks = spec.tick() - start;
  logPhase(spec, start, `magic_pre_arena lvl=${skillLevel(spec, 'Magic')} pray=${skillLevel(spec, 'Prayer')}`);
 
- if (skillLevel(spec, 'Magic') < 60) throw Error(`magic < 60 (${skillLevel(spec, 'Magic')}) before Mage Arena`);
+ // No batch carries death runes for Fire Blast: base 71 plus the Magic potion (+4) must reach Fire Wave (75).
+ if (skillLevel(spec, 'Magic') < 71) throw Error(`magic < 71 (${skillLevel(spec, 'Magic')}) before Mage Arena: potion +4 must reach Fire Wave 75`);
  await completeMageArena(spec, start, deadline);
  const arenaDoneTicks = spec.tick() - start;
  // Finish any remaining dragonstone rings if Kolodion ended before Lv 76, then drink Magic potion(+4) for Charge at 80.

@@ -575,6 +575,60 @@ test('executeShopToolPurchase closes shop, walks back to bank, and re-deposits w
     }
 });
 
+test('executeShopToolPurchase walks back and re-deposits withdrawn coins when the buy is refused cleanly', async () => {
+    let bankOpen = true;
+    let shopOpen = false;
+    let gen = 1;
+    const bank: { id: number; name: string; count: number; slot?: number }[] = [
+        { id: 995, name: 'Coins', count: 5000, slot: 0 },
+    ];
+    const inv: { id: number; name: string; count: number; slot?: number }[] = [];
+    const walks: string[] = [];
+
+    const hooks = {
+        openBank: async () => { bankOpen = true; gen++; },
+        closeBank: async () => { bankOpen = false; },
+        withdrawItem: async (item: { id: number; name: string; count: number }, count: number) => {
+            const b = bank.find(r => r.id === item.id)!;
+            b.count -= count;
+            inv.push({ id: item.id, name: item.name, count, slot: 0 });
+            gen++;
+        },
+        depositItem: async (item: { id: number; name: string; count: number }, count: number) => {
+            const amt = count === -1 ? item.count : count;
+            const idx = inv.findIndex(r => r.id === item.id);
+            if (idx >= 0) {
+                inv[idx]!.count -= amt;
+                if (inv[idx]!.count <= 0) inv.splice(idx, 1);
+            }
+            bank.find(r => r.id === item.id)!.count += amt;
+            gen++;
+        },
+        getInventory: () => inv,
+        getEquipment: () => [],
+        getBankState: () => ({ isOpen: bankOpen, items: bank }),
+        getBankGeneration: () => bankOpen ? gen : undefined,
+        walkTo: async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); return true; },
+        openShop: async () => { shopOpen = true; return { success: true }; },
+        buyFromShop: async () => ({ success: false, message: 'out of stock' }),
+        closeShop: async () => { shopOpen = false; },
+        getShopState: () => ({ isOpen: shopOpen, shopItems: [{ id: 1385, name: 'Staff of earth', count: 2, buyPrice: 1500, slot: 0 }] }),
+        waitUntil: async (pred: () => boolean) => pred(),
+    };
+
+    const res = await executeShopToolPurchase(hooks, {
+        targetId: 1385,
+        shop: 'staffshop',
+        maxBudget: 1875,
+        returnBankSpot: { x: 3185, z: 3436 },
+    });
+    expect(res).toEqual({ bought: false, id: 1385, coinsSpent: 0, reason: 'out of stock' });
+    expect(shopOpen).toBe(false);
+    expect(walks).toEqual(['3203,3433', '3185,3436']);
+    expect(bank.find(i => i.id === 995)?.count).toBe(5000);
+    expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+});
+
 test('shouldAttemptShopUpgrade gates repeat checks per tier and cools down failed shelf walks for 700 ticks', () => {
     const gate: { checkedTier?: number; failedAt?: { tier: number; tick: number } } = {};
     expect(shouldAttemptShopUpgrade(gate, 21, 100)).toBe(true);

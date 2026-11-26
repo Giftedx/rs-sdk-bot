@@ -960,10 +960,11 @@ export type Rune = keyof typeof TELE_RUNE_IDS;
 export type RuneCounts = Record<Rune, number>;
 
 export const TELEPORTS = [
-    { name: 'camelot', level: 45, xp: 55.5, members: true },
-    { name: 'falador', level: 37, xp: 48, members: false },
-    { name: 'lumbridge', level: 31, xp: 41, members: false },
-    { name: 'varrock', level: 25, xp: 35, members: false },
+    // Server XP: the game base XP times the 25x server rate, the same units as SPLASH_SPELLS.
+    { name: 'camelot', level: 45, xp: 1387.5, members: true },
+    { name: 'falador', level: 37, xp: 1200, members: false },
+    { name: 'lumbridge', level: 31, xp: 1025, members: false },
+    { name: 'varrock', level: 25, xp: 875, members: false },
 ].map(t => {
     const component = `magic:${t.name}_teleport`;
     const edge = loadTravel().find(e => e.run.how === 'spell' && e.run.component === component);
@@ -1669,7 +1670,7 @@ export async function runMagicOrder(
             const equipment = JSON.stringify(project(s.sdk.getEquipment()));
             moved = true;
             for (const id of new Set(s.sdk.getInventory().map(i => i.id))) await deposit(id);
-            const limit = Math.min(o.maxCasts, castsNeeded(magicXp(), o.target, 65, o.maxCasts), banked(itemId), banked(561), fireCost ? Math.floor(banked(554) / fireCost) : o.maxCasts);
+            const limit = Math.min(o.maxCasts, castsNeeded(magicXp(), o.target, 1625, o.maxCasts), banked(itemId), banked(561), fireCost ? Math.floor(banked(554) / fireCost) : o.maxCasts);
             await withdraw(561, limit);
             if (fireCost) await withdraw(554, limit * fireCost);
             await closeBank();

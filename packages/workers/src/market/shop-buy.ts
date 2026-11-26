@@ -1477,10 +1477,11 @@ export async function runOwnedSwordFromEast(
 
 export async function runBuySwordSession(s: Session, cfg: BuySwordConfig, stop: () => boolean = () => false) {
     const run = cfg.prepareEast ? runOwnedSwordFromEast : runOwnedSword;
+    const itemId = cfg.itemId ?? SWORD;
     return run(s, {
-        itemId: cfg.itemId ?? SWORD,
+        itemId,
         cap: cfg.cap ?? 900,
-        maximumSpend: cfg.maximumSpend ?? 2500,
+        maximumSpend: cfg.maximumSpend ?? SWORD_PROFILES[itemId]?.limit ?? 2500,
         stop,
     });
 }

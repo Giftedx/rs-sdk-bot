@@ -8,6 +8,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {simBotsDir} from '../../core/src/practice-paths';
 import {canBind} from './ports';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
@@ -78,11 +79,11 @@ async function run(directory:string){
  try{
   writeFileSync(fd,owner);
   if(existsSync(pidFile)||!canBind(8888)||!canBind(7780))throw Error('practice stack has another owner: harness recovery required');
-  const pin=source(),name=runBotName('fldrm',1),botDir=join(root,'vendor/rs-sdk/bots',name);
-  if(existsSync(botDir))throw Error('isolated practice identity already exists');
+  const pin=source(),name=runBotName('fldrm',1);
+  if(existsSync(join(simBotsDir(root),name))||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('isolated practice identity already exists');
   stack=await startStack({tickMs:150,xpRate:25,readyTimeoutMs:60000});pids=readFileSync(pidFile,'utf8');
-  await createBot(name);
-  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+  const {envPath}=await createBot(name);
+  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
   const path=await applyPreset(name,DRUID_FIXTURE);copyFileSync(path,join(directory,'before.sav'));
   const child=async(label:string,timeoutMs:number)=>{
    druidMemoryGate(freemem()/2**30);

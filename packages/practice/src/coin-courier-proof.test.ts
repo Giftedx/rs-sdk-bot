@@ -27,3 +27,8 @@ test('registration wait failure still settles its exact connection and failed lo
  const second=fixture();second.deps.settle=async()=>false;
  await expect(registerCoinProofAccount('Fixture',endpoints,second.deps)).rejects.toThrow('practice registration logout failed');
 });
+test('registration reads the profile createBot writes under the sim bots directory',async()=>{
+ const {deps}=fixture();let read='';
+ await registerCoinProofAccount('Fixture',endpoints,{...deps,readEnv:(file:string)=>{read=file;return profile;}});
+ expect(read.replace(/\\/g,'/')).toEndWith('/.practice/sim/bots/Fixture/bot.env');
+});

@@ -1762,7 +1762,9 @@ export function chooseRangedDecision(account: RangedObservedAccount, target: num
     if (!kit) {
         const hasBow = BOWS.some(b => b.req <= level && (owned[b.id] ?? 0) > 0);
         const hasArrow = ARROWS.some(q => q.req <= level && (owned[q.id] ?? 0) >= 3);
-        const method = !hasArrow ? 'ranged/lowe-buy-bronze' : !hasBow ? 'ranged/lowe-buy-shortbow' : null;
+        // An owned bow and owned arrows with no kit from a full observation: the arrows need a better bow, and bronze arrows fit every bow.
+        const observed = !!account.bank && !!account.inventory && !!account.equipment;
+        const method = !hasArrow ? 'ranged/lowe-buy-bronze' : !hasBow ? 'ranged/lowe-buy-shortbow' : observed ? 'ranged/lowe-buy-bronze' : null;
         if (method) {
             const acqStep = { script: 'scripts/ranged-train.ts', args: [String(Math.min(target, 5)), '1500'], env: { TARGET_LEVEL: String(Math.min(target, 5)) } };
             return {
@@ -1891,8 +1893,9 @@ async function runAdaptiveRangedBand(
                         return async (item: Parameters<Session['bot']['withdrawItem']>[0], amount: number, ...rest: unknown[]) => {
                             if (typeof item === 'object' && 'id' in item && item.id === COINS) {
                                 const held = countPackItems(s.sdk.getInventory(), COINS);
-                                const spent = coinsBefore - (totals().get(COINS) ?? 0);
-                                const available = preparationFunds(coinsBefore, spent, o.maxSpend, o.coinReserve);
+                                const current = totals().get(COINS) ?? 0;
+                                const spent = coinsBefore - current;
+                                const available = preparationFunds(current, spent, o.maxSpend, o.coinReserve);
                                 if (!Number.isSafeInteger(amount) || amount < 0 || held + amount > available) {
                                     throw Error('adaptive Ranged fare budget refused');
                                 }
