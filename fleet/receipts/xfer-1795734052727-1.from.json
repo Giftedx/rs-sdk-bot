@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795734052727-1",
+ "account": "Pocketpython",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "3182935d-992d-40ba-80cf-8c1c6eeb48e5",
+ "count": 0,
+ "ok": false,
+ "at": 1795734326053,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795734310119
+ },
+ "logout": {
+  "attemptId": "1795734303069-0000028596-0000000001",
+  "at": 1795734326032,
+  "sha256": "2ef4a54fd5823a17133c04bce8acc706a148731a6abad4b511ccb40b22f97579"
+ },
+ "screen": false
+}

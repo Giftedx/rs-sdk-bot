@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795734052727-3",
+ "account": "Pullmybow",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 21,
+ "claim": "6b56f673-491f-481a-a92c-9a64eed551de",
+ "count": 0,
+ "ok": false,
+ "at": 1795734340436,
+ "detail": "trade claimed"
+}

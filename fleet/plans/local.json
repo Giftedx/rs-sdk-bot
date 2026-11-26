@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795734239710,
+ "at": 1795734344112,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -191,7 +191,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=2 -- crafting inventory grind:unicorn_horn"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=1 -- crafting inventory grind:unicorn_horn"
    ],
    "env": {
     "ROUNDS": "1"
