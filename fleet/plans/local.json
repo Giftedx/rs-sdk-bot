@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795711363764,
+ "at": 1795711548774,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -171,25 +171,20 @@
    "role": "helper"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=15 -- smithing smelt 1500 bronze",
+    "scripts/aio-market.ts ORDER_KEY=brain-440-7-p97 ITEM_ID=440 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=7 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "5"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "army"
+   "goal": "campaign:haggis:item:2351",
+   "role": "auto"
   },
   {
    "account": "Billionaire",
@@ -246,35 +241,16 @@
    ]
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=7 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=7 -- crafting inventory grind:chocolate_bar"
-   ],
+   "account": "Hocuspokeus",
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   }
  ],
@@ -289,10 +265,12 @@
   "bowbeforeme",
   "fatstack",
   "fingersmith",
-  "hocuspokeus",
+  "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
+  "oreelse",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
