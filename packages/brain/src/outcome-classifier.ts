@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { liveRoot, repoRoot } from '../../core/src/practice-paths';
-import { isWorkerReleaseHold } from '../../core/src/worker-release/peers';
+import { isWorkerReleaseHold } from '../../core/src/worker-release';
 import {
     validateRunOutcome,
     type DeathOutcome,
