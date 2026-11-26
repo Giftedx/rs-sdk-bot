@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795724145595,
+ "at": 1795724156154,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -115,53 +115,6 @@
    "role": "army"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1189 MAX_MAKE=15 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 TARGET_COUNT=15 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "helper"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "20",
-    "ORE_RESERVE": "0"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "helper"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-453-114-p517 ITEM_ID=453 QUANTITY=114 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=57 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -176,6 +129,26 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "auto"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_harralander_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:97",
+   "role": "army"
   },
   {
    "account": "Shaftsinker",

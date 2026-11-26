@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723740263-1",
  "account": "Unsheathed",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 52,
  "claim": "079d77ac-8b67-4bbf-a374-4c170b7fed98",
- "count": 0,
- "ok": false,
- "at": 1795724136816,
- "detail": "trade claimed"
+ "count": 52,
+ "ok": true,
+ "at": 1795724149855,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 52
+ },
+ "bank": {
+  "count": 52,
+  "at": 1795724149106
+ },
+ "logout": {
+  "attemptId": "1795724136825-0000000432-0000000001",
+  "at": 1795724149847,
+  "sha256": "b101f1c1244f29c2f1749e0b1fe36176a772b179f705a4ab86cfcddda5463693"
+ },
+ "screen": true
 }
