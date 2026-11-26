@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795729889066-1",
+ "account": "Shaftsinker",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 200,
+ "claim": "b3a2a43f-1698-415a-bcf5-38ce64b139ee",
+ "count": 0,
+ "ok": false,
+ "at": 1795730495559,
+ "detail": "trade claimed"
+}
