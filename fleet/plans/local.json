@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718729813,
+ "at": 1795718764511,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -271,6 +271,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:biohazard",
    "role": "auto"
   }
  ],

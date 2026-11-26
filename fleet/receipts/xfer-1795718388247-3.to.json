@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795718388247-3",
  "account": "ChaosInPants",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "d805b903-0a2b-4626-bd56-ffc45bb63bd9",
- "count": 0,
- "ok": false,
- "at": 1795718709915,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795718732554,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795718731814
+ },
+ "logout": {
+  "attemptId": "1795718709953-0000020436-0000000001",
+  "at": 1795718732532,
+  "sha256": "efb9488563d10bf1ee7084fcd387c6265fd4950bb0bdc108cde9cc17db3c8837"
+ },
+ "screen": true
 }
