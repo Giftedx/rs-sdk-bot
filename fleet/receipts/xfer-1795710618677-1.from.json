@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710618677-1",
+ "account": "Packhorse",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 3,
+ "claim": "af758aa5-6be3-4ab9-8013-98ce40ae166a",
+ "count": 0,
+ "ok": false,
+ "at": 1795710804588,
+ "detail": "trade claimed"
+}
