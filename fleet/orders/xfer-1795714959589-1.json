@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795714959589-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "CoinCock",
+  "item": "Dragon bones",
+  "count": 11,
+  "itemId": 536,
+  "start": 1795714959589,
+  "end": 1795715859589,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
