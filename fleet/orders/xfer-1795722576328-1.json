@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795722576328-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "AFKnight",
+  "item": "Coins",
+  "count": 360,
+  "itemId": 995,
+  "start": 1795722576328,
+  "end": 1795723476328,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

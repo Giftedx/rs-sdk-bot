@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795722576328-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Quickhandjob",
+  "item": "Chaos rune",
+  "count": 220,
+  "itemId": 562,
+  "start": 1795722576328,
+  "end": 1795723476328,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
