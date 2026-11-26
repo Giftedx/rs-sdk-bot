@@ -540,6 +540,9 @@ export class OutcomeClassifier {
     }): DefectRecord {
         const key = defectKey(params.activityId, params.faultSignature);
         const existing = this.defects.get(key);
+        // The count says how often the signature failed during one hold. A hold that expired or was cleared ends that
+        // count: a later failure is a first defect again, and it holds only its own account (planner.ts isFleetWideDefect).
+        const holding = existing?.quarantined === true && (existing.expiresAt === undefined || params.now < existing.expiresAt);
         const logPath =
             nonEmpty(params.logPath) ??
             existing?.logPath ??
@@ -563,7 +566,7 @@ export class OutcomeClassifier {
             logPath,
             ...(tickRecordPath ? { tickRecordPath } : {}),
             detail,
-            count: (existing?.count ?? 0) + 1,
+            count: (holding ? existing?.count ?? 0 : 0) + 1,
         };
 
         const errors = validateDefectRecord(next);

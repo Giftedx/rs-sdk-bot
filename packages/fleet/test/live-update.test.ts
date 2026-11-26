@@ -296,11 +296,28 @@ describe('fleet live-update facade', () => {
             const root = scratch();
             mkdirSync(join(root, '.practice', 'live'), { recursive: true });
             writeFileSync(join(root, '.practice', flag === 'swarm' ? 'live' : '', `stop-${flag}`), 'owner hold');
+            // A paused update cannot land, so the pass removes the drain mark; a dry pass keeps it.
+            writePendingUpdate(root, { at: Date.now(), target: 't', files: ['a.ts'] });
+            const dry: string[] = [];
+            expect(await runLiveUpdateCli(root, ['--dry'], {}, line => dry.push(line))).toBe(0);
+            expect(dry[0]).toMatch(/^RESULT ok live-update paused\b/);
+            expect(existsSync(pendingUpdateFile(root))).toBe(true);
             const lines: string[] = [];
             const code = await runLiveUpdateCli(root, [], {}, line => lines.push(line));
             expect(code).toBe(0);
             expect(lines[0]).toMatch(/^RESULT ok live-update paused\b/);
+            expect(existsSync(pendingUpdateFile(root))).toBe(false);
         }
+    });
+
+    test('live updates turned off remove the drain mark', async () => {
+        const root = scratch();
+        mkdirSync(join(root, '.practice', 'live'), { recursive: true });
+        writePendingUpdate(root, { at: Date.now(), target: 't', files: ['a.ts'] });
+        const lines: string[] = [];
+        expect(await runLiveUpdateCli(root, [], { LIVE_UPDATE: '0' }, line => lines.push(line))).toBe(0);
+        expect(lines[0]).toBe('RESULT ok live-update off (LIVE_UPDATE=0)');
+        expect(existsSync(pendingUpdateFile(root))).toBe(false);
     });
 
     test('readCheckout detects untracked path-prefix collisions and applyUpdate adopts matching untracked files safely', () => {

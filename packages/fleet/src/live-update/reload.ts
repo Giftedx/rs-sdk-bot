@@ -43,15 +43,19 @@ export async function runLiveUpdateCli(
 ): Promise<number> {
     const dry = argv.includes('--dry'), target = 'origin/master';
     const finish = (line: string, code = 0): number => { log(line); return code; };
-    if (env.LIVE_UPDATE === '0') return finish('RESULT ok live-update off (LIVE_UPDATE=0)');
+    // An update that this pass cannot land has no use for a drain: its mark would hold new starts and trades, and ask
+    // runs to log out (swarm.ts drainStopAccounts), until it ages out. So the pass removes the mark. A failed fetch
+    // keeps it, because the next pass can land the update and renews the mark.
+    const cannotLand = (line: string): number => { if (!dry) clearPendingUpdate(root); return finish(line); };
+    if (env.LIVE_UPDATE === '0') return cannotLand('RESULT ok live-update off (LIVE_UPDATE=0)');
     for (const flag of ['live-update', 'coordinator', 'swarm'] as const) {
         if (hasStopFile(flag, root)) {
-            return finish(flag === 'live-update' ? 'RESULT ok live-update paused by stop file' : `RESULT ok live-update paused by stop-${flag}`);
+            return cannotLand(flag === 'live-update' ? 'RESULT ok live-update paused by stop file' : `RESULT ok live-update paused by stop-${flag}`);
         }
     }
     const git = gitIn(root);
     const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-    if (!branch.ok || branch.out !== 'master') return finish(`RESULT ok live-update none: checkout is on ${branch.ok ? branch.out : 'no branch'}`);
+    if (!branch.ok || branch.out !== 'master') return cannotLand(`RESULT ok live-update none: checkout is on ${branch.ok ? branch.out : 'no branch'}`);
     const fetch = git('fetch', '--quiet', '--no-tags', 'origin', 'master');
     if (!fetch.ok) return finish(`RESULT fail live-update fetch: ${fetch.out.slice(0, 200)}`, 1);
     try {
