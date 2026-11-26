@@ -19,6 +19,7 @@ import {
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import { isWorkerReleaseHold } from '../../core/src/worker-release';
+import { isClaimHeldResult, isStopResult } from '../../brain/src/outcome-classifier';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
@@ -1069,11 +1070,12 @@ export function captureRunBaseline(
 // supervisor paused on it) or a stop (an owner or account stop file, or a lost fleet lease, before or during the run).
 // Such a run is no outcome: as a worker defect it would quarantine its activity for every account.
 // A stopped run whose result is its own failure (a refusal printed before the stop was seen) is still that failure.
+// A login that a fleet claim refused is a hold of the account under every end reason.
 export function gateHeldRunEnd(endReason: string, lastResultLine?: string): boolean {
     if (/^release-paused\b/.test(endReason)) return true;
-    if (lastResultLine !== undefined && isWorkerReleaseHold(lastResultLine)) return true;
+    if (lastResultLine !== undefined && (isWorkerReleaseHold(lastResultLine) || isClaimHeldResult(lastResultLine))) return true;
     if (!/^stopped\b/.test(endReason)) return false;
-    return lastResultLine === undefined || /\bstop file\b/.test(lastResultLine);
+    return lastResultLine === undefined || isStopResult(lastResultLine);
 }
 
 export function extractWorkerOutcomeInput(params: {
