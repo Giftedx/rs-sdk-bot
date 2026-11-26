@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795732906853-1",
  "account": "BackdoorMan",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 510,
  "claim": "6f8b2b5f-5cea-4d0e-9093-29800a476ad2",
- "count": 0,
- "ok": false,
- "at": 1795733306414,
- "detail": "trade claimed"
+ "count": 510,
+ "ok": true,
+ "at": 1795733318883,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 560
+ },
+ "bank": {
+  "count": 510,
+  "at": 1795733318143
+ },
+ "logout": {
+  "attemptId": "1795733306423-0000027600-0000000001",
+  "at": 1795733318871,
+  "sha256": "8a5b37671fd1c8ad6b4433f8ef773eb1bc7ae5ddb35fe47f25a1c542fad4e7e8"
+ },
+ "screen": true
 }
