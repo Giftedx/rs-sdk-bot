@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727606565-1",
  "account": "Swordinhand",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Chaos rune",
  "requested": 6,
  "claim": "9ebb36f6-a934-4ce2-85ed-b3556626078d",
- "count": 0,
- "ok": false,
- "at": 1795727726984,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795727851194,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795727834807
+ },
+ "logout": {
+  "attemptId": "1795727727186-0000015744-0000000001",
+  "at": 1795727851183,
+  "sha256": "0e63f90be77aafe543cdd8d5a75a2e7f1105f7527d7507f582af81e92ec23c80"
+ },
+ "screen": true
 }
