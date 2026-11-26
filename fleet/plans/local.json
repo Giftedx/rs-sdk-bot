@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795733829924,
+ "at": 1795733904753,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -85,6 +85,37 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "fluffs"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:fluffs",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:fluffs",
+   "role": "auto"
   },
   {
    "account": "mmthv2350",
@@ -254,15 +285,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "fluffs"
+    "barcrawl"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:fluffs",
+   "goal": "goal:quest_board:barcrawl",
    "role": "army"
   },
   {
@@ -322,39 +353,7 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
    "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -380,11 +379,11 @@
   "ballspinner",
   "bigpackage",
   "dipstick",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
   "moneyshot",
   "oreelse",
   "pickpockdick",

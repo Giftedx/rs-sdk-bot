@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733568928-1",
  "account": "CoinCock",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 560,
  "claim": "6452dc10-12ac-42f1-86f7-4d080762c855",
- "count": 0,
- "ok": false,
- "at": 1795733890950,
- "detail": "trade claimed"
+ "count": 560,
+ "ok": true,
+ "at": 1795733902851,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 560
+ },
+ "bank": {
+  "count": 560,
+  "at": 1795733902114
+ },
+ "logout": {
+  "attemptId": "1795733890960-0000002524-0000000001",
+  "at": 1795733902840,
+  "sha256": "6d50df638451ae5c25a89ce7f9098b7d7dd6e8f3a43a78074c280c82fd50ae34"
+ },
+ "screen": true
 }
