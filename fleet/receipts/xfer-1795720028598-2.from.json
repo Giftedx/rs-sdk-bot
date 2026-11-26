@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720028598-2",
  "account": "CoinCock",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 81,
  "claim": "462ea160-b002-44ce-9c36-7be98d0ff176",
- "count": 0,
- "ok": false,
- "at": 1795720239331,
- "detail": "trade claimed"
+ "count": 81,
+ "ok": true,
+ "at": 1795720447283,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 81,
+  "after": 0
+ },
+ "bank": {
+  "count": 81,
+  "at": 1795720426098
+ },
+ "logout": {
+  "attemptId": "1795720239351-0000026344-0000000001",
+  "at": 1795720447274,
+  "sha256": "10f0c02617794bd1cec834f45c98585762148c3cedb8f811d6662cd8a411d1ff"
+ },
+ "screen": true
 }
