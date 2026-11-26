@@ -140,9 +140,11 @@ export const realInProcessDeps: InProcessDeps = {
 };
 
 // The script prints `START x z level` right after login; it must equal the preset position. A pair script
-// (quest-arrav.ts) prints one START per account, the companion's first, so any START line may match.
+// (quest-arrav.ts) prints one START per account, the companion's first, so any START line may match. scripts/chain.ts
+// prints each step's lines after "  | " (packages/core/src/run-child.ts streamChildOutput), and its first step logs in
+// at the preset position.
 function startMatches(stdout: string, preset?: string): { ok: boolean; detail: string } {
-    const all = [...stdout.matchAll(/^START (\d+) (\d+) (\d+)/gm)];
+    const all = [...stdout.matchAll(/^(?: {2}\| )?START (\d+) (\d+) (\d+)/gm)];
     if (!all.length) return { ok: false, detail: 'no START line' };
     const p = preset ? PRESETS[preset]?.position : undefined;
     if (!p) return { ok: true, detail: all[0]![0] };

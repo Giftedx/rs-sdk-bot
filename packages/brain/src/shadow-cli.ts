@@ -241,6 +241,8 @@ function verifySyntheticScenarioProbes(
             Herblore: { level: 50, xp: 105_000 }, Mining: { level: 55, xp: 170_000 }, Prayer: { level: 45, xp: 65_000 },
             Smithing: { level: 55, xp: 170_000 }, Thieving: { level: 55, xp: 170_000 }, Woodcutting: { level: 55, xp: 170_000 },
         },
+        // The Legends' Quest items that the quest sweep takes only from the bank: a rune axe and a prayer potion(4).
+        bank: { items: { 1359: 1, 2434: 1 }, observedAt: now - 10_000, trusted: true },
         quests_extra: undefined,
     } as AccountState;
     (questVet as any).quests = {

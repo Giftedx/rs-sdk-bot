@@ -1832,6 +1832,20 @@ return [
         bank: [...(PRESETS.quest_squire!.inventory ?? [])]},
       pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && new RegExp(`^SQUIRE_FROM ${stage}$`, 'm').test(s) && /^MILESTONE 100 /m.test(s)
         && has.test(s) && !hasNot.test(s)} as BenchCase)),
+  // The brain's chain for a Knight's Sword account with no iron bars and 16 iron ore banked. The quest sweep gets iron
+  // bars only from the bank (packages/workers/src/quest/bank-needs.ts), so the quest preflight names 2351:2 and the
+  // planner smelts them before the quest. The step texts are the chain.ts command that the swarm runs for that plan
+  // (packages/fleet/src/worker-dispatch.ts dispatchAccountPlan); the sweep then finds the bars in the bank. Half of the
+  // iron ore fails at the furnace (smelting.rs2:202), and 8 ore made 1 bar on seed 7, so the bank holds 16. chain.ts
+  // prints each child line after "  | ".
+  {key: 'extra:chain-squire-smelt-bars', script: 'scripts/chain.ts', preset: 'quest_squire', timeoutMs: 600_000,
+    scriptArgs: ['scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=2 ORE_RESERVE=0 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 -- smithing smelt 1000 iron',
+      'scripts/aio-quester.ts DEMAND_ID=goal:quest_board:squire BATCH_UNITS=1 -- sweep squire'],
+    presetConfig: {...PRESETS.quest_squire!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
+      bank: [...(PRESETS.quest_squire!.inventory ?? []).filter(i => i.id !== 2351), {id: 440, count: 16}]},
+    pass: s => /^RESULT ok chain rounds=1 ok=2 failed=0$/m.test(s) && /^ {2}\| RESULT ok mode=iron .*"made":2,"banked":2/m.test(s)
+      && /^ {2}\| QUEST_SWEEP_WITHDRAW \{"id":2351,"count":2,/m.test(s) && /^ {2}\| QUEST_SWEEP_BANK_DONE /m.test(s)
+      && /^ {2}\| MILESTONE 100 /m.test(s) && !/missing 2351/.test(s)},
   // Fight Arena through the quest sweep from the Ardougne south bank with the quest pack banked, at %arenaquest
   // (varp 17) = 3 in the worn Khazard helmet and armour: the state that live runs left at "fail talk barman" (no coins
   // then; the sweep stages the preset's 20). The sweep reads the stage from the journal, and the script starts at the

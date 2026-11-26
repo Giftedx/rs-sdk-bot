@@ -26,6 +26,7 @@ import {
     type WorkerTile,
     type WorkerWorldView,
 } from '../../workers/src/contracts';
+import { questSweepCoins, questSweepNeeds } from '../../workers/src/quest/bank-needs';
 import { loadTravel } from '../../core/src/travel';
 import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
@@ -1341,6 +1342,30 @@ interface StaticActivityPreflight {
     readonly spotId: string | undefined;
     readonly maxConcurrentAccounts: number | undefined;
     readonly boatEastFromKandarin: boolean;
+    readonly questSweep: { readonly slug: string; readonly name: string } | undefined;
+}
+
+// The items and coins that the quest sweep takes from the bank for an account (packages/workers/src/quest/bank-needs.ts):
+// the preset items that no shop sells and no gather plan covers, and the preset coins with the price of the shop items,
+// the NPC fees of the gather items that the account lacks and the boat fares from its tile. A complete quest needs none.
+export function questSweepRequirements(
+    acct: WorkerAccountView,
+    quest: { readonly slug: string; readonly name: string },
+    cache?: AccountLookupCache,
+): { readonly items: readonly RequiredItemSpec[]; readonly coins: number } | null {
+    const state = cachedAccountQuestState(acct, quest.name, cache);
+    if (state === 'complete') return null;
+    const need = questSweepNeeds(quest.slug, (skill) => cachedAccountSkillLevel(acct, skill, cache), state === 'started');
+    const owned = (id: number) => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true });
+    const byId = new Map<number, { count: number; name?: string }>();
+    for (const row of need.bank) {
+        if (row.for !== row.id && owned(row.for) >= row.forCount) continue;
+        const prev = byId.get(row.id);
+        byId.set(row.id, { count: (prev?.count ?? 0) + row.count, ...(row.name ? { name: row.name } : {}) });
+    }
+    const items: RequiredItemSpec[] = [...byId].map(([itemId, r]) => ({ itemId, count: r.count, ...(r.name ? { itemName: r.name } : {}) }));
+    const skills = Object.fromEntries(Object.entries(acct.skills).map(([name, s]) => [name.toLowerCase(), s.level]));
+    return { items, coins: questSweepCoins(need, owned, acct.pos ?? undefined, skills) };
 }
 
 const staticPreflightCache = new WeakMap<object, StaticActivityPreflight>();
@@ -1416,6 +1441,9 @@ function extractStaticActivityPreflight(activity: {
         spotId: activity.spotId,
         maxConcurrentAccounts: activity.maxConcurrentAccounts,
         boatEastFromKandarin: activity.workerId === 'quest',
+        questSweep: cfg.mode === 'sweep' && typeof cfg.questSlug === 'string'
+            ? { slug: cfg.questSlug, name: typeof cfg.questName === 'string' ? cfg.questName : cfg.questSlug }
+            : undefined,
     };
     staticPreflightCache.set(activity, spec);
     return spec;
@@ -1450,6 +1478,14 @@ export function activityPreflightFromConfig(
         }
         requiredItems = mutableItems;
     }
+    let coinsRequired = base.coinsRequired;
+    if (base.questSweep) {
+        const sweep = questSweepRequirements(acct, base.questSweep, opts?._acctCache);
+        if (sweep) {
+            if (sweep.items.length > 0) requiredItems = [...requiredItems, ...sweep.items];
+            if (sweep.coins > (coinsRequired ?? 0)) coinsRequired = sweep.coins;
+        }
+    }
     return evaluatePreflight(
         acct,
         {
@@ -1460,7 +1496,7 @@ export function activityPreflightFromConfig(
             startedQuestRefused: base.startedQuestRefused,
             wearableItemIds: base.wearableItemIds,
             requiredItems,
-            coinsRequired: base.coinsRequired,
+            coinsRequired,
             operatingCoinFloat: base.operatingCoinFloat,
             ferryFareHint: base.ferryFareHint,
             targetTile: base.targetTile,

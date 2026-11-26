@@ -106,6 +106,15 @@ test('in-process mode runs up to `parallel` runs at once and keeps results in ru
     expect(r.results.map(x => x.tail.match(/run\d/)?.[0])).toEqual(['run1', 'run2', 'run3', 'run4', 'run5']);
 });
 
+test('in-process mode: a chain.ts run passes on the START line of its first step', async () => {
+    const { proveInProcess, okPass } = await import('../src/prove');
+    const deps = (out: string) => ({ prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} });
+    const chain = ['  | START 3224 3245 0', 'CHAIN round=1 scripts/aio-skiller.ts ok RESULT ok', '  | START 3269 3166 0', 'RESULT ok chain rounds=1 ok=2 failed=0'].join('\n');
+    expect((await proveInProcess({ bot: 'g', script: 'scripts/chain.ts', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps(chain))).passes).toBe(1);
+    expect((await proveInProcess({ bot: 'g', script: 'scripts/chain.ts', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps('  | START 1 2 0\nRESULT ok chain rounds=1 ok=1 failed=0'))).passes).toBe(0);
+    expect((await proveInProcess({ bot: 'g', script: 'scripts/chain.ts', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps(' | START 3224 3245 0\nRESULT ok'))).passes).toBe(0);
+});
+
 test('in-process mode: a missing or wrong START line fails the run', async () => {
     const { proveInProcess, okPass } = await import('../src/prove');
     const deps = (out: string) => ({ prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} });
