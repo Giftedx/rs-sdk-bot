@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795720028598-1",
+ "account": "ChaosInPants",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "4cc65c98-7d41-405c-9bcc-00e87ba1cd0d",
+ "count": 0,
+ "ok": false,
+ "at": 1795720307742,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 25",
+ "logout": {
+  "attemptId": "1795720299384-0000007240-0000000001",
+  "at": 1795720307658,
+  "sha256": "30a64ab0cccdf0060c5c010d33915c5cf7dce8ad88e4e2cbc1e85cd42642754f"
+ },
+ "screen": false
+}

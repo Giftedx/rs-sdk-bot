@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720283886,
+ "at": 1795720313317,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 PRODUCT_TARGET=240 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=240 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/ranged-train.ts",
    "args": [],
@@ -72,22 +87,6 @@
    "repeat": false,
    "goal": "goal:pk_army:TossTheCaber",
    "role": "auto"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
   },
   {
    "account": "Earlyshooter",
@@ -106,7 +105,7 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "Magicwanda",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -122,7 +121,7 @@
    "role": "auto"
   },
   {
-   "account": "AFKnight",
+   "account": "Pullmybow",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -136,22 +135,6 @@
    "repeat": false,
    "goal": "goal:quest_board:tree",
    "role": "auto"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
   },
   {
    "account": "Moneyshot",
@@ -192,6 +175,22 @@
    "role": "army"
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-2357-12-p3459 ITEM_ID=2357 QUANTITY=12 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 -- ge-buy",
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=12 STOCK_TARGET=12 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=12 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
@@ -207,20 +206,56 @@
    "role": "army"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Quickhandjob",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "sweep",
+    "arena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "464"
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "3"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "army"
   }
  ],
  "army": [
@@ -236,7 +271,6 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
@@ -245,7 +279,6 @@
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "swordinhand",

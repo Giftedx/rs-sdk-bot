@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720142309-1",
  "account": "Fingersmith",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 6,
  "claim": "d899800b-cf54-4bcc-afff-ae45685261e0",
- "count": 0,
- "ok": false,
- "at": 1795720221147,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795720290857,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795720228094
+ },
+ "logout": {
+  "attemptId": "1795720221157-0000019688-0000000001",
+  "at": 1795720290846,
+  "sha256": "10629e939da6f6ff1f3e5f84a9a879004654e34ab97b76dcbe7cd556f1338ea2"
+ },
+ "screen": true
 }

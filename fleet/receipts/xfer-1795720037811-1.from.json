@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720037811-1",
  "account": "Spitroaster",
  "partner": "WellHung",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 23,
  "claim": "7c4dcc54-22e9-4ce7-9288-dc60bb336c06",
- "count": 0,
- "ok": false,
- "at": 1795720258536,
- "detail": "trade claimed"
+ "count": 23,
+ "ok": true,
+ "at": 1795720306044,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 23,
+  "after": 0
+ },
+ "bank": {
+  "count": 23,
+  "at": 1795720270926
+ },
+ "logout": {
+  "attemptId": "1795720258547-0000005772-0000000001",
+  "at": 1795720306032,
+  "sha256": "774c48280250c8e890b716a5b59dcf58cae281327f88d7426ed35dc3d089d685"
+ },
+ "screen": true
 }
