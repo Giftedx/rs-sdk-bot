@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795720037811-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "WellHung",
+  "item": "Rune essence",
+  "count": 23,
+  "itemId": 1436,
+  "start": 1795720037811,
+  "end": 1795720937811,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

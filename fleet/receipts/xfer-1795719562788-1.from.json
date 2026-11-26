@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795719562788-1",
+ "account": "Fatstack",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "7eb2bb2e-749a-49b5-a92f-14260b0751a0",
+ "count": 0,
+ "ok": false,
+ "at": 1795720091836,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 7,
+  "at": 1795720060162
+ },
+ "logout": {
+  "attemptId": "1795720050601-0000006936-0000000001",
+  "at": 1795720091757,
+  "sha256": "4e6e88d7e07b8f585468bbe72f68cb7f5ab03dd6ef56953a70da0bc5375aaabe"
+ },
+ "screen": false
+}

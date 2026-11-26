@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795719910121-1",
+ "account": "mmsmk1232",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "3ff472d9-09ef-42bc-9cca-dd382ebe9a13",
+ "count": 0,
+ "ok": false,
+ "at": 1795720077944,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

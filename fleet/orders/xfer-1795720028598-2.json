@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795720028598-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "SporranBulge",
+  "item": "Rune essence",
+  "count": 81,
+  "itemId": 1436,
+  "start": 1795720028598,
+  "end": 1795720928598,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
