@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795725819167-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "Moneyshot",
+  "item": "Fishing bait",
+  "count": 2,
+  "itemId": 313,
+  "start": 1795725819167,
+  "end": 1795726719167,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

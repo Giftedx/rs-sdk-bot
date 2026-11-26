@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725716023-1",
+ "account": "MineYourBiz",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 62,
+ "claim": "f69cbec2-ba67-4ab0-8f3b-b088d3e2c090",
+ "count": 62,
+ "ok": true,
+ "at": 1795725818454,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 62,
+  "after": 0
+ },
+ "bank": {
+  "count": 62,
+  "at": 1795725800895
+ },
+ "logout": {
+  "attemptId": "1795725791706-0000025968-0000000001",
+  "at": 1795725818441,
+  "sha256": "bd2a84ed66a3793834c4dfa628b41c25b878f47d96b03fb2dd893077e897b353"
+ },
+ "screen": true
+}
