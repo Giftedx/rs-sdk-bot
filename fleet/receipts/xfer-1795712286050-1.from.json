@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795712286050-1",
  "account": "OreElse",
  "partner": "Quickhandjob",
@@ -12,6 +12,16 @@
  "claim": "65367857-daa1-4ac6-8bca-8657c27554e6",
  "count": 0,
  "ok": false,
- "at": 1795712521663,
- "detail": "trade claimed"
+ "at": 1795712559241,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 5,
+  "at": 1795712528116
+ },
+ "logout": {
+  "attemptId": "1795712521919-0000003560-0000000001",
+  "at": 1795712559229,
+  "sha256": "b5fe66382008bafbebc6264737fa9794362325ceb77812d93f7784eec43e3653"
+ },
+ "screen": false
 }

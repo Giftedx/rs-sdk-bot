@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795711886206-4",
  "account": "Woodenstaff",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "4de7101d-f13c-476b-9c04-b2a01fcccc4e",
- "count": 0,
- "ok": false,
- "at": 1795712545806,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795712557108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795712556076
+ },
+ "logout": {
+  "attemptId": "1795712545818-0000013304-0000000001",
+  "at": 1795712556822,
+  "sha256": "c8a721bc2dc013f8aba2f0485fc655cceb17ba1b12f8fbb9086a6473cf7b056b"
+ },
+ "screen": true
 }
