@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795724591086-1",
+ "account": "Woodenstaff",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8010,
+ "claim": "299021e9-dc05-42af-831e-536e6b2fb951",
+ "count": 0,
+ "ok": false,
+ "at": 1795724740568,
+ "detail": "trade claimed"
+}
