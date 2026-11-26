@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727578796-1",
  "account": "YewFirst",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 29,
  "claim": "b0140f7f-565a-48ff-ac62-7d1566ba1ea7",
- "count": 0,
- "ok": false,
- "at": 1795727738149,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795727764764,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29,
+  "after": 0
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795727746001
+ },
+ "logout": {
+  "attemptId": "1795727738157-0000027088-0000000001",
+  "at": 1795727764752,
+  "sha256": "08f350832a3a1232f69298b246e31458cf7bcfe8ae0be9f49f35c3a040e83eb3"
+ },
+ "screen": true
 }
