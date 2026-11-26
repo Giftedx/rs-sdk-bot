@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
-import { buildDropSources } from '../src/item-sources/drops';
-import type { SourceCatalog } from '../src/item-sources/lookup';
+import { buildDropSources } from './drops';
+import type { SourceCatalog } from './lookup';
 
 const PROC_FILE = 'scripts/drop tables/scripts/shared_droptables.rs2';
 const PROCS = `[proc,randomherb]()(namedobj, int)

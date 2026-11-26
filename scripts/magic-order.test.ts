@@ -68,7 +68,7 @@ test('five funded Lumbridge casts reach37 from8125XP without a sixth or Falador 
  while(level<37){
   const t=selectTeleport(level,37,held)!;expect(t.name).toBe('lumbridge');
   for(const k of Object.keys(TELE_RUNE_IDS) as (keyof RuneCounts)[])held[k]-=t.costs[k];
-  xp+=t.xp*25;n++;
+  xp+=t.xp;n++;
   while(level<99&&xp>=magicXpForLevel(level+1))level++;
  }
  expect(n).toBe(5);expect(level).toBe(37);expect(held).toEqual(ownedTele({air:10,earth:0,law:0}));
