@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795710391725-1",
+ "account": "OreElse",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "8dd799d0-4fec-454e-a27c-e09ad448a925",
+ "count": 2,
+ "ok": true,
+ "at": 1795710700136,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795710699368
+ },
+ "logout": {
+  "attemptId": "1795710651198-0000024880-0000000001",
+  "at": 1795710700124,
+  "sha256": "744dff869a456f7fc4dcf7c0aa6966482063fe0bb81674d8f45deaa8732b27df"
+ },
+ "screen": true
+}

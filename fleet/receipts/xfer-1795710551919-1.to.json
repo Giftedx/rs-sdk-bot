@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710551919-1",
+ "account": "TossTheCaber",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "02410540-bec6-4f0a-a50f-69a5bf4a917f",
+ "count": 0,
+ "ok": false,
+ "at": 1795710692270,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795710486909-1",
+ "account": "Billionaire",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "455187b1-1364-4d96-9266-89df181dd3e3",
+ "count": 0,
+ "ok": false,
+ "at": 1795710642768,
+ "detail": "trade claimed"
+}
