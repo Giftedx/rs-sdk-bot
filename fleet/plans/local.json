@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721769213,
+ "at": 1795721849394,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -113,21 +113,57 @@
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "arena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-71-p61 ITEM_ID=1436 QUANTITY=71 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=71 -- runecraft air"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=98 PRODUCT_TARGET=98 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=98 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
-   "account": "BackdoorMan",
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_guam_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:91",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -140,10 +176,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "helper"
+   "role": "army"
   },
   {
-   "account": "WellHung",
+   "account": "AFKnight",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -156,7 +192,23 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:elena",
-   "role": "helper"
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "tree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
+   "role": "auto"
   },
   {
    "account": "YewGotWood",
@@ -172,6 +224,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
+   "role": "auto"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
    "role": "auto"
   }
  ],
@@ -202,8 +270,6 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
-  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"
