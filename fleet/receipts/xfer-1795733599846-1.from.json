@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795733599846-1",
  "account": "YewFirst",
  "partner": "Moneyshot",
@@ -12,6 +12,16 @@
  "claim": "12cf5cce-3861-4080-ad93-6c7bfbd5a62b",
  "count": 0,
  "ok": false,
- "at": 1795733825607,
- "detail": "trade claimed"
+ "at": 1795733851271,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 5,
+  "at": 1795733835319
+ },
+ "logout": {
+  "attemptId": "1795733825961-0000008948-0000000001",
+  "at": 1795733851259,
+  "sha256": "af2920fc17cda85449998bd054d3049c3961f578e17fbfb3d6c1aa1d30960071"
+ },
+ "screen": false
 }
