@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795737334049,
+ "at": 1795737345988,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=43 PRODUCT_TARGET=43 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=43 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=31 PRODUCT_TARGET=31 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=31 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -286,26 +286,6 @@
    "role": "auto"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:3doseantipoison"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:shaftshooter:item:175",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:shaftshooter:item:175",
-   "role": "army"
-  },
-  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -320,37 +300,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-561-2-p206 ITEM_ID=561 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=206 -- ge-buy",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=50 -- magic bones"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=14 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
   }
  ],
  "army": [
@@ -378,7 +327,9 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "undermykilt"
+  "swordinhand",
+  "undermykilt",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
