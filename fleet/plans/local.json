@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795710476908,
+ "at": 1795710489345,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -290,7 +290,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "391"
+    "BATCH_UNITS": "366"
    },
    "enabled": true,
    "repeat": false,
@@ -306,7 +306,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "391"
+    "BATCH_UNITS": "366"
    },
    "enabled": true,
    "repeat": false,
@@ -314,26 +314,11 @@
    "role": "army"
   },
   {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=391 -- runecraft supply"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=391 -- runecraft supply"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=366 -- runecraft supply"
    ],
    "env": {
     "ROUNDS": "1"
@@ -368,7 +353,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "391"
+    "BATCH_UNITS": "366"
    },
    "enabled": true,
    "repeat": false,
@@ -379,16 +364,21 @@
    "account": "Abracadickra",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "jewellery"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:steelrod:item:2349",
+    "BATCH_UNITS": "9"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:steelrod:item:2349",
    "role": "auto"
   },
   {
@@ -454,6 +444,26 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "items",
+    "enchant:sapphire_necklace",
+    "-",
+    "1",
+    "1200"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:grindmyherb:item:3853",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:3853",
+   "role": "army"
   }
  ],
  "army": [
@@ -472,7 +482,6 @@
   "oreelse",
   "pocketpool",
   "pocketpython",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
