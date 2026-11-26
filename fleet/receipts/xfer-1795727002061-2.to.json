@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727002061-2",
  "account": "SporranBulge",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 3,
  "claim": "56d46cd3-c7d0-41a5-9c9a-ec28c4fa5e88",
- "count": 0,
- "ok": false,
- "at": 1795727572914,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795727585995,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795727585239
+ },
+ "logout": {
+  "attemptId": "1795727572923-0000014324-0000000001",
+  "at": 1795727585983,
+  "sha256": "903d5ef5a9a684754e4671ed693cc8c5af7a63f039fdd5c34a77cd310a3ea943"
+ },
+ "screen": true
 }
