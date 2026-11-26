@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795719579335-2",
  "account": "TheFullMonty",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 2,
  "claim": "dcf467bf-1586-4090-bb0a-a42e87476e5d",
- "count": 0,
- "ok": false,
- "at": 1795720082775,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795720096937,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795720095698
+ },
+ "logout": {
+  "attemptId": "1795720082785-0000030328-0000000001",
+  "at": 1795720096451,
+  "sha256": "d3c44fe4ab5b854ad99762af71b139b724f79773b06a02d76fbe600fec28cd1c"
+ },
+ "screen": true
 }

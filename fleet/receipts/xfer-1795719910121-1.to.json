@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795719910121-1",
+ "account": "BackdoorMan",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "e07c5462-5c70-4e56-8073-e51069b65260",
+ "count": 1,
+ "ok": true,
+ "at": 1795720116859,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795720116109
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795720115347
+ },
+ "logout": {
+  "attemptId": "1795720100507-0000021008-0000000001",
+  "at": 1795720116848,
+  "sha256": "b6691e3bbe3a078f379850bedb4595a34f352e83f7bd44e7e5a38a06d96692a9"
+ },
+ "screen": true
+}
