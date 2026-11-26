@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795731901718,
+ "at": 1795731912849,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,6 +90,34 @@
    "role": "army"
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -106,54 +134,18 @@
    "role": "auto"
   },
   {
-   "account": "AFKnight",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Unsheathed",
+   "script": "scripts/aio-pvp.ts",
    "args": [
-    "chicken"
+    "team"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:AFKnight",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "7"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:AFKnight",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=379 ITEMS=Lobster MAX_ITEMS=10 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy alfonse 3000",
-    "scripts/aio-fighter.ts DEMAND_ID=goal:supply_chain:207 BATCH_UNITS=35 BANK_PACK=1 -- druid"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=5 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=5 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -251,21 +243,6 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -286,34 +263,43 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
+   "account": "Pullmybow",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/generated/waterfall.ts --",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- fire-combat"
+    "chicken"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Fatstack",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=37 PRODUCT_TARGET=37 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=37 -- crafting inventory identify:ranarr_weed"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   }
  ],
  "army": [
@@ -336,6 +322,7 @@
   "moneyshot",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",

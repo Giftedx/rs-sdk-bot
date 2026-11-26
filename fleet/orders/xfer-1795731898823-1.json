@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795731898823-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "KnightRider",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795731898823,
+  "end": 1795732798823,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
