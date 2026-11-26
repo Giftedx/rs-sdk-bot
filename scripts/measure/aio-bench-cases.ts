@@ -1832,14 +1832,110 @@ return [
         bank: [...(PRESETS.quest_squire!.inventory ?? [])]},
       pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && new RegExp(`^SQUIRE_FROM ${stage}$`, 'm').test(s) && /^MILESTONE 100 /m.test(s)
         && has.test(s) && !hasNot.test(s)} as BenchCase)),
-  // Witch's House on a started journal (%ballquest, varp 226, = 1): quest-ball.ts has no resume stage, so the sweep
-  // refuses at entry, before a bank walk, with the text the supervisor ends the job on (live: "fail step cheese",
-  // then "fail talk boy 1" on each next login). The sweep ends RESULT fail by design, so the case runs it through
-  // scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
-  {key: 'extra:sweep-ball-started-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_ball',
-    scriptArgs: ['ball', 'journal is started and quest-ball.ts has no resume stage'], timeoutMs: 120_000,
-    presetConfig: {...PRESETS.quest_ball!, varps: {...PRESETS.quest_ball!.varps, 226: 1}},
+  // Fight Arena through the quest sweep from the Ardougne south bank with the quest pack banked, at %arenaquest
+  // (varp 17) = 3 in the worn Khazard helmet and armour: the state that live runs left at "fail talk barman" (no coins
+  // then; the sweep stages the preset's 20). The sweep reads the stage from the journal, and the script starts at the
+  // barman: no Lady Servil, no chest and no first guard talk.
+  {key: 'extra:sweep-arena-resume-s3', script: 'scripts/aio-quester.ts', preset: 'quest_arena', scriptArgs: ['sweep', 'arena'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2655, z: 3283, level: 0}, inventory: [], coins: 0, varps: {...PRESETS.quest_arena!.varps, 17: 3},
+      equipment: [...(PRESETS.quest_arena!.equipment ?? []), {id: 74, count: 1, slot: 0}, {id: 75, count: 1, slot: 4}],
+      bank: [...(PRESETS.quest_arena!.inventory ?? []), {id: 995, count: PRESETS.quest_arena!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^ARENA_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":3/m.test(s)
+      && /^MILESTONE 4 /m.test(s) && /^MILESTONE complete /m.test(s) && !/^MILESTONE ([123]|armour again) /m.test(s)},
+  // Fight Arena at %arenaquest = 6: the account stands in the arena with the ogre, so the sweep refuses by name after
+  // the journal read, before a bank walk.
+  {key: 'extra:sweep-arena-resume-s6-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_arena',
+    scriptArgs: ['arena', 'journal stage 6 has no resume from the start tile'], timeoutMs: 120_000,
+    presetConfig: {...PRESETS.quest_arena!, position: {x: 2590, z: 3160, level: 0}, varps: {...PRESETS.quest_arena!.varps, 17: 6}},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_RESUME .*"stage":6.*"kind":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+  // Family Crest through the quest sweep at %crestquest (varp 148) = 2, after Caleb's "Ok, I will get those.", the
+  // state that live runs left at "fail talk caleb 2" (direct runs with no staged fish). The account stands at the
+  // Varrock east bank with the quest pack banked. The sweep reads the stage from the journal, and the script starts
+  // at the fish to Caleb: no Dimintheis and no "caleb 1".
+  {key: 'extra:sweep-crest-resume-s2', script: 'scripts/aio-quester.ts', preset: 'quest_crest', scriptArgs: ['sweep', 'crest'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_crest!, position: {x: 3254, z: 3420, level: 0}, inventory: [], varps: {...PRESETS.quest_crest!.varps, 148: 2},
+      bank: [...(PRESETS.quest_crest!.inventory ?? [])]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^CREST_FROM 2$/m.test(s) && /^MILESTONE gauntlets /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s)},
+  // Imp Catcher on a started journal (varp 160 = 1, quest_imp.constant:2): quest-imp.ts has no resume stage, so the
+  // sweep refuses at entry, before a bank walk, with the text the supervisor ends the job on. The sweep ends RESULT
+  // fail by design, so the case runs it through scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
+  {key: 'extra:sweep-imp-started-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_imp',
+    scriptArgs: ['imp', 'journal is started and quest-imp.ts has no resume stage'], timeoutMs: 120_000,
+    presetConfig: {...PRESETS.quest_imp!, varps: {...PRESETS.quest_imp!.varps, 160: 1}},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_ENTRY .*"journal":"started".*"entry":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+  // Merlin's Crystal through the quest sweep with the quest pack banked. `resume-s4`: from the Catherby bank at
+  // %arthur (varp 14) = 4 and bit 1 of varp 15 (the black candle asked for), the state that live runs left at "fail
+  // talk candle maker 2": the script starts at the candle maker, and one talk trades the wax (no Arthur, knights, crate
+  // or Mordred). `resume-s3-keep`: at 3 inside Keep Le Faye (2768,3409), where live runs that failed "step protect
+  // from melee on" left Dipstick and InTheSack: the sweep leaves by the keep crate to Catherby, banks, and the script
+  // starts at the Catherby crate back to the keep.
+  {key: 'extra:sweep-merlin-resume-s4', script: 'scripts/aio-quester.ts', preset: 'quest_merlin', scriptArgs: ['sweep', 'merlin'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_merlin!, position: {x: 2809, z: 3439, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_merlin!.varps, 14: 4, 15: 0b10},
+      bank: [...(PRESETS.quest_merlin!.inventory ?? []), {id: 995, count: PRESETS.quest_merlin!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^MC_FROM 4$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":4/m.test(s)
+      && /^MC_ALTAR_WORDS false$/m.test(s) && /^MILESTONE 5 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE [1-4] /m.test(s)},
+  {key: 'extra:sweep-merlin-resume-s3-keep', script: 'scripts/aio-quester.ts', preset: 'quest_merlin', scriptArgs: ['sweep', 'merlin'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_merlin!, position: {x: 2768, z: 3409, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_merlin!.varps, 14: 3},
+      bank: [...(PRESETS.quest_merlin!.inventory ?? []), {id: 995, count: PRESETS.quest_merlin!.coins ?? 0}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_KEEP_LE_FAYE_EXIT .*"ok":true/m.test(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^MC_FROM 3$/m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":3/m.test(s) && /^MILESTONE 4 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE [1-3] /m.test(s)},
+  // Dragon Slayer through the quest sweep from the Varrock west bank with the quest pack banked, at %dragonquest (varp
+  // 176) = 2 after the Oracle (%dragon_oracle 184 = 2, shield 186 and goblin 187 known): the state that TheFullMonty's
+  // live run left at "fail step magic door" (its pack held none of the door's four items). Melzar's key is banked, as
+  // later jobs leave it. The sweep reads stage 22, withdraws the key (QuestResume.held) with the preset pack, and the
+  // script starts at the magic door: no Guildmaster, Oziach or Oracle.
+  {key: 'extra:sweep-dragon-resume-s22', script: 'scripts/aio-quester.ts', preset: 'quest_dragon', scriptArgs: ['sweep', 'dragon'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_dragon!, position: {x: 3185, z: 3436, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_dragon!.varps, 176: 2, 184: 2, 186: 1, 187: 1},
+      bank: [...(PRESETS.quest_dragon!.inventory ?? []), {id: 995, count: PRESETS.quest_dragon!.coins ?? 0}, {id: 1542, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^DS_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":22,/m.test(s)
+      && /^QUEST_SWEEP_HELD .*"banked":\[1542\]/m.test(s) && /^MILESTONE 4 /m.test(s) && /^MILESTONE 16 /m.test(s)
+      && /^RESULT ok\b.*\bquestMsg=true\b/m.test(s) && !/^MILESTONE [123] /m.test(s)},
+  // Temple of Ikov through the quest sweep from the Ardougne north bank with the quest pack banked, at %ikov (varp 26)
+  // = 10 with the pendant of Lucien worn: the state that 3 live runs left after "fail walk to web" (the dark stairs
+  // with no light). The sweep keeps the worn bow on (one slot), stages the lit candle, and the script starts at the
+  // cellar ladder with no Lucien talk.
+  {key: 'extra:sweep-ikov-resume-s10', script: 'scripts/aio-quester.ts', preset: 'quest_ikov', scriptArgs: ['sweep', 'ikov'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ikov!, position: {x: 2618, z: 3332, level: 0}, inventory: [], varps: {...PRESETS.quest_ikov!.varps, 26: 10},
+      equipment: [...(PRESETS.quest_ikov!.equipment ?? []), {id: 86, count: 1, slot: 2}],
+      bank: [...(PRESETS.quest_ikov!.inventory ?? [])]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^IK_FROM low$/m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":10,"spent":\[\],"from":1,/m.test(s) && /^MILESTONE 100 /m.test(s) && !/^MILESTONE 10 /m.test(s)},
+  // Holy Grail through the quest sweep from the Seers' Village bank with the quest pack banked, at %grail (varp 5) = 4:
+  // the crone spoken to, no napkin or whistle (live TrouserSnake and UnderMyKilt hold neither). The sweep reads the
+  // stage from the journal, and the script starts at Galahad: no King Arthur, Merlin or Entrana. `resume-s4` has
+  // Excalibur in the bank, and the sweep withdraws it (QuestResume.held). `resume-s4-lost` has none, as on the live
+  // accounts (an earlier run left it on the Port Sarim dock): the Lady of the Lake gives it again for 500 of the 600
+  // staged coins.
+  ...([['resume-s4', true], ['resume-s4-lost', false]] as const).map(([mode, banked]) =>
+    ({key: `extra:sweep-grail-${mode}`, script: 'scripts/aio-quester.ts', preset: 'quest_grail', scriptArgs: ['sweep', 'grail'], timeoutMs: 600_000,
+      presetConfig: {...PRESETS.quest_grail!, position: {x: 2727, z: 3493, level: 0}, inventory: [], coins: 0, varps: {...PRESETS.quest_grail!.varps, 5: 4},
+        bank: [...(PRESETS.quest_grail!.inventory ?? []).filter((i) => banked || i.id !== 35), {id: 995, count: (PRESETS.quest_grail!.coins ?? 0) + 500}]},
+      pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^HG_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":4/m.test(s)
+        && /^MILESTONE 4 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE ([123]|whistles again) /m.test(s)
+        && /^MILESTONE excalibur again /m.test(s) !== banked} as BenchCase)),
+  // Witch's House through the quest sweep from the Falador west bank with the quest pack banked. `resume-s1` has
+  // %ballquest (varp 226) = 1, the state that live runs left at "fail step gate in" (no leather gloves worn, so the
+  // gate shocks, quest_ball.rs2:33-38): the gloves and the door key are banked, the sweep wears the gloves, and the
+  // script starts at the pot, which gives the key again (it looks at the pack only). `resume-s2` has 2, the magnet
+  // found and banked: the sweep withdraws it (QuestResume.held), and the script skips the basement.
+  {key: 'extra:sweep-ball-resume-s1', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ball!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
+      equipment: (PRESETS.quest_ball!.equipment ?? []).filter(i => i.id !== 1059),
+      varps: {...PRESETS.quest_ball!.varps, 226: 1},
+      bank: [...(PRESETS.quest_ball!.inventory ?? []), {id: 1059, count: 1}, {id: 2409, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^BALL_FROM 1$/m.test(s) && /^MILESTONE 7 /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":1[,}]/m.test(s) && !/^MILESTONE 1 /m.test(s)},
+  {key: 'extra:sweep-ball-resume-s2', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ball!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
+      varps: {...PRESETS.quest_ball!.varps, 226: 2},
+      bank: [...(PRESETS.quest_ball!.inventory ?? []), {id: 2409, count: 1}, {id: 2410, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^BALL_FROM 2$/m.test(s) && /^MILESTONE 7 /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":2[,}]/m.test(s) && /^QUEST_SWEEP_HELD .*"banked":\[2410\]/m.test(s)
+      && !/^MILESTONE [12] /m.test(s)},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
   // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,

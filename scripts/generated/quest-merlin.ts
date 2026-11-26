@@ -13,8 +13,12 @@
 // Camelot teleport, bat bones dropped on the magic symbol (2780,3515) with the lit black candle; Excalibur on the
 // crystal (62 at 2767,3493, level 2); King Arthur.
 // Helper items (tradeable): bucket of wax (30), bat bones (530), bread (2309), tinderbox (590), runes.
-// MC_FROM=<milestone> starts later (debug presets); MC_STOP=<milestone> ends early.
-import { openQuest } from './quest-lib';
+// MC_FROM=<milestone> starts after that milestone (debug presets quest_merlin_s<milestone>); MC_STOP=<milestone> ends
+// early. On a started journal the quest sweep reads %arthur from the journal (packages/workers/src/quest/resume.ts
+// merlinJournalStage) and starts the script from the start tile at MC_FROM 1-4 for %arthur 1-4, 8 for 5 (Thrantax
+// bound) and 9 for 6 (Merlin free: King Arthur only). %arthur 4 covers milestones 4-7, so at MC_FROM 4 a held candle
+// skips the candle maker, a held Excalibur skips the Lady, and the journal's chaos altar line skips the altar.
+import { openQuest, readQuestJournalStage } from './quest-lib';
 
 const ARTHUR = { x: 2764, z: 3515 };
 const GAWAIN = { x: 2763, z: 3506 };
@@ -34,7 +38,15 @@ const PFM = 14;
 
 const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false, burst: true });
 try {
-    const FROM = Number(process.env.MC_FROM || 0);
+    const FROM = q.stageFrom('MC_FROM');
+    console.log(`MC_FROM ${FROM}`);
+    // A resumed account can wear Excalibur. The Lady offers no second one while one is worn (lady_of_the_lake.rs2:4),
+    // and the crystal takes it from the pack, so it comes off first.
+    const wornSword = q.s.sdk.getEquipment().find((e) => e.id === ITEM.excalibur);
+    if (wornSword) {
+        await q.s.bot.unequipItem(wornSword);
+        if (!await q.waitUntil(() => q.has(ITEM.excalibur), 8)) await q.fail('excalibur did not come off');
+    }
     const STOP = Number(process.env.MC_STOP || 99);
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+merlin/i) > 0) questDone = true; });
@@ -59,6 +71,26 @@ try {
         }
         if (!arrived()) await q.fail(`${label}: ${listLocs()}`);
     };
+    // Keep Le Faye with its upper floors and the jetty: the walls (loc 1911) and doors of maps/m43_53.jm2 bound
+    // x 2763-2776, z 3395-3409; the jetty is the bridge at 2777-2780,3399-3402.
+    const inKeep = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2764 && p.worldX <= 2780 && p.worldZ >= 3395 && p.worldZ <= 3409; };
+    // At stage 4 the journal names the chaos altar words once known (arthur_journal.rs2:45-49). The altar gives them
+    // again at stage 4 (quest_arthur.rs2:142-148), so a journal that does not show them means a visit.
+    const altarWordsKnown = async (): Promise<boolean> => {
+        try {
+            return await readQuestJournalStage(q, 'arthur', /Merlin's Crystal/i, (body: string) => {
+                const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ');
+                return /To bind Thrantax to my will/i.test(text) ? /I have the magic words from the Chaos Altar memorised/i.test(text) : undefined;
+            });
+        } catch (e) {
+            // Only the reader's own faults (quest-journal.ts: "arthur journal ...", "arthur stage unobserved ...").
+            if (!(e instanceof Error) || !e.message.startsWith('arthur ')) throw e;
+            console.log(`WARN merlin journal: ${e.message}`);
+            return false;
+        }
+    };
+    const altarWords = FROM === 4 && await altarWordsKnown();
+    if (FROM === 4) console.log(`MC_ALTAR_WORDS ${altarWords}`);
 
     // 1-3. King Arthur, Gawain, Lancelot (upstairs).
     if (FROM < 1) {
@@ -111,22 +143,33 @@ try {
     }
 
     // 5. The keep crate back to Catherby; the candle maker: "black candles" sets bit 1, then the wax for the candle.
+    // A resume at FROM 4 starts at the start tile and walks to the candle maker. With bit 1 still set (a run that ended
+    // after "black candles"), the first talk trades the wax at once (candle_maker.rs2:2-13). A held candle skips both.
     if (FROM < 5) {
-        // The keep crate is on map level 1 of the jetty, which is walked as level 0 (the bot lands at 2778,3401,0 beside
-        // it), so the bot goes down to the jetty and clicks the crate by id and tile.
-        if (q.lvl() === 2) await q.climb('keep stairs down', stairs(/climb-down/i, MORDRED, 15), /climb-down/i, levelIs(1));
-        if (q.lvl() === 1) await q.climb('keep stairs down 2', stairs(/climb-down/i, { x: 2769, z: 3404 }, 15), /climb-down/i, levelIs(0));
-        await q.dash('to keep crate', KEEP_CRATE.x - 1, KEEP_CRATE.z, 0, 25);
-        await crate('keep crate', 64, KEEP_CRATE, () => q.near(2802, 3441, 3) && q.lvl() === 0);
+        if (FROM < 4 || inKeep()) {
+            // The keep crate is on map level 1 of the jetty, which is walked as level 0 (the bot lands at 2778,3401,0
+            // beside it), so the bot goes down to the jetty and clicks the crate by id and tile.
+            if (q.lvl() === 2) await q.climb('keep stairs down', stairs(/climb-down/i, MORDRED, 15), /climb-down/i, levelIs(1));
+            if (q.lvl() === 1) await q.climb('keep stairs down 2', stairs(/climb-down/i, { x: 2769, z: 3404 }, 15), /climb-down/i, levelIs(0));
+            await q.dash('to keep crate', KEEP_CRATE.x - 1, KEEP_CRATE.z, 0, 25);
+            await crate('keep crate', 64, KEEP_CRATE, () => q.near(2802, 3441, 3) && q.lvl() === 0);
+        }
         await setPfm(false);
-        await q.talk('candle maker 1', /^candle maker$/i, [/any black candles/i], () => q.sawText(/supply you with a black candle/i), CANDLE_MAKER, 40);
-        await q.talk('candle maker 2', /^candle maker$/i, [], () => q.has(ITEM.unlit), CANDLE_MAKER, 30);
-        await q.step('light candle', () => q.useOnItem(ITEM.tinderbox, ITEM.unlit), () => q.has(ITEM.lit), 4, 4);
+        if (!q.has(ITEM.lit)) {
+            if (!q.has(ITEM.unlit)) {
+                await q.talk('candle maker 1', /^candle maker$/i, [/any black candles/i], () => q.sawText(/supply you with a black candle/i) || q.has(ITEM.unlit), CANDLE_MAKER, 40);
+                if (!q.has(ITEM.unlit)) await q.talk('candle maker 2', /^candle maker$/i, [], () => q.has(ITEM.unlit), CANDLE_MAKER, 30);
+            }
+            await q.step('light candle', () => q.useOnItem(ITEM.tinderbox, ITEM.unlit), () => q.has(ITEM.lit), 4, 4);
+        }
         await ms(5);
     }
 
-    // 6. Excalibur: the Lady of the Lake sets bit 2; the jeweller's door in Port Sarim spawns the beggar; bread.
-    if (FROM < 6) {
+    // 6. Excalibur: the Lady of the Lake sets bit 2; the jeweller's door in Port Sarim spawns the beggar; bread. A held
+    // Excalibur skips it. Asking the Lady again clears bits 2-4 (lady_of_the_lake.rs2:42-43), so the door always starts
+    // the beggar's talk; she offers the test at %arthur 4 and 5 only when no Excalibur is in the pack, bank or worn
+    // (lady_of_the_lake.rs2:4,20; inv_procs.rs2:233-235), so a resume at FROM 8 without it gets it again here.
+    if (FROM < 9 && !q.has(ITEM.excalibur)) {
         await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to lady', [{ x: LADY.x, z: LADY.z - 1, tol: 2 }]);
         await q.talk('lady', /^(the )?lady of the lake$/i, [/seek the sword excalibur/i], () => q.sawText(/that seems easy enough/i), LADY, 40);
@@ -138,10 +181,12 @@ try {
         await q.converse([/^yes,? certainly/i], () => q.has(ITEM.excalibur) && !q.dialogOpen(), 60);
         if (!q.has(ITEM.excalibur)) await q.fail(`excalibur: ${listLocs()}`);
         await ms(6);
+        // At FROM 8 the crystal is next: back to Camelot as block 8 does.
+        if (FROM >= 8) await tele('camelot teleport', 'magic:camelot_teleport', 2757, 3478);
     }
 
     // 7. The chaos altar north of Varrock: op 2 gives the words (bit 0).
-    if (FROM < 7) {
+    if (FROM < 7 && !altarWords) {
         await tele('varrock teleport', 'magic:varrock_teleport', 3213, 3424);
         await setPfm(true);
         await q.walk('to chaos altar', [{ x: ALTAR.x, z: ALTAR.z - 2, tol: 2 }]);
@@ -164,7 +209,8 @@ try {
         await ms(8);
     }
 
-    // 9. Excalibur on the crystal (level 2), then King Arthur.
+    // 9. Excalibur on the crystal (level 2), then King Arthur. At FROM 9 (%arthur 6) the crystal only says Merlin is
+    // free (quest_arthur.rs2:244-247), and King Arthur alone queues the completion (king_arthur.rs2:42,48-51).
     if (FROM < 9) {
         await q.walk('to crystal tower', [{ x: CRYSTAL.x, z: CRYSTAL.z + 3, tol: 4 }]);
         // Tower door 1533 at 2766,3495 (seen in the loc list), then the ladders.
@@ -178,9 +224,9 @@ try {
         await q.converse([], () => q.sawText(/set merlin free/i) && !q.dialogOpen(), 20);
         await q.climb('tower down 1', stairs(/climb-down/i, CRYSTAL, 10), /climb-down/i, levelIs(1));
         await q.climb('tower down 2', stairs(/climb-down/i, CRYSTAL, 10), /climb-down/i, levelIs(0));
-        await q.talk('arthur 2', /^king arthur$/i, [], () => questDone, ARTHUR, 40);
-        await ms(9);
     }
+    await q.talk('arthur 2', /^king arthur$/i, [], () => questDone, ARTHUR, 40);
+    await ms(9);
 
     offDone();
     await q.end(questDone, `qp=6 excalibur=${q.has(ITEM.excalibur)} questMsg=${questDone}`);

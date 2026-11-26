@@ -14,6 +14,12 @@
 // Sir Percival; Camelot teleport, Ardougne, Brimhaven, the whistle to the restored realm, the Holy Grail (level 2);
 // the whistle back; Camelot teleport, King Arthur.
 // Helper items (tradeable): 100 coins, runes. HG_FROM=<milestone> starts later (debug presets); HG_STOP ends early.
+// On a started journal the quest sweep reads %grail from the journal (packages/workers/src/quest/resume.ts) and the
+// script starts from the start tile: %grail 2 at milestone 1, 3 at 2 (the Falador teleport when not by Port Sarim), 4
+// and 7 at 3, 8 at 7, 9 at 8. A napkin in the pack skips Galahad, two whistles skip the manor, the grail skips the
+// restored realm. Short of whistles at Sir Percival or the restored realm, the account gets them again at the manor
+// (the napkin again from Galahad, brother_galahad.rs2:69-76); without Excalibur before the realm, from the Lady of the
+// Lake for 500 coins (lady_of_the_lake.rs2:4-35).
 import { openQuest } from './quest-lib';
 
 const ARTHUR = { x: 2764, z: 3515 };
@@ -33,13 +39,15 @@ const BELL = { x: 2762, z: 4694 };                        // grail_fisherman.rs2
 const FISHER_KING = { x: 2762, z: 4688 };                 // level 1, maps/m43_73.jm2 1 10 16
 const SACKS = { x: 2960, z: 3507 };                       // percy_sacks 23 (maps/m46_54.jm2 0 16 51)
 const GRAIL = { x: 2649, z: 4684 };                       // level 2, maps/m41_73.jm2 obj 2 25 12
+const LADY = { x: 2924, z: 3405 };                        // ladyofthelake 250 (maps/m45_53.jm2 0 44 13)
 const ITEM = { excalibur: 35, scimitar: 1333, napkin: 15, whistle: 16, bell: 17, grail: 19, coins: 995, food: 379 };
 const NPC = { titan: 221 };
 const PFM = 14;
 
 const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false, burst: true });
 try {
-    const FROM = Number(process.env.HG_FROM || 0);
+    const FROM = q.stageFrom('HG_FROM');
+    console.log(`HG_FROM ${FROM}`);
     const STOP = Number(process.env.HG_STOP || 99);
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+holy grail/i) > 0) questDone = true; });
@@ -88,6 +96,36 @@ try {
         await q.walk(`${label} to crossing`, [{ x: CROSSING.x, z: CROSSING.z, tol: 0 }]);
         await blow(`${label} whistle`, inRealm);
     };
+    // Draynor Manor level 2: the whistle door spawns two whistles while the napkin is in the pack and it holds fewer
+    // than two (quest_grail.rs2:30-35); the pick-ups stop at `want`.
+    const manorWhistles = async (want: number): Promise<void> => {
+        // Stop south of the Draynor Manor dead-tree avoid corridor, then click directly up the path to the front door.
+        await q.walk('to manor gate', [{ x: MANOR_DOOR.x, z: 3326, tol: 2 }]);
+        await q.dash('to manor door', MANOR_DOOR.x, MANOR_DOOR.z - 1, 0, 35);
+        const front = () => q.findLoc(l => l.id === 134 && l.x === MANOR_DOOR.x && l.z === MANOR_DOOR.z) ?? { id: 134, x: MANOR_DOOR.x, z: MANOR_DOOR.z };
+        await q.step('manor door', () => q.opLoc(front(), 1), () => (q.pos()?.worldZ ?? 0) > MANOR_DOOR.z, 6, 4);
+        await q.walk('to manor stairs', [{ x: 3108, z: 3362, tol: 1 }]);
+        await q.climb('manor stairs', stairs(/walk-up|climb-up/i, { x: 3108, z: 3363 }, 3), /walk-up|climb-up/i, levelIs(1));
+        await q.walk('to spiral stairs', [{ x: 3104, z: 3364, tol: 2 }]);
+        await q.climb('spiral stairs', stairs(/climb-up/i, { x: 3104, z: 3362 }, 3), /climb-up/i, levelIs(2));
+        await q.walk('to whistle door', [{ x: WHISTLE_DOOR.x, z: WHISTLE_DOOR.z + 1, tol: 0 }]);
+        const wdoor = () => q.findLoc(l => l.id === 22 && l.x === WHISTLE_DOOR.x && l.z === WHISTLE_DOOR.z) ?? { id: 22, x: WHISTLE_DOOR.x, z: WHISTLE_DOOR.z };
+        await q.step('whistle door', () => q.opLoc(wdoor(), 1), () => !!ground(ITEM.whistle), 6, 4);
+        for (let i = q.cnt(ITEM.whistle); i < want; i++) await pickUp(`whistle ${i + 1}`, ITEM.whistle);
+    };
+    // A resumed account short of whistles: the napkin again from Galahad when the pack has none ("Why did you leave?"
+    // at %grail 4 or more, brother_galahad.rs2:35-36, 48-51, 69-76), then the manor.
+    const whistlesFor = async (want: number): Promise<void> => {
+        if (q.cnt(ITEM.whistle) >= want) return;
+        if (!q.has(ITEM.napkin)) {
+            await tele('camelot teleport napkin', 'magic:camelot_teleport', 2757, 3478);
+            await q.walk('to galahad napkin', [{ x: GALAHAD.x + 1, z: GALAHAD.z, tol: 2 }]);
+            await q.talk('galahad napkin', /^galahad$/i, [/quest to find the holy grail/i, /why did you leave/i], () => q.has(ITEM.napkin), GALAHAD, 60);
+        }
+        await tele('falador teleport whistles', 'magic:falador_teleport', 2965, 3378);
+        await manorWhistles(want);
+        q.milestone('whistles again');
+    };
 
     // 1. King Arthur: the grail quest (%grail 2).
     if (FROM < 1) {
@@ -113,46 +151,53 @@ try {
     // 3. Entrana: Excalibur stays on the Port Sarim dock (300 ticks, drop.rs2); the High Priest spawns the crone
     // (%grail 4).
     if (FROM < 3) {
-        if (FROM < 2) await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
+        // A resume at %grail 3 starts beside King Arthur; the debug preset quest_grail_s2 stands on the Port Sarim dock.
+        if (FROM < 2 || !q.near(SARIM_MONK.x, SARIM_MONK.z, 30)) await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to sarim monks', [{ x: SARIM_MONK.x, z: SARIM_MONK.z + 3, tol: 1 }]);
         const dropAt = { x: q.pos()!.worldX, z: q.pos()!.worldZ };
-        for (const id of [ITEM.excalibur, ITEM.scimitar]) if (q.has(id)) await q.step(`drop ${id}`, () => q.s.sdk.sendDropItem(q.slot(id)!), () => !q.has(id), 4, 3);
+        const dropped: number[] = [];
+        for (const id of [ITEM.excalibur, ITEM.scimitar]) {
+            if (!q.has(id)) continue;
+            await q.step(`drop ${id}`, () => q.s.sdk.sendDropItem(q.slot(id)!), () => !q.has(id), 4, 3);
+            dropped.push(id);
+        }
         await sail('entrana monk', /^monk of entrana$/i, [/ready to go/i], SARIM_MONK, { x: 2834, z: 3331 });
         await q.walk('to high priest', [{ x: PRIEST.x, z: PRIEST.z - 1, tol: 2 }]);
         await q.talk('priest', /^high priest( of entrana)?$/i, [/ok,? i will go searching/i], () => q.sawText(/good luck with that/i), PRIEST, 60);
         await q.walk('to entrana monks', [{ x: ENTRANA_MONK.x, z: ENTRANA_MONK.z + 2, tol: 2 }]);
         await sail('leave entrana', /^monk of entrana$/i, [/yes,? i'm ready to go/i], ENTRANA_MONK, { x: 3048, z: 3231 });
-        if (!ground(ITEM.excalibur)) await q.walk('to excalibur', [{ x: dropAt.x, z: dropAt.z, tol: 3 }]);
-        await pickUp('take excalibur', ITEM.excalibur);
+        if (dropped.includes(ITEM.excalibur)) {
+            if (!ground(ITEM.excalibur)) await q.walk('to excalibur', [{ x: dropAt.x, z: dropAt.z, tol: 3 }]);
+            await pickUp('take excalibur', ITEM.excalibur);
+        }
         if (ground(ITEM.scimitar)) await pickUp('take scimitar', ITEM.scimitar);
-        await wield(q.has(ITEM.scimitar) ? ITEM.scimitar : ITEM.excalibur);
+        const weapon = q.has(ITEM.scimitar) ? ITEM.scimitar : ITEM.excalibur;
+        if (q.has(weapon)) await wield(weapon);
         await ms(3);
     }
-    // 4. Galahad, west of McGrubor's Wood: the holy table napkin.
-    if (FROM < 4) {
+    // 4. Galahad, west of McGrubor's Wood: the holy table napkin. At %grail 7 he gives another only when the pack and
+    // the bank have none, with no tea (brother_galahad.rs2:9-24).
+    if (FROM < 4 && !q.has(ITEM.napkin)) {
         await tele('camelot teleport 1', 'magic:camelot_teleport', 2757, 3478);
         await q.walk('to galahad', [{ x: GALAHAD.x + 1, z: GALAHAD.z, tol: 2 }]);
-        await q.talk('galahad', /^galahad$/i, [/item from the realm of the fisher king/i], () => q.has(ITEM.napkin) && q.sawText(/cup of tea/i), GALAHAD, 60);
+        await q.talk('galahad', /^galahad$/i, [/item from the realm of the fisher king/i, /lost the holy table napkin/i], () => q.has(ITEM.napkin) && (q.sawText(/cup of tea/i) || q.sawText(/try not to lose this one/i)), GALAHAD, 60);
         await ms(4);
     }
     // 5. Draynor Manor level 2: the whistle door spawns two whistles while the napkin is in the pack.
-    if (FROM < 5) {
+    if (FROM < 5 && q.cnt(ITEM.whistle) < 2) {
         if (FROM < 4) await tele('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
-        // Stop south of the Draynor Manor dead-tree avoid corridor, then click directly up the path to the front door.
-        await q.walk('to manor gate', [{ x: MANOR_DOOR.x, z: 3326, tol: 2 }]);
-        await q.dash('to manor door', MANOR_DOOR.x, MANOR_DOOR.z - 1, 0, 35);
-        const front = () => q.findLoc(l => l.id === 134 && l.x === MANOR_DOOR.x && l.z === MANOR_DOOR.z) ?? { id: 134, x: MANOR_DOOR.x, z: MANOR_DOOR.z };
-        await q.step('manor door', () => q.opLoc(front(), 1), () => (q.pos()?.worldZ ?? 0) > MANOR_DOOR.z, 6, 4);
-        await q.walk('to manor stairs', [{ x: 3108, z: 3362, tol: 1 }]);
-        await q.climb('manor stairs', stairs(/walk-up|climb-up/i, { x: 3108, z: 3363 }, 3), /walk-up|climb-up/i, levelIs(1));
-        await q.walk('to spiral stairs', [{ x: 3104, z: 3364, tol: 2 }]);
-        await q.climb('spiral stairs', stairs(/climb-up/i, { x: 3104, z: 3362 }, 3), /climb-up/i, levelIs(2));
-        await q.walk('to whistle door', [{ x: WHISTLE_DOOR.x, z: WHISTLE_DOOR.z + 1, tol: 0 }]);
-        const wdoor = () => q.findLoc(l => l.id === 22 && l.x === WHISTLE_DOOR.x && l.z === WHISTLE_DOOR.z) ?? { id: 22, x: WHISTLE_DOOR.x, z: WHISTLE_DOOR.z };
-        await q.step('whistle door', () => q.opLoc(wdoor(), 1), () => !!ground(ITEM.whistle), 6, 4);
-        await pickUp('whistle 1', ITEM.whistle);
-        await pickUp('whistle 2', ITEM.whistle);
+        await manorWhistles(2);
         await ms(5);
+    }
+    // A resumed account without Excalibur (an earlier run left it on the Port Sarim dock, 300 ticks, drop.rs2:22): the
+    // Lady of the Lake gives it again for 500 coins when the pack, worn slots and bank hold none
+    // (lady_of_the_lake.rs2:4-35); the two Brimhaven trips take 30 coins each (sailors.rs2:24-30).
+    if (FROM < 6 && !q.has(ITEM.excalibur) && !worn(ITEM.excalibur)) {
+        if (q.cnt(ITEM.coins) < 560) await q.fail(`excalibur lost: the Lady of the Lake takes 500 coins and the ships 60, the pack holds ${q.cnt(ITEM.coins)}`);
+        await tele('falador teleport excalibur', 'magic:falador_teleport', 2965, 3378);
+        await q.walk('to lady', [{ x: LADY.x, z: LADY.z - 1, tol: 2 }]);
+        await q.talk('lady', /^(the )?lady of the lake$/i, [/seek the sword excalibur/i], () => q.has(ITEM.excalibur), LADY, 40);
+        q.milestone('excalibur again');
     }
     // 6. The Fisher Realm: the fisherman's bell, the Black Knight Titan, the castle, the Fisher King (%grail 8).
     if (FROM < 6) await toRealm('realm 1');
@@ -205,8 +250,9 @@ try {
         await blow('whistle back 1', () => !inRealm());
         await ms(6);
     }
-    // 7. The Goblin Village sacks: Sir Percival takes a whistle (%grail 9).
+    // 7. The Goblin Village sacks: Sir Percival takes a whistle (%grail 9); the restored realm needs the other.
     if (FROM < 8) {
+        await whistlesFor(2);
         await tele('falador teleport 3', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to sacks', [{ x: SACKS.x - 1, z: SACKS.z, tol: 0 }]);
         const sacks = () => q.findLoc(l => l.id === 23) ?? { id: 23, x: SACKS.x, z: SACKS.z };
@@ -216,8 +262,10 @@ try {
         if (q.cnt(ITEM.whistle) >= w0) await q.talk('percival', /^sir percival$/i, [/your father wishes to speak to you/i], () => q.cnt(ITEM.whistle) < w0, SACKS, 60);
         await ms(7);
     }
-    // 8. The restored realm: the Holy Grail on level 2 of the castle.
-    if (FROM < 9) {
+    // 8. The restored realm: the Holy Grail on level 2 of the castle. A resumed account with the grail in the pack
+    // goes to King Arthur (a held grail also stops a second pick-up, quest_grail.rs2:69-72).
+    if (FROM < 9 && !q.has(ITEM.grail)) {
+        await whistlesFor(1);
         await toRealm('realm 2');
         await q.walk('to grail stairs', [{ x: 2647, z: 4682, tol: 2 }]);
         await q.climb('grail stairs', stairs(/climb-up/i, { x: 2648, z: 4683 }, 3), /climb-up/i, levelIs(1));

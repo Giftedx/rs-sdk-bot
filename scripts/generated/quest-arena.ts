@@ -15,7 +15,11 @@
 // Fire Wave at Magic 75 with blood runes, else Fire Blast or Bolt), staff of fire, every 5 ticks.
 // The doors: fightarena_door1 (2617,3171 and 2585,3141) opens from the inside tile; from outside the guard lets a
 // player in Khazard armour through (quest_arena.rs2:33-52).
-// ARENA_FROM=<stage> starts later (debug presets with varp 17 set).
+// ARENA_FROM=<stage> starts later (debug presets with varp 17 set). On a started journal the quest sweep reads the
+// stage from the journal (packages/workers/src/quest/resume.ts arenaJournalStage, arenaFrom) and the script starts at
+// it from the start tile beside Lady Servil: 1-5, or 12 for 12-13. A resumed account without the Khazard armour
+// searches the chest again (it gives back what the player lacks, quest_arena.rs2:5-28); at 5 the drunk guard gives
+// spare keys (khazard_guard.rs2:78-83), so no brew.
 import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 import type { Session } from '../../packages/core/src/inprocess';
@@ -40,7 +44,8 @@ g.QUEST_SCRIPT_ID = 'quest-arena';
 const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 2500, eatAt: 6, food: [ITEM.food], burst: opts.burst ?? true });
 let offDone: (() => void) | undefined;
 try {
-    const FROM = Number(process.env.ARENA_FROM ?? 0);
+    const FROM = q.stageFrom('ARENA_FROM');
+    console.log(`ARENA_FROM ${FROM}`);
     let questDone = false;
     offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+fight arena/i) > 0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
@@ -165,8 +170,10 @@ try {
         q.milestone(1);
     }
 
-    // 2. The chest in the guards' house: Open, then Search (helmet and armour), and wear both.
-    if (FROM < 2) {
+    // 2. The chest in the guards' house: Open, then Search (helmet and armour), and wear both. A resumed run before the
+    // arena that holds neither piece in the pack nor worn searches again.
+    const owns = (id: number): boolean => q.has(id) || worn(id);
+    if (FROM < 2 || (FROM < 6 && !(owns(ITEM.helmet) && owns(ITEM.armour)))) {
         await q.walk('to chest', [{ x: CHEST.x, z: CHEST.z + 1, tol: 0 }]);
         await q.step('chest', async () => {
             const c = q.findLoc(l => l.x === CHEST.x && l.z === CHEST.z && /chest/i.test(l.name));
@@ -174,8 +181,8 @@ try {
             await q.opLoc(c, q.opIndex(c, /search|open/i));
             await q.waitTicks(2);
             await q.converse([], () => !q.dialogOpen(), 6);
-        }, () => q.has(ITEM.helmet) && q.has(ITEM.armour), 12, 5);
-        q.milestone(2);
+        }, () => owns(ITEM.helmet) && owns(ITEM.armour), 12, 5);
+        q.milestone(FROM < 2 ? 2 : 'armour again');
     }
     if (q.has(ITEM.helmet)) await wear(ITEM.helmet);
     if (q.has(ITEM.armour)) await wear(ITEM.armour);
@@ -200,8 +207,9 @@ try {
             await talkId('guard 1', NPC.guard2, [], () => q.sawText(/fall asleep/i));
             q.milestone(3);
         }
-        // 4. The barman, out by the west door (free from the inside tile), back in past the guard there.
-        if (!q.has(ITEM.brew) && !q.has(ITEM.keys)) {
+        // 4. The barman, out by the west door (free from the inside tile), back in past the guard there. At 5 the guard
+        // has drunk the brew and gives spare keys instead.
+        if (FROM < 5 && !q.has(ITEM.brew) && !q.has(ITEM.keys)) {
             await q.walk('to west door', [{ x: DOOR_W.x, z: DOOR_W.z, tol: 0 }]);
             await doorThrough('west door out', DOOR_W, () => (q.pos()?.worldX ?? 0) < DOOR_W.x);
             await q.walk('to barman', [{ x: BARMAN.x + 1, z: BARMAN.z + 1, tol: 2 }]);
@@ -216,8 +224,12 @@ try {
             await talkId('guard 2', NPC.guard2, [], () => q.has(ITEM.keys), 80);
             q.milestone(5);
         }
-        // 6. The keys on Jeremy's cell door; the server walks the player into the arena and lets the ogre out.
-        await q.walk('to corridor', [{ x: 2617, z: 3151, tol: 0 }]);
+        // 6. The keys on Jeremy's cell door; the server walks the player into the arena and lets the ogre out. From the
+        // guard the corridor is north through loc_1533 (2616,3147). The walk south to the first guard talk opens it; a
+        // run resumed at 3 came in by the west door, and its walk to the corridor took the cell gates instead ("The
+        // cell gate is securely locked", hosted bench extra:sweep-arena-resume-s3, 3 of 3 seeds).
+        await q.openDoor('door 2616,3147', 2616, 3147);
+        await q.dash('to corridor', 2617, 3151, 0, 30);
         await q.dash('to cell', CELL.x, CELL.z, 0, 30);
         await setPfm(true);
         await q.step('keys on cell', () => q.useOnLoc(ITEM.keys, CELL), () => inArena() || q.sawText(/i have the keys/i), 15, 4);
@@ -262,7 +274,8 @@ try {
     }
 
     // Out by the arena door (from the inside it opens and moves the player out, quest_arena.rs2:125-136), north to Servil.
-    await setPfm(true);
+    // A run resumed at 12 from the start tile is outside already and needs no prayer.
+    if ((q.pos()?.worldZ ?? 9999) <= DOOR_N.z) await setPfm(true);
     if (inArena()) {
         await q.walk('to arena door', [{ x: ARENA_DOOR.x - 1, z: ARENA_DOOR.z + 1, tol: 0 }]);
         await doorThrough('arena door', ARENA_DOOR, () => !inArena());

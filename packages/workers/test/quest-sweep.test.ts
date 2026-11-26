@@ -105,6 +105,15 @@ test('Nature Spirit does without the wolfbane dagger 2952; another quest still n
  expect([...needs(presetFor('scorpion'),false,'scorpion')]).toEqual([...needs(presetFor('scorpion'),false,'')]);
 });
 
+test('Family Crest stages its 2 antipoisons 2446; another quest leaves 2446 out',()=>{
+ const preset=presetFor('crest');
+ expect((preset.inventory??[]).filter(i=>i.id===2446).length).toBe(2);
+ const crest=new Map([...needs(preset,false,'crest'),...needs(preset,true,'crest')]);
+ expect(crest.get(2446)).toBe(2);
+ const other=new Map([...needs(preset,false,''),...needs(preset,true,'')]);
+ expect(other.has(2446)).toBe(false);
+});
+
 test('a completed Scorpion journal refuses before staging while client varp 76 stays at its untransmitted default',()=>{
  // A completed account shows the journal "complete" while client var[76] stays 0; a varp-100 test lets it stage coins and runes.
  expect(scorpionEntryRefusal('complete',0)).toBe('invalid entry: Scorpion Catcher is complete');

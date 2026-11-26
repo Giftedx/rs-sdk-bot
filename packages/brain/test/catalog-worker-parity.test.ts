@@ -178,14 +178,15 @@ describe('catalog-worker parity', () => {
         expect(catalog.require('quest:dwarfcannon').config.script).toBe('scripts/generated/dwarfcannon.ts');
         expect(catalog.require('quest:waterfall').config.script).toBe('scripts/generated/waterfall.ts');
         expect(catalog.require('quest:squire').config.questResumable).toBe(true);
-        expect(catalog.require('quest:ball').config.questResumable).toBe(false);
+        expect(catalog.require('quest:ball').config.questResumable).toBe(true);
+        expect(catalog.require('quest:imp').config.questResumable).toBe(false);
 
-        const started = makeTestAccount({ quests: { "Witch's House": 'started', "The Knight's Sword": 'started' }, skills: { Hitpoints: { level: 60, xp: 300_000 } } });
-        const ball = activityPreflightFromConfig(started, catalog.require('quest:ball'), world, 1);
-        expect(ball.blockers.some((b) => b.kind === 'invalid_config' && /started and its script has no resume stage/.test(b.message))).toBe(true);
+        const started = makeTestAccount({ quests: { 'Imp Catcher': 'started', "The Knight's Sword": 'started' }, skills: { Hitpoints: { level: 60, xp: 300_000 } } });
+        const imp = activityPreflightFromConfig(started, catalog.require('quest:imp'), world, 1);
+        expect(imp.blockers.some((b) => b.kind === 'invalid_config' && /started and its script has no resume stage/.test(b.message))).toBe(true);
         const squire = activityPreflightFromConfig(started, catalog.require('quest:squire'), world, 1);
         expect(squire.blockers.some((b) => b.kind === 'invalid_config')).toBe(false);
-        const fresh = activityPreflightFromConfig(makeTestAccount({ skills: { Hitpoints: { level: 60, xp: 300_000 } } }), catalog.require('quest:ball'), world, 1);
+        const fresh = activityPreflightFromConfig(makeTestAccount({ skills: { Hitpoints: { level: 60, xp: 300_000 } } }), catalog.require('quest:imp'), world, 1);
         expect(fresh.blockers.some((b) => b.kind === 'invalid_config')).toBe(false);
     });
 
@@ -245,6 +246,12 @@ describe('catalog-worker parity', () => {
         const horror = catalog.require('quest:horror');
         expect(horror.config.requiredQuests).toContain('barcrawl');
         expect((horror.config.requiredSkills as Record<string, number>)?.Magic).toBe(75);
+
+        // quest-arena.ts fights under Protect from Melee with fire spells.
+        const arena = catalog.require('quest:arena').config.requiredSkills as Record<string, number>;
+        expect(arena.Prayer).toBe(43);
+        expect(arena.Magic).toBe(59);
+        expect((catalog.require('quest:merlin').config.requiredSkills as Record<string, number>).Prayer).toBe(43);
 
         const mm = catalog.require('quest:mm');
         expect(mm.config.requiredQuests).toContain('grandtree');

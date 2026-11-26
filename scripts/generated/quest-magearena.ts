@@ -336,4 +336,4 @@ try {
 } catch (e) { await q.fail(String(e)); } finally { g.QUEST_SCRIPT_ID = prevScriptId; }
 }
 
-if (import.meta.main) void runQuestMageArena();
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) await runQuestMageArena();

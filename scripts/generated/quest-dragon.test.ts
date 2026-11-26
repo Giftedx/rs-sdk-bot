@@ -8,7 +8,7 @@ function finishDragon(destination: string, runes = true) {
  const script=pathToFileURL(resolve(root,'scripts/generated/quest-dragon.ts')).href;
  const code=`import {mock} from 'bun:test';
  const calls=[];
- const q={s:{onTick:cb=>{cb();return()=>{};}},msgCount:()=>1,
+ const q={s:{onTick:cb=>{cb();return()=>{};}},msgCount:()=>1,stageFrom:env=>Number(process.env[env]??0),
   canCast:()=>${JSON.stringify(runes)},
   teleport:async(...args)=>{calls.push(['teleport',...args]);},
   end:async(...args)=>{calls.push(['end',...args]);console.log('DRAGON_FINISH '+JSON.stringify(calls));process.exit(0);},

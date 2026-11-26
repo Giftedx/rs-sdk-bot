@@ -9,8 +9,14 @@
 // (wormbrain.rs2), 3 the chest behind the Oracle's magic door (magic_door.rs2: mind bomb, unfired bowl, lobster pot,
 // silk). All quest items are untradeable (quest_dragon.obj); the shield is tradeable but only the Duke gives it.
 // Combat: Elvarg breath max 70, 10 with the anti-dragon shield worn (elvarg.rs2 elvarg_max_hit); her melee is 0 under
-// Protect from Melee. DS_FROM=<milestone> starts later (debug presets); DS_STOP=<milestone> ends early.
+// Protect from Melee. DS_STOP=<milestone> ends early.
 // DS_RETURN=varrock requires one additional Varrock teleport's runes and returns there after completion.
+// FROM (q.stageFrom): DS_FROM=<milestone> (the debug presets), else the milestone that the quest sweep maps from the
+// journal of a started quest (packages/workers/src/quest/resume.ts QUEST_RESUME.dragon), else 0. The sweep hands over at
+// the preset tile in the Champions' Guild with the preset pack and the held quest items: 1 Oziach, 2 the Oracle, 3 the
+// magic door, 4 the maze, 11 the hull, 12 Wormbrain, 14 the sail, 15 Elvarg. A resumed run (FROM > 0) skips the mine,
+// the maze and the Duke when the pack holds their piece or the shield: the journal reads a banked piece as not found
+// (dragon_journal.rs2:103-125 count inv only). At FROM 15 off Crandor it sails again first.
 import { openQuest } from './quest-lib';
 
 const GUILDMASTER = { x: 3191, z: 3362 };                 // guildmaster 198 (maps/m49_52.jm2 0 55 34)
@@ -36,7 +42,8 @@ const PFM = 14;                                            // protect_from_melee
 
 const q = await openQuest({ cap: 6000, eatAt: 60, food: [ITEM.food], lumbridgeOk: true });
 try {
-    const FROM = Number(process.env.DS_FROM || 0);
+    const FROM = q.stageFrom('DS_FROM');
+    console.log(`DS_FROM ${FROM}`);
     const STOP = Number(process.env.DS_STOP || 99);
     const RETURN = process.env.DS_RETURN ?? '';
     if (RETURN && RETURN !== 'varrock') throw Error('DS_RETURN must be varrock or empty');
@@ -113,6 +120,10 @@ try {
     };
     const levelIs = (lv: number) => () => q.lvl() === lv;
     const ladder = (re: RegExp, at: { x: number; z: number }, r = 3) => () => q.findLoc(l => /ladder/i.test(l.name) && Math.max(Math.abs(l.x - at.x), Math.abs(l.z - at.z)) <= r && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
+    // A resumed run holds an item in the pack or worn. The chests give a piece again only when none is in the pack, the
+    // bank or worn (magic_door.rs2:50, melzars_maze.rs2:160), so a held piece must skip its part.
+    const resumed = FROM > 0;
+    const holds = (...ids: number[]): boolean => resumed && ids.some(id => q.has(id) || (q.st()?.equipment ?? []).some((e: any) => e.id === id));
 
     // 1. Guildmaster: "Do you know where I could get a Rune Plate mail body?" sets 1.
     if (FROM < 1) {
@@ -148,15 +159,19 @@ try {
         await ms(2);
     }
 
-    // 3. The Oracle on Ice Mountain: "I seek a piece of the map" sets %dragon_oracle 2.
-    if (FROM < 3) {
+    // 3. The Oracle on Ice Mountain: "I seek a piece of the map" sets %dragon_oracle 2. It sets 2 again after the door
+    // (oracle.rs2:17), and the door then takes the four items again (magic_door.rs2:9), so a held piece 3 skips the talk.
+    if (FROM < 3 && !holds(ITEM.part3, ITEM.map)) {
         await q.walk('to oracle', [{ x: ORACLE.x, z: ORACLE.z - 1, tol: 2 }]);
         await q.talk('oracle', /^oracle$/i, [/seek a piece of the map/i], () => q.sawText(/bowl that's not seen heat/i), ORACLE, 40);
         await ms(3);
     }
 
     // 4. Dwarven mine: the magic door takes the four items (from the west side), the chest gives map piece 3.
-    if (FROM < 4) {
+    // From the west the door is not "entering" (loc 2586 at 3051,9840 is a west wall, maps/m47_153.jm2 0 43 48 "2586 0";
+    // door_procs.rs2:83-86), so below %dragon_oracle 3 it says "The door is locked." unless the pack holds all four
+    // (magic_door.rs2:9-23).
+    if (FROM < 4 && !holds(ITEM.part3, ITEM.map)) {
         if ((q.pos()?.worldZ ?? 0) < 9000) {
             await q.walk('to mine ladder', [{ x: MINE_LADDER.x, z: MINE_LADDER.z + 1, tol: 1 }]);
             const down = () => q.findLoc(l => /ladder|trapdoor/i.test(l.name) && Math.max(Math.abs(l.x - MINE_LADDER.x), Math.abs(l.z - MINE_LADDER.z)) <= 2);
@@ -176,33 +191,35 @@ try {
     // Ground floor: rat (red key, door 2926,3253), ladder 2928,3256 up. Level 1: ghost (orange, door 2931,3253),
     // ladder 2934,3254 up. Level 2: skeleton (yellow, door 2924,3249), ladders down 2940,3240 and 2937,3240, then
     // funladdertop 2932,3240 to the basement. Basement: zombie (blue, door 2931,9643), Melzar (magenta, door
-    // 2929,9652), lesser demon (green, door 2936,9655), chest 2935,9657.
+    // 2929,9652), lesser demon (green, door 2936,9655), chest 2935,9657. A resumed run outside the maze starts at its
+    // door again: Melzar's key stays in the pack (melzars_maze.rs2:13-17) and each NPC drops its key again (:69-138).
+    // A held piece 1 skips the maze.
     const doorAt = (x: number, z: number) => () => q.findLoc(l => l.x === x && l.z === z && /door/i.test(l.name));
     const keyDoor = async (label: string, key: number, x: number, z: number, from: { x: number; z: number }, through: () => boolean): Promise<void> => {
         await q.dash(`${label} approach`, from.x, from.z, 0, 25);
         if (!q.has(key) || !doorAt(x, z)()) console.log(`WARN ${label}: key=${q.has(key)} door=${JSON.stringify(doorAt(x, z)())} near=${q.locs().filter((l: any) => l.distance <= 3).map((l: any) => `${l.name}@${l.x},${l.z}`).join(' ')}`);
         await q.step(label, () => { const d = doorAt(x, z)(); return d ? q.useOnLoc(key, d) : q.waitTicks(1); }, through, 8, 4);
     };
-    if (FROM < 5) {
+    if (FROM < 5 && !holds(ITEM.part1, ITEM.map)) {
         await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to maze', [{ x: MAZE_DOOR.x + 1, z: MAZE_DOOR.z, tol: 0 }]);
         await keyDoor('maze door', ITEM.melzarKey, MAZE_DOOR.x, MAZE_DOOR.z, { x: MAZE_DOOR.x + 1, z: MAZE_DOOR.z }, () => (q.pos()?.worldX ?? 99999) <= MAZE_DOOR.x - 1);
         await ms(5);
     }
-    if (FROM < 6) {
+    if (FROM < 6 && !holds(ITEM.part1, ITEM.map)) {
         await kill('rat', NPC.rat, ITEM.red);
         await keyDoor('red door', ITEM.red, 2926, 3253, { x: 2927, z: 3253 }, () => (q.pos()?.worldX ?? 99999) <= 2925);
         await q.dash('to rat ladder', 2928, 3255, 1, 25);
         await q.climb('rat ladder up', ladder(/climb-up/i, { x: 2928, z: 3256 }), /climb-up/i, levelIs(1));
         await ms(6);
     }
-    if (FROM < 7) {
+    if (FROM < 7 && !holds(ITEM.part1, ITEM.map)) {
         await kill('ghost', NPC.ghost, ITEM.orange);
         await keyDoor('orange door', ITEM.orange, 2931, 3253, { x: 2930, z: 3253 }, () => (q.pos()?.worldX ?? 0) >= 2931);
         await q.climb('ghost ladder up', ladder(/climb-up/i, { x: 2934, z: 3254 }), /climb-up/i, levelIs(2));
         await ms(7);
     }
-    if (FROM < 8) {
+    if (FROM < 8 && !holds(ITEM.part1, ITEM.map)) {
         await kill('skeleton', NPC.skeleton, ITEM.yellow);
         await keyDoor('yellow door', ITEM.yellow, 2924, 3249, { x: 2924, z: 3250 }, () => (q.pos()?.worldZ ?? 99999) <= 3249);
         await q.dash('to ladder room', 2939, 3240, 1, 40);
@@ -211,7 +228,7 @@ try {
         await q.climb('basement ladder', ladder(/climb-down/i, { x: 2932, z: 3240 }, 5), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
         await ms(8);
     }
-    if (FROM < 9) {
+    if (FROM < 9 && !holds(ITEM.part1, ITEM.map)) {
         await setPfm(true);
         await kill('zombie', NPC.zombie, ITEM.blue);
         await keyDoor('blue door', ITEM.blue, 2931, 9643, { x: 2931, z: 9643 }, () => (q.pos()?.worldX ?? 99999) <= 2930);
@@ -224,13 +241,14 @@ try {
         await ms(9);
     }
 
-    // 10. The Duke on level 1 of Lumbridge castle gives the shield (%dragon_shield 1, duke_horacio.rs2:4-5, 59-64).
+    // 10. The Duke on level 1 of Lumbridge castle gives the shield (%dragon_shield 1, duke_horacio.rs2:4-5, 59-64). He
+    // offers it only while none is in the pack or worn (:4), so a held shield skips the Duke.
     const wear = async (label: string, id: number, slot: number): Promise<void> => {
         const worn = () => (q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id === id);
         await q.step(label, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), worn, 3, 3);
     };
     const stairs = (re: RegExp) => () => q.findLoc(l => /stair/i.test(l.name) && Math.max(Math.abs(l.x - 3205), Math.abs(l.z - 3209)) <= 3 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
-    if (FROM < 10) {
+    if (FROM < 10 && !holds(ITEM.shield)) {
         await tele('lumbridge teleport', 'magic:lumbridge_teleport', 3221, 3218);
         await q.walk('to castle stairs', [{ x: 3206, z: 3210, tol: 1 }]);
         await q.climb('castle stairs up', stairs(/climb-up/i), /climb-up/i, levelIs(1));
@@ -260,11 +278,24 @@ try {
         await q.talk('klarense', /^klarense$/i, [/could buy it/i, /yep, sounds good/i], () => q.cnt(ITEM.coins) <= c0 - 2000, KLARENSE, 40);
         await ms(11);
     }
-    if (FROM < 12) {
+    // At FROM 15 off Crandor (the sweep start tile at journal stage 90) the crash has reset %dragonquestvar and
+    // %dragon_ned_hired (dragonslayer_ned.rs2:22-24). Ned sails again when asked (ned.rs2:5-10, 196-213), and the hull
+    // ladder goes to the holed hull until 3 planks are in again, then to Ned's deck (lady_lumbridge.rs2:33-41, 57-91).
+    const CRANDOR = { x: 2851, z: 3235 };                     // ^crandor_tele_coord 0_44_50_35_35 (quest_dragon.constant)
+    const LAIR = { x: 2855, z: 9637 };                        // Elvarg's zone 0_44_150_31_28..47_46 (quest_dragon.rs2:27)
+    const resail = FROM === 15 && !q.near(CRANDOR.x, CRANDOR.z, 40) && !q.near(LAIR.x, LAIR.z, 40);
+    if (resail) {
+        await q.walk('to ned again', [{ x: 3102, z: 3258, tol: 0 }]);
+        await q.openDoor('ned door again', 3101, 3258);
+        await q.dash('into ned house again', 3100, 3258, 1, 10);
+        await q.talk('ned again', /^ned$/i, [/take me to crandor again/i], () => q.sawText(/steer a little better this time/i), NED, 40);
+    }
+    if (FROM < 12 || resail) {
         await board('board ship');
         await q.climb('ship ladder down', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 6 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
         const hole = () => q.findLoc(l => /hole/i.test(l.name) && l.distance <= 6);
-        for (let i = 0; i < 6 && q.has(ITEM.plank); i++) {
+        // A resume at stage 3 can find planks already in (%dragonquestvar 1-2): the third one lifts the player to level 2.
+        for (let i = 0; i < 6 && q.has(ITEM.plank) && q.lvl() !== 2; i++) {
             const n0 = q.cnt(ITEM.plank);
             await q.step(`plank ${i}`, () => { const h = hole(); return h ? q.useOnLoc(ITEM.plank, h) : q.waitTicks(1); }, () => q.cnt(ITEM.plank) < n0, 6, 3);
             await q.converse([], () => !q.dialogOpen(), 4);
@@ -277,11 +308,14 @@ try {
 
     // 13. Wormbrain in the Port Sarim jail sells piece 2 for 10,000 coins; the three pieces join into the map.
     if (FROM < 13) {
-        // Jail door: loc 1530 at 3011,3197, south wall (maps/m47_49.jm2 0 3 61); the cells are east of the corridor.
-        await q.walk('to jail', [{ x: 3011, z: 3197, tol: 0 }]);
-        await q.openDoor('jail door', 3011, 3197);
-        await q.dash('jail corridor', 3011, 3187, 1, 20);
-        await q.talk('wormbrain', /^wormbrain$/i, [/piece of map that i need/i, /could pay you/i, /10,000 it is/i], () => q.has(ITEM.part2), WORMBRAIN, 50);
+        // Wormbrain sells only while piece 2 is not in the pack (wormbrain.rs2:23); a held piece or map skips him.
+        if (!holds(ITEM.part2, ITEM.map)) {
+            // Jail door: loc 1530 at 3011,3197, south wall (maps/m47_49.jm2 0 3 61); the cells are east of the corridor.
+            await q.walk('to jail', [{ x: 3011, z: 3197, tol: 0 }]);
+            await q.openDoor('jail door', 3011, 3197);
+            await q.dash('jail corridor', 3011, 3187, 1, 20);
+            await q.talk('wormbrain', /^wormbrain$/i, [/piece of map that i need/i, /could pay you/i, /10,000 it is/i], () => q.has(ITEM.part2), WORMBRAIN, 50);
+        }
         await q.step('join map', () => q.useOnItem(ITEM.part1, ITEM.part2), () => q.has(ITEM.map), 4, 4);
         await q.converse([], () => !q.dialogOpen(), 4);
         await ms(13);
@@ -293,14 +327,15 @@ try {
         await q.walk('to ned', [{ x: 3102, z: 3258, tol: 0 }]);
         await q.openDoor('ned door', 3101, 3258);
         await q.dash('into ned house', 3100, 3258, 1, 10);
-        await q.talk('ned hire', /^ned$/i, [/could you take me to the island of crandor/i], () => q.sawText(/just show me the map/i), NED, 40);
+        // A resume at stage 7 can find Ned hired already: he then asks for the map and takes it (ned.rs2:11-14, 170-189).
+        await q.talk('ned hire', /^ned$/i, [/could you take me to the island of crandor/i, /take me to crandor island now/i], () => q.sawText(/just show me the map/i) || !q.has(ITEM.map), NED, 40);
         await q.step('map to ned', async () => { const n = q.npc(/^ned$/i); if (n) await q.useOnNpc(ITEM.map, n); }, () => !q.has(ITEM.map), 15, 3);
         await q.converse([], () => !q.dialogOpen(), 10);
         await ms(14);
     }
 
     // 15. The ship: with the map given and Ned hired the hull ladder goes to level 3, where Ned sails to Crandor.
-    if (FROM < 15) {
+    if (FROM < 15 || resail) {
         await board('board ship 2');
         await q.climb('ship ladder down 2', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 6 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
         await q.talk('ned sail', /^ned$/i, [/yep lets go/i], () => q.near(2851, 3235, 8), { x: 3047, z: 9640 }, 60);

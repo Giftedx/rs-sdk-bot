@@ -256,6 +256,70 @@ export async function leaveHazeelCave(
     return up ? { ok: true } : { ok: false, detail: `hazeel cave stairs climb unobserved at ${where()}` };
 }
 
+// Keep Le Faye with its jetty: the walls (loc 1911) of maps/m43_53.jm2 enclose x 2764-2776, z 3395-3409, and the
+// jetty is 2777-2780,3399-3402. The walker has no way out (live Merlin's Crystal runs that ended there logged in at
+// 2768,3409 and 2771,3409, and every walk failed with "no route"). The keep crate on the jetty (loc 64 at 2779,3401,
+// op 2, "Yes.") ships the player to the Catherby pier with no varp check (quest_arthur.rs2:38-66), as quest-merlin.ts
+// leaves the keep.
+export const inKeepLeFaye = (p: { worldX: number; worldZ: number; level: number }) =>
+    p.level === 0 && p.worldX >= 2764 && p.worldX <= 2780 && p.worldZ >= 3395 && p.worldZ <= 3409;
+
+export async function leaveKeepLeFaye(s: Session): Promise<{ ok: boolean; detail?: string }> {
+    const pos = () => s.sdk.getState()?.player;
+    const where = () => {
+        const p = pos();
+        return p ? `${p.worldX},${p.worldZ},${p.level}` : 'unknown';
+    };
+    const p0 = pos();
+    if (!p0 || !inKeepLeFaye(p0)) return { ok: true };
+    const from = where();
+    const near = (x: number, z: number, tol: number) => {
+        const p = pos();
+        return !!p && p.level === 0 && Math.abs(p.worldX - x) <= tol && Math.abs(p.worldZ - z) <= tol;
+    };
+    const landed = () => near(2802, 3441, 3);
+    const onJetty = () => (pos()?.worldX ?? 0) >= 2777;
+    // The double doors 1516/1519 at 2776,3400-3401 (maps/m43_53.jm2 0 24 8-9) between the keep and the jetty start
+    // shut, and a walk click does not open them (hosted bench extra:sweep-merlin-resume-s3-keep: no move from 2768,3409).
+    const openDoor = async () => {
+        const door = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === 2776 && (l.z === 3400 || l.z === 3401) && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)),
+        ) as any;
+        if (!door) return;
+        const op = (door.optionsWithIndex as { text: string; opIndex: number }[]).find((o) => /^open$/i.test(o.text))!.opIndex;
+        await s.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+        await waitUntil(s, () => !(s.sdk.getState()?.nearbyLocs ?? []).some(
+            (l: any) => l.x === 2776 && l.z === door.z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)),
+        ), { timeoutTicks: 12 });
+    };
+    // The session walker opens doors on its way (live Dipstick walked from the jetty to 2768,3409 with it).
+    if (!onJetty()) await walkPath(await sessionWalker(s), [{ x: 2778, z: 3401, tol: 0 }], { maxTicks: 60 });
+    for (let i = 0; i < 3 && !landed(); i++) {
+        if (!onJetty()) {
+            await s.direct({ type: 'walkTo', x: 2775, z: 3401, running: true, reason: 'SDK' });
+            await waitUntil(s, () => near(2775, 3401, 0), { timeoutTicks: 30 });
+            await openDoor();
+        }
+        await s.direct({ type: 'walkTo', x: 2778, z: 3401, running: true, reason: 'SDK' });
+        await waitUntil(s, () => near(2778, 3401, 1), { timeoutTicks: 15 });
+        await s.direct({ type: 'interactLoc', x: 2779, z: 3401, locId: 64, optionIndex: 2, reason: 'SDK' });
+        for (let k = 0; k < 120 && !landed(); k++) {
+            const dlg: any = s.sdk.getDialog();
+            if (dlg?.isOpen && !dlg.isWaiting) {
+                if ((dlg.options ?? []).some((o: any) => /^yes\.?$/i.test(o.text))) await s.sdk.clickDialogByText(/^yes\.?$/i);
+                else await s.sdk.sendClickDialog(0);
+            }
+            await waitTicks(s, 1);
+        }
+    }
+    for (let k = 0; k < 6 && s.sdk.getDialog()?.isOpen; k++) {
+        await s.sdk.sendClickDialog(0);
+        await waitTicks(s, 1);
+    }
+    console.log(`QUEST_SWEEP_KEEP_LE_FAYE_EXIT ${JSON.stringify({ from, ok: landed(), at: where() })}`);
+    return landed() ? { ok: true } : { ok: false, detail: `keep le faye crate to catherby unobserved at ${where()}` };
+}
+
 const inMournerHq = (p: { worldX: number; worldZ: number; level: number }) =>
     p.level === 0 && p.worldX >= 2539 && p.worldX <= 2557 && p.worldZ >= 3321 && p.worldZ <= 3330;
 type ExitPoint = Tile & { tol?: number };
