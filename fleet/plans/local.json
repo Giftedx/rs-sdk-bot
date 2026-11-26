@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795731579294,
+ "at": 1795731597916,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 PRODUCT_TARGET=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 PRODUCT_TARGET=234 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -114,23 +114,6 @@
    "resources": [
     "edgeville-unicorns"
    ]
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-gather"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Magicwanda",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Magicwanda",
-   "role": "auto"
   },
   {
    "account": "Billionaire",
@@ -264,6 +247,27 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "wizard"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto",
+   "resources": [
+    "wizards-tower"
+   ]
   }
  ],
  "army": [
