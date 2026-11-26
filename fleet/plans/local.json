@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795723522333,
+ "at": 1795723547936,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -170,6 +170,22 @@
    "role": "army"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=25 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=3 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "helper"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -189,17 +205,31 @@
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p224 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=3 -- smithing anvil 1500"
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "goal:quest_board:biohazard",
    "role": "auto"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=275 STOCK_TARGET=425 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=425 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
   }
  ],
  "army": [
@@ -215,7 +245,6 @@
   "bowbeforeme",
   "dipstick",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
