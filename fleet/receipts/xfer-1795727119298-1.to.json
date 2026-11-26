@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727119298-1",
+ "account": "Magicwanda",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "aec34641-a9c9-4417-9d94-eda8dc19480b",
+ "count": 0,
+ "ok": false,
+ "at": 1795727607569,
+ "detail": "trade claimed"
+}
