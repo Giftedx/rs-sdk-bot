@@ -467,7 +467,8 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         }
     }
 
-    const total = cookedTotal + cookedCount();
+    // cookedTotal already holds the cooked food still in the pack.
+    const total = cookedTotal;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
     const counts = `ticks=${used()} ${counters()} cookedPer1kTicks=${perK}`;
     const summary = failure ? `${failure} ${counts}` : counts;

@@ -667,7 +667,7 @@ const DEFAULT_NPC_SPELLS: Readonly<Record<string, { name: string; component: str
     'water-strike': { name: 'water-strike', component: 'magic:water_strike', level: 5, runes: { 555: 1, 556: 1, 558: 1 }, debuff: false, members: false },
     'earth-strike': { name: 'earth-strike', component: 'magic:earth_strike', level: 9, runes: { 557: 2, 556: 1, 558: 1 }, debuff: false, members: false },
     'fire-strike': { name: 'fire-strike', component: 'magic:fire_strike', level: 13, runes: { 554: 3, 556: 2, 558: 1 }, debuff: false, members: false },
-    'curse': { name: 'curse', component: 'magic:curse', level: 19, runes: { 555: 3, 557: 2, 559: 1 }, debuff: true, members: false },
+    'curse': { name: 'curse', component: 'magic:curse', level: 19, runes: { 555: 2, 557: 3, 559: 1 }, debuff: true, members: false },
 };
 
 export function validateMagicBankJob(j: MagicBankJob, deps?: ArtisanExternalDeps) {
@@ -2965,9 +2965,9 @@ export async function runMagicCli(
                 s,
                 {
                     mode: restArgs[0] as 'talismans' | 'craft',
-                    cap: Number(restArgs[1]),
-                    target: Number(env.STOCK_TARGET),
-                    reserve: Number(env.COIN_RESERVE),
+                    cap: Number(restArgs[1] ?? 4000),
+                    target: Number(env.STOCK_TARGET ?? 100),
+                    reserve: Number(env.COIN_RESERVE ?? 0),
                     killsPerTarget: Number(env.HUNT_KILLS_PER_TARGET ?? 0),
                     stop: () => stopped,
                 },

@@ -273,5 +273,5 @@ if (import.meta.main) {
     }
 
     await helperDone;
-    await finish([main], ok, detail);
+    await finish(helper ? [main, helper] : [main], ok, detail);
 }

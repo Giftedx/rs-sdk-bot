@@ -8,7 +8,7 @@ import { questFlags } from '../../packages/core/src/quest-status';
 import { RESERVED_ACCOUNTS } from '../../packages/core/src/specialist-boards';
 import { xpForLevel } from '../../packages/planner/src/curve';
 import { createBot } from '../../packages/practice/src/bots';
-import { rsSdkRoot } from '../../packages/practice/src/paths';
+import { practiceBotsRoot, rsSdkRoot } from '../../packages/practice/src/paths';
 import { applyPreset } from '../../packages/practice/src/presets';
 import { runBotName } from '../../packages/practice/src/prove';
 import { ISOLATED, pointBotAt, startIsolatedStack } from '../../packages/practice/src/rehearse';
@@ -390,7 +390,7 @@ async function runIsolated(): Promise<void> {
     const wineCount = Number(process.env.WINE_COUNT ?? DEFAULT_WINE_COUNT);
     const mainName = runBotName('hagm', 1);
     const helperName = runBotName('hagh', 1);
-    const botsDir = join(rsSdkRoot(), 'bots');
+    const botsDir = practiceBotsRoot();
     const saves = [playerSavePath(mainName), playerSavePath(helperName)];
     try {
         const [{ envPath: mEnv }, { envPath: hEnv }] = await Promise.all([createBot(mainName), createBot(helperName)]);

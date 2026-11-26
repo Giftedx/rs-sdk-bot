@@ -245,3 +245,10 @@ test('alchemy consumer checks29 real CLI effects, exact credits, selected item, 
  for(const text of [log.replace('LOGOUT logged-out','LOGOUT timeout'),log.replace('"coins":96','"coins":97'),log.replace('"itemId":845','"itemId":841'),log.replace('"alchItemId":845','"alchItemId":841')])
   expect(Object.values(check(a,text)).every(Boolean)).toBe(false);
 });
+
+test('magic registration reads the profile path that createBot returned',()=>{
+ const p=selectMagicProofEndpoints(()=>true,()=>0),envPath='/proof/.practice/sim/bots/fixture/bot.env';
+ const registration=magicRegistrationArgs('fixture',p,envPath);
+ expect(registration[1]).toContain(`readFileSync(${JSON.stringify(envPath)},'utf8')`);
+ expect(registration[1]).not.toContain('vendor');
+});

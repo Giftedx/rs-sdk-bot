@@ -62,12 +62,16 @@ function sameWornSnapshot(prev: readonly number[], raw: readonly any[] | undefin
     return count === prev.length;
 }
 
-let world: World | null = null;
-export async function getWorld(): Promise<World> {
-    if (!world) {
+// The promise is the cache: bots of one process that ask at the same time share one build of the area labels.
+let world: Promise<World> | null = null;
+export function getWorld(): Promise<World> {
+    world ??= (async (): Promise<World> => {
         const { createWorld, rsPathLength } = await import('../world');
-        world ??= { ...createWorld({ pathLength: await rsPathLength() }), offThread: true };
-    }
+        return { ...createWorld({ pathLength: await rsPathLength() }), offThread: true };
+    })().catch((e) => {
+        world = null;
+        throw e;
+    });
     return world;
 }
 

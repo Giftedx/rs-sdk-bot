@@ -118,20 +118,30 @@ export function affectedTests(tests: readonly string[], changed: readonly string
         }
         return r;
     };
+    // A false result found below a cut cycle can still be true through the cut ancestor, so it is not cached.
+    // A traversal ends at its first true result, so a file that one traversal finished as false stays false in it;
+    // when the whole traversal gives false, every file it finished is false for good.
+    let cuts = 0;
+    const done = new Set<string>();
     const reach = (f: string, path: Set<string>): boolean => {
         if (hit.has(f)) return true;
         const known = reaches.get(f);
         if (known !== undefined) return known;
-        if (path.has(f)) return false;
+        if (path.has(f) || done.has(f)) { cuts++; return false; }
         path.add(f);
+        const before = cuts;
         const yes = step(f).some(next => reach(next, path));
         path.delete(f);
-        reaches.set(f, yes);
+        if (!yes) done.add(f);
+        if (yes || cuts === before) reaches.set(f, yes);
         return yes;
     };
     const active = new Set<string>();
     return tests.filter(t => {
-        if (reach(t, active)) return true;
+        done.clear();
+        const yes = reach(t, active);
+        if (!yes) for (const f of done) reaches.set(f, false);
+        if (yes) return true;
         const text = readCached(t);
         if (text === null) throw new Error(`missing test file ${t}`);
         return SCANS.test(text);

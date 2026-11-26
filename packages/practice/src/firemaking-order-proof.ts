@@ -9,6 +9,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {hasSimStopFile,simBotsDir} from '../../core/src/practice-paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
@@ -172,10 +173,10 @@ async function run(directory:string){
    let name:string,path:string;
    if(id==='rerun'){if(!entry)throw Error('rerun requires the completed entry account');({name,path}=entry);}
    else{
-    name=runBotName('flfm',index+1);const botDir=join(root,'vendor/rs-sdk/bots',name);
-    if(existsSync(botDir))throw Error('isolated practice identity already exists');
-    await createBot(name);
-    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+    name=runBotName('flfm',index+1);
+    if(existsSync(join(simBotsDir(root),name))||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('isolated practice identity already exists');
+    const {envPath}=await createBot(name);
+    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
     path=await applyPreset(name,firemakingFixture(id));
     if(id==='entry')entry={name,path};
    }
@@ -183,7 +184,7 @@ async function run(directory:string){
    const before=readPracticeSave(join(dir,'before.sav')),log=join(dir,'worker.log');
    const limit=Math.min(id==='entry'?360000:90000,deadline-Date.now()-15000);
    if(limit<30000)throw Error(`native envelope exhausted before ${id}`);
-   if(existsSync(join(root,'.practice',`stop-${name}`)))throw Error('stale stop file for practice identity');
+   if(hasSimStopFile(name,root))throw Error('stale stop file for practice identity');
    const config=childConfiguration(name,id);
    const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
    let timedOut=false,termination:Promise<void>|undefined;

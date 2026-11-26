@@ -762,7 +762,7 @@ if (import.meta.main) {
         });
         main = res.session;
         totalTicks = res.totalTicks;
-        relogs = res.relogs;
+        relogs += res.relogs;
         ok = res.ok;
         detail = `level=${res.finalLevel} xp=${res.finalXp} totalTicks=${totalTicks} relogs=${relogs} stuns=${res.stuns} attempts=${res.attempts} tut=${tutTicks} trade=${tradeTicks} travel=${travelTicks}${stopReason ? ` stop=${stopReason}` : ''}`;
     } catch (error) {

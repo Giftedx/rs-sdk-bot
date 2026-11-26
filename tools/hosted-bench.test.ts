@@ -2,7 +2,7 @@ import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {expect, test} from 'bun:test';
-import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, evaluatePollState, expandMultiSeedArtifacts, extractPlanOpts, INITIAL_POLL_WAIT_MS, MAX_JOBS, parseBoundedIntFlag, parseRunId, POLL_BACKOFF_MS, pollDelayMs, resultLines} from './hosted-bench';
+import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, dispatchedRunId, evaluatePollState, expandMultiSeedArtifacts, extractPlanOpts, INITIAL_POLL_WAIT_MS, MAX_JOBS, parseBoundedIntFlag, parseRunId, POLL_BACKOFF_MS, pollDelayMs, resultLines} from './hosted-bench';
 
 test('the plan gives one runner to each pattern and seed', () => {
     expect(benchPlan('^pvp:squad$  ^quester:quest:crest$', '7,8')).toEqual([
@@ -33,7 +33,14 @@ test('result lines: one for each case, the failure text, the profile, and a runn
         '      profile  seed 7  a  wall 35.3 s  engine start 2.7 s  login wait 3.9 s  tick wait 9.4 ms  held 0.9 s  capped 0',
         'FAIL  seed 8  b  ticks -  1.0 s  RESULT fail died',
         'FAIL  seed 7  bench-p2-s7: no result (bench: not started: port 21000 has a listener)']);
-    expect({failed: r.failed, cases: r.cases}).toEqual({failed: 2, cases: 2});
+    expect({failed: r.failed, cases: r.cases, noResult: r.noResult}).toEqual({failed: 1, cases: 2, noResult: 1});
+});
+
+test('the fallback run id skips a run created before the dispatch', () => {
+    const at = Date.parse('2026-11-26T12:00:00Z');
+    expect(dispatchedRunId(JSON.stringify([{databaseId: 9, createdAt: '2026-11-26T11:50:00Z'}]), at)).toBeUndefined();
+    expect(dispatchedRunId(JSON.stringify([{databaseId: 10, createdAt: '2026-11-26T12:00:01Z'}, {databaseId: 9, createdAt: '2026-11-26T11:50:00Z'}]), at)).toBe('10');
+    expect(dispatchedRunId('', at)).toBeUndefined();
 });
 
 test('a pattern that starts with a dash is refused: the runner would read it as an option', () => {

@@ -111,6 +111,9 @@ export interface BrainCycleOptions {
     readonly marketQuotes?: MarketQuotesMap;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
     readonly heldPlan?: FleetSchedulerInput['heldPlan'];
+    /** Removes an account's death end record from the caller's in-memory map. The swarm holds that map and
+     * writes all of it back on each persist, so a file-only clear of swarm-deaths.json does not last. */
+    readonly clearDeath?: (account: string) => number;
 }
 
 export interface BrainCycleResult {
@@ -372,6 +375,7 @@ function applyCommand(
         readonly side: string;
         readonly classifier: OutcomeClassifier;
         readonly demandEngine: DemandEngine;
+        readonly clearDeath?: (account: string) => number;
     },
 ): boolean {
     const { root, now, side, classifier, demandEngine } = opts;
@@ -385,7 +389,9 @@ function applyCommand(
                 return false;
             }
             const removed = clearOperatorStops(cmd.account, root);
-            const clearedDeaths = cmd.clearDead === true ? clearPersistedDeathRecords(cmd.account, root) : 0;
+            const clearedDeaths = cmd.clearDead === true
+                ? (opts.clearDeath?.(cmd.account) ?? 0) + clearPersistedDeathRecords(cmd.account, root)
+                : 0;
             const cleared = classifier.applyOperatorCommand(cmd, now);
             return cleared || removed > 0 || clearedDeaths > 0 || overlay === undefined;
         }
@@ -473,6 +479,7 @@ export function drainOperatorCommands(opts: {
     readonly side?: string;
     readonly classifier: OutcomeClassifier;
     readonly demandEngine: DemandEngine;
+    readonly clearDeath?: (account: string) => number;
 }): OperatorCommandApplyResult[] {
     const root = resolve(opts.root ?? repoRoot);
     const now = opts.now ?? Date.now();
@@ -533,6 +540,7 @@ export function drainOperatorCommands(opts: {
                 side,
                 classifier: opts.classifier,
                 demandEngine: opts.demandEngine,
+                clearDeath: opts.clearDeath,
             });
             atomicJson(receiptPath, { ...cmd, appliedAt: now, applied });
             rmSync(item.path, { force: true });
@@ -854,7 +862,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const demandEngine = createDemandEngine({ catalog, rateStore, campaigns, missions, root });
 
     const appliedCommands = consumeCommands
-        ? drainOperatorCommands({ root, now, side, classifier, demandEngine })
+        ? drainOperatorCommands({ root, now, side, classifier, demandEngine, clearDeath: opts.clearDeath })
         : [];
 
     const diagnostics = inspectWorldSnapshot({

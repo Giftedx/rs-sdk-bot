@@ -473,6 +473,11 @@ async function runRehearseMain(args: string[]): Promise<void> {
     let planTicks: number | undefined;
     let runs = 1;
     const env: Record<string, string> = {};
+    const parseRuns = (raw: string | undefined) => {
+        const n = Number(raw);
+        if (!Number.isSafeInteger(n) || n < 1) throw Error(`usage: --runs requires a positive integer (got "${raw ?? ''}")`);
+        return n;
+    };
     const parseEnvSpec = (raw: string) => {
         const m = /^([A-Z][A-Z0-9_]*)=([\w.,:+@\/-]*)$/.exec(raw);
         if (!m) throw Error(`usage: --env needs KEY=VALUE (got "${raw}")`);
@@ -487,9 +492,9 @@ async function runRehearseMain(args: string[]): Promise<void> {
         } else if (a === '--plan-ticks') {
             planTicks = Number(args[++i]);
         } else if (a.startsWith('--runs=')) {
-            runs = Math.max(1, Number(a.slice('--runs='.length)));
+            runs = parseRuns(a.slice('--runs='.length));
         } else if (a === '--runs') {
-            runs = Math.max(1, Number(args[++i]));
+            runs = parseRuns(args[++i]);
         } else if (a.startsWith('--env=')) {
             parseEnvSpec(a.slice('--env='.length));
         } else if (a === '--env') {

@@ -868,9 +868,15 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
    const ht = helper.sdk.getTradeState();
 
    if (!st.isOpen && !ht.isOpen) {
-    if (sawConfirm || giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+    if (giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
      console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
      return;
+    }
+    if (sawConfirm) {
+     // A closed confirm screen with the items still held: allow one tick for the inventory update, then trade again.
+     sawConfirm = false;
+     await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+     continue;
     }
     const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
     const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);

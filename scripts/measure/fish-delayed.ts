@@ -45,10 +45,11 @@ try {
             // Best plain clicking: one click every PERIOD ticks. The click sets clock + 4 (cage) or + 5 (harpoon),
             // the hidden op rolls on the due tick, and the next click lands 1 tick later. A click also closes a
             // level-up dialog (clearPendingAction), which stops the self-queued chain. On the free tick, drop a fish.
-            if ((s.sdk.getInventory()?.length ?? 0) >= 26) { const f = slotOf(FISH); if (f !== undefined) { void s.direct({ type: 'dropItem', slot: f, reason: 'SDK' }); drops++; } await waitTicks(s, 1); }
+            const full = (s.sdk.getInventory()?.length ?? 0) >= 26;
+            if (full) { const f = slotOf(FISH); if (f !== undefined) { void s.direct({ type: 'dropItem', slot: f, reason: 'SDK' }); drops++; } await waitTicks(s, 1); }
             await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: op, reason: 'SDK' });
             cycles++;
-            await waitTicks(s, PERIOD - ((s.sdk.getInventory()?.length ?? 0) >= 26 ? 1 : 0));
+            await waitTicks(s, PERIOD - (full ? 1 : 0));
             continue;
         }
         const knife = slotOf(/^knife$/i), log = slotOf(/^logs$/i);

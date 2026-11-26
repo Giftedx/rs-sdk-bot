@@ -9,6 +9,7 @@ import{applyPreset,type SaveConfig}from'./presets';
 import{deliveryLockDir,rsSdkRoot}from'./paths';
 import{runBotName}from'./prove';
 import{killTree}from'../../core/src/proc';
+import{simBotsDir}from'../../core/src/practice-paths';
 import{stopStack}from'./stack';
 import{selectGeProofEndpoints,startGeProofStack,geProofAccountEnv,assertGeProofAccount,HEADROOM_WAIT_MS,waitFreeMemory}from'./order-proof-shared';
 export{HEADROOM_WAIT_MS,waitFreeMemory};
@@ -111,8 +112,11 @@ export async function runShopSupplyNative(directory:string){
  };
  try{
   stack=await startGeProofStack(endpoint);
+  // Varp 134 is the logout clock. A session's logout save can land after its client exits.
+  const logoutClock=(path:string)=>readPracticeSave(path).vars[134]??0;
+  const loggedOutSave=(path:string,since:number)=>waitPracticeSave(path,s=>(s.vars[134]??0)>since,{timeoutMs:15000});
   const seed=async(index:number,coins:number,extra:Record<string,unknown>={})=>{
-   const name=runBotName('flshop',index);if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice identity already exists');
+   const name=runBotName('flshop',index);if(existsSync(join(simBotsDir(root),name))||existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice identity already exists');
    const {envPath}=await createBot(name);writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),endpoint));assertGeProofAccount(readFileSync(envPath,'utf8'),endpoint.env);actors.add(name);
    const path=await applyPreset(name,shopSupplyFixture(coins,extra));return{name,path};
   };
@@ -125,8 +129,9 @@ export async function runShopSupplyNative(directory:string){
   const repeat=await command(buyer.name,'repeat');await waitPracticeSave(buyer.path,s=>bank(s,557)===1139&&atBank(s));copyFileSync(buyer.path,join(directory,'repeat.sav'));
   if(hash(journal)!==journalBefore)throw Error('shop fallback changed the GE journal');
   copyFileSync(journal,join(directory,'original-ge-journal-after.json'));copyFileSync(journal+'.shop.json',join(directory,'fallback-spend.json'));
-  const poor=await seed(2,30000);copyFileSync(poor.path,join(directory,'refuse-before.sav'));
-  const refuse=await command(poor.name,'refuse',false);await waitPracticeSave(poor.path,s=>s.position.x===3185&&s.position.z===3436);copyFileSync(poor.path,join(directory,'refused.sav'));
+  const poor=await seed(2,30000);copyFileSync(poor.path,join(directory,'refuse-before.sav'));const poorClock=logoutClock(poor.path);
+  const refuse=await command(poor.name,'refuse',false);
+  if(!(await loggedOutSave(poor.path,poorClock)).matched)throw Error('refusal logout save unobserved');copyFileSync(poor.path,join(directory,'refused.sav'));
   const alternate=await seed(3,352288);copyFileSync(alternate.path,join(directory,'betty-before.sav'));
   const emptyBetty=await command(alternate.name,'betty-empty-ge',false,50);if(emptyBetty.code===0||!emptyBetty.log.includes('"acquired":0')||!emptyBetty.log.includes('LOGOUT logged-out'))throw Error('alternate zero-fill GE settlement unproved');
   const betty=await command(alternate.name,'betty',true,50,'betty');
@@ -140,10 +145,11 @@ export async function runShopSupplyNative(directory:string){
   const refillRepeat=await command(seeded.name,'refill-repeat',true,50,'betty-refill');await waitPracticeSave(seeded.path,s=>bank(s,557)===53);
   copyFileSync(seeded.path,join(directory,'refill-repeat.sav'));copyFileSync(orderPaths(endpoint.server,seeded.name,'native-earth-shop').journal+'.shop.json',join(directory,'refill-ledger.json'));
   const hunter=await seed(5,352288,{skills:{Attack:49,Strength:10,Defence:11,Hitpoints:35},inventory:[],bank:[{id:995,count:352288},{id:554,count:1482},{id:557,count:3},{id:1277,count:1},{id:1171,count:1},{id:1115,count:1},{id:1891,count:8}]});
-  await command(hunter.name,'hunt-empty-ge',false,100);
-  copyFileSync(hunter.path,join(directory,'hunt-before.sav'));
+  const hunterClock=logoutClock(hunter.path);
+  await command(hunter.name,'hunt-empty-ge',false,100);await loggedOutSave(hunter.path,hunterClock);
+  copyFileSync(hunter.path,join(directory,'hunt-before.sav'));const huntClock=logoutClock(hunter.path);
   const ownedHunt=await command(hunter.name,'owned-hunt',true,100,'owned-talismans',{HUNT_KILLS_PER_TARGET:'1'});
-  await waitPracticeSave(hunter.path,s=>s.position.z===3436||ownedHunt.code!==0);copyFileSync(hunter.path,join(directory,'hunt-after.sav'));
+  await waitPracticeSave(hunter.path,s=>ownedHunt.code!==0||(s.vars[134]??0)>huntClock,{timeoutMs:15000});copyFileSync(hunter.path,join(directory,'hunt-after.sav'));
   const crafter=await seed(6,352288,{skills:{Runecraft:51,Hitpoints:35},inventory:[],bank:[{id:995,count:352288},{id:554,count:1482},{id:557,count:3},{id:1436,count:60},{id:1438,count:1},{id:1440,count:1}]});await command(crafter.name,'craft-empty-ge',false,100);
   copyFileSync(crafter.path,join(directory,'craft-before.sav'));
   const ownedCraft=await command(crafter.name,'owned-craft',true,100,'owned-craft');

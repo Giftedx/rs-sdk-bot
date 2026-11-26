@@ -168,6 +168,16 @@ export async function executeShopToolPurchase(
     await hooks.waitUntil(() => !!hooks.stop?.() || !hooks.getShopState()?.isOpen, 6);
 
     const spent = cashBefore - countIn(hooks.getInventory(), COINS_ID);
+    // A clean refusal changes neither coins nor the item: bank the withdrawn coins and report it.
+    if (!confirmed && spent === 0 && countIn(hooks.getInventory(), params.targetId) === heldBefore) {
+        await recoverToBank();
+        return {
+            bought: false,
+            id: params.targetId,
+            coinsSpent: 0,
+            reason: buyReply.success ? 'shop buy unconfirmed' : (buyReply.message ?? 'shop buy refused'),
+        };
+    }
     if (!confirmed || countIn(hooks.getInventory(), params.targetId) < heldBefore + 1 || spent !== price) {
         throw new Error(buyReply.success ? `shop buy reconciliation mismatch for ${params.targetId}` : `shop buy refused: ${buyReply.message ?? params.targetId}`);
     }

@@ -215,11 +215,13 @@ export function genericCombatNpc<T extends { id: number; distance: number; reach
                   baseId
                       ?? (target === 'taverley_druid'
                           ? npcId('chaos druid')
-                          : target === 'taverley_black_dragon'
-                              ? npcId('black dragon')
-                              : target === 'taverley_blue_dragon'
-                                  ? npcId('blue dragon')
-                                  : undefined),
+                          : target === 'taverley_giant'
+                              ? GIANT.npc
+                              : target === 'taverley_black_dragon'
+                                  ? npcId('black dragon')
+                                  : target === 'taverley_blue_dragon'
+                                      ? npcId('blue dragon')
+                                      : undefined),
               ]);
     const owned = (n: T) =>
         selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 && n.inCombat === true && n.targetIndex === 32768 + selfSlot;
@@ -1974,7 +1976,6 @@ export async function runGenericCombatSession(
     if (untilItem && !conf0Drops(TARGET_KEY).test(opts.untilItemName!)) {
         return { ok: false, kills: 0, itemsLooted: 0, bankTrips: 0, walkTicks: 0, detail: `no combat progress: UNTIL_ITEM ${opts.untilItemName} is no drop that target ${TARGET_KEY} picks up` };
     }
-    const untilId = untilItem ? objId(opts.untilItemName!.trim().toLowerCase()) : undefined;
     const potionPolicy = combatPotionPolicy(env);
     if ((potionPolicy || maximum !== undefined) && CAP <= 200) throw Error('finite combat job reserves200ticks for owned bank return');
     const alch = combatAlchPolicy(env);
@@ -1987,6 +1988,10 @@ export async function runGenericCombatSession(
         ? { ...targetConf, spot: { x: 3117, z: 9850 }, bankSpot: { x: 3092, z: 3496 }, drops: /(big bones|limpwurt root|iron arrow|nature rune)/i }
         : targetConf;
     const conf = alch?.route ? { ...baseConf, spot: alch.route.site, bankSpot: alch.route.bank } : baseConf;
+    if (untilItem && !conf.drops.test(opts.untilItemName!)) {
+        return { ok: false, kills: 0, itemsLooted: 0, bankTrips: 0, walkTicks: 0, detail: `no combat progress: UNTIL_ITEM ${opts.untilItemName} is no drop that target ${TARGET_KEY} picks up` };
+    }
+    const untilId = untilItem ? objId(opts.untilItemName!.trim().toLowerCase()) : undefined;
     if (TARGET_KEY !== 'druid' && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
         throw Error(`Wilderness destination forbidden for ${TARGET_KEY}`);
     }
@@ -2314,6 +2319,10 @@ export async function runMeleeGatherCli(
         ? { ...targetConf, spot: { x: 3117, z: 9850 }, bankSpot: { x: 3092, z: 3496 }, drops: /(big bones|limpwurt root|iron arrow|nature rune)/i }
         : targetConf;
     const conf = alch?.route ? { ...baseConf, spot: alch.route.site, bankSpot: alch.route.bank } : baseConf;
+    if (untilItem && !conf.drops.test(env.UNTIL_ITEM!)) {
+        await finish([], false, `no combat progress: UNTIL_ITEM ${env.UNTIL_ITEM} is no drop that target ${TARGET_KEY} picks up`);
+        return;
+    }
     if (TARGET_KEY !== 'cow' && TARGET_KEY !== 'druid' && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
         throw Error(`Wilderness destination forbidden for ${TARGET_KEY}`);
     }

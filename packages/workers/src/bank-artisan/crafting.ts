@@ -1298,7 +1298,7 @@ export async function runLegacyCraftJewelryCli(
                 const toCut = inv().filter(i => uncutRe.test(i.name));
                 const uncutCount = () => inv().filter(i => uncutRe.test(i.name)).reduce((n, i) => n + i.count, 0);
                 const before = uncutCount();
-                for (const g of toCut) void s.sdk.sendUseItemOnItem(ch.slot, g.slot);
+                for (const g of toCut) void s.sdk.sendUseItemOnItem(ch.slot, g.slot).catch(() => {});
                 await waitUntilFn(s, () => uncutCount() < before, { timeoutTicks: 15 });
                 const after = uncutCount();
                 const diff = before - after;

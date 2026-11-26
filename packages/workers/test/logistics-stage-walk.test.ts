@@ -283,6 +283,16 @@ test('existing raw wine and short staged inputs refuse production without spendi
     }
 });
 
+test('a short staged input names that input and its observed count', async () => {
+    const f = wineFixture();
+    f.bank.find(i => i.id === 1937)!.count = 1;
+    try {
+        const result = await runPreservedWine(f.session, { maximum: 2, cap: 100 });
+        expect(result.ok).toBe(false);
+        expect(result.short).toEqual([{ id: 1937, count: 1 }]);
+    } finally { f.close(); }
+});
+
 test('exact reconciliation rejects fermented substitution, a missing input debit and equipment loss', () => {
     const before: WineStock = { items: { 1987: 4, 1937: 4, 995: 777 }, equipment: [{ id: 1277, count: 1, slot: 3 }], xp: 0 };
     const after: WineStock = { items: { 1987: 2, 1937: 2, 1996: 2, 995: 777 }, equipment: before.equipment, xp: 0 };

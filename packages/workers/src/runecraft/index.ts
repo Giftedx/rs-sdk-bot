@@ -310,14 +310,17 @@ export async function runRunecraftCli(
     }
 
     if (method === 'carriers' || method === 'staged' || method === 'body-continuation' || method === 'body-measure') {
+        // staged and body-measure take an optional leading number (level or pack count) before the roster.
+        const counted = (method === 'staged' || method === 'body-measure') && /^[0-9]+$/.test(args[0] ?? '');
+        const n = counted ? args[0] : undefined, roster = counted ? args.slice(1) : args;
         const flag = method === 'staged'
-            ? `--staged=${env.RUNE_ALTAR ?? 'body'}:${args[0] ?? 99}`
+            ? `--staged=${env.RUNE_ALTAR ?? 'body'}:${n ?? 99}`
             : method === 'body-measure'
-                ? `--body-measure=${args[0] ?? 12}`
+                ? `--body-measure=${n ?? 12}`
                 : method === 'body-continuation'
                     ? '--body-continuation'
                     : '--carriers';
-        return runRunecraftCli('bank-craft', account, [...args, flag], env, deps);
+        return runRunecraftCli('bank-craft', account, [...roster, flag], env, deps);
     }
 
     if (method === 'stage-carriers' || method === 'stage-opening') {

@@ -1,6 +1,6 @@
 // Global controller-level exponential backoff circuit breaker for remote Git claim authority, proxy, and server-drain faults.
 // Never records per-account deaths, holds, stop files, or retirements.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { renameRetry } from '../../core/src/status';
 
@@ -119,6 +119,9 @@ export class InfraCircuitBreaker {
     private readonly random: () => number;
     private readonly rename?: (from: string, to: string) => void;
     private state: InfraCircuitSnapshot;
+    // The swarm, the fleet agent and each session-recovery pass share one state file. Each call reads the
+    // file again when another process changed it, so a write never replaces that process's buckets.
+    private fileStamp = '';
 
     constructor(opts: InfraCircuitBreakerOptions = {}) {
         this.baseMs = Math.max(100, opts.baseMs ?? 5_000);
@@ -145,8 +148,24 @@ export class InfraCircuitBreaker {
         };
     }
 
+    private stamp(): string {
+        if (!this.stateFile) return '';
+        try {
+            const st = statSync(this.stateFile);
+            return `${st.mtimeMs}:${st.size}`;
+        } catch {
+            return '';
+        }
+    }
+
+    private refresh(): void {
+        if (!this.stateFile) return;
+        if (this.stamp() !== this.fileStamp) this.state = this.load();
+    }
+
     private load(): InfraCircuitSnapshot {
         if (!this.stateFile) return this.emptyState();
+        this.fileStamp = this.stamp();
         try {
             const parsed = JSON.parse(readFileSync(this.stateFile, 'utf8'));
             if (parsed?.schema !== 'infra-circuit-breaker/1' || typeof parsed.faults !== 'object') return this.emptyState();
@@ -175,6 +194,7 @@ export class InfraCircuitBreaker {
             mkdirSync(dirname(this.stateFile), { recursive: true });
             writeFileSync(tmp, JSON.stringify(this.state, null, 2));
             renameRetry(tmp, this.stateFile, this.rename);
+            this.fileStamp = this.stamp();
         } catch {
             try { rmSync(tmp, { force: true }); } catch { /* ignore cleanup error */ }
             // Persistence must not break controller execution.
@@ -194,6 +214,7 @@ export class InfraCircuitBreaker {
         if (!kind) {
             return { tripped: false, kind: null, consecutiveFailures: 0, backoffMs: 0, openUntil: 0 };
         }
+        this.refresh();
         const at = this.now();
         const bucket = this.state.faults[kind];
         bucket.consecutiveFailures += 1;
@@ -215,6 +236,7 @@ export class InfraCircuitBreaker {
     }
 
     recordSuccess(kind?: InfraFaultKind): void {
+        this.refresh();
         const at = this.now();
         let changed = false;
         const targets = kind ? [kind] : KINDS;
@@ -232,6 +254,7 @@ export class InfraCircuitBreaker {
     }
 
     canProceed(kind?: InfraFaultKind): InfraProceedCheck {
+        this.refresh();
         const at = this.now();
         const checkKinds = kind ? [kind] : KINDS;
         let worstKind: InfraFaultKind | undefined;
@@ -267,6 +290,7 @@ export class InfraCircuitBreaker {
     }
 
     snapshot(): InfraCircuitSnapshot {
+        this.refresh();
         const f = this.state.faults;
         return {
             schema: this.state.schema,

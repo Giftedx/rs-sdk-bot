@@ -1041,3 +1041,11 @@ test('agility transit aborts goTo with signal when caller stop triggers', async 
         f.stop();
     }
 }, 20_000);
+
+test('agilityWorker maps a thrown no-food refusal to missing_supply', async () => {
+    const f = fixture({ lowHp: true });
+    try {
+        const outcome = await agilityWorker.run(f.s as any, { course: 'gnome', targetLevel: 2 });
+        expect(outcome.kind).toBe('missing_supply');
+    } finally { f.stop(); }
+});

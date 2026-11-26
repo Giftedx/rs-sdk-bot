@@ -1,7 +1,7 @@
 // Fletching 1 -> 99 floor with stackable supplies (preset floor_fletching): no bank, no walking.
 // Bands from floor-bands.ts FLETCHING: arrowheads on headless arrows (15 per action, arrows.rs2) and dart tips on
 // feathers (10 per action, darts.rs2). Neither has a delay, so up to 5 actions run per tick.
-// Usage: bun scripts/measure/floor-fletching.ts <bot> [perTick=5] [close=1] [open=0]
+// Usage: bun scripts/measure/floor-fletching.ts <bot> [perTick=5] [close=0] [open=0]
 //   open=1: send the planned actions in order, perTick per tick, without waiting to see the level (the server runs
 //   them in order inside one tick, so a level reached by action 3 already counts for action 4).
 // LADDER=arrows: arrows only, no dart tips (planner row fletch-arrows, preset floor_fletching_arrows).

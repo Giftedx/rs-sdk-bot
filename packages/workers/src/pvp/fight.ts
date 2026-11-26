@@ -691,6 +691,9 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
     return null;
 }
 
+// One reaction on each session's ended promise serves every wait: a reaction per wait stays on the pending promise
+// until the session ends, so a long session holds one closure per tick.
+const endedWaits = new WeakMap<object, { done: boolean; waits: Set<() => void> }>();
 // The next game tick, or false once the session has ended: a dropped session publishes no more ticks, so a plain
 // onTick wait would hang and a loop around it would spin on failed actions. The wait counts as an open tick stream,
 // so a lockstep practice engine runs its next tick at once (inprocess.ts acknowledgeTick) and does not hold each tick
@@ -698,10 +701,19 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
 export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean> {
     return new Promise(resolve => {
         let open = true;
-        const end = (ticked: boolean) => { if (!open) return; open = false; tickWaits.active--; off(); resolve(ticked); };
+        let w = endedWaits.get(s.ended);
+        if (!w) {
+            const entry = { done: false, waits: new Set<() => void>() };
+            endedWaits.set(s.ended, entry);
+            void s.ended.then(() => { entry.done = true; for (const f of [...entry.waits]) f(); entry.waits.clear(); });
+            w = entry;
+        }
+        const waits = w.waits;
+        const onEnd = () => end(false);
+        const end = (ticked: boolean) => { if (!open) return; open = false; tickWaits.active--; off(); waits.delete(onEnd); resolve(ticked); };
         tickWaits.active++;
         const off = s.onTick(() => end(true));
-        void s.ended.then(() => end(false));
+        if (w.done) queueMicrotask(onEnd); else waits.add(onEnd);
     });
 }
 

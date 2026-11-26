@@ -724,6 +724,7 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
     let stepStart = s.tick();
     let lastObstacleKey = '';
     const tickets0 = ticketCount();
+    let lastTickets = tickets0;
 
     const targetReached = () => (o.stopOnMaxLaps ? tags >= o.maxLaps : ctx.base() >= o.target);
     const seen = new Set<string>();
@@ -737,8 +738,15 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
             if (seen.has(key)) continue;
             seen.add(key);
             if (ctx.fallText(m.text)) ctx.falls();
-            if (/ticket/i.test(m.text)) tags++;
         }
+        // A tag is a held-ticket rise: pillars give no XP, and refusal messages also name tickets.
+        const heldTickets = ticketCount();
+        if (heldTickets > lastTickets) {
+            tags += heldTickets - lastTickets;
+            stepStart = s.tick();
+            if (targetReached()) break;
+        }
+        lastTickets = heldTickets;
 
         const p = ctx.pos();
         if (inBrimhavenPit(p)) {
@@ -755,7 +763,6 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
 
         const curXp = ctx.xp();
         if (curXp > lastTagXp) {
-            if (o.stopOnMaxLaps && !seen.has(`xp:${s.tick()}`)) tags++;
             lastTagXp = curXp;
             stepStart = s.tick();
             console.log(`AGILITY_PROGRESS level=${ctx.base()} xp=${curXp} tick=${s.tick()} step=brimhaven`);
@@ -845,6 +852,7 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
         entry: ctx.entry,
         ticks: s.tick() - ctx.start,
         tickets: ticketCount(),
+        ticketsGained: ticketCount() - tickets0,
     };
 }
 
@@ -882,7 +890,7 @@ export async function runAgilitySession(
             delta: {
                 xp: { Agility: result.xpGained },
                 ...(result.entry.coinsSpent > 0 ? { coins: -result.entry.coinsSpent } : {}),
-                ...(result.tickets ? { items: { [BRIMHAVEN_ARENA.ticketId]: result.tickets } } : {}),
+                ...(result.ticketsGained ? { items: { [BRIMHAVEN_ARENA.ticketId]: result.ticketsGained } } : {}),
                 elapsedTicks: result.ticks,
             },
             result,
@@ -895,7 +903,7 @@ export async function runAgilitySession(
             ? 'died'
             : lower.includes('interrupted')
                 ? 'aborted'
-                : /already at target|unsupported|requires|missing owned|needs \d+ carried/.test(lower)
+                : /already at target|unsupported|requires|missing owned|no owned food|needs \d+ carried/.test(lower)
                     ? 'refused'
                     : 'failed';
         return { ok: false, kind, detail, delta: { elapsedTicks } };

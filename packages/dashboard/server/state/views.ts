@@ -60,7 +60,8 @@ function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: numbe
     if (/^food chain: courier/i.test(goal)) return { kind: 'courier', fish: fishCount(pack, /^(trout|salmon)$/i), coins: coinsOf(s), at: placeOf(s.pos) };
     if (/fish/i.test(goal) || s.role === 'fishing') return { kind: 'fish', xpPerTick: xpRate, feathers: pack.filter((i: any) => i?.name === 'Feather').reduce((n: number, i: any) => n + i.count, 0) };
     if (/woodcut|chop/i.test(goal) || s.role === 'woodcutting') return { kind: 'wood', xpPerTick: xpRate, hp: s.hp ?? null };
-    if (/bank/i.test(goal) || s.name === BANKER) return { kind: 'bank' };
+    // Only the banker's own goals ('bank', 'give to the bank'); skill goals such as 'Gather and bank ores' stay skill rows.
+    if (/^(bank|give to the bank)\b/i.test(goal) || s.name === BANKER) return { kind: 'bank' };
     return { kind: 'xp', xpPerTick: xpRate };
 }
 

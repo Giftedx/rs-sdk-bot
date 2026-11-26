@@ -720,14 +720,18 @@ describe('packages/fleet/src/brain-runtime', () => {
             }),
         );
 
+        // The swarm passes clearDeath to remove the record from its in-memory end map too.
+        const clearDeathCalls: string[] = [];
         const second = runBrainCycle({
             root,
             fleetDir: join(root, 'fleet'),
             now: now + 30,
             side: 'local',
             marketQuotes: {},
+            clearDeath: (account) => { clearDeathCalls.push(account); return 1; },
         });
 
+        expect(clearDeathCalls).toEqual(['AlphaBot']);
         expect(second.appliedCommands.find(c => c.id === 'cmd-invalid-campaign-err')?.duplicate).toBe(true);
         expect(second.appliedCommands.find(c => c.id === 'cmd-resume-cleardead')?.applied).toBe(true);
         expect(existsSync(join(liveRoot(root), 'stop-AlphaBot'))).toBe(false);

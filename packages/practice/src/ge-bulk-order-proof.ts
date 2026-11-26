@@ -7,6 +7,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {killTree,commandLine} from '../../core/src/proc';
+import {resolveBotEnvPath} from '../../core/src/practice-paths';
 import {rsSdkRoot,deliveryLockDir,practiceBotsRoot} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';
@@ -211,7 +212,7 @@ async function run(directory:string){
   if(await waitFreeMemory(FREE_FLOOR_GB)<FREE_FLOOR_GB)throw Error('practice free memory below floor');
   const actor=args[0]==='scripts/aio-market.ts'?args[1]:args[2];
   if(!actor||!actors.has(actor))throw Error('owned practice actor required');
-  assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',actor,'bot.env'),'utf8'),owned.env);
+  assertGeProofAccount(readFileSync(resolveBotEnvPath(actor),'utf8'),owned.env);
   const out=join(directory,label+'.log'),err=join(directory,label+'.err');
   const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env,...owned.env},stdout:Bun.file(out),stderr:Bun.file(err),windowsHide:true});
   let expired=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},timeoutMs);
@@ -240,7 +241,7 @@ async function run(directory:string){
   const buy=await command(['scripts/aio-market.ts',buyer,'ge-buy'],env,'buy',remote?330000:150000);
   const saved=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'after.sav'));if(!saved.matched)throw Error('exact purchased bank stock not saved');
-  const journalPath=orderPaths(serverFromEnv(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')),buyer,orderKey).journal;
+  const journalPath=orderPaths(serverFromEnv(readFileSync(resolveBotEnvPath(buyer),'utf8')),buyer,orderKey).journal;
   writeFileSync(join(directory,'journal.json'),existsSync(journalPath)?readFileSync(journalPath):'null');
   // The rerun must find the settled journal and leave the GE untouched.
   const again=await command(['scripts/aio-market.ts',buyer,'ge-buy'],env,'again');
@@ -260,7 +261,7 @@ async function run(directory:string){
   if(snapshot.code!==0||!snapshot.log.split(/\r?\n/).includes('LOGOUT logged-out'))throw Error('rescue bank snapshot/logout unproved');
   // Keep the practice lock and the observed bank snapshot across this owned stack restart.
   const ownedPids=Object.values(JSON.parse(readFileSync(pidsFile(owned.instance),'utf8')) as Record<string,{pid:number}>).map(p=>p.pid);
-  assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8'),owned.env);
+  assertGeProofAccount(readFileSync(resolveBotEnvPath(buyer),'utf8'),owned.env);
   const market=practiceMarket(owned);
   stack=await stageWithStoppedStack(buyerPath,async()=>{
    await stack!.stop();
@@ -332,7 +333,7 @@ async function sell(name:string,item:number,quantity:number,price:number,record:
   try{
    if(process.argv[2]==='--snapshot'){
     const record=geProofFixtureRecord(process.argv.slice(2)),name=record.argv[1]!;
-    assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
+    assertGeProofAccount(readFileSync(resolveBotEnvPath(name),'utf8'));
     const s=await openBot(name,{record});let ok=false,detail='';
     try{
      const generation=s.bankObservation?.()?.generation??0;
@@ -343,7 +344,7 @@ async function sell(name:string,item:number,quantity:number,price:number,record:
     await finish([s],ok,detail);
    }else if(process.argv[2]==='--sell'){
     const record=geProofFixtureRecord(process.argv.slice(2)),name=record.argv[1]!,[item,quantity,price]=record.argv.slice(2);
-    assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
+    assertGeProofAccount(readFileSync(resolveBotEnvPath(name),'utf8'));
     await sell(name,Number(item),Number(quantity),Number(price),record);
   }else{
    if(!process.env.DELIVERY_DIR)throw Error('run through bun run deliver ge-bulk-order');

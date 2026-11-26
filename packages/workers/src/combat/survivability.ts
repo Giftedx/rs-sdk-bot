@@ -1173,7 +1173,7 @@ export async function runHighAlch(s: CombatSession, recipe: MagicRecipe, o: { co
             await s.bot.dismissBlockingUI();
         }
         if (over()) {
-            stop = 'stopped';
+            stop = ended ? 'session ended' : life.stopped() ? 'stopped' : 'cap';
             break;
         }
         const before = counts();

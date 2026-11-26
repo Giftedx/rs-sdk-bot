@@ -59,6 +59,8 @@ import {
     sharkEntry,
     sharkFishingTrace,
     sharkOrderConfig,
+    sharkOrderProblem,
+    effectiveSharkOrder,
     sharkRoutePlan,
     sharkSpot,
     sharkSummary,
@@ -1458,6 +1460,15 @@ test('south-wall cooking arrival cannot authorize a heat input despite being wit
 });
 
 // --- Shark supply (formerly shark-supply.test.ts) ---
+test('the claimed shark order is the executed order and is validated before the claim', () => {
+    const base = { args: [] as string[], env: { MAX_COOKED: '25' } as Record<string, string> };
+    expect(effectiveSharkOrder(base)).toMatchObject({ target: 25, maxTicks: 9000 });
+    expect(effectiveSharkOrder({ ...base, target: { count: 40, capTicks: 5000 } } as any)).toMatchObject({ target: 40, maxTicks: 5000 });
+    expect(sharkOrderProblem(effectiveSharkOrder(base))).toBeUndefined();
+    expect(sharkOrderProblem(effectiveSharkOrder({ ...base, env: { MAX_COOKED: '150' } }))).toBe('invalid finite shark order/consumer');
+    expect(sharkOrderProblem(effectiveSharkOrder({ ...base, env: { CAP: 'x' } }))).toBe('invalid finite shark order/consumer');
+});
+
 test('a finite order key is claimed once; duplicate and uncertain output refuse any unchanged retry', () => {
     const dir = mkdtempSync(join(tmpdir(), 'shark-order-'));
     try {

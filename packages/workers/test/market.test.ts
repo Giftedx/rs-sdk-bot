@@ -424,6 +424,15 @@ describe('market WorkerModule contract compliance', () => {
             rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    test('buy-sword preflight requires the full maximumSpend that the run withdraws', () => {
+        const acct = makeAccount({ inventory: {}, bank: { items: { 995: 2200 }, observedAt: 1_700_000_000_000, trusted: true } });
+        const world = makeWorld(acct);
+        expect(preflightMarket(acct, { mode: 'buy-sword', itemId: 1287, maximumSpend: 2080 }, world).ok).toBe(true);
+        const pre = preflightMarket(acct, { mode: 'buy-sword', itemId: 1287 }, world);
+        expect(pre.ok).toBe(false);
+        expect(pre.blockers.some(b => b.kind === 'missing_coins')).toBe(true);
+    });
 });
 
 describe('scripts/aio-market.ts shim and resolveMarketStep', () => {

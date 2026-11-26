@@ -372,7 +372,8 @@ export async function runArtisan(
             }
             case 'prayer': {
                 const { prayerOptions, runPrayer } = await import('./prayer');
-                const opts = prayerOptions([s.name, ...cfg.args], cfg.env);
+                // prayerOptions reads the CLI argv shape (target at argv[3]), as runPrayerCli builds it.
+                const opts = prayerOptions(['bun', 'aio-skiller', s.name, ...cfg.args], cfg.env);
                 const r = await runPrayer(s, { ...opts, stop: halted });
                 return { ok: r.ok, summary: `buried=${r.buried}`, ticks: r.ticks, produced: r.buried, failure: r.ok ? undefined : r.failure };
             }

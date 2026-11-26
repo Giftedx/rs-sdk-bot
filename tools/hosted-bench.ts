@@ -164,9 +164,9 @@ export function expandMultiSeedArtifacts(dir: string): Set<string> {
 }
 export type CaseRow = {case: string; ok: boolean; elapsedMs: number; ledgerTicks: number[]; output?: number | null; result?: string | null; kept?: boolean};
 // One line for each case of each job, and one line for each profile.
-export function resultLines(jobs: readonly {name: string; rows: readonly CaseRow[]; log: string}[]): {lines: string[]; failed: number; cases: number} {
+export function resultLines(jobs: readonly {name: string; rows: readonly CaseRow[]; log: string}[]): {lines: string[]; failed: number; cases: number; noResult: number} {
     const lines: string[] = [];
-    let failed = 0, cases = 0;
+    let failed = 0, cases = 0, noResult = 0;
     for (const job of [...jobs].sort((a, b) => a.name.localeCompare(b.name))) {
         const seed = /-s(\d+)$/.exec(job.name)?.[1] ?? '?';
         for (const r of job.rows) {
@@ -179,9 +179,16 @@ export function resultLines(jobs: readonly {name: string; rows: readonly CaseRow
                 lines.push(`      profile  seed ${seed}  ${p.case}  wall ${(p.wallMs / 1000).toFixed(1)} s  engine start ${(p.engineStartMs / 1000).toFixed(1)} s  login wait ${(p.engine.startupMs / 1000).toFixed(1)} s  tick wait ${p.engine.gameMsPerTick} ms  held ${(p.client.heldMs / 1000).toFixed(1)} s  capped ${p.client.capped}`);
             } catch { /* a cut line */ }
         }
-        if (!job.rows.length) { failed++; lines.push(`FAIL  seed ${seed}  ${job.name}: no result (${(/^bench: .*$/m.exec(job.log)?.[0] ?? /^AIO_BENCH_ERROR .*$/m.exec(job.log)?.[0] ?? 'see the job log').slice(0, 200)})`); }
+        if (!job.rows.length) { noResult++; lines.push(`FAIL  seed ${seed}  ${job.name}: no result (${(/^bench: .*$/m.exec(job.log)?.[0] ?? /^AIO_BENCH_ERROR .*$/m.exec(job.log)?.[0] ?? 'see the job log').slice(0, 200)})`); }
     }
-    return {lines, failed, cases};
+    return {lines, failed, cases, noResult};
+}
+
+// The newest run in a `gh run list --json databaseId,createdAt` list that was created after the dispatch.
+export function dispatchedRunId(listJson: string, dispatchedAt: number): string | undefined {
+    const runs = JSON.parse(listJson || '[]') as {databaseId?: number; createdAt?: string}[];
+    // The margin allows for clock skew between this PC and GitHub.
+    return runs.find(r => r.databaseId != null && Date.parse(r.createdAt ?? '') >= dispatchedAt - 5000)?.databaseId?.toString();
 }
 
 export function parseRunId(raw: string): string {
@@ -256,10 +263,11 @@ if (import.meta.main) {
         ];
         const dispatchArgs = [...parsedArgs, ...extraPlanTokens].join(' ');
         const plan = benchPlan(argv[0]!, seeds, extractPlanOpts(dispatchArgs));
+        const dispatchedAt = Date.now();
         const started = gh(['workflow', 'run', 'CI', '--ref', workflowRef, '-f', `bench_pattern=${argv[0]}`, '-f', `bench_seeds=${seeds}`, '-f', `bench_args=${dispatchArgs}`, '-f', `bench_ref=${ref}`]);
         if (!started.ok) { console.error(`hosted-bench: the run did not start: ${started.err.trim().split('\n').at(-1)}`); process.exit(2); }
         run = /actions\/runs\/(\d+)/.exec(started.out + started.err)?.[1];
-        for (let i = 0; !run && i < 10; i++) { await Bun.sleep(1000); run = JSON.parse(gh(['run', 'list', '--workflow', 'CI', '--event', 'workflow_dispatch', '--branch', workflowRef, '-L', '1', '--json', 'databaseId']).out || '[]')[0]?.databaseId?.toString(); }
+        for (let i = 0; !run && i < 10; i++) { await Bun.sleep(1000); run = dispatchedRunId(gh(['run', 'list', '--workflow', 'CI', '--event', 'workflow_dispatch', '--branch', workflowRef, '-L', '5', '--json', 'databaseId,createdAt']).out, dispatchedAt); }
         if (!run) { console.error('hosted-bench: the run started and its id was not found: see gh run list --workflow CI'); process.exit(2); }
         console.log(`hosted-bench: run ${run}, ${plan.length} ${plan.length === 1 ? 'runner' : 'runners'} (${patternCount * seedCount} pairs), code ${ref}`);
         if (!wait) process.exit(0);
@@ -309,8 +317,8 @@ if (import.meta.main) {
         try { rows = JSON.parse(readFileSync(file, 'utf8')).rows; } catch { /* the job gave no rows */ }
         return {name: name.replace(/-[0-9a-f]{40}$/, ''), rows, log: existsSync(log) ? readFileSync(log, 'utf8') : ''};
     });
-    const {lines, failed, cases} = resultLines(jobs);
+    const {lines, failed, cases, noResult} = resultLines(jobs);
     console.log(lines.join('\n'));
-    console.log(`hosted-bench: run ${run}: ${cases - Math.min(failed, cases)} of ${cases} cases passed on ${jobs.length} ${jobs.length === 1 ? 'runner' : 'runners'}; files in .practice/hosted-bench/${run}`);
-    process.exit(!jobs.length ? 2 : failed ? 1 : 0);
+    console.log(`hosted-bench: run ${run}: ${cases - failed} of ${cases} cases passed${noResult ? `; ${noResult} ${noResult === 1 ? 'runner' : 'runners'} gave no result` : ''} on ${jobs.length} ${jobs.length === 1 ? 'runner' : 'runners'}; files in .practice/hosted-bench/${run}`);
+    process.exit(!jobs.length ? 2 : failed || noResult ? 1 : 0);
 }

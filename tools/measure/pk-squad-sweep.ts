@@ -107,8 +107,9 @@ export function summarizeCandidateByCase(candidate: string, runId: string, dir: 
 
 /** Ranks candidates with 0-death hard invariant first, then kills, kills/hr, HP/kill, safety margin, and supplies/kill. */
 export function rankSweepRows(rows: readonly SweepRow[]): SweepRow[] {
-    const numAsc = (a: number | null, b: number | null) => (a ?? Infinity) - (b ?? Infinity);
-    const numDesc = (a: number | null, b: number | null) => (b ?? -Infinity) - (a ?? -Infinity);
+    // Equal values (two nulls included) tie at 0; Infinity - Infinity is NaN, which skips the later tie-breaks.
+    const numAsc = (a: number | null, b: number | null) => a === b ? 0 : (a ?? Infinity) - (b ?? Infinity);
+    const numDesc = (a: number | null, b: number | null) => a === b ? 0 : (b ?? -Infinity) - (a ?? -Infinity);
     return [...rows].sort((a, b) => {
         const ra = a.row, rb = b.row;
         const deadA = ra.deaths > 0 ? 1 : 0, deadB = rb.deaths > 0 ? 1 : 0;
@@ -309,10 +310,13 @@ if (import.meta.main) {
 
     const sweepAt = Date.now();
     console.error(`[sweep] launching ${candidates.length} candidates concurrently (${patternCount} patterns x ${seedCount} seeds, ${hostedPlanFlags.join(' ')})`);
-    const dispatched = await Promise.all(candidates.map(c => runHostedCandidate(
+    const settled = await Promise.allSettled(candidates.map(c => runHostedCandidate(
         root, c, pattern, seeds, extraFlags, hostedPlanFlags, ref, workflowRef,
         res => console.error(`[sweep] finished ${res.candidate}: run ${res.runId} (${(res.elapsedMs / 1000).toFixed(1)}s, exit ${res.ok ? 0 : 1})`),
     )));
+    const dispatched = settled.flatMap(r => r.status === 'fulfilled' ? [r.value] : []);
+    for (const r of settled) if (r.status === 'rejected') console.error(`[sweep] ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+    if (dispatched.length < settled.length) process.exitCode = 1;
     const sweepWallMs = Date.now() - sweepAt;
     const sweepRows: SweepRow[] = dispatched.map(d => ({
         candidate: d.candidate,

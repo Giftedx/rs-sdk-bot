@@ -124,6 +124,19 @@ test('a change selects the tests that reach it by import, by a quoted path, or b
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
+test('an import cycle does not hide a test that reaches the change through the cycle', () => {
+    const base = mkdtempSync(join(tmpdir(), 'test-shards-cycle-'));
+    const write = (path: string, text: string) => { mkdirSync(dirname(join(base, path)), { recursive: true }); writeFileSync(join(base, path), text); };
+    try {
+        write('scripts/a.ts', "import { b } from './b';\nimport { c } from './c';\nexport const a = 1;");
+        write('scripts/b.ts', "import { a } from './a';\nexport const b = 1;");
+        write('scripts/c.ts', 'export const c = 1;');
+        write('scripts/a.test.ts', "import { a } from './a';");
+        write('scripts/b.test.ts', "import { b } from './b';");
+        expect(affectedTests(['scripts/a.test.ts', 'scripts/b.test.ts'], ['scripts/c.ts'], base)).toEqual(['scripts/a.test.ts', 'scripts/b.test.ts']);
+    } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
 test('parsePorcelainPaths preserves leading spaces on unstaged modified lines and resolves renames', () => {
     const raw = [
         ' M tools/now.ts',

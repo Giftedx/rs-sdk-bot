@@ -131,6 +131,9 @@ export const FLEE_HP = 0.3;
 // openBot logs `DEATH at=x,z,level wild=N hp=h/max by=<source> taken=<damage> hits=<n> script=<file>`: the source
 // that did the most damage, so each death can be fixed by its cause.
 export const CAUSE_TICKS = 20;
+// A seen event key is kept this many ticks, above the state's combat event expiry (50 ticks), so an event that the
+// state still holds is never counted again.
+const SEEN_TICKS = 60;
 export type Hit = { tick: number; damage: number; source: string };
 
 // The name of a damage source: an NPC as `name#id`, a player as `player:name`.
@@ -142,7 +145,7 @@ export function sourceName(st: any, type: string, index: number): string {
 
 export function damageLog() {
     const hits: Hit[] = [];
-    const seen = new Set<string>();
+    const seen = new Map<string, number>();
     return {
         // Reads the new damage_taken events of a tick.
         read(st: any) {
@@ -150,12 +153,12 @@ export function damageLog() {
                 if (e?.type !== 'damage_taken') continue;
                 const key = e.observationId !== undefined ? `o${e.observationId}` : `${e.tick}:${e.sourceType}:${e.sourceIndex}:${e.damage}`;
                 if (seen.has(key)) continue;
-                seen.add(key);
+                seen.set(key, e.tick ?? st?.tick ?? 0);
                 hits.push({ tick: e.tick ?? st.tick ?? 0, damage: e.damage ?? 0, source: sourceName(st, e.sourceType, e.sourceIndex) });
             }
             const now = st?.tick ?? 0;
             while (hits.length && now - hits[0]!.tick > CAUSE_TICKS) hits.shift();
-            if (seen.size > 500) seen.clear();
+            for (const [key, tick] of seen) if (Math.abs(now - tick) > SEEN_TICKS) seen.delete(key);
         },
         // The death line's cause fields.
         cause(): string {

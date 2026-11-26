@@ -16,7 +16,7 @@ import { join, resolve } from 'node:path';
 import { createBot } from '../../packages/practice/src/bots';
 import { applyPreset, type SaveConfig } from '../../packages/practice/src/presets';
 import { runBotName } from '../../packages/practice/src/prove';
-import { rsSdkRoot } from '../../packages/practice/src/paths';
+import { practiceBotsRoot } from '../../packages/practice/src/paths';
 
 const repo = resolve(import.meta.dir, '..', '..');
 const logDir = process.env.LOG_DIR ?? join(repo, '.practice', 'foodchain');
@@ -28,10 +28,10 @@ const ardyBank = { x: 2654, z: 3283, level: 0 };
 const logs = (n: number) => Array.from({ length: n }, () => ({ id: 1511, count: 1 }));
 
 async function prep(name: string, p: SaveConfig) { await createBot(name); await applyPreset(name, p); }
-function cleanup(name: string) { rmSync(join(rsSdkRoot(), 'bots', name), { recursive: true, force: true }); }
+function cleanup(name: string) { rmSync(join(practiceBotsRoot(), name), { recursive: true, force: true }); }
 
 async function run(script: string, bot: string, env: Record<string, string>, args: string[] = [], timeoutMs = 900_000) {
-    const proc = Bun.spawn(['bun', resolve(repo, script), bot, ...args], { cwd: rsSdkRoot(), env: { ...process.env, ...env }, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
+    const proc = Bun.spawn(['bun', resolve(repo, script), bot, ...args], { cwd: repo, env: { ...process.env, ...env }, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     await proc.exited;

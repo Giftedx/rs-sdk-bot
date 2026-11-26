@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { labelAreas, writeLabels } from '../packages/core/src/components';
 import { pathfindingDataKey } from '../packages/core/src/pathcache';
+import { lifecycleRootForServer } from '../packages/core/src/practice-paths';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, loadCachedLabels, RECOVER_SCRIPT, recoverEnvironment, remediateFleetHealth } from './fleet-health';
 import { recoverSessionToHub } from '../packages/workers/src/logistics';
@@ -23,7 +24,8 @@ afterEach(() => {
 });
 
 function writeLogoutProof(root: string, account: string, server: string, confirmed = true) {
-    const attempt = beginSessionAttempt({ account, server }, { root, now: () => 100 });
+    // The real layout: receipts under the checkout's lifecycle root, not the checkout itself.
+    const attempt = beginSessionAttempt({ account, server }, { root: lifecycleRootForServer(server, root), now: () => 100 });
     if (confirmed) attempt.record('ended', 'logged-out');
 }
 

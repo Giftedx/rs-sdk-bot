@@ -901,7 +901,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.noted };
                     if (/short of order/i.test(r.failure)) {
-                        return settleFailure(() => ({ kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: GRAPES_ID, itemName: 'Grapes', required: maximum + reserve, available: 0 }] }), r.failure);
+                        return settleFailure(() => ({ kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: r.short.map(i => ({ itemId: i.id, itemName: i.id === JUG_WATER_ID ? 'Jug of water' : 'Grapes', required: maximum + reserve, available: i.count })) }), r.failure);
                     }
                     return settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure }), r.failure);
                 }

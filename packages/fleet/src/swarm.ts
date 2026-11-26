@@ -1457,6 +1457,15 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         persistEnded(deathsFile, ended);
         return ended;
     };
+    // An operator resume_account with clearDead removes the account's death record here, in the map that
+    // each persist writes back (brain-runtime.ts applyCommand).
+    const clearDeath = (account: string): number => {
+        const key = account.toLowerCase();
+        const dead = [...ended].filter(([name, r]) => name.toLowerCase() === key && /^died\b/i.test(r.reason.trim()));
+        for (const [name] of dead) ended.delete(name);
+        if (dead.length) persistEnded(deathsFile, ended);
+        return dead.length;
+    };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
     let tickStatusByLower: Map<string, { file: string; mtimeMs: number; data: any }> | null = null;
     const statusHit = (a: string) => tickStatusByLower?.get(a.toLowerCase()) ?? readAccountStatus(root, a);
@@ -1753,15 +1762,21 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         endedLower.has(account.toLowerCase()) || accountPlan.steps[0]?.stepKind === 'recover'
                             ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted)
                             : undefined;
-                    lastBrainResult = runBrainCycle({
-                        root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
-                        catalog, rateStore, classifier, infraBreaker,
-                        activeAccounts: activeMap, persist: true, consumeCommands: true,
-                        heldPlan,
-                    });
-                    lastBrainAt = nowMs;
-                    lastBrainPlanMtime = planMtime;
-                    brainDirty = false;
+                    // A cycle that throws keeps the last result: without brain jobs in the plan, the stop pass
+                    // below would write SWARM_STOP.removed for every brain-dispatched worker.
+                    try {
+                        lastBrainResult = runBrainCycle({
+                            root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
+                            catalog, rateStore, classifier, infraBreaker,
+                            activeAccounts: activeMap, persist: true, consumeCommands: true,
+                            heldPlan, clearDeath,
+                        });
+                        lastBrainAt = nowMs;
+                        lastBrainPlanMtime = planMtime;
+                        brainDirty = false;
+                    } catch (error) {
+                        console.log(`SWARM brain cycle failed, last plan kept: ${String(error)}`);
+                    }
                 }
 
                 const brainResult = lastBrainResult;

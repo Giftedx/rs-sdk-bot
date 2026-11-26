@@ -275,6 +275,16 @@ test('transfer summaries retain known values and aggregate unpriced coverage wit
  expect(html).not.toContain('<strong>0</strong>');
 });
 
+test('transfer summaries count the folded transfers of each vault link and show its last time',()=>{
+ const code=operations.slice(operations.indexOf(' function transfers(){'),operations.indexOf(' // Best in slot (Supply ledger tab):'));
+ const flow=[{from:'Worker',to:'Banker',value:20,coins:0,valueComplete:true,unpriced:0,n:12,last:5000,items:[{id:1,name:'Ring',count:2}]}];
+ const env:any={S:{vault:{flow}},window:{},bots:()=>[{name:'Worker'},{name:'Banker'}],E:String,nf:String,gp:String,safeName:String,age:(at:number)=>'age'+at};
+ const html=new Function(...Object.keys(env),`${moneySource}${code};return transfers();`)(...Object.values(env)) as string;
+ expect(html).toContain('12 transfers between fleet accounts');
+ expect(html).toContain('12 transfers · ');
+ expect(html).toContain('last age5000 ago');
+});
+
 test('the account HP KPI dates recorded health and labels it current only while the current guard passes',()=>{
  const code=operations.slice(operations.indexOf(' function account(){'),operations.indexOf(' function raw(){'));
  const html=(bot:any,helpers=true)=>{

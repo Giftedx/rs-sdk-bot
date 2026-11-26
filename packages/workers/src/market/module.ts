@@ -368,10 +368,12 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
             travelCoins = route.travelCoins;
             travelTicks = route.travelTicks;
             const spendable = availableCoinsAfterReserves(totalCoins, baseCoinReserve, escrow);
-            if (spendable < profile.cost + travelCoins) {
+            // runOwnedSword withdraws exactly maximumSpend from the bank before it reads the shelf price.
+            const swordNeed = Math.max(maximumSpend, profile.cost) + travelCoins;
+            if (spendable < swordNeed) {
                 blockers.push({
                     kind: 'missing_coins',
-                    required: baseCoinReserve + profile.cost + travelCoins,
+                    required: baseCoinReserve + swordNeed,
                     available: totalCoins,
                     reserved: baseCoinReserve,
                     escrow,
@@ -904,19 +906,20 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         itemsDelta: { [EARTH_RUNE]: r.boughtTotal - r.seeded },
                     };
                 }
-                if (!r.conserved || !r.quiescent) {
-                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop, detail: r.failure };
-                }
-                if (r.stop === 'coins') {
+                // A clean 'budget' stop with owned coins below reserve plus the unspent order budget is a coin shortfall.
+                if (r.conserved && r.safeOffline && r.stop === 'budget' && r.finalCoins - cfg.reserve < cfg.spend - r.spentTotal) {
                     return {
                         kind: 'missing_supply',
                         activityId,
                         account: session.name,
                         ticksElapsed,
                         durationMs: ms(),
-                        missing: [{ itemId: COINS, required: Math.max(1, cfg.reserve + 1), available: r.finalCoins }],
+                        missing: [{ itemId: COINS, required: cfg.reserve + Math.max(1, cfg.spend - r.spentTotal), available: r.finalCoins }],
                         summary: r.failure,
                     };
+                }
+                if (!r.conserved || !r.quiescent) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop, detail: r.failure };
                 }
                 if (isStopped()) {
                     return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop || 'stopped', detail: r.failure || r.stop };

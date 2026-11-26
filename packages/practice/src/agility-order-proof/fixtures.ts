@@ -3,6 +3,7 @@ import {copyFileSync,existsSync,readFileSync,statSync,writeFileSync} from 'node:
 import {freemem} from 'node:os';
 import {join,resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../../core/src/memory';
+import {simBotsDir} from '../../../core/src/practice-paths';
 import {killTree} from '../../../core/src/proc';
 import {createBot} from '../bots';
 import {readPracticeSave,waitPracticeSave} from '../fleet-player-save';
@@ -44,11 +45,11 @@ export async function runCourseApproach(directory:string,source:unknown,retained
  const original=resolve(retainedPath),before=readPracticeSave(original),bytes=readFileSync(original);
  if(before.position.x!==2494||before.position.z!==3437||before.position.level!==0||before.skills[3]?.level!==10)
   throw Error('retained ordinary approach state required');
- const name=runBotName('agi',7),botDir=join(repoRoot,'vendor/rs-sdk/bots',name);
+ const name=runBotName('agi',7);
  const path=join(repoRoot,'vendor/rs-sdk/server/engine/data/players/main',name+'.sav');
- if(existsSync(botDir)||existsSync(path))throw Error('fresh diagnostic copy required');
- await createBot(name);
- if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local diagnostic required');
+ if(existsSync(join(simBotsDir(repoRoot),name))||existsSync(join(repoRoot,'vendor/rs-sdk/bots',name))||existsSync(path))throw Error('fresh diagnostic copy required');
+ const {envPath}=await createBot(name);
+ if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local diagnostic required');
  // Copy exact bytes. No preset, supply seed, relocation or initialization run.
  writeFileSync(path,bytes,{flag:'wx'});copyFileSync(path,join(directory,'course-approach-before.sav'));
  const stamp=statSync(path).mtimeMs,logPath=join(directory,'course-approach.log');
@@ -76,9 +77,10 @@ export async function runCourseApproach(directory:string,source:unknown,retained
 
 export async function createAgilityFixture(directory:string,mode:Mode,source:unknown,started:number,index:number,preset:SaveConfig,
  assets:Pick<SaveConfig,'bank'|'equipment'>={bank:[{id:995,count:12345},{id:1511,count:13}],equipment:[{id:1351,count:1,slot:3}]},recoveryHp?:number){
- const name=runBotName('agi',index),botDir=join(repoRoot,'vendor/rs-sdk/bots',name);
- if(existsSync(botDir))throw Error('fresh fixture required');await createBot(name);
- if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+ const name=runBotName('agi',index);
+ if(existsSync(join(simBotsDir(repoRoot),name))||existsSync(join(repoRoot,'vendor/rs-sdk/bots',name)))throw Error('fresh fixture required');
+ const {envPath}=await createBot(name);
+ if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
  const path=await applyPreset(name,agilityFixturePreset({...preset,...assets}));
  if(recoveryHp!==undefined){
   // Only this fresh, generated, offline recovery fixture gets depleted HP.

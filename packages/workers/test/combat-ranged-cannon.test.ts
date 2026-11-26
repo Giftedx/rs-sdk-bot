@@ -12,6 +12,7 @@ import {
     cancelImpTarget,
     cannonWalker,
     chooseImpCancelStep,
+    chooseRangedDecision,
     fireDeathCredit,
     fireFightSafe,
     fireHomeEntryPoints,
@@ -504,4 +505,10 @@ test('imp pickup disappearance without actual inventory gain cannot claim output
 test('imp food waits for the actual delayed heal and counts one debit before carrying on',async()=>{
     const f=fixture('delayed-food');try{const r=await runImps(f.session,{cap:200,maximum:1,walk:f.walk,cancelPlanner:f.planner});expect(r).toMatchObject({ok:true,creditedKills:1,eaten:1,hpMin:8,preserved:true});expect(f.eats()).toBe(1);expect(f.inv.find(i=>i.id===333).count).toBe(5);}finally{f.stop();}
 });
+});
+test('a shortbow with only steel arrows at Ranged 5 buys bronze arrows instead of stalling on an empty acquire',()=>{
+ const account={account:'t',at:0,skills:{Ranged:{level:5,xp:0},Hitpoints:{level:10,xp:0}},inventory:{at:0,value:{}},equipment:{at:0,value:{}},bank:{at:0,value:{841:1,886:100},generation:1}} as any;
+ const d=chooseRangedDecision(account,10);
+ expect(d.state).toBe('acquire');expect(d.selected).toBe('ranged/lowe-buy-bronze');expect(d.path[0]?.method).toBe('ranged/lowe-buy-bronze');
+ expect(chooseRangedDecision({...account,equipment:null},10).selected).toBeNull();
 });

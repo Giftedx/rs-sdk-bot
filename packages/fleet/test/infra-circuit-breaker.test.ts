@@ -118,6 +118,26 @@ describe('InfraCircuitBreaker', () => {
         expect(readFileSync(holdsFile, 'utf8')).toBe('[]');
     });
 
+    test('two processes on one state file see and keep each other\'s buckets', () => {
+        const stateFile = join(scratch(), 'live', 'infra-circuit-breaker.json');
+        const now = 50_000;
+        const opts = { stateFile, now: () => now, random: () => 0.5, jitterRatio: 0 };
+        const swarm = new InfraCircuitBreaker(opts);
+        const agent = new InfraCircuitBreaker(opts);
+
+        agent.recordFailure('could not resolve host github.com');
+        expect(swarm.canProceed('remote_git_claim').allowed).toBe(false);
+
+        swarm.recordFailure('proxy connection refused');
+        const onDisk = new InfraCircuitBreaker({ stateFile, now: () => now });
+        expect(onDisk.canProceed('remote_git_claim').allowed).toBe(false);
+        expect(onDisk.canProceed('proxy').allowed).toBe(false);
+
+        agent.recordSuccess('remote_git_claim');
+        expect(swarm.canProceed('remote_git_claim').allowed).toBe(true);
+        expect(swarm.canProceed('proxy').allowed).toBe(false);
+    });
+
     test('redacts embedded credentials in lastError and wraps guard calls cleanly', async () => {
         let now = 10_000;
         const breaker = new InfraCircuitBreaker({

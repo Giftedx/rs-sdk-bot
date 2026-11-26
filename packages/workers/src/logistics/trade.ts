@@ -831,9 +831,12 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
     let courierBusy = false;
     const DRY = env.DRY === '1';
     const readLog = (f: string) => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
+    // The chain removes only the stop files it wrote itself ('foodchain'); any other stop file is a pause it honours.
+    const ownerStopped = (a: string) => { try { return readFileSync(join(prac, `stop-${a}`), 'utf8').trim() !== 'foodchain'; } catch { return false; } };
     function start(account: string, script: string, childEnv: Record<string, string>, tag = script, extraArgs: readonly string[] = []): string {
         if (running.has(account)) throw new Error(`${account} already runs`);
         if (DRY) { say(`DRY would start ${account} ${tag} ${JSON.stringify(childEnv)}`); return ''; }
+        if (ownerStopped(account)) { say(`skip ${account} ${tag}: stop file`); return ''; }
         const log = join(logDir, `${account}-${Date.now()}.log`);
         rmSync(join(prac, `stop-${account}`), { force: true });
         const proc = Bun.spawn(['bun', script, account, ...extraArgs], { cwd: REPO_ROOT, env: { ...env, DEMO_OK: '1', RANDOM_EVENTS: '0', ...childEnv }, stdout: Bun.file(log), stderr: Bun.file(log + '.err'), windowsHide: true });
@@ -866,6 +869,7 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
     });
     async function runGive(giver: string, receiver: string, give: string) {
         if (DRY) { say(`DRY would give ${giver} -> ${receiver} ${give}`); return false; }
+        if (ownerStopped(giver)) { say(`skip give ${giver} -> ${receiver}: stop file`); return false; }
         const log = join(logDir, `${giver}-give-${Date.now()}.log`);
         rmSync(join(prac, `stop-${giver}`), { force: true });
         const proc = Bun.spawn(['bun', 'scripts/aio-logistics.ts', giver, 'give-to-banker', receiver], { cwd: REPO_ROOT, env: { ...env, DEMO_OK: '1', RANDOM_EVENTS: '0', GIVE: give }, stdout: Bun.file(log), stderr: Bun.file(log + '.err'), windowsHide: true });
@@ -888,7 +892,7 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
         } finally { courierBusy = false; }
     }
     async function topUpFares() {
-        const donor = FARMERS.find(f => !running.has(f) && !external(f) && !dead.has(f));
+        const donor = FARMERS.find(f => !running.has(f) && !external(f) && !dead.has(f) && !ownerStopped(f));
         if (!donor) return false;
         courierBusy = true;
         try {
@@ -909,19 +913,19 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
             if (running.size === 0) { say('stopped (stop-foodchain)'); return false; }
             return true;
         }
-        if (!running.has(COOK) && !external(COOK) && !dead.has(COOK)) {
+        if (!running.has(COOK) && !external(COOK) && !dead.has(COOK) && !ownerStopped(COOK)) {
             start(COOK, FOOD_CHAIN_SCRIPTS.cook.script, { TICKS: '9000', GIVE_TO: COURIER }, 'fishcook', FOOD_CHAIN_SCRIPTS.cook.extraArgs);
         }
         if (courierBusy) return true;
         const w = waitingFarmer();
-        if (w && courierFish() >= MIN_GIVE && !running.has(COURIER)) { void giveFish(w); return true; }
+        if (w && courierFish() >= MIN_GIVE && !running.has(COURIER) && !ownerStopped(COURIER)) { void giveFish(w); return true; }
         for (const f of FARMERS) {
-            if (running.has(f) || external(f) || dead.has(f)) continue;
+            if (running.has(f) || external(f) || dead.has(f) || ownerStopped(f)) continue;
             if (farmerFood(f) >= 5 || courierFish() >= MIN_GIVE) {
                 start(f, FOOD_CHAIN_SCRIPTS.farmer.script, { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' }, 'goldfarm', FOOD_CHAIN_SCRIPTS.farmer.extraArgs);
             }
         }
-        if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || courierFish() >= MIN_GIVE) return true;
+        if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || ownerStopped(COURIER) || courierFish() >= MIN_GIVE) return true;
         const ready = count(status(COOK)?.bank, /^(trout|salmon)$/i);
         const low = FARMERS.filter(f => !dead.has(f)).some(f => farmerFood(f) < LOW);
         if (ready < MIN_FISH || !low) return true;

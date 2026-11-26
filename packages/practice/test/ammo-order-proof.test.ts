@@ -122,3 +122,10 @@ test('planned eastbound entry gate rejects wrong entry, missing approach, lost a
  expect(plannedEntryChecks({...input,repeat:{code:1,log:'handoff failed'}}).plannedRepeat).toBe(false);
  expect(plannedEntryChecks({...input,planned:{code:0,log:input.planned.log.replace('LOGOUT logged-out\n','')}}).plannedLogout).toBe(false);
 });
+
+test('generated registration reads the profile path that createBot returned',()=>{
+ const p=selectAmmoProofEndpoints(()=>true,()=>0),envPath='/proof/.practice/sim/bots/fixture/bot.env';
+ const registration=ammoRegistrationArgs('fixture',p,envPath);
+ expect(registration[1]).toContain(`readFileSync(${JSON.stringify(envPath)},'utf8')`);
+ expect(registration[1]).not.toContain('vendor');
+});

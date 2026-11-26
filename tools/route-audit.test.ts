@@ -25,6 +25,11 @@ test('indirect smelting corridors retain each fixed tuple and its source line',(
  expect(rows.every(r=>r.sources[0]==='smelt-batch.ts:1')).toBe(true);
 });
 
+test('a multi-line tile list cites the line that holds each tile, not the line before its trivia',()=>{
+ const rows=fixedTiles('const route = [\n  [3272,3227],\n  // note\n  [3275,3212],\n];\nwalk(\n3222,3218);','multi.ts');
+ expect(rows.map(r=>r.sources[0])).toEqual(['multi.ts:2','multi.ts:4','multi.ts:6']);
+});
+
 test('auditTargets and auditStarts cover quest starts, banks, shops, training spots, and Wilderness hotspots',()=>{
  const starts=auditStarts();
  expect(starts.lumbridge).toEqual({x:3222,z:3218,level:0});

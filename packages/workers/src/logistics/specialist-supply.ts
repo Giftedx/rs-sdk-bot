@@ -948,6 +948,12 @@ export function countById(items: readonly { id: number; baseId?: number; count?:
     return total;
 }
 
+// countById sums noted and unnoted stacks, so a kit check compares it with the kit's total for that base id.
+export function kitBaseTotal(kit: readonly KitSpecItem[], id: number): number {
+    const want = resolveBaseId(id);
+    return kit.reduce((n, k) => n + (resolveBaseId(k.id) === want ? k.count : 0), 0);
+}
+
 const specIds = (spec: KitSpecItem): readonly number[] => (spec.altIds?.length ? [spec.id, ...spec.altIds] : [spec.id]);
 const countForSpec = (items: readonly { id: number; baseId?: number; count?: number }[], spec: KitSpecItem): number =>
     specIds(spec).reduce((sum, id) => sum + countById(items, id), 0);
@@ -1579,20 +1585,20 @@ export async function runSpecialistStage(args: readonly string[], env: Record<st
             const [served, given] = await Promise.all([
                 holderSession.bot.serveTrades({
                     from: exactNameRe(donor),
-                    accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && concreteKit.every(k => countById(offer, k.id) === k.count),
+                    accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && concreteKit.every(k => countById(offer, k.id) === kitBaseTotal(concreteKit, k.id)),
                     maxTrades: 1,
                     timeout: 60_000,
                 }),
                 donorSession.bot.trade(exactNameRe(holder), { give: giveList, accept: offer => offer.length === 0, requestTimeout: 20_000, timeout: 60_000 }),
             ]);
             const rx = served.trades.find(t => t.success);
-            if (!given.success || !rx || !concreteKit.every(k => countById(rx.received, k.id) === k.count)) {
+            if (!given.success || !rx || !concreteKit.every(k => countById(rx.received, k.id) === kitBaseTotal(concreteKit, k.id))) {
                 throw Error(`stage transfer mismatch (${plan.name} leg ${legIdx + 1}): given=${given.success} rx=${!!rx}`);
             }
             await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), concreteKit), { timeoutTicks: 10 });
             const legAfter = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
             lastTransferAt = Date.now();
-            for (const spec of concreteKit) if (countById(legAfter, spec.id) - countById(legBefore, spec.id) !== spec.count) throw Error(`recipient delta mismatch (${plan.name} leg ${legIdx + 1}) for ${spec.name}`);
+            for (const spec of concreteKit) if (countById(legAfter, spec.id) - countById(legBefore, spec.id) !== kitBaseTotal(concreteKit, spec.id)) throw Error(`recipient delta mismatch (${plan.name} leg ${legIdx + 1}) for ${spec.name}`);
             const receipt = buildLegDeliveryReceipt({ kitName: plan.name, leg: legIdx + 1, totalLegs: plan.legs.length, server, from: donor, to: holder, at: lastTransferAt, before: legBefore, after: legAfter, kit: concreteKit });
             legReceipts.push(receipt);
             if (plan.legs.length > 1) {

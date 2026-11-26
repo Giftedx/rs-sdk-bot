@@ -505,6 +505,19 @@ for (const mode of ['new', 'legacy', 'stale', 'foreign', 'settled']) {
     }, 2000);
 }
 
+test('collection accepts a receipt the giver prepared after the request and before the wait', async () => {
+    const root = makeTempDir('offer-early-'); let tick = 0;
+    const callbacks = new Set<() => void>();
+    const s: any = { name: 'Courier', tick: () => tick, sdk: { getState: () => ({}) }, onTick: (cb: () => void) => { callbacks.add(cb); return () => callbacks.delete(cb); } };
+    const requested = Date.now() - 5000;
+    writeFileSync(join(root, 'cook-courier.json'), JSON.stringify({ token: 'early', from: 'Cook', to: 'Courier', server: 'practice', at: Date.now() - 1000, state: 'prepared', expected: [{ id: 334, count: 10 }] }));
+    const timer = setInterval(() => { tick++; for (const cb of [...callbacks]) cb(); }, 1);
+    try {
+        await awaitCollectionOffer(s, 'Cook', 'practice', 10, root, requested);
+        await expect(awaitCollectionOffer(s, 'Cook', 'practice', 3, root, Date.now())).rejects.toThrow('no trade accepted');
+    } finally { clearInterval(timer); }
+}, 2000);
+
 test('handoff matching, collection orchestration, custom item policies, and race conditions', async () => {
     const req = { token: 'one', from: 'Courier', to: 'Farmer', server: 'practice', at: 100, state: 'prepared' as const, expected: [{ id: 334, count: 10 }] };
     const credit = { ...req, at: 120, before: [{ id: 334, count: 5 }], after: [{ id: 334, count: 15 }] };

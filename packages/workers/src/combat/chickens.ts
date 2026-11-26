@@ -391,6 +391,8 @@ export async function trainChickens(
         for (const id of kit) {
             if (!s.sdk.getEquipment().some(i => i.id === id)) {
                 const item = s.sdk.getInventory().find(i => i.id === id);
+                // A full pack leaves optional kit pieces in the bank; training goes on without them.
+                if (!item && id !== kit[0] && !(entry === 'lower-health' && id === kit[1])) continue;
                 if (!item || !(await s.bot.equipItem(item)).success || !(await waitUntil(s, () => s.sdk.getEquipment().some(i => i.id === id), { timeoutTicks: 6 }))) {
                     throw Error('training kit not worn');
                 }

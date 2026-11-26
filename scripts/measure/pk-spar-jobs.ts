@@ -35,8 +35,13 @@ if (import.meta.main) {
     const main = /[\\/]\.claude[\\/]worktrees[\\/]/.test(root) ? resolve(root, '..', '..', '..') : root;
     const pause = resolve(main, '.practice/pk-climb-pause'), dir = resolve(root, '.practice/pk-spar');
     mkdirSync(dir, { recursive: true });
-    const count = (pattern: string) => Number(Bun.spawnSync(['powershell', '-NoProfile', '-Command',
-        `(Get-CimInstance Win32_Process -Filter "Name='bun.exe'" | Where-Object { $_.CommandLine -match '${pattern}' -and $_.CommandLine -notmatch 'pk-spar-jobs' }).Count`], { windowsHide: true }).stdout.toString().trim() || 0);
+    // A failed, empty or timed-out scan counts as busy (Infinity), never as "no bench running".
+    const count = (pattern: string) => {
+        const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command',
+            `(Get-CimInstance Win32_Process -Filter "Name='bun.exe'" | Where-Object { $_.CommandLine -match '${pattern}' -and $_.CommandLine -notmatch 'pk-spar-jobs' }).Count`], { windowsHide: true, timeout: 20_000 });
+        const s = r.stdout.toString().trim(), n = Number(s);
+        return r.exitCode === 0 && s !== '' && Number.isFinite(n) ? n : Infinity;
+    };
     const benches = () => count('aio-practice-bench');
     // With the file absent, a waiting matrix or climb looks each 30 s: give it up to 75 s to start its bench, then
     // wait for that bench to end.

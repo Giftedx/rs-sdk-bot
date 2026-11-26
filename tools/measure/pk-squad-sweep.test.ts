@@ -60,6 +60,20 @@ test('rankSweepRows enforces 0-death hard invariant then ranks by kills, kills/h
     expect(table).toContain('| 1 | `safe-fast-lower-hp` | 12 of 12 | 0 | 22 | 40 | 21 | 75% | 64 | 1 | 103 |');
 });
 
+test('rankSweepRows reaches the MinHP tie-break when both kills/hr and HP/kill are null', () => {
+    const mk = (candidate: string, minHp: number): SweepRow => ({
+        candidate,
+        runId: candidate,
+        row: {
+            batch: candidate, condition: 'c', runs: [], kills: 0, gang: 12, deaths: 0,
+            hpAKill: null, ticksARun: null, killsAnHour: null, accountTicksAKill: null, coinsAKill: null,
+            avgKillTicks: null, ticksPerKill: null, minHp, sharksEaten: 0, karamEaten: 0,
+            freezesCast: 0, freezesLanded: 0, freezePct: null, suppliesPerKill: null, escapes: 0, hasMetrics: true,
+        } as SweepRow['row'],
+    });
+    expect(rankSweepRows([mk('a-low-hp', 5), mk('b-high-hp', 60)]).map(r => r.candidate)).toEqual(['b-high-hp', 'a-low-hp']);
+});
+
 test('summarizeCandidateDir reads hosted-bench artifact folders with SQUAD_METRICS', () => {
     const dir = mkdtempSync(join(tmpdir(), 'squad-sweep-'));
     try {

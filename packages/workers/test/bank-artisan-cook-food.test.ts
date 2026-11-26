@@ -104,3 +104,39 @@ test('food patterns use the item names of the server row, not the food word', ()
     expect(rawFoodPattern('lobster').test('Raw lobster')).toBe(true);
     expect(rawFoodPattern('lobster').test('Lobster pot')).toBe(false);
 });
+
+test('cooked food still in the pack at the stop counts once', async () => {
+    let tick = 0;
+    const listeners = new Set<() => void>();
+    const inventory: { slot: number; id: number; name: string; count: number }[] = [
+        { slot: 0, id: 377, name: 'Raw lobster', count: 1 },
+        { slot: 1, id: 377, name: 'Raw lobster', count: 1 },
+    ];
+    const dialog = { isOpen: false, options: [], isWaiting: false };
+    const s: any = {
+        name: 'Fixture',
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        sdk: {
+            getState: () => ({ player: { worldX: 2816, worldZ: 3444, level: 0 }, inventory, dialog, gameMessages: [] }),
+            getSkill: (name: string) => (name === 'Cooking' ? { level: 40, baseLevel: 40 } : undefined),
+            getInventory: () => inventory,
+            getDialog: () => dialog,
+            findNearbyLoc: () => ({ id: 2728, x: 2817, z: 3444 }),
+            sendUseItemOnLoc: async (slot: number) => {
+                const item = inventory.find(i => i.slot === slot)!;
+                Object.assign(item, { id: 379, name: 'Lobster' });
+                return { success: true };
+            },
+        },
+        bot: {},
+    };
+    const timer = setInterval(() => { tick++; for (const cb of [...listeners]) cb(); }, 1);
+    try {
+        const stop = () => inventory.some(i => i.name === 'Lobster');
+        const r = await runCookFood(s, 'lobster', 500, stop);
+        expect(r.cookedTotal).toBe(1);
+        expect(r.total).toBe(1);
+    } finally { clearInterval(timer); }
+});

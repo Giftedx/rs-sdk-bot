@@ -1012,7 +1012,6 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
         }
         const currentFish = countFish();
         if (currentFish > 0) {
-            caughtTotal += currentFish;
             for (const item of inv()) {
                 if (/raw (lobster|swordfish|tuna)/i.test(item.name)) {
                     await s.bot.depositItem(item.name, -1);
@@ -1035,6 +1034,8 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
             }
         }
         await waitTicks(s, 1);
+        // Count only the fish that left the pack; a refused deposit keeps them in countFish().
+        caughtTotal += Math.max(0, currentFish - countFish());
         await s.bot.closeInterface();
         bankTrips++;
         console.log(`MILESTONE bank t=${used()} caughtTotal=${caughtTotal} bankTrips=${bankTrips}`);
@@ -1096,6 +1097,19 @@ export function sharkOrderConfig(args: readonly string[], env: Record<string, st
         maxTicks: Number(args[1] ?? env.CAP ?? 9000),
         consumer: env.SHARK_CONSUMER ?? 'high-HP endgame combat staging',
     };
+}
+
+/** The shark order a run executes: cfg.target overrides the args and env values. */
+export function effectiveSharkOrder(cfg: Pick<NormalizedGatherConfig, 'args' | 'env' | 'target'>) {
+    const o = sharkOrderConfig(cfg.args, cfg.env);
+    return { target: cfg.target?.count ?? o.target, maxTicks: cfg.target?.capTicks ?? o.maxTicks, consumer: o.consumer };
+}
+
+export function sharkOrderProblem(o: { target: number; maxTicks: number; consumer: string }): string | undefined {
+    if (!Number.isSafeInteger(o.target) || o.target < 1 || o.target > 100 || !Number.isSafeInteger(o.maxTicks) || o.maxTicks < 1 || !o.consumer.trim()) {
+        return 'invalid finite shark order/consumer';
+    }
+    return undefined;
 }
 
 export function sharkSummary(r: { banked: number; caught: number; cooked: number; burnt: number; coinsSpent: number; ticks: number }) {
@@ -1197,9 +1211,8 @@ export type SharkOptions = {
 };
 
 export async function supplySharks(s: Session, o: SharkOptions) {
-    if (!Number.isSafeInteger(o.target) || o.target < 1 || o.target > 100 || !Number.isSafeInteger(o.maxTicks) || o.maxTicks < 1 || !o.consumer.trim()) {
-        throw Error('invalid finite shark order/consumer');
-    }
+    const problem = sharkOrderProblem(o);
+    if (problem) throw Error(problem);
     const start = s.tick();
     const state = () => s.sdk.getState();
     const inv = () => s.sdk.getInventory();
@@ -3238,11 +3251,8 @@ function parseVillageOrder(cfg: NormalizedGatherConfig): VillageOrder {
 export async function runFishingSession(s: Session, cfg: NormalizedGatherConfig, stop: () => boolean): Promise<GatherOutcome> {
     switch (cfg.method) {
         case 'shark': {
-            const o = sharkOrderConfig(cfg.args, cfg.env);
             const r = await supplySharks(s, {
-                target: cfg.target?.count ?? o.target,
-                maxTicks: cfg.target?.capTicks ?? o.maxTicks,
-                consumer: o.consumer,
+                ...effectiveSharkOrder(cfg),
                 stop,
                 cookSharks: cfg.deps?.cookSharks,
             });
@@ -3386,7 +3396,12 @@ export async function runFishingCli(account: string, cfg: NormalizedGatherConfig
     if (cfg.method === 'shark') {
         const orderKey = resolveSetting(cfg, 'ORDER_KEY');
         if (orderKey) {
-            const config = sharkOrderConfig(cfg.args, cfg.env);
+            const config = effectiveSharkOrder(cfg);
+            const problem = sharkOrderProblem(config);
+            if (problem) {
+                await finish([], false, problem);
+                return 1;
+            }
             try {
                 journal = claimSharkOrder(SHARK_ORDER_DIR, account, orderKey, config);
             } catch (e) {

@@ -291,6 +291,45 @@ test('gatherWorker.run and toWorkerOutcome map success, refusal, death, missing_
     );
     expect(isRunOutcome(died)).toBe(true);
     expect(died.kind).toBe('death');
+
+    const oreFail = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: 'ticks=120 died=false mined=0 stop=no-progress oreWaitTicks=40', delta: { elapsedTicks: 120 } },
+        'Miner',
+        normalizeGatherConfig({ skill: 'mining', method: 'ore' }),
+        120,
+    );
+    expect(oreFail.kind).not.toBe('death');
+    expect(oreFail.kind).not.toBe('session_unsettled');
+    const essenceFail = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: 'essence {"ok":false,"died":false,"mined":0}', delta: { elapsedTicks: 50 } },
+        'Miner',
+        normalizeGatherConfig({ skill: 'mining', method: 'essence' }),
+        50,
+    );
+    expect(essenceFail.kind).not.toBe('death');
+    const oreDied = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: 'died=true no ore progress: hp lost', delta: { elapsedTicks: 30 } },
+        'Miner',
+        normalizeGatherConfig({ skill: 'mining', method: 'ore' }),
+        30,
+    );
+    expect(oreDied.kind).toBe('death');
+    const ended = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: 'session ended: disconnected', delta: { elapsedTicks: 30 } },
+        'Thief',
+        normalizeGatherConfig({ skill: 'thieving', method: 'pickpocket' }),
+        30,
+    );
+    expect(ended.kind).toBe('session_unsettled');
+});
+
+test('gatherEstimate prices an at-site mining job by its PROFILE setting', () => {
+    const acct = makeAccount();
+    const world = makeWorld(acct);
+    const iron = gatherEstimate(acct, { skill: 'mining', method: 'at-site' }, world);
+    const runite = gatherEstimate(acct, { skill: 'mining', method: 'at-site', env: { PROFILE: 'runite_rock_table' } }, world);
+    expect(runite.unitsPerTick).toBe(0.06);
+    expect(iron.unitsPerTick).toBe(0.25);
 });
 
 test('gatherPreflight honors lowercase world reserves, globalReserves, and escrow, and gatherEstimate applies 25x XP scaling', () => {

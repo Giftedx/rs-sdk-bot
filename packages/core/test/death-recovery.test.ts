@@ -141,6 +141,19 @@ test('death cause: the source that did the most damage in the last 20 ticks, eac
     expect(damageLog().cause()).toBe('by=unknown taken=0 hits=0');
 });
 
+test('death cause: a long fight never counts an event that the state still holds a second time', () => {
+    const log = damageLog();
+    const ev = (tick: number) => ({ type: 'damage_taken', tick, damage: 1, sourceType: 'npc', sourceIndex: 7, observationId: tick, targetType: 'player', targetIndex: 0 });
+    const events: ReturnType<typeof ev>[] = [];
+    // More than 500 distinct events, ending a few ticks after the 501st.
+    for (let tick = 1; tick <= 510; tick++) {
+        events.push(ev(tick));
+        while (tick - events[0]!.tick >= 50) events.shift();
+        log.read({ tick, nearbyNpcs: [{ index: 7, id: 3, name: 'Guard' }], combatEvents: [...events] });
+    }
+    expect(log.cause()).toBe('by=Guard#3 taken=21 hits=21');
+});
+
 test('flee guard: low Hitpoints, no food, an attacker: run out of reach, report safe once, stay held', async () => {
     let t = 0;
     const listeners = new Set<() => void>(), sent: any[] = [], safe: string[] = [];

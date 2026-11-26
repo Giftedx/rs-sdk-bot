@@ -519,7 +519,9 @@ export async function runWoodSupply(
         if (p && p.level === t.level && Math.max(Math.abs(p.worldX - t.x), Math.abs(p.worldZ - t.z)) <= 2) return;
         // North-bank lane avoids the jail/road spiders.
         if (t.x === SUPPLY_BANK.x && t.z === SUPPLY_BANK.z) {
-            for (const step of [...SUPPLY_CORRIDOR].reverse()) await walk(step);
+            // Walk only the lane steps west of the player; a start in Draynor goes straight to the bank.
+            const from = p?.worldX ?? Infinity;
+            for (const step of [...SUPPLY_CORRIDOR].reverse().filter(c => from > c.x + 8)) await walk(step);
         } else if (t === SUPPLY_TREES || t === SUPPLY_KNIFE || t.x > 3150) {
             for (const step of SUPPLY_CORRIDOR) await walk(step);
         }

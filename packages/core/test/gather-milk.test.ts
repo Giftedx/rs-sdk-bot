@@ -29,6 +29,12 @@ test('milk gathering accepts two conversions after the corresponding bucket debi
  expect(f.counts()).toEqual({milk:3,buckets:0,actions:2});
 });
 
+test('two gathers of one id each add their count to the target',async()=>{
+ const f=milkSession('both');
+ expect(await gatherItems(f.session,{} as Parameters<typeof gatherItems>[1],[{id:MILK,count:1,how:'milk'},{id:MILK,count:1,how:'milk'}],async()=>({ok:true}))).toBeNull();
+ expect(f.counts()).toEqual({milk:3,buckets:0,actions:2});
+});
+
 test('a one-sided milk conversion stops before a second interaction',async()=>{
  for(const mode of ['milk only','bucket only'] as const){
   const f=milkSession(mode);

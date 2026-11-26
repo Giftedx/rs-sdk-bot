@@ -1,6 +1,7 @@
 import {copyFileSync,existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {workerSourceRevision} from '../../../core/src/worker-release';
+import {simBotsDir} from '../../../core/src/practice-paths';
 import {createBot} from '../bots';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../fleet-player-save';
 import {applyPreset} from '../presets';
@@ -79,8 +80,9 @@ export async function proveFreshRuneAirRecovery(parent:string){
      const position=airRecoveryPositions[i>=3?0:i]!;
      budget.check();const dir=join(directory,String(i));mkdirSync(dir,{recursive:true});
      const name=runBotName('flair',i+1),save=engineSave(name);
-     if(existsSync(save)||existsSync(join(repoRoot,'vendor/rs-sdk/bots',name)))throw Error('air recovery fixture identity already exists');
-     await createBot(name);
+     if(existsSync(save)||existsSync(join(repoRoot,'vendor/rs-sdk/bots',name))||existsSync(join(simBotsDir(repoRoot),name)))throw Error('air recovery fixture identity already exists');
+     // freshRuneBinding reads the vendor profile.
+     await createBot(name,{legacyVendorDir:true});
      const binding=freshRuneBinding(name,tickMs);writeFileSync(join(dir,'fixture.json'),JSON.stringify({binding,position,scope:'ordinary recovery fixture; never default registration'}),{flag:'wx'});
      // Seed once, only for this separate ordinary fixture. Postcraft fixtures
      // carry one essence. The existing continuation fixture mines its own.

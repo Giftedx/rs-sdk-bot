@@ -254,6 +254,9 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
     expect(parseCliArgs(['StickyFinger', '--seeds', '7,8,9']).seeds).toEqual([7, 8, 9]);
     expect(parseCliArgs(['StickyFinger', '--seed=8']).seeds).toEqual([8]);
     expect(() => parseCliArgs(['StickyFinger', '--seeds', 'foo'])).toThrow('positive integers');
+    expect(() => parseCliArgs(['StickyFinger', '--seeds', '7,8x,9'])).toThrow('positive integers');
+    expect(() => parseCliArgs(['StickyFinger', '--seeds', '7,,9'])).toThrow('positive integers');
+    expect(() => parseCliArgs(['StickyFinger', '--seeds', '0,7'])).toThrow('positive integers');
     expect(parseCliArgs(['TipMyShaft', '--env', 'SUPPLIER=Moneyshot', '--env=CAP=150']).env).toEqual({
         SUPPLIER: 'Moneyshot',
         CAP: '150',

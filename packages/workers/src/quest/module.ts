@@ -278,7 +278,7 @@ function estimateQuest(_acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
 
 function failOutcome(activityId: string, account: string, ticksElapsed: number, durationMs: number, message: string, stopped?: boolean): RunOutcome {
     const lower = message.toLowerCase();
-    if (/died|death|isdead/.test(lower)) {
+    if (/\b(died|death|isdead)\b/.test(lower)) {
         return { kind: 'death', activityId, account, ticksElapsed, durationMs, faultSignature: `${activityId}:death`, detail: message };
     }
     if (stopped) {

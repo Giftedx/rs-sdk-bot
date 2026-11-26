@@ -84,13 +84,27 @@ export async function runBanker(
     const payOut = async (bot: string) => {
         if (!accounts().some(n => n.toLowerCase() === bot.toLowerCase())) return;
         const file = join(reqDir, `${bot}.json`);
-        if (Date.now() - statSync(file).mtimeMs > 10 * 60_000 || (fails.get(bot) ?? 0) >= 2) {
+        // A taker removes its own request when it gives up, so the file can go between the listing and this read.
+        const gone = (e: unknown) => (e as NodeJS.ErrnoException)?.code === 'ENOENT';
+        let mtimeMs: number, request: any;
+        try {
+            mtimeMs = statSync(file).mtimeMs;
+        } catch (e) {
+            if (gone(e)) return;
+            throw e;
+        }
+        if (Date.now() - mtimeMs > 10 * 60_000 || (fails.get(bot) ?? 0) >= 2) {
             console.log(`WARN dropped stale payout request from ${bot}`);
             rmSync(file, { force: true });
             fails.delete(bot);
             return;
         }
-        const request = JSON.parse(readFileSync(file, 'utf8'));
+        try {
+            request = JSON.parse(readFileSync(file, 'utf8'));
+        } catch (e) {
+            if (gone(e)) return;
+            throw e;
+        }
         order?.preflight(s.name, bot);
         const prepared = await preparePayout(s, request.items, env.PAYOUT_NOTES === '1', keep);
         const want = prepared.want;
@@ -244,6 +258,7 @@ export async function runTakeFromBanker(
 
     try {
         mkdirSync(dir, { recursive: true });
+        const requested = Date.now();
         writeFileSync(file, JSON.stringify({ items }));
         await waitTicks(s, 2);
         await s.bot.walkTo(BANK_SPOT.x, BANK_SPOT.z, 2);
@@ -254,7 +269,7 @@ export async function runTakeFromBanker(
         const beforeExact = order ? s.sdk.getInventory().filter(i => i.id === order.id).reduce((n, i) => n + i.count, 0) : 0;
         let ok = false;
         if (order) {
-            await order.receipt.awaitCollectionOffer(s, banker, server, 150);
+            await order.receipt.awaitCollectionOffer(s, banker, server, 150, undefined, requested);
             const collected = await order.receipt.collectHandoff(
                 s,
                 banker,
@@ -345,7 +360,7 @@ export async function runSupplyHolder(
         if (specialistNearby) {
             console.log(`SPECIALIST ${specialistName} spotted! Serving trade immediately...`);
             const stageItems = inv().filter(i => supplyPattern.test(i.name));
-            const giveList = stageItems.slice(0, BATCH_SIZE).map(i => ({ item: new RegExp(`^${i.name}$`, 'i'), amount: i.count }));
+            const giveList = stageItems.slice(0, BATCH_SIZE).map(i => ({ item: exactItem(i.name), amount: i.count }));
             const tradeRes = await s.bot.trade(new RegExp(`^${specialistName}$`, 'i'), { give: giveList, timeout: 30000 });
             if (tradeRes.success) {
                 specialistTrades++;
@@ -458,13 +473,15 @@ export async function runPreservedWine(s: Session, o: WineStockOptions, stop: ()
         guard();
     };
     let before: WineStock | undefined, after: WineStock | undefined, made = 0, noted = 0, failure = '', assets = false;
+    let short: WineItem[] = [];
     try {
         guard();
         if ((s.sdk.getSkill('Cooking')?.baseLevel ?? 0) < WINE_LEVEL_REQUIRED) throw Error('preserved wine requires Cooking35');
         await open();
         before = stock();
         if ((before.items[UNFERMENTED_WINE_ID] ?? 0) !== 0) throw Error('preserved wine entry has existing raw wine');
-        if (recipeInputs.some(id => (before!.items[id] ?? 0) < o.maximum + reserve)) throw Error('preserved wine staged inputs short of order and reserve');
+        short = recipeInputs.filter(id => (before!.items[id] ?? 0) < o.maximum + reserve).map(id => ({ id, count: before!.items[id] ?? 0 }));
+        if (short.length) throw Error('preserved wine staged inputs short of order and reserve');
 
         while (made < o.maximum && !stopped() && s.tick() - start < o.cap) {
             await open();
@@ -525,5 +542,5 @@ export async function runPreservedWine(s: Session, o: WineStockOptions, stop: ()
         failure = String(error);
     }
     const used = (id: number) => !before ? 0 : after ? (before.items[id] ?? 0) - (after.items[id] ?? 0) : (before.items[id] ?? 0) - stored(id) - held(id);
-    return { ok: !failure, made, noted, inputs: { grapes: used(GRAPES_ID), water: used(JUG_WATER_ID) }, assets, ticks: s.tick() - start, failure: failure || '-' };
+    return { ok: !failure, made, noted, inputs: { grapes: used(GRAPES_ID), water: used(JUG_WATER_ID) }, assets, short, ticks: s.tick() - start, failure: failure || '-' };
 }

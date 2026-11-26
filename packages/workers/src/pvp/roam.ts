@@ -8,7 +8,7 @@
 //        [FRIENDS=name,name] (the accounts never to attack, in place of the owned and listed accounts; FRIENDS= is none)
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openBot, settle } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
@@ -71,12 +71,20 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const readClaims = (): Claims => {
         try { return new Map(Object.entries(JSON.parse(readFileSync(claimsFile, 'utf8')))) as Claims; } catch { return new Map(); }
     };
+    // Other hunter processes share the file: a write goes through a temporary file and a rename, so a reader never
+    // sees a part-written file and reads every other hunter's claim. (A damaged file still reads as no claims, so the
+    // next write replaces it.)
     const writeClaims = (edit: (c: Claims) => void) => {
+        const tmp = `${claimsFile}.${process.pid}.tmp`;
         try {
             const c = readClaims(); edit(c);
             mkdirSync(join(claimsFile, '..'), { recursive: true });
-            writeFileSync(claimsFile, JSON.stringify(Object.fromEntries(c)));
-        } catch { /* claims are a courtesy between our hunters */ }
+            writeFileSync(tmp, JSON.stringify(Object.fromEntries(c)));
+            renameSync(tmp, claimsFile);
+        } catch {
+            /* claims are a courtesy between our hunters */
+            try { rmSync(tmp, { force: true }); } catch { /* nothing to remove */ }
+        }
     };
     const myName = session.name.toLowerCase();
     const myWeaponValue = () => Math.max(0, ...[...(kit.melee ?? []), ...(kit.ranged ?? []), ...(kit.magic ?? [])].map(id => itemCost(id)));

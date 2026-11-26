@@ -9,6 +9,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {simBotsDir} from '../../core/src/practice-paths';
 import {deliveryLockDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
@@ -190,10 +191,10 @@ async function run(delivery:string,door=false){
    const dir=join(directory,k.id);mkdirSync(dir);
    let account=k.from?accounts[k.from]:undefined;
    if(!account){
-    const name=runBotName(door?'fldoor':'flgold',index+1),botDir=join(root,'vendor/rs-sdk/bots',name);
-    if(existsSync(botDir))throw Error('isolated practice identity already exists');
-    await createBot(name);
-    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+    const name=runBotName(door?'fldoor':'flgold',index+1);
+    if(existsSync(join(simBotsDir(root),name))||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('isolated practice identity already exists');
+    const {envPath}=await createBot(name);
+    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
     account={name,path:await applyPreset(name,k.preset!)};
    }
    accounts[k.id]=account;

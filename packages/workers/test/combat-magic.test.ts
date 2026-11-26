@@ -24,6 +24,7 @@ import {
     SPLASH_SITES,
     SPLASH_SPELLS,
     SPLASH_TILE,
+    TELEPORTS,
     WATER,
     bankedSplashSpells,
     castReaches,
@@ -48,6 +49,7 @@ import {
     splashPlan,
     splashSite,
     splashSpell,
+    teleportShortfall,
     withCombatPrayer,
     withIncomingProtection,
     type CombatSession,
@@ -430,6 +432,17 @@ test('a level casts the best stat spell it has, and Wind Strike under Confuse', 
     expect(splashSpell(19).component).toBe('magic:curse');
     expect(splashSpell(99).component).toBe('magic:curse');
     expect(SPLASH_SPELLS.map(s => [s.level, s.xp])).toEqual([[19, 725], [11, 525], [3, 325], [1, 137]]);
+});
+
+test('teleport XP is in server units, so the rune shortfall covers only the casts the target needs', () => {
+    expect(TELEPORTS.map(t => [t.name, t.xp])).toEqual([['camelot', 1387.5], ['falador', 1200], ['lumbridge', 1025], ['varrock', 875]]);
+    const varrock = TELEPORTS.find(t => t.name === 'varrock')!;
+    const xp = xpForLevel(30);
+    const casts = Math.ceil((xpForLevel(31) - xp) / 875);
+    const none = { air: 0, mind: 0, earth: 0, water: 0, fire: 0, law: 0 };
+    const missing = teleportShortfall(xp, 31, 1000, varrock, varrock.costs, { ...none, law: 200 });
+    expect(missing.law).toBe(0);
+    for (const k of ['air', 'fire'] as const) expect(missing[k]).toBe(casts * varrock.costs[k]);
 });
 
 test('the plan counts casts spell by spell up this server level curve, and their runes', () => {

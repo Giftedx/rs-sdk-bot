@@ -153,7 +153,7 @@ function buildState() {
             nativeProof: resultProof({name,text:res},proofs),
             job, planJob: jobRaw, bounded: boundedOperation(s), reserved: name === MAIN || (reservedEntry && !job),
             // Training: a fresh bot whose goal skill is still below its target, not a gold farmer or a banker.
-            training: fresh && !production && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
+            training: fresh && !production && sk != null && sk.level < target && !/^(gold farm|bank\b|give to the bank\b)/i.test(String(job?.goal ?? s.goal ?? '')),
             role4: roleView(s, job, fresh, r),
             // Newest RESULT this server saw for the account, and its newest death in the last 24 h.
             lastRes: (() => { const x = newestRes.get(nameLower); return x && (!s.started || x.at >= s.started) ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),

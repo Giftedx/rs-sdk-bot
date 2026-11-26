@@ -2500,3 +2500,15 @@ test('runecraft preflight checks level caps/air reserves, maps config refusals t
     await expect(enterAirAltar(ruinsSession, () => true)).rejects.toThrow('air entry stopped');
     expect(usedTalisman).toBe(false);
 });
+test('staged and body-measure CLI methods keep a leading number out of the carrier roster', async () => {
+    const summaries: string[] = [];
+    const deps = { finish: async (_s: unknown, ok: boolean, summary: string) => { summaries.push(`${ok}:${summary}`); } } as any;
+    const helpers = Array.from({ length: 16 }, (_, i) => `Helper${i}`);
+    // CAP=0 fails after roster validation, so each run reaches the budget check only with a valid roster.
+    expect(await runRunecraftCli('staged', 'Crafter', ['Helper0', 'Helper1'], { CAP: '0' }, deps)).toBe(1);
+    expect(await runRunecraftCli('staged', 'Crafter', ['50', 'Helper0', 'Helper1'], { CAP: '0' }, deps)).toBe(1);
+    expect(await runRunecraftCli('body-measure', 'Crafter', ['12', ...helpers], { CAP: '0' }, deps)).toBe(1);
+    expect(await runRunecraftCli('body-measure', 'Crafter', helpers, { CAP: '0' }, deps)).toBe(1);
+    expect(summaries).toHaveLength(4);
+    for (const s of summaries) expect(s).toContain('carrier tick budget must be1..10000');
+});
