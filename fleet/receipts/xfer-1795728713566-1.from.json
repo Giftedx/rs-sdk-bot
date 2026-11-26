@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728713566-1",
  "account": "Swordinhand",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "f6150f98-562c-42c1-82d8-f60c705557f7",
- "count": 0,
- "ok": false,
- "at": 1795728849754,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795728901511,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795728870356
+ },
+ "logout": {
+  "attemptId": "1795728849764-0000019344-0000000001",
+  "at": 1795728901498,
+  "sha256": "4e731d74f3a686f89ce0ee6d865b4cea3a775d695a166e9aaf8aead67e30a169"
+ },
+ "screen": true
 }
