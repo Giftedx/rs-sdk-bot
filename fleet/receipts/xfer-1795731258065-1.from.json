@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731258065-1",
  "account": "Shaftsinker",
  "partner": "Pullmybow",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "11e4b396-f7ac-42b3-82fb-ddebd5ffe2fb",
- "count": 0,
- "ok": false,
- "at": 1795731421157,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795731558179,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 19940,
+  "after": 19880
+ },
+ "logout": {
+  "attemptId": "1795731421188-0000022444-0000000001",
+  "at": 1795731558168,
+  "sha256": "9d1823d69281c46d8f78afce4f5b41575b374b634abc77f6f24baa720cc8fb6c"
+ },
+ "screen": true
 }
