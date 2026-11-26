@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795728713566-2",
+ "account": "Fingersmith",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 4,
+ "claim": "55668008-1c8f-4808-a364-55e67c8bea73",
+ "count": 0,
+ "ok": false,
+ "at": 1795729202506,
+ "detail": "trade claimed"
+}
