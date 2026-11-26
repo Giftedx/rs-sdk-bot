@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795729475470-2",
+ "account": "Unsheathed",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "b42d75a9-04d2-402f-ac27-c4c7a136480e",
+ "count": 60,
+ "ok": true,
+ "at": 1795729973451,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795729972700
+ },
+ "logout": {
+  "attemptId": "1795729961342-0000011300-0000000001",
+  "at": 1795729973440,
+  "sha256": "887ac282a591e9f920348dfbd630657d4e169ff0db2bdaa5731e9649f0e09718"
+ },
+ "screen": true
+}
