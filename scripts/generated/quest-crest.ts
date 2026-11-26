@@ -8,7 +8,11 @@
 // skill_combat/scripts/player/player_magic.rs2:223 (a blast that hits Chronozon sets its bit).
 // Helper items (preset): 5 cooked fish (Caleb), 2 perfect gold bars (tradeable; a helper mines them in the Witchaven
 // dungeon), 2 rubies, ring and necklace moulds, an antipoison, runes for 4 blasts, spare fire blasts and 6 teleports.
-// CREST_FROM=<stage> starts later (debug presets with varp 148 set).
+// CREST_FROM=<%crestquest> starts at that stage. On a started journal the quest sweep reads the stage from the journal
+// (packages/workers/src/quest/resume.ts crestJournalStage) and the script starts there from the start tile beside
+// Dimintheis, behind Varrock's east gate: each later block starts with a teleport, and at 5-7 the bot goes into Al
+// Kharid by the Lumbridge teleport and the toll gate, as at 4. At stage 2 Dimintheis offers the quest again and "Ok,
+// I will help you." sets 1 (crest_dimintheis.rs2:20,29-31,58-59), so a restart at 0 repeats Dimintheis and Caleb.
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
@@ -31,7 +35,8 @@ const BLASTS = ['magic:wind_blast', 'magic:water_blast', 'magic:earth_blast', 'm
 
 const q = await openQuest({ cap: 4000, eatAt: 65, food: [385, 379], lumbridgeOk: true, burst: true });
 try {
-    const FROM = Number(process.env.CREST_FROM ?? 0);
+    const FROM = q.stageFrom('CREST_FROM');
+    console.log(`CREST_FROM ${FROM}`);
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+family crest/i) > 0) questDone = true; });
     const tele = (label: string, comp: string, x: number, z: number) => q.teleport(label, comp, x, z);
@@ -49,6 +54,15 @@ try {
             await q.converse([/^yes, ok/i], () => (q.pos()?.worldX ?? 0) >= GATE.x, 30);
         }
         if ((q.pos()?.worldX ?? 0) < GATE.x) await q.fail('toll gate');
+    };
+    // A start at 5-7 skips the gem trader: the bot stands beside Dimintheis, so it goes into Al Kharid the way of
+    // stage 4 before the furnace or Avan. inDesert holds until the Falador teleport to Boot.
+    let inDesert = false;
+    const intoAlKharid = async (): Promise<void> => {
+        if (FROM < 5 || inDesert) return;
+        await tele('lumbridge teleport (resume)', 'magic:lumbridge_teleport', 3221, 3218);
+        await tollGate();
+        inDesert = true;
     };
 
     // 1. Dimintheis: "dump", "So where is this crest?", "Ok, I will help you." sets 1.
@@ -78,6 +92,7 @@ try {
         q.milestone(5);
     }
     if (FROM < 8 && (!q.has(ITEM.ring) || !q.has(ITEM.neck))) {
+        await intoAlKharid();
         await q.walk('to furnace', [{ x: 3275, z: 3186, tol: 3 }]);
         const furnace = () => named(/^furnace$/i);
         if (!furnace()) console.log(`WARN no furnace: ${q.locs().slice(0, 12).map((l: any) => `${l.name}@${l.x},${l.z}`).join(' ')}`);
@@ -100,6 +115,7 @@ try {
     // 6. Avan in the scorpion pit north of Al Kharid (npc name "Man", debugname avan).
     const avan = /^man$/i;
     if (FROM < 6) {
+        await intoAlKharid();
         await q.walk('to avan', [{ x: AVAN.x, z: AVAN.z - 2, tol: 2 }]);
         await q.talk('avan 1', avan, [/looking for a man named avan/i], () => q.sawText(/must first do something for me|perfect gold/i), AVAN, 60);
         q.milestone(6);
@@ -108,6 +124,7 @@ try {
     // 7. Boot under the mountains: Falador teleport, the ladder north of Falador, the tunnel west.
     if (FROM < 7) {
         await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
+        inDesert = false;
         await q.walk('to boot ladder', [{ x: BOOT_LADDER.x, z: BOOT_LADDER.z + 1, tol: 1 }]);
         await q.climb('boot ladder down', () => named(/ladder|trapdoor/i, BOOT_LADDER, 2), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
         await q.walk('to boot', [{ x: BOOT.x + 1, z: BOOT.z, tol: 2 }]);
@@ -115,10 +132,12 @@ try {
         q.milestone(7);
     }
 
-    // 8. Avan takes the ring and necklace and gives his piece.
+    // 8. Avan takes the ring and necklace and gives his piece. A start at 7 that made the jewellery is in Al Kharid.
     if (FROM < 8) {
-        await tele('lumbridge teleport 2', 'magic:lumbridge_teleport', 3221, 3218);
-        await tollGate();
+        if (!inDesert) {
+            await tele('lumbridge teleport 2', 'magic:lumbridge_teleport', 3221, 3218);
+            await tollGate();
+        }
         await q.walk('to avan 2', [{ x: AVAN.x, z: AVAN.z - 2, tol: 2 }]);
         await q.talk('avan 2', avan, [], () => q.has(ITEM.calebPiece), AVAN, 60);
         q.milestone(8);
@@ -145,7 +164,10 @@ try {
 
     // 11. Chronozon in the Edgeville dungeon: one hit of each blast sets its 4 bits; then any kill drops Johnathon's
     // piece. The trapdoor route comes from the south and stays clear of the 3 black demons north of him.
-    if (!q.has(ITEM.johnPiece)) {
+    // A start at 10 skips the dungeon when the pack holds his piece or the joined crest (QuestResume.held: a run that
+    // ended after the kill), and else casts the Varrock teleport first: the start tile is behind Varrock's east gate.
+    if (!q.has(ITEM.johnPiece) && !q.has(ITEM.crest)) {
+        if (FROM >= 10) await tele('varrock teleport (resume)', 'magic:varrock_teleport', 3213, 3424);
         await q.walk('to trapdoor', [{ x: TRAPDOOR.x, z: TRAPDOOR.z + 1, tol: 1 }]);
         const trap = () => named(/trapdoor/i, TRAPDOOR, 2);
         for (let i = 0; i < 4 && (q.pos()?.worldZ ?? 0) < 9000; i++) {

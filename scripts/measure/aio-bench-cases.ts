@@ -1844,14 +1844,41 @@ return [
     scriptArgs: ['arena', 'journal stage 6 has no resume from the start tile'], timeoutMs: 120_000,
     presetConfig: {...PRESETS.quest_arena!, position: {x: 2590, z: 3160, level: 0}, varps: {...PRESETS.quest_arena!.varps, 17: 6}},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_RESUME .*"stage":6.*"kind":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
-  // Witch's House on a started journal (%ballquest, varp 226, = 1): quest-ball.ts has no resume stage, so the sweep
-  // refuses at entry, before a bank walk, with the text the supervisor ends the job on (live: "fail step cheese",
-  // then "fail talk boy 1" on each next login). The sweep ends RESULT fail by design, so the case runs it through
-  // scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
-  {key: 'extra:sweep-ball-started-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_ball',
-    scriptArgs: ['ball', 'journal is started and quest-ball.ts has no resume stage'], timeoutMs: 120_000,
-    presetConfig: {...PRESETS.quest_ball!, varps: {...PRESETS.quest_ball!.varps, 226: 1}},
+  // Family Crest through the quest sweep at %crestquest (varp 148) = 2, after Caleb's "Ok, I will get those.", the
+  // state that live runs left at "fail talk caleb 2" (direct runs with no staged fish). The account stands at the
+  // Varrock east bank with the quest pack banked. The sweep reads the stage from the journal, and the script starts
+  // at the fish to Caleb: no Dimintheis and no "caleb 1".
+  {key: 'extra:sweep-crest-resume-s2', script: 'scripts/aio-quester.ts', preset: 'quest_crest', scriptArgs: ['sweep', 'crest'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_crest!, position: {x: 3254, z: 3420, level: 0}, inventory: [], varps: {...PRESETS.quest_crest!.varps, 148: 2},
+      bank: [...(PRESETS.quest_crest!.inventory ?? [])]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^CREST_FROM 2$/m.test(s) && /^MILESTONE gauntlets /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s)},
+  // Imp Catcher on a started journal (varp 160 = 1, quest_imp.constant:2): quest-imp.ts has no resume stage, so the
+  // sweep refuses at entry, before a bank walk, with the text the supervisor ends the job on. The sweep ends RESULT
+  // fail by design, so the case runs it through scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
+  {key: 'extra:sweep-imp-started-refused', script: 'scripts/measure/quest-refusal-probe.ts', preset: 'quest_imp',
+    scriptArgs: ['imp', 'journal is started and quest-imp.ts has no resume stage'], timeoutMs: 120_000,
+    presetConfig: {...PRESETS.quest_imp!, varps: {...PRESETS.quest_imp!.varps, 160: 1}},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_ENTRY .*"journal":"started".*"entry":"refuse"/m.test(s) && !/^QUEST_SWEEP_BANK /m.test(s)},
+  // Witch's House through the quest sweep from the Falador west bank with the quest pack banked. `resume-s1` has
+  // %ballquest (varp 226) = 1, the state that live runs left at "fail step gate in" (no leather gloves worn, so the
+  // gate shocks, quest_ball.rs2:33-38): the gloves and the door key are banked, the sweep wears the gloves, and the
+  // script starts at the pot, which gives the key again (it looks at the pack only). `resume-s2` has 2, the magnet
+  // found and banked: the sweep withdraws it (QuestResume.held), and the script skips the basement.
+  {key: 'extra:sweep-ball-resume-s1', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ball!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
+      equipment: (PRESETS.quest_ball!.equipment ?? []).filter(i => i.id !== 1059),
+      varps: {...PRESETS.quest_ball!.varps, 226: 1},
+      bank: [...(PRESETS.quest_ball!.inventory ?? []), {id: 1059, count: 1}, {id: 2409, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^BALL_FROM 1$/m.test(s) && /^MILESTONE 7 /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":1[,}]/m.test(s) && !/^MILESTONE 1 /m.test(s)},
+  {key: 'extra:sweep-ball-resume-s2', script: 'scripts/aio-quester.ts', preset: 'quest_ball', scriptArgs: ['sweep', 'ball'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ball!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
+      varps: {...PRESETS.quest_ball!.varps, 226: 2},
+      bank: [...(PRESETS.quest_ball!.inventory ?? []), {id: 2409, count: 1}, {id: 2410, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^BALL_FROM 2$/m.test(s) && /^MILESTONE 7 /m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":2[,}]/m.test(s) && /^QUEST_SWEEP_HELD .*"banked":\[2410\]/m.test(s)
+      && !/^MILESTONE [12] /m.test(s)},
   {key: 'market:shop-buy', script: 'scripts/aio-market.ts', preset: 'shop_catherby', scriptArgs: ['shop-buy'], pass: ok},
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
   // Out of Doric's house to the Falador east bank, where Doric's Quest leaves the account (live: the first walk click,

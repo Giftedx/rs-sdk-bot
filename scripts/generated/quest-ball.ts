@@ -6,6 +6,15 @@
 // The witch (Nora T. Hagg) patrols z 3463 from x 2930 to 2904 and catches a player within 3 tiles in line of sight
 // who is north or south of her and not behind a hedge (witch.rs2:1-34). A catch takes the shed key and the ball, sets
 // 3 back to 1 and puts the player outside at 2929,3456. A player on her own row (dz 0) is never caught.
+// BALL_FROM=<%ballquest> starts at that stage from the start tile. On a started journal the quest sweep reads the stage
+// from the journal (ball_journal.rs2; 3 and 5 show one text, and run alike here) and the script starts there. Each
+// stage goes in by the front door: the pot gives the door key again to a pack without it (it looks at the pack only,
+// quest_ball.rs2:1-8). 1: the basement. 2: the basement only for a pack without the magnet (the cupboard gives one only
+// when the pack and the bank hold none, :65-75; the sweep withdraws a banked one), then the mouse. 3, 5: the garden, and
+// the fountain only for a pack without the shed key (it looks at the bank too, :162-169). 6: the shed door opens to op1
+// (:127-131; the shed key on it spawns the experiment again, :134-157), then the ball; a pack with the ball goes to the boy.
+// The gate shocks a hand with no leather gloves worn and the player stays out (:33-38; live "fail step gate in" took
+// floor(hp/10)+1 a try): the gloves are worn from the pack, or the run fails by name before the ladder.
 import { openQuest, fireSpell as resolveFireSpell } from './quest-lib';
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
@@ -27,7 +36,7 @@ const SHED = { id: 2863, x: 2934, z: 3463 };              // witchsheddoor, west
 const WITCH_X0 = 2904, WITCH_X1 = 2930;
 const COVER_S = new Set([2903, 2907, 2908, 2909, 2915, 2916, 2917, 2923, 2924, 2925, 2929, 2930, 2931].map(x => `${x},3461`));
 const COVER_N = new Set([2902, 2903, 2904, 2905, 2906, 2907, 2908, 2909, 2911, 2912, 2913, 2914, 2919, 2920, 2921, 2926, 2927, 2928, 2932].map(x => `${x},3465`));
-const ITEM = { key: 2409, magnet: 2410, shedKey: 2411, ball: 2407, cheese: 1985, food: 379 };
+const ITEM = { key: 2409, magnet: 2410, shedKey: 2411, ball: 2407, cheese: 1985, food: 379, gloves: 1059 };
 const PFM = 14;
 type Tile = [number, number];
 const ROW = 3463;                                          // the witch's patrol row (witches_house.npc patrol1-6)
@@ -59,6 +68,8 @@ let off: (() => void) | undefined;
 let offCatch: (() => void) | undefined;
 let offWitch: (() => void) | undefined;
 try {
+    const FROM = q.stageFrom('BALL_FROM');
+    console.log(`BALL_FROM ${FROM}`);
     // The partner (Defence 1, 10 HP) fights under Protect from Melee; the main (Defence 99) does not need it.
     const PARTNER = (q.s.sdk.getSkill('Defence')?.level ?? 1) < 40;
     let questDone = false;
@@ -132,126 +143,153 @@ try {
     const join = (...ls: Tile[][]): Tile[] => ls.reduce((acc, l) => acc.concat(acc.length ? l.slice(1) : l), [] as Tile[]);
 
     // 1. The boy: "What's the matter?", "Ok, I'll see what I can do." sets 1 (boy.rs2:3-15).
-    await q.talk('boy 1', boy, [/what's the matter/i, /ok, i'll see what i can do/i], () => q.sawText(/thanks (mister|lady)/i), BOY);
-    q.milestone(1);
-
-    // 2. The key under the pot outside the front door; the door opens with the key in the pack (quest_ball.rs2:10-31).
-    await q.walk('to pot', [{ x: 2899, z: 3474, tol: 1 }]);
-    await q.step('pot', () => q.opLoc(POT, 1), () => q.has(ITEM.key), 10, 4);
-    await shut();
-    await q.step('front door', () => q.opLoc(FRONT, 1), () => x() >= 2901 && z() >= 3466, 8, 4);
-    q.milestone('key');
-
-    // 3. The basement: the ladder, the gate (gloves worn), the cupboard: Open, then Search gives the magnet (2).
-    await q.openDoor('hall door', 2902, 3474);
-    await q.climb('ladder down', () => q.locAt(LADDER_DOWN.x, LADDER_DOWN.z), /climb-down/i, () => z() > 9000);
-    await q.walk('to gate', [{ x: GATE.x + 1, z: GATE.z, tol: 0 }]);
-    const gate = () => q.findLoc(l => l.x === GATE.x && (l.z === GATE.z || l.z === GATE.z + 1) && /gate/i.test(l.name));
-    await q.step('gate in', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => x() <= GATE.x, 8, 4);
-    const cb = () => q.findLoc(l => l.x === CUPBOARD.x && l.z === CUPBOARD.z);
-    await q.step('cupboard open', () => { const c = cb(); return c ? q.opLoc(c, q.opIndex(c, /open/i)) : q.waitTicks(1); }, () => /search/i.test((cb()?.optionsWithIndex ?? []).map((o: any) => o.text).join(' ')), 10, 4);
-    await q.step('cupboard search', () => { const c = cb(); return c ? q.opLoc(c, q.opIndex(c, /search/i)) : q.waitTicks(1); }, () => q.has(ITEM.magnet), 10, 4);
-    await shut();
-    q.milestone(2);
-    await q.step('gate out', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => x() > GATE.x, 8, 4);
-    await q.climb('ladder up', () => q.locAt(LADDER_UP.x, LADDER_UP.z), /climb-up/i, () => z() < 9000);
-
-    // 4. The cheese on the mouse hole spawns the mouse; the magnet on the mouse unlocks the back door (3).
-    await q.openDoor('hall door 2', 2902, 3474);
-    await q.openDoor('porch door', 2902, 3468);
-    await q.walk('to hole', [{ x: 2902, z: 3467, tol: 0 }]);
-    const mouse = () => q.npc(/^mouse$/i);
-    await q.step('cheese', () => q.useOnLoc(ITEM.cheese, HOLE), () => !!mouse(), 8, 4);
-    await shut();
-    await q.step('magnet', () => { const m = mouse(); return m ? q.useOnNpc(ITEM.magnet, m) : q.waitTicks(1); }, () => !q.has(ITEM.magnet), 8, 4);
-    await shut();
-    q.milestone(3);
-
-    // 5. The back door, the fountain (shed key), the shed door with the key (spawns the experiment), by the garden
-    // corridors round the witch's pen.
-    inGarden = true;
-    await q.step('back door', () => q.opLoc(BACK, 1), () => z() <= 3465, 8, 4);
-    await shut();
-    await sneak('to fountain', join(line(2901, 3465, 2901, 3460), line(2901, 3460, 2933, 3460), line(2933, 3460, 2933, 3466), line(2933, 3466, 2912, 3466), [[2912, 3467]]));
-    await q.step('fountain', () => q.opLoc(FOUNTAIN, 2), () => q.has(ITEM.shedKey), 12, 4);
-    await shut();
-    q.milestone('shedkey');
-    await q.dash('fountain back', 2912, 3467, 0, 20);
-    await sneak('to shed', join([[2912, 3467]], line(2912, 3466, 2933, 3466), line(2933, 3466, 2933, 3463)));
-    if (wantPfm) await setPfm(true);
-    await q.step('shed door', () => q.useOnLoc(ITEM.shedKey, SHED), () => x() >= SHED.x, 8, 4);
-    await shut();
-    q.milestone('shed');
-
-    // 6. The 4 forms: each death spawns the next, which attacks (witches_experiement.rs2:37-81).
-    const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
-    const hasStaff = () => q.has(1387) || q.s.sdk.getEquipment().some((e: any) => e.id === 1387);
-    const useMagic = (q.s.sdk.getSkill('Magic')?.baseLevel ?? 1) >= 35 && hasStaff() && (q.has(562) || q.has(560) || q.has(565));
-    if (useMagic && q.has(1387)) {
-        const staff = q.inv().find((i: any) => i.id === 1387);
-        if (staff) await q.s.bot.equipItem(staff);
+    if (FROM < 1) {
+        await q.talk('boy 1', boy, [/what's the matter/i, /ok, i'll see what i can do/i], () => q.sawText(/thanks (mister|lady)/i), BOY);
+        q.milestone(1);
     }
-    const FORMS = [/^witches experiment$/i, /second form/i, /third form/i, /fourth form/i];
-    const exp = (): any => { for (let i = FORMS.length - 1; i >= 0; i--) { const n = q.npc(FORMS[i]!); if (n) return n; } return undefined; };
-    const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
-    if (!useMagic) await retaliate();
-    let killed = false;
-    let lastTarget = -1;
-    let lastCast = -99;
-    let lastPrayerPot = -10;
-    const PRAY_POTS = [2434, 139, 141, 143];
-    for (let t = 0; t < 600 && !killed; t++) {
-        await q.guard('experiment');
-        if (q.msgCount(/kill the shapeshifter once and for all/i) > 0) { killed = true; break; }
-        if (wantPfm) {
-            const pts = q.st()?.prayers?.prayerPoints ?? 0;
-            if (pts <= 6 && t - lastPrayerPot >= 4) {
-                const pot = PRAY_POTS.find(id => q.has(id));
-                if (pot) {
-                    lastPrayerPot = t;
-                    await q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+
+    // At 6 a pack with the ball goes to the boy: he takes the ball in the pack (boy.rs2:27-33), and the witch takes it
+    // from a player she catches (witch.rs2:28).
+    if (!(FROM >= 6 && q.has(ITEM.ball))) {
+        // 2. The key under the pot outside the front door; the door opens with the key in the pack (quest_ball.rs2:10-31).
+        await q.walk('to pot', [{ x: 2899, z: 3474, tol: 1 }]);
+        await q.step('pot', () => q.opLoc(POT, 1), () => q.has(ITEM.key), 10, 4);
+        await shut();
+        await q.step('front door', () => q.opLoc(FRONT, 1), () => x() >= 2901 && z() >= 3466, 8, 4);
+        q.milestone('key');
+
+        // 3. The basement: the ladder, the gate (gloves worn), the cupboard: Open, then Search gives the magnet (2).
+        const basement = FROM < 2 || (FROM < 3 && !q.has(ITEM.magnet));
+        if (basement) {
+            const gloved = () => q.s.sdk.getEquipment().some((e: any) => e.id === ITEM.gloves);
+            const gloves = q.inv().find((i: any) => i.id === ITEM.gloves);
+            if (!gloved() && gloves) await q.s.bot.equipItem(gloves);
+            for (let i = 0; i < 5 && !gloved(); i++) await q.waitTicks(1);
+            if (!gloved()) await q.fail('gate in: leather gloves 1059 not worn, the gate shocks a bare hand (quest_ball.rs2:33-38)');
+            await q.openDoor('hall door', 2902, 3474);
+            await q.climb('ladder down', () => q.locAt(LADDER_DOWN.x, LADDER_DOWN.z), /climb-down/i, () => z() > 9000);
+            await q.walk('to gate', [{ x: GATE.x + 1, z: GATE.z, tol: 0 }]);
+            const gate = () => q.findLoc(l => l.x === GATE.x && (l.z === GATE.z || l.z === GATE.z + 1) && /gate/i.test(l.name));
+            await q.step('gate in', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => x() <= GATE.x, 8, 4);
+            const cb = () => q.findLoc(l => l.x === CUPBOARD.x && l.z === CUPBOARD.z);
+            await q.step('cupboard open', () => { const c = cb(); return c ? q.opLoc(c, q.opIndex(c, /open/i)) : q.waitTicks(1); }, () => /search/i.test((cb()?.optionsWithIndex ?? []).map((o: any) => o.text).join(' ')), 10, 4);
+            await q.step('cupboard search', () => { const c = cb(); return c ? q.opLoc(c, q.opIndex(c, /search/i)) : q.waitTicks(1); }, () => q.has(ITEM.magnet), 10, 4);
+            await shut();
+            q.milestone(2);
+            await q.step('gate out', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => x() > GATE.x, 8, 4);
+            await q.climb('ladder up', () => q.locAt(LADDER_UP.x, LADDER_UP.z), /climb-up/i, () => z() < 9000);
+        }
+
+        // 4. The cheese on the mouse hole spawns the mouse; the magnet on the mouse unlocks the back door (3).
+        if (basement) await q.openDoor('hall door 2', 2902, 3474);
+        await q.openDoor('porch door', 2902, 3468);
+        await q.walk('to hole', [{ x: 2902, z: 3467, tol: 0 }]);
+        if (FROM < 3) {
+            const mouse = () => q.npc(/^mouse$/i);
+            await q.step('cheese', () => q.useOnLoc(ITEM.cheese, HOLE), () => !!mouse(), 8, 4);
+            await shut();
+            await q.step('magnet', () => { const m = mouse(); return m ? q.useOnNpc(ITEM.magnet, m) : q.waitTicks(1); }, () => !q.has(ITEM.magnet), 8, 4);
+            await shut();
+            q.milestone(3);
+        }
+
+        // 5. The back door, the fountain (shed key), the shed door with the key (spawns the experiment), by the garden
+        // corridors round the witch's pen.
+        inGarden = true;
+        await q.step('back door', () => q.opLoc(BACK, 1), () => z() <= 3465, 8, 4);
+        await shut();
+        if (FROM < 6 && !q.has(ITEM.shedKey)) {
+            await sneak('to fountain', join(line(2901, 3465, 2901, 3460), line(2901, 3460, 2933, 3460), line(2933, 3460, 2933, 3466), line(2933, 3466, 2912, 3466), [[2912, 3467]]));
+            await q.step('fountain', () => q.opLoc(FOUNTAIN, 2), () => q.has(ITEM.shedKey), 12, 4);
+            await shut();
+            q.milestone('shedkey');
+            await q.dash('fountain back', 2912, 3467, 0, 20);
+            await sneak('to shed', join([[2912, 3467]], line(2912, 3466, 2933, 3466), line(2933, 3466, 2933, 3463)));
+        } else {
+            // The way back from the shed, the other way round.
+            await sneak('to shed', join(line(2901, 3465, 2901, 3460), line(2901, 3460, 2933, 3460), line(2933, 3460, 2933, 3463)));
+        }
+        if (FROM < 6) {
+            if (wantPfm) await setPfm(true);
+            await q.step('shed door', () => q.useOnLoc(ITEM.shedKey, SHED), () => x() >= SHED.x, 8, 4);
+        } else {
+            await q.step('shed door', () => q.opLoc(SHED, 1), () => x() >= SHED.x, 8, 4);
+        }
+        await shut();
+        q.milestone('shed');
+
+        // 6. The 4 forms: each death spawns the next, which attacks (witches_experiement.rs2:37-81).
+        if (FROM < 6) {
+            const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            const hasStaff = () => q.has(1387) || q.s.sdk.getEquipment().some((e: any) => e.id === 1387);
+            const useMagic = (q.s.sdk.getSkill('Magic')?.baseLevel ?? 1) >= 35 && hasStaff() && (q.has(562) || q.has(560) || q.has(565));
+            if (useMagic && q.has(1387)) {
+                const staff = q.inv().find((i: any) => i.id === 1387);
+                if (staff) await q.s.bot.equipItem(staff);
+            }
+            const FORMS = [/^witches experiment$/i, /second form/i, /third form/i, /fourth form/i];
+            const exp = (): any => { for (let i = FORMS.length - 1; i >= 0; i--) { const n = q.npc(FORMS[i]!); if (n) return n; } return undefined; };
+            const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+            if (!useMagic) await retaliate();
+            let killed = false;
+            let lastTarget = -1;
+            let lastCast = -99;
+            let lastPrayerPot = -10;
+            const PRAY_POTS = [2434, 139, 141, 143];
+            for (let t = 0; t < 600 && !killed; t++) {
+                await q.guard('experiment');
+                if (q.msgCount(/kill the shapeshifter once and for all/i) > 0) { killed = true; break; }
+                if (wantPfm) {
+                    const pts = q.st()?.prayers?.prayerPoints ?? 0;
+                    if (pts <= 6 && t - lastPrayerPot >= 4) {
+                        const pot = PRAY_POTS.find(id => q.has(id));
+                        if (pot) {
+                            lastPrayerPot = t;
+                            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+                        }
+                    }
+                    if ((q.st()?.prayers?.prayerPoints ?? 0) > 0 && !pfmOn()) {
+                        await q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
+                    }
                 }
+                if (q.dialogOpen()) {
+                    const d: any = q.st()?.dialog;
+                    if (d && !d.isWaiting && (d.options?.length ?? 0) <= 1) void q.s.sdk.sendClickDialog(0);
+                }
+                const n = exp();
+                if (useMagic) {
+                    if (n && !q.dialogOpen() && q.T() - lastCast >= 5) {
+                        lastCast = q.T();
+                        await q.s.direct({
+                            type: 'spellOnNpc',
+                            npcIndex: n.index,
+                            spellComponent: componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))),
+                            reason: 'SDK',
+                        });
+                    }
+                } else if (n && (n.index !== lastTarget || t % 6 === 0) && q.pos()?.targetIndex !== n.index) {
+                    await attack(n);
+                    lastTarget = n.index;
+                }
+                await q.waitTicks(1);
             }
-            if ((q.st()?.prayers?.prayerPoints ?? 0) > 0 && !pfmOn()) {
-                await q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
-            }
+            if (!useMagic) await retaliate();
+            if (!killed) await q.fail('experiment not killed');
+            q.milestone(6);
+            if (wantPfm) await setPfm(false);
         }
-        if (q.dialogOpen()) {
-            const d: any = q.st()?.dialog;
-            if (d && !d.isWaiting && (d.options?.length ?? 0) <= 1) void q.s.sdk.sendClickDialog(0);
-        }
-        const n = exp();
-        if (useMagic) {
-            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) {
-                lastCast = q.T();
-                await q.s.direct({
-                    type: 'spellOnNpc',
-                    npcIndex: n.index,
-                    spellComponent: componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))),
-                    reason: 'SDK',
-                });
-            }
-        } else if (n && (n.index !== lastTarget || t % 6 === 0) && q.pos()?.targetIndex !== n.index) {
-            await attack(n);
-            lastTarget = n.index;
-        }
-        await q.waitTicks(1);
-    }
-    if (!useMagic) await retaliate();
-    if (!killed) await q.fail('experiment not killed');
-    q.milestone(6);
-    if (wantPfm) await setPfm(false);
 
-    // 7. The ball, out of the shed, back through the house, the boy (7).
-    const ballG = () => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.ball);
-    await q.step('ball', () => { const g = ballG(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.ball), 12, 4);
-    q.milestone('ball');
-    await q.step('shed out', () => q.opLoc(SHED, 1), () => x() < SHED.x, 8, 4);
-    await sneak('from shed', join(line(2933, 3463, 2933, 3460), line(2933, 3460, 2901, 3460), line(2901, 3460, 2901, 3465)));
-    await q.step('back door in', () => q.opLoc(BACK, 1), () => z() >= 3466, 8, 4);
-    inGarden = false;
-    await q.openDoor('porch door 2', 2902, 3468);
-    await q.step('front door out', () => q.opLoc(FRONT, 1), () => x() <= 2900, 8, 4);
+        // 7. The ball, out of the shed, back through the house, the boy (7).
+        const ballG = () => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.ball);
+        await q.step('ball', () => { const g = ballG(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.ball), 12, 4);
+        q.milestone('ball');
+        await q.step('shed out', () => q.opLoc(SHED, 1), () => x() < SHED.x, 8, 4);
+        await sneak('from shed', join(line(2933, 3463, 2933, 3460), line(2933, 3460, 2901, 3460), line(2901, 3460, 2901, 3465)));
+        await q.step('back door in', () => q.opLoc(BACK, 1), () => z() >= 3466, 8, 4);
+        inGarden = false;
+        await q.openDoor('porch door 2', 2902, 3468);
+        await q.step('front door out', () => q.opLoc(FRONT, 1), () => x() <= 2900, 8, 4);
+    }
     await q.talk('boy 2', boy, [], () => questDone, BOY, 40, true);
     await shut();
     q.milestone(7);

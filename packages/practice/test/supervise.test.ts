@@ -230,7 +230,7 @@ test('a refusal before any game tick frees the account instead of holding it', a
 
 test('a quest sweep refusal at entry ends the job without a second login', async () => {
     const { supervise, isNamedRefusal } = await import('../src/supervise');
-    const started = "RESULT fail quest-sweep ball refused: Witch's House journal is started and quest-ball.ts has no resume stage";
+    const started = 'RESULT fail quest-sweep imp refused: Imp Catcher journal is started and quest-imp.ts has no resume stage';
     expect(isNamedRefusal(started)).toBe(true);
     expect(isNamedRefusal('RESULT fail quest-sweep dragon refused: Dragon Slayer needs 32 quest points, the account has 12')).toBe(true);
     // A script failure after the handover is no refusal: it keeps the retry rules.
