@@ -831,3 +831,18 @@ test('resolveShopProfile resolves hand-authored profiles and raw knowledge/shops
  expect(scim!.npc.test('Zeke')).toBe(true);
  expect(scim!.items.some(i => i.re.test('Bronze scimitar'))).toBe(true);
 });
+
+test('a planned order passes only with every unit bought or its stock target met', async () => {
+    const { shopOrderShortText } = await import('../src/market/shop-buy');
+    // 2 vials wanted, an empty shelf and the stock wait at its limit: the consumer must not start.
+    expect(shopFinishOk(0, false, 'stock-wait', 2)).toBe(false);
+    expect(shopFinishOk(1, false, 'stock-wait', 2)).toBe(false);
+    expect(shopFinishOk(2, false, 'item-cap', 2)).toBe(true);
+    // A rerun that finds the staff already banked buys nothing and passes.
+    expect(shopFinishOk(0, true, 'stock-target', 1)).toBe(true);
+    // Coins at the reserve: no purchase, no pass.
+    expect(shopFinishOk(0, false, 'coin-reserve', 1)).toBe(false);
+    expect(shopOrderShortText(0, 2, 'stock-wait')).toBe('order short bought=0/2: shop out of stock');
+    expect(shopOrderShortText(0, 1, 'coin-reserve')).toBe('order short bought=0/1: insufficient coins');
+    expect(shopOrderShortText(0, Infinity, 'stock-wait')).toBe('order short bought=0/target: shop out of stock');
+});

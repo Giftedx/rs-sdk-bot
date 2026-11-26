@@ -469,6 +469,12 @@ export function resolveActivityWorkerRoute(
     }
 }
 
+// A planned shop step waits this long between purchases for the shelf to restock. The engine
+// adds one unit each stockrate ticks (World.ts: tick % stockrate), and Vial of water at the
+// Ardougne Adventurers' Store restocks each 30 ticks, so the wait spans more than one restock.
+export const PLANNED_SHOP_NO_BUY_TICKS = 100;
+const MARKET_WORK_NO_BUY_TICKS = 25;
+
 function resolveAcquireOrGearSource(
     account: string,
     stepKind: 'acquire' | 'gear_upgrade',
@@ -477,6 +483,7 @@ function resolveAcquireOrGearSource(
         itemId: number;
         itemName?: string;
         quantity: number;
+        stockTarget?: number;
         shopId?: string;
         transferOrderId?: string;
         activityId?: string;
@@ -484,6 +491,9 @@ function resolveAcquireOrGearSource(
         coinFloatPreserved?: number;
     },
     ctx?: WorkerRoutingContext,
+    // A prep step feeds the next step of its chain, so its shop order must fill. A market work step
+    // is the demand's own progress, so a partial purchase passes and the demand keeps the rest.
+    plannedOrder = true,
 ): WorkerRouteStep {
     const reserveNum = Math.max(0, Math.floor(params.coinFloatPreserved ?? DEFAULT_OPERATING_COIN_FLOAT));
     const reserve = String(reserveNum);
@@ -512,6 +522,9 @@ function resolveAcquireOrGearSource(
             const profile = params.shopId ?? 'ardy';
             const escapedItemName = resolvedItemName ? escapeRegExp(resolvedItemName) : undefined;
             const items = escapedItemName ?? String(params.itemId);
+            // A gear upgrade wants one owned copy; an acquire names the owned total its consumer needs.
+            const stockTarget = !plannedOrder ? undefined : stepKind === 'gear_upgrade' ? 1 : params.stockTarget;
+            const noBuyTicks = plannedOrder ? PLANNED_SHOP_NO_BUY_TICKS : MARKET_WORK_NO_BUY_TICKS;
             return {
                 account,
                 stepKind,
@@ -524,10 +537,12 @@ function resolveAcquireOrGearSource(
                     ITEM_ID: String(params.itemId),
                     ...(escapedItemName ? { ITEMS: escapedItemName } : {}),
                     MAX_ITEMS: String(params.quantity),
+                    ...(stockTarget !== undefined ? { STOCK_TARGET: String(stockTarget) } : {}),
                     COIN_RESERVE: reserve,
                     FLOAT: String(floatAmount),
-                    NO_BUY_TICKS: '25',
+                    NO_BUY_TICKS: String(noBuyTicks),
                     STOP_AT_TARGET: '1',
+                    ...(plannedOrder ? { FILL_ORDER: '1' } : {}),
                     BANK_PACK: '1',
                 },
                 config: {
@@ -536,10 +551,12 @@ function resolveAcquireOrGearSource(
                     cap: 3000,
                     items,
                     maxItems: params.quantity,
+                    ...(stockTarget !== undefined ? { stockTarget } : {}),
                     coinReserve: reserveNum,
                     float: floatAmount,
-                    noBuyTicks: 25,
+                    noBuyTicks,
                     stopAtTarget: true,
+                    ...(plannedOrder ? { fillOrder: true } : {}),
                     bankPack: true,
                     shopId: profile,
                     itemId: params.itemId,
@@ -781,6 +798,7 @@ export function resolvePlannedStepWorkerRoute(
                         coinFloatPreserved: typeof cfg.coinFloatPreserved === 'number' ? cfg.coinFloatPreserved : undefined,
                     },
                     ctx,
+                    false,
                 );
                 return {
                     ...routed,

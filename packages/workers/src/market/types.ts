@@ -332,6 +332,8 @@ export type ShopBuyConfig = {
     readonly noBuyTicks?: number;
     readonly blindBuy?: boolean;
     readonly stopAtTarget?: boolean;
+    // A planned order: the run passes only when it buys maxItems or meets stockTarget.
+    readonly fillOrder?: boolean;
     readonly bankPack?: boolean;
     readonly stockPollTicks?: number;
 };

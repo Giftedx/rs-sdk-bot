@@ -363,6 +363,9 @@ export interface AcquireStep {
     readonly itemId: number;
     readonly itemName?: string;
     readonly quantity: number;
+    // The pack and bank total of the item that meets the consumer's need. A rerun of the
+    // chain that finds this total owned buys nothing.
+    readonly stockTarget?: number;
     readonly estimatedTicks: number;
     readonly estimatedCoinCost: number;
     readonly coinFloatPreserved: number;
@@ -1461,6 +1464,7 @@ function pushAcquireStepErrors(v: unknown, errors: string[], prefix = ''): void 
     if (!isNonNegInt(v.itemId)) errors.push(`${prefix}AcquireStep.itemId must be non-negative integer`);
     if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push(`${prefix}AcquireStep.itemName must be non-empty`);
     if (!isPosInt(v.quantity)) errors.push(`${prefix}AcquireStep.quantity must be positive integer`);
+    if (v.stockTarget !== undefined && !isPosInt(v.stockTarget)) errors.push(`${prefix}AcquireStep.stockTarget must be positive integer`);
     if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}AcquireStep.estimatedTicks must be finite non-negative`);
     if (!isFiniteNonNeg(v.estimatedCoinCost)) errors.push(`${prefix}AcquireStep.estimatedCoinCost must be finite non-negative`);
     if (!isNonNegInt(v.coinFloatPreserved)) errors.push(`${prefix}AcquireStep.coinFloatPreserved must be non-negative integer`);

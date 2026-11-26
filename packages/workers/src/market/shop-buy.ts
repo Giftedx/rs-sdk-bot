@@ -166,8 +166,21 @@ export function blindBuyObserved(
     return { bought, spent };
 }
 
-export function shopFinishOk(bought: number, targetMet: boolean, stop: string): boolean {
+// orderUnits marks a planned order: it passes only with all units bought or the stock target met,
+// so a chain does not start its consumer without the inputs.
+export function shopFinishOk(bought: number, targetMet: boolean, stop: string, orderUnits?: number): boolean {
+    if (orderUnits !== undefined) return targetMet || bought >= orderUnits;
     return bought > 0 || targetMet || stop === 'stock-wait';
+}
+
+// The failure text of a short planned order. "out of stock" and "insufficient coins" are the
+// phrases the brain outcome classifier reads as a market cooldown and a coin shortfall.
+export function shopOrderShortText(bought: number, orderUnits: number, stop: string): string {
+    const units = Number.isFinite(orderUnits) ? String(orderUnits) : 'target';
+    if (stop === 'coin-reserve' || stop === 'spend-cap' || stop === 'bounded-purchase-unaffordable') {
+        return `order short bought=${bought}/${units}: insufficient coins`;
+    }
+    return `order short bought=${bought}/${units}: shop out of stock`;
 }
 
 export function maximumUnitCost(
@@ -352,6 +365,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
     const NO_BUY_TICKS = cfg.noBuyTicks ?? 0;
     const BLIND_BUY = cfg.blindBuy === true;
     const STOP_AT_TARGET = cfg.stopAtTarget === true;
+    const FILL_ORDER = cfg.fillOrder === true;
     const BANK_PACK = cfg.bankPack === true;
     const STOCK_POLL_TICKS = cfg.stockPollTicks ?? 15;
     const stockTarget = cfg.stockTarget ?? 500;
@@ -662,7 +676,8 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                     const since = s.tick();
                     await waitTicks(s, NO_BUY_TICKS);
                     noBuyTicks = s.tick() - since;
-                    stopReason = 'stock-wait';
+                    // This wait is for coins, not shelf stock: a planned order names the coin shortfall.
+                    stopReason = FILL_ORDER ? 'coin-reserve' : 'stock-wait';
                 } else {
                     stopReason = 'coin-reserve';
                 }
@@ -877,10 +892,11 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
     }
     const strandedOnDeck = !ended && (pos()?.level ?? 0) === 1 && !conf.realm?.inside(pos() ?? { worldX: 0, worldZ: 0 }) && !!pickDisembarkPlank(s as unknown as BoatSession);
     const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, stockTarget);
-    const ok = !strandedOnDeck && shopFinishOk(boughtTotal, targetMet, stopReason);
+    const ok = !strandedOnDeck && shopFinishOk(boughtTotal, targetMet, stopReason, FILL_ORDER ? MAX_ITEMS : undefined);
     const ticks = used();
     const coinsLeft = coins();
-    const summary = `${strandedOnDeck ? `stranded on deck level=${pos()?.level} ` : ''}ticks=${ticks} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coinsLeft} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`;
+    const orderShort = FILL_ORDER && !ok && !strandedOnDeck ? `${shopOrderShortText(boughtTotal, MAX_ITEMS, stopReason)} ` : '';
+    const summary = `${strandedOnDeck ? `stranded on deck level=${pos()?.level} ` : ''}${orderShort}ticks=${ticks} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coinsLeft} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`;
     return {
         ok,
         strandedOnDeck,

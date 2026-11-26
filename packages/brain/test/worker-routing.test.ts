@@ -574,3 +574,68 @@ test('craft_gather routing compiles runnable enchant, charge-glory, decant, smit
     expect(legacyGem.routeKey).toBe('crafting:inventory');
     expect(legacyGem.args).toEqual(['crafting', 'inventory', 'cut-dragonstone']);
 });
+
+test('a planned shop step fills its order, waits for a restock and stops at the owned total', () => {
+    const vials = resolvePlannedStepWorkerRoute('KnightRider', {
+        stepKind: 'acquire',
+        source: 'npc_shop',
+        itemId: 227,
+        itemName: 'Vial of water',
+        quantity: 2,
+        stockTarget: 2,
+        estimatedTicks: 30,
+        estimatedCoinCost: 4,
+        coinFloatPreserved: 1000,
+        shopId: 'adventurershop',
+    });
+    expect(vials.env.FILL_ORDER).toBe('1');
+    expect(vials.env.STOCK_TARGET).toBe('2');
+    expect(vials.env.MAX_ITEMS).toBe('2');
+    expect(Number(vials.env.NO_BUY_TICKS)).toBeGreaterThan(30);
+    expect(vials.config).toMatchObject({ fillOrder: true, stockTarget: 2, maxItems: 2 });
+
+    const noTarget = resolvePlannedStepWorkerRoute('KnightRider', {
+        stepKind: 'acquire', source: 'npc_shop', itemId: 227, quantity: 2, estimatedTicks: 30, estimatedCoinCost: 4, coinFloatPreserved: 1000, shopId: 'adventurershop',
+    });
+    expect(noTarget.env.STOCK_TARGET).toBeUndefined();
+    expect(noTarget.env.FILL_ORDER).toBe('1');
+
+    const staff = resolvePlannedStepWorkerRoute('Earlyshooter', {
+        stepKind: 'gear_upgrade',
+        itemId: 1381,
+        itemName: 'Staff of air',
+        slot: 'weapon',
+        netXpPerTickGain: 15,
+        remainingBandTicks: 2000,
+        acquisitionTicks: 60,
+        paybackNetTicks: 500,
+        source: 'npc_shop',
+        shopId: 'zaff',
+        estimatedCoinCost: 1500,
+        coinFloatPreserved: 1000,
+    });
+    // One owned staff of air meets the upgrade, so a rerun of the chain buys no second staff.
+    expect(staff.env.STOCK_TARGET).toBe('1');
+    expect(staff.env.MAX_ITEMS).toBe('1');
+    expect(staff.env.FILL_ORDER).toBe('1');
+});
+
+test('a market work step keeps a partial purchase: no fill order, no stock target, the short stock wait', () => {
+    const work = resolvePlannedStepWorkerRoute('Packhorse', {
+        stepKind: 'work',
+        activityId: 'market:shop-buy',
+        demandId: 'campaign:haggis:item:44',
+        workerId: 'market',
+        batchUnits: 197,
+        estimatedTicks: 600,
+        expectedValuePerHour: 100,
+        config: { mode: 'shop-buy', itemId: 44, itemName: 'Rune arrowtips', quantity: 197, shopId: 'archeryshop2', estimatedCoinCost: 1000, coinFloatPreserved: 1000 },
+    });
+    expect(work.routeKey).toBe('shop-buy');
+    expect(work.env.MAX_ITEMS).toBe('197');
+    expect(work.env.FILL_ORDER).toBeUndefined();
+    expect(work.env.STOCK_TARGET).toBeUndefined();
+    expect(work.env.NO_BUY_TICKS).toBe('25');
+    expect(work.env.FLOAT).toBeDefined();
+    expect(work.env.STOP_AT_TARGET).toBe('1');
+});
