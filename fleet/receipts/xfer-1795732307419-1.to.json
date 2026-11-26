@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795732307419-1",
+ "account": "BoneToPick",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 3,
+ "claim": "3eded348-1afe-4441-946e-19cb7a9303ce",
+ "count": 0,
+ "ok": false,
+ "at": 1795732634023,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Feather",
+   "requested": 250,
+   "count": 0
+  }
+ ]
+}
