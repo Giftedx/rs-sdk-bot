@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795723172947-1",
  "account": "Wandwaver",
  "partner": "FishAndChips",
@@ -12,6 +12,16 @@
  "claim": "abc001e6-f4cc-41c3-b8a5-557edc74370a",
  "count": 0,
  "ok": false,
- "at": 1795723420534,
- "detail": "trade claimed"
+ "at": 1795723615515,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 6,
+  "at": 1795723599549
+ },
+ "logout": {
+  "attemptId": "1795723420541-0000027504-0000000001",
+  "at": 1795723615505,
+  "sha256": "20a01c51f485f018753cedd55392a55e04147fb9d31a23e64cfcf13c6b9de849"
+ },
+ "screen": false
 }

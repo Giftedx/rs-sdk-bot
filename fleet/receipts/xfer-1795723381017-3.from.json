@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723381017-3",
  "account": "BoneToPick",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "3e340b8f-467c-4a4f-9f02-96d1735664b5",
- "count": 0,
- "ok": false,
- "at": 1795723459335,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795723656325,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723641157
+ },
+ "logout": {
+  "attemptId": "1795723459344-0000019236-0000000001",
+  "at": 1795723656315,
+  "sha256": "621d93e77cc9998ddb11409b7e035c4dbada8db957894266421b693142398e26"
+ },
+ "screen": true
 }

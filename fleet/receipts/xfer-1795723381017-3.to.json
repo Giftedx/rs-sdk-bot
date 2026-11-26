@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723381017-3",
+ "account": "Pullmybow",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "b7a86b57-ca69-4ad7-8d83-1f6dd7af085f",
+ "count": 1,
+ "ok": true,
+ "at": 1795723657940,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723657124
+ },
+ "logout": {
+  "attemptId": "1795723646104-0000019596-0000000001",
+  "at": 1795723657901,
+  "sha256": "a01968ab2417e4a469a64f061edd0956464375fda9f312eaa533ccaac872000a"
+ },
+ "screen": true
+}

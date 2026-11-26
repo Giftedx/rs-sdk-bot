@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723242647-1",
+ "account": "Billionaire",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "bb33ab98-e94d-43c3-a6a3-dd90c7fb9b51",
+ "count": 0,
+ "ok": false,
+ "at": 1795723684070,
+ "detail": "trade claimed"
+}

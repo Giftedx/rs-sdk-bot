@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723481155-1",
+ "account": "Quickhandjob",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "2446600b-02b5-4124-904f-ab65fd2d1aef",
+ "count": 1,
+ "ok": true,
+ "at": 1795723670280,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723655153
+ },
+ "logout": {
+  "attemptId": "1795723649108-0000024468-0000000001",
+  "at": 1795723670272,
+  "sha256": "b7bcb6ab21457bf837d37ed08e6004393d71c196cd8aa111b0e4052514c8c518"
+ },
+ "screen": true
+}
