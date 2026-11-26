@@ -40,7 +40,7 @@ import {
     type SystemHold,
     type WorldSnapshot,
 } from './contracts';
-import { addNoRoute, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, parseNoRoute, standsAt } from './no-route';
+import { addNoRoute, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, noRouteState, parseNoRoute, standsAt } from './no-route';
 import type { RateStore } from './rate-store';
 
 export const DEFAULT_MARKET_COOLDOWN_MS = 10 * 60_000;
@@ -1038,15 +1038,21 @@ export class OutcomeClassifier {
         return { ...this.marketCooldowns };
     }
 
-    // The facts that still hold for the account. A fact ends when it expires or the account leaves the start of
-    // its search: the account moved, so a new search decides.
+    // The facts that still hold for the account. A fact ends when it expires, when the account leaves the start of
+    // its search, or when the account's levels, quests or items change (noRouteState): then a new search decides.
+    // A fact without a state takes the account's state of its first snapshot, which is still the state of the run.
     private holdingNoRoutes(acct: AccountState, now: number): readonly NoRouteFact[] | undefined {
         const key = acct.name.toLowerCase();
         const facts = this.noRoutes.get(key);
         if (!facts) return acct.noRoutes;
-        const kept = acct.pos === null ? facts.filter(f => now < f.expiresAt) : facts.filter(f => noRouteHolds(f, acct.pos, now));
+        const state = noRouteState(acct);
+        const kept = facts
+            .filter(f => (acct.pos === null ? now < f.expiresAt : noRouteHolds(f, acct.pos, now)) && (f.state === undefined || f.state === state))
+            .map(f => (f.state === undefined ? { ...f, state } : f));
+        const changed = kept.length < facts.length || kept.some((f, i) => f !== facts[i]);
         if (kept.length === 0) this.noRoutes.delete(key);
-        else if (kept.length < facts.length) this.noRoutes.set(key, kept);
+        else this.noRoutes.set(key, kept);
+        if (changed) this.saveIfEnabled(now);
         return kept.length > 0 ? kept : undefined;
     }
 

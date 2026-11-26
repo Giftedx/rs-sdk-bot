@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defaultActivityCatalog } from '../src/catalog';
 import type { AccountState, NoRouteFact, WorldSnapshot } from '../src/contracts';
-import { NO_ROUTE_TTL_MS, parseNoRoute } from '../src/no-route';
+import { NO_ROUTE_TTL_MS, noRouteState, parseNoRoute } from '../src/no-route';
 import { OutcomeClassifier } from '../src/outcome-classifier';
 import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability } from '../src/preflight';
 
@@ -86,7 +86,7 @@ test('a "no route" failure where the run ended is a fact about the account, not 
     // The fact is saved and reaches the planner's account state after a restart.
     const reloaded = new OutcomeClassifier({ root, persist: true });
     const snap = reloaded.applyToSnapshot(world(meat()), NOW + 60_000);
-    expect(snap.accounts.MeatNTwoVeg!.noRoutes).toEqual([res.noRoute!]);
+    expect(snap.accounts.MeatNTwoVeg!.noRoutes).toEqual([{ ...res.noRoute!, state: noRouteState(meat()) }]);
 
     // The account walked away: the fact ends, and the saved state drops it.
     const moved = reloaded.applyToSnapshot(world(meat(VARROCK_WEST)), NOW + 120_000);
@@ -109,13 +109,31 @@ test('the first load of a state saved before no-route facts turns a no-route def
 
     const migrated = new OutcomeClassifier({ filePath: file, persist: true });
     const expected: NoRouteFact = { from: MEAT, to: ARDOUGNE_MARKET, activityId: 'gather:thieving-knights', observedAt: NOW, expiresAt: NOW + NO_ROUTE_TTL_MS };
-    expect(migrated.applyToSnapshot(world(meat()), NOW + 60_000).accounts.MeatNTwoVeg!.noRoutes).toEqual([expected]);
+    expect(migrated.applyToSnapshot(world(meat()), NOW + 60_000).accounts.MeatNTwoVeg!.noRoutes).toEqual([{ ...expected, state: noRouteState(meat()) }]);
     expect(migrated.quarantinedDefects(NOW + 60_000).map(d => d.activityId)).toEqual(['gather:thieving-knights']);
 
     // A resume clears the fact for good: the state now holds `noRoutes`, so a later load does not convert again.
     migrated.applyOperatorCommand({ schemaVersion: 1, id: 'cmd-2', issuedAt: NOW, issuedBy: 'test', kind: 'resume_account', account: 'MeatNTwoVeg' }, NOW + 60_000);
     const again = new OutcomeClassifier({ filePath: file, persist: true });
     expect(again.applyToSnapshot(world(meat()), NOW + 120_000).accounts.MeatNTwoVeg!.noRoutes).toBeUndefined();
+});
+
+test('a fact ends when the account gains coins, items or levels that a route search reads', () => {
+    const fail = { activityId: 'combat:magic-splash', account: 'MeatNTwoVeg', exitCode: 1, status: 'fail', reason: 'blocked after 1 runs', detail: SPLASH, pos: MEAT };
+    const holds = (classifier: OutcomeClassifier, acct: AccountState, at: number) =>
+        classifier.applyToSnapshot(world(acct), at).accounts.MeatNTwoVeg!.noRoutes?.length ?? 0;
+    const broke = meat();
+    const paid: AccountState = { ...broke, bank: { ...broke.bank, items: { 995: 60 } } };
+    const stronger: AccountState = { ...broke, skills: { ...broke.skills, Defence: { level: 45, xp: 61_000 } } };
+    for (const [name, changed] of [['coins', paid], ['levels', stronger]] as const) {
+        const classifier = new OutcomeClassifier({ persist: false });
+        classifier.classifyAndApplyRaw(fail, { now: NOW });
+        // The first snapshot after the run gives the fact the account's state, and the same state keeps it.
+        expect([name, holds(classifier, broke, NOW + 1_000), holds(classifier, broke, NOW + 2_000)]).toEqual([name, 1, 1]);
+        expect([name, holds(classifier, changed, NOW + 3_000)]).toEqual([name, 0]);
+        // The fact is gone, not hidden: the old state does not bring it back.
+        expect([name, holds(classifier, broke, NOW + 4_000)]).toEqual([name, 0]);
+    }
 });
 
 test('a "no route" from a tile where the run did not end stays a defect of the activity', () => {

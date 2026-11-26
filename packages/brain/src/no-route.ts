@@ -4,20 +4,24 @@
 // failed with "precondition no route to" an Ardougne tile. The worker's own search is the evidence. While the account
 // stands where that search started, the planner refuses the same activity and each target near the tile that the
 // search could not reach.
-import { isWorkerTile, type WorkerTile } from '../../workers/src/contracts';
+import { createHash } from 'node:crypto';
+import { isWorkerTile, type WorkerAccountView, type WorkerTile } from '../../workers/src/contracts';
 
 // A worker's route search for this account found no route from `from` to `to`. It holds while the account stands at
-// `from` and until `expiresAt` (AccountState.noRoutes).
+// `from`, while its state is `state`, and until `expiresAt` (AccountState.noRoutes).
 export interface NoRouteFact {
     readonly from: WorkerTile;
     readonly to: WorkerTile;
     readonly activityId: string;
     readonly observedAt: number;
     readonly expiresAt: number;
+    // noRouteState of the account that the search ran for. The outcome classifier sets it on the first snapshot
+    // after the run, while the account is still logged out where the run ended.
+    readonly state?: string;
 }
 
-// A fact ends when the account moves. Without a move, a level, a quest or a walker change can still open the route,
-// so a fact also ends 3 days after its search.
+// A fact ends when the account moves or its state changes. A walker change can still open the route, so a fact also
+// ends 3 days after its search.
 export const NO_ROUTE_TTL_MS = 72 * 3_600_000;
 // The account stands where the search started while it is this many tiles or fewer from `from`, on the same floor.
 export const NO_ROUTE_FROM_TILES = 8;
@@ -66,7 +70,20 @@ export function isNoRouteFact(v: unknown): v is NoRouteFact {
     const f = v as Record<string, unknown>;
     return isWorkerTile(f.from) && isWorkerTile(f.to) && typeof f.activityId === 'string' && f.activityId.trim().length > 0
         && typeof f.observedAt === 'number' && Number.isFinite(f.observedAt) && f.observedAt > 0
-        && typeof f.expiresAt === 'number' && Number.isFinite(f.expiresAt) && f.expiresAt > 0;
+        && typeof f.expiresAt === 'number' && Number.isFinite(f.expiresAt) && f.expiresAt > 0
+        && (f.state === undefined || (typeof f.state === 'string' && f.state.length > 0));
+}
+
+// What a route search for the account reads beside its position: the danger rule reads its levels, quest doors read
+// its quests, and travel reads the coins, items and runes it holds, wears and banks (core/src/travel.ts travelAllowed,
+// core/src/trip.ts planTrip). A change to any of them can open a route that had none.
+export function noRouteState(acct: WorkerAccountView): string {
+    const counts = (m: Readonly<Record<number, number>>) =>
+        Object.entries(m).filter(([, n]) => n > 0).sort(([a], [b]) => Number(a) - Number(b)).map(([id, n]) => `${id}:${n}`).join(',');
+    const skills = Object.entries(acct.skills).sort(([a], [b]) => a.localeCompare(b)).map(([s, v]) => `${s}:${v.level}`).join(',');
+    const quests = Object.entries(acct.quests).sort(([a], [b]) => a.localeCompare(b)).map(([q, v]) => `${q}:${v}`).join(',');
+    const text = [skills, quests, counts(acct.inventory), counts(acct.equipment), counts(acct.bank.items)].join('|');
+    return createHash('sha1').update(text).digest('hex');
 }
 
 export function standsAt(pos: WorkerTile | null, from: WorkerTile): boolean {
