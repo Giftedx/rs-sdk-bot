@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795716875373-2",
  "account": "Packhorse",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 6,
  "claim": "9586a48d-5d4f-4544-9ede-800b54f32c0c",
- "count": 0,
- "ok": false,
- "at": 1795717526559,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795717542192,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795717541445
+ },
+ "logout": {
+  "attemptId": "1795717526761-0000016928-0000000001",
+  "at": 1795717542181,
+  "sha256": "7a72e655a4a1b49788c170fdc600066ee705f91a3c0a251c964334d50decb90c"
+ },
+ "screen": true
 }
