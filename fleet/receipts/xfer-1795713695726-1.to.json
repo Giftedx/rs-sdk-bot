@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713695726-1",
  "account": "Quickhandjob",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 4,
  "claim": "8b730718-1765-446e-8c70-638b4824a09a",
- "count": 0,
- "ok": false,
- "at": 1795713829722,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795713843216,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795713842428
+ },
+ "logout": {
+  "attemptId": "1795713829734-0000006100-0000000001",
+  "at": 1795713843203,
+  "sha256": "ab18bd9be0d9304d21fe0152bbdfef281177f2388c3f6a3b507524bd49f0ee4c"
+ },
+ "screen": true
 }
