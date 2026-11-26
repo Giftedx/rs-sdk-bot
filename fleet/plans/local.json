@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795720406802,
+ "at": 1795720423965,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -82,7 +82,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1000"
+    "BATCH_UNITS": "480"
    },
    "enabled": true,
    "repeat": false,
@@ -138,7 +138,7 @@
    "role": "auto"
   },
   {
-   "account": "Bigpackage",
+   "account": "KnightRider",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -154,7 +154,7 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "Moneyshot",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -170,22 +170,6 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "crest"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:crest",
-   "role": "army"
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -198,6 +182,44 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery-trip"
+   ],
+   "env": {
+    "RECIPE": "diamond_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1643",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-2357-7-p3459 ITEM_ID=2357 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 -- ge-buy",
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=12 STOCK_TARGET=12 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=12 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   }
  ],
@@ -220,7 +242,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
