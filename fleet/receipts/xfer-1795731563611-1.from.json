@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731563611-1",
  "account": "Woodenstaff",
  "partner": "Unsheathed",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "9b8c8b88-b114-4cfc-905a-8ef4a74734aa",
- "count": 0,
- "ok": false,
- "at": 1795731767249,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795731854170,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20000,
+  "after": 19940
+ },
+ "logout": {
+  "attemptId": "1795731767259-0000010588-0000000001",
+  "at": 1795731854156,
+  "sha256": "41469229b37baa15ecc01b7f9abe0c0f82205086b2de338a31213596e74a390a"
+ },
+ "screen": true
 }

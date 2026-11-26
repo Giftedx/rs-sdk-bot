@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795731563611-1",
+ "account": "Unsheathed",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "206058c3-c8f1-42d7-bddf-420948efa58f",
+ "count": 60,
+ "ok": true,
+ "at": 1795731855808,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795731855001
+ },
+ "logout": {
+  "attemptId": "1795731843587-0000028992-0000000001",
+  "at": 1795731855797,
+  "sha256": "e70494fb49aad2f1a274d726978fdf09503a334590bf7915e370ddff42300140"
+ },
+ "screen": true
+}
