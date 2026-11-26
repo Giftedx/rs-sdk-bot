@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725019479-1",
+ "account": "Woodpecker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 2,
+ "claim": "a21636b2-1233-4707-8589-f0b1700f3b54",
+ "count": 0,
+ "ok": false,
+ "at": 1795725295677,
+ "detail": "trade claimed"
+}

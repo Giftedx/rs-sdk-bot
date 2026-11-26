@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795725068797-1",
+ "account": "SporranDip",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8200,
+ "claim": "2ed231ca-3637-479c-9e2d-55e5528d5a36",
+ "count": 0,
+ "ok": false,
+ "at": 1795725298904,
+ "detail": "trade claimed"
+}

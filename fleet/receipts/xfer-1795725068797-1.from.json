@@ -1,0 +1,16 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725068797-1",
+ "account": "Woodenstaff",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8200,
+ "claim": "85c8b11a-2f4a-4708-a3b8-592c24005b74",
+ "count": 8200,
+ "ok": true,
+ "at": 1795725307180,
+ "detail": "transfer observe
