@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795720261889-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 123,
+  "itemId": 892,
+  "start": 1795720261889,
+  "end": 1795721161889,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

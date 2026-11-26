@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720028598-2",
+ "account": "CoinCock",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 81,
+ "claim": "462ea160-b002-44ce-9c36-7be98d0ff176",
+ "count": 0,
+ "ok": false,
+ "at": 1795720239331,
+ "detail": "trade claimed"
+}

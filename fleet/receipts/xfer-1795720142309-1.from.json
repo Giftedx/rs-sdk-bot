@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795720142309-1",
+ "account": "Fingersmith",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "d899800b-cf54-4bcc-afff-ae45685261e0",
+ "count": 0,
+ "ok": false,
+ "at": 1795720221147,
+ "detail": "trade claimed"
+}

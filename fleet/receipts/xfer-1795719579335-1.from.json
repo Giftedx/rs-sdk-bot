@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795719579335-1",
  "account": "mmtha0205",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 7,
  "claim": "0f8ef145-a9c8-4117-9857-844cef693b04",
- "count": 0,
- "ok": false,
- "at": 1795720095476,
- "detail": "trade claimed"
+ "count": 7,
+ "ok": true,
+ "at": 1795720254464,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 0
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795720242126
+ },
+ "logout": {
+  "attemptId": "1795720095487-0000030084-0000000001",
+  "at": 1795720254451,
+  "sha256": "4c3437ff0aef81fa690a066cc94bde05b40e09b88cc699b4352ffaec63776762"
+ },
+ "screen": true
 }
