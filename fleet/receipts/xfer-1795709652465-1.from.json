@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795709652465-1",
+ "account": "Pocketrocket",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "94243b2a-c05f-4d4c-8657-afa5c41b44b7",
+ "count": 0,
+ "ok": false,
+ "at": 1795709815432,
+ "detail": "trade claimed"
+}
