@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795708365537,
+ "at": 1795708377161,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,22 +74,6 @@
    "role": "auto"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-market.ts ITEM_ID=1349 \"ITEMS=Iron axe\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -128,6 +112,25 @@
    ]
   },
   {
+   "account": "KnightRider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -148,21 +151,24 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "trooper"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army",
    "resources": [
-    "varrock-se-mine"
+    "khazard-troopers"
    ]
   },
   {
@@ -227,34 +233,35 @@
    ]
   },
   {
-   "account": "Wandwanker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1353 \"ITEMS=Steel axe\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy axeshop 3000",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+    "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "campaign:haggis:item:1515",
    "role": "army"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Unsheathed",
@@ -337,23 +344,56 @@
   },
   {
    "account": "Packhorse",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
+    "scripts/aio-logistics.ts ITEM_ID=1436 QUANTITY=85 \"ITEM_NAME=Rune essence\" -- loadout",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=220 -- runecraft air"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "3"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "army"
   }
  ],
  "army": [
@@ -371,11 +411,9 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "swordinhand",

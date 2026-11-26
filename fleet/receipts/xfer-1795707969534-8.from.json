@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795707969534-8",
  "account": "mmthv2350",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Staff",
  "requested": 1,
  "claim": "dca88a24-259c-4dc3-ba58-588a0c810543",
- "count": 0,
- "ok": false,
- "at": 1795708277568,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795708373477,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795708286310
+ },
+ "logout": {
+  "attemptId": "1795708277576-0000005932-0000000001",
+  "at": 1795708373465,
+  "sha256": "322c7a5230a233cf7793e5cc0fcc5895430880c9dae56ee5a25702db503a98a9"
+ },
+ "screen": true
 }
