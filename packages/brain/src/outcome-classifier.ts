@@ -195,7 +195,7 @@ const INFRA_GENERIC_RE = /(?:\binfra.?fault\b|circuit.?breaker|rate.?limit)/i;
 // "died":false, death=0) is a report, not a death: worker RESULT lines carry died=false on every run.
 const DEATH_TEXT_RE = /\b(?:died|death)\b(?!\s*(?:=|"?\s*:))|\bdied(?:=|"\s*:\s*)true\b|you are dead|oh dear/i;
 // Death Plateau's quest slug is "death": "quest-sweep death missing 2064:1", "quest:death", "quest-death.ts" and the
-// quest name name a quest, not a death (live: Stirmypot marked dead by "RESULT fail quest-sweep death missing ...").
+// quest name name a quest, not a death.
 const DEATH_QUEST_NAME_RE = /\bquest(?:-sweep\s+|_board:|[-_:])death\b|\bdeath plateau\b/gi;
 export const deathText = (text: string) => DEATH_TEXT_RE.test(text.replace(DEATH_QUEST_NAME_RE, 'quest plateau'));
 const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i;

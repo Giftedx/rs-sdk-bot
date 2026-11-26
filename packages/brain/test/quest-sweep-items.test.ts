@@ -5,10 +5,9 @@ import { createActivityCatalog } from '../src/catalog';
 import { planAccount, xpForLevel } from '../src/planner';
 import { activityPreflightFromConfig } from '../src/preflight';
 
-// Live quest-board ends that these needs answer (.practice/results.jsonl, after PR 1524):
-//   TheFullMonty, Stirmypot magearena: "quest-sweep magearena missing 2434:4"
-//   Earlyshooter priestperil: "quest-sweep priestperil missing 1436:23"
-//   six accounts with a started The Knight's Sword and no redberry pie (2325), which no shop sells.
+// The quest sweep ends "missing <id>:<count>" for a preset item that it can take only from the bank: prayer potions
+// (2434) for the Mage Arena, rune essence (1436) for Priest in Peril, and a redberry pie (2325), which no shop sells,
+// for The Knight's Sword.
 
 const NOW = 1_700_000_000_000;
 const level = (n: number) => ({ level: n, xp: xpForLevel(n) });

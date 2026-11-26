@@ -2221,6 +2221,19 @@ test('prayer potions ride as food when base Prayer covers the points the quest u
  // Monkey Madness used 384 points in its bench (21 sips at Prayer 43): even Prayer 99 keeps its potions.
  expect(prayerCovers('mm',99)).toBe(false);
 });
+test('a base Prayer level that covers a fight quest restores drained points at the altar instead of staging potions', async () => {
+ const {prayerWanted,PRAYER_QUESTS}=await import('../src/quest/sweep-plan');
+ // A covered level with drained points restores at the altar.
+ expect(prayerWanted('tree',84)).toBe(PRAYER_USED.tree!+PRAYER_MARGIN);
+ expect(prayerShort(0,84,prayerWanted('tree',84)!)).toBe(true);
+ expect(prayerShort(84,84,prayerWanted('tree',84)!)).toBe(false);
+ expect(prayerWanted('arena',72)).toBe(PRAYER_USED.arena!+PRAYER_MARGIN);
+ expect(prayerShort(1,72,prayerWanted('arena',72)!)).toBe(true);
+ // Below the cover the sweep stages the potions and makes no altar trip.
+ expect(prayerWanted('tree',43)).toBeUndefined();
+ expect(prayerWanted('zanaris',99)).toBeUndefined();
+ expect(prayerWanted('merlin',1)).toBe(PRAYER_QUESTS.merlin);
+});
 test('a preset antipoison is a food row, never a need: Monkey Madness carries its superantipoison only when held', async () => {
  const {ANTIPOISONS}=await import('../src/quest/sweep');
  const preset=presetFor('mm');

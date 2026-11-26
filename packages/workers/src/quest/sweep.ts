@@ -550,7 +550,6 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             }
         }
         const baseLevel = (name: string) => st()?.skills?.find((k: any) => k.name === name)?.baseLevel ?? 1;
-        const prayerPoints = () => st()?.skills?.find((k: any) => k.name === 'Prayer')?.level ?? 0;
         for (const id of STURDY_OPTIONAL[quest] ?? []) {
             if (base.has(id) && baseLevel('Hitpoints') >= STURDY && baseLevel('Defence') >= STURDY) {
                 food.set(id, base.get(id)!);
@@ -559,7 +558,8 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 if (meal !== undefined) food.set(meal, Math.max(food.get(meal)!, STURDY_MEALS));
             }
         }
-        if (prayerCovers(quest, prayerPoints())) for (const id of PRAYER_POTIONS) base.delete(id);
+        // A Prayer level that covers the fights needs no potion: prayBefore restores drained points at the altar.
+        if (prayerCovers(quest, baseLevel('Prayer'))) for (const id of PRAYER_POTIONS) base.delete(id);
         for (const id of [...ANTIPOISONS, ...(QUEST_FINDS[quest] ?? [])]) {
             if (base.has(id)) {
                 food.set(id, (food.get(id) ?? 0) + base.get(id)!);
