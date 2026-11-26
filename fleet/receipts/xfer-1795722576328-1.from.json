@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722576328-1",
  "account": "Fingerblastr",
  "partner": "AFKnight",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 360,
  "claim": "f851c967-860d-4d61-b4f7-1ba7d9193e02",
- "count": 0,
- "ok": false,
- "at": 1795722673899,
- "detail": "trade claimed"
+ "count": 360,
+ "ok": true,
+ "at": 1795722924335,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 17387,
+  "after": 17027
+ },
+ "logout": {
+  "attemptId": "1795722673907-0000021080-0000000001",
+  "at": 1795722924323,
+  "sha256": "95b9cfb06fe45135fb832a65f5a91a9fe9de7426bfc28972fbf007a8dc2a97e4"
+ },
+ "screen": true
 }

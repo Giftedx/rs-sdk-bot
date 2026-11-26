@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722751709-1",
+ "account": "Swordinhand",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 8200,
+ "claim": "1aef7768-4973-442c-98f7-2e0659e4963f",
+ "count": 0,
+ "ok": false,
+ "at": 1795722974597,
+ "detail": "trade claimed"
+}

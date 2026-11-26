@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795722921215-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Billionaire",
+  "item": "Copper ore",
+  "count": 6,
+  "itemId": 436,
+  "start": 1795722921215,
+  "end": 1795723821215,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
