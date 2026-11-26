@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795725673379,
+ "at": 1795725706593,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -122,17 +122,20 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "scripts/aio-quester.ts -- sweep biohazard",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:upass BATCH_UNITS=1 -- sweep upass"
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
    ],
    "env": {
-    "ROUNDS": "1"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:upass",
    "role": "army"
   },
   {
@@ -151,38 +154,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "20",
-    "ORE_RESERVE": "0"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "helper"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-453-150-p517 ITEM_ID=453 QUANTITY=150 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=75 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
@@ -213,6 +184,59 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "14",
+    "ORE_RESERVE": "0"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "helper"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-14-p97 ITEM_ID=440 QUANTITY=14 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-28-p517 ITEM_ID=453 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:steelrod:item:2353 BATCH_UNITS=14 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:steelrod:item:2353",
    "role": "army"
   },
   {
@@ -262,7 +286,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
   "mmtha0205",
   "oreelse",
   "pickpockdick",
