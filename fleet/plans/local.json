@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795731296668,
+ "at": 1795731307354,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -132,7 +132,7 @@
    ]
   },
   {
-   "account": "mmsmk1232",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -148,7 +148,7 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
