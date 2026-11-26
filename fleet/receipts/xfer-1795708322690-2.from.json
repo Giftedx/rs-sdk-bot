@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708322690-2",
+ "account": "Wandwaver",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "2bc4581a-12d2-4eca-b9d9-f412364f4b80",
+ "count": 0,
+ "ok": false,
+ "at": 1795708864829,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708724948-1",
+ "account": "Abracadickra",
+ "partner": "Wandwanker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "7b88e1b0-7fd4-4ad4-ab6f-f0ff4ebe7023",
+ "count": 0,
+ "ok": false,
+ "at": 1795708842195,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Staff of air",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
