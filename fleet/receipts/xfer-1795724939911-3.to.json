@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724939911-3",
  "account": "TossTheCaber",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 58,
  "claim": "b082ec8d-73cd-4e99-a3d0-131d3a456a0f",
- "count": 0,
- "ok": false,
- "at": 1795725044246,
- "detail": "trade claimed"
+ "count": 58,
+ "ok": true,
+ "at": 1795725054625,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 58
+ },
+ "bank": {
+  "count": 58,
+  "at": 1795725053908
+ },
+ "logout": {
+  "attemptId": "1795725044260-0000008564-0000000001",
+  "at": 1795725054612,
+  "sha256": "8f4964b3a40cd86480c5c90943c65c1cc93e5e8425484ebb500e627b5adf2fb4"
+ },
+ "screen": true
 }
