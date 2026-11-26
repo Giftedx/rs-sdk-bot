@@ -2,10 +2,11 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { legCache, type LegCache } from '../src/leg-cache';
-import { loadPathfinding } from '../src/pathcache';
-import { createWorld, rsPathLength, type Account, type DoorBlock, type PathLength, type Tile, type World } from '../src/world';
-import { boxKey, changeBuilder, hintLengths, legKey, withHint } from '../src/world/leg-key';
+import { legCache, type LegCache } from '../leg-cache';
+import { loadPathfinding } from '../pathcache';
+import { createWorld, rsPathLength, type Account, type DoorBlock, type PathLength, type Tile, type World } from '../world';
+// A test beside the world submodules may import one of them; other files use the facade (world-structure.test.ts).
+import { boxKey, changeBuilder, hintLengths, legKey, withHint } from './leg-key';
 
 test('a box key names the changes in the chunks the box touches, in any order, over several tables', () => {
     const one = changeBuilder(), other = changeBuilder();
