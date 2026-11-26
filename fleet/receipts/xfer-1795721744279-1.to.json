@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721744279-1",
  "account": "Earlyshooter",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 84,
  "claim": "f4b3171f-297c-4e02-8e21-3a50bd700eb2",
- "count": 0,
- "ok": false,
- "at": 1795722048683,
- "detail": "trade claimed"
+ "count": 84,
+ "ok": true,
+ "at": 1795722243983,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 216,
+  "after": 300
+ },
+ "bank": {
+  "count": 84,
+  "at": 1795722243232
+ },
+ "logout": {
+  "attemptId": "1795722048691-0000002400-0000000001",
+  "at": 1795722243969,
+  "sha256": "0d94049e28e579017afcf3ce45baa4de9caa51dfc21e89b5b70b13b8a65f0537"
+ },
+ "screen": true
 }
