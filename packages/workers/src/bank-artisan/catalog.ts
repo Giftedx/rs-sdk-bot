@@ -75,7 +75,8 @@ function banknoteIds(): ReadonlySet<number> {
 }
 
 export function isItemStackable(id: number): boolean {
-    return itemById(id)?.stackable === true || banknoteIds().has(id);
+    const item = itemById(id);
+    return item ? item.stackable === true : banknoteIds().has(id);
 }
 
 // The client item type decides when the session has one. The knowledge build decides otherwise.
