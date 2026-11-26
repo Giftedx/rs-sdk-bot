@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717438566,
+ "at": 1795717451676,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -83,7 +83,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1182"
+    "BATCH_UNITS": "1672"
    },
    "enabled": true,
    "repeat": false,
@@ -91,7 +91,7 @@
    "role": "army"
   },
   {
-   "account": "Earlyshooter",
+   "account": "SporranBulge",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -104,10 +104,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
-   "role": "auto"
+   "role": "helper"
   },
   {
-   "account": "SporranBulge",
+   "account": "YewGotWood",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -120,36 +120,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ball",
-   "role": "helper"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
    "role": "auto"
   },
   {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-1182-p61 ITEM_ID=1436 QUANTITY=1182 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=1182 -- runecraft air"
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 -- fletching arrows"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:53",
    "role": "army"
   },
   {
@@ -186,37 +172,49 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "mining",
-    "ore"
+    "sweep",
+    "crest"
    ],
    "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:quest_board:crest",
+   "role": "army"
   },
   {
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=7 STOCK_TARGET=7 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=7 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-quester.ts -- sweep elena",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
+   "goal": "goal:quest_board:biohazard",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:castmyload:item:556",
+    "BATCH_UNITS": "186"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:castmyload:item:556",
    "role": "army"
   },
   {
@@ -233,58 +231,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:chompybird",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "trawler"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Crafting",
-    "TARGET_LEVEL": "40"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:viking",
    "role": "army"
   }
  ],
@@ -306,13 +252,16 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
