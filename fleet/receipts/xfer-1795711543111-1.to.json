@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795711543111-1",
+ "account": "OreElse",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 5,
+ "claim": "52e0cf6c-d369-4d9a-844a-509d04a373d4",
+ "count": 5,
+ "ok": true,
+ "at": 1795711777278,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795711776584
+ },
+ "logout": {
+  "attemptId": "1795711762936-0000010600-0000000001",
+  "at": 1795711777266,
+  "sha256": "95f51a66d8b4d7282b9b89463c2eb9a7e9bad3e51da324bdc0b32f4ebd43b97a"
+ },
+ "screen": true
+}

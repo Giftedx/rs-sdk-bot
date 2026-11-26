@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795711787656-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "mmthv2350",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795711787656,
+  "end": 1795712687656,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

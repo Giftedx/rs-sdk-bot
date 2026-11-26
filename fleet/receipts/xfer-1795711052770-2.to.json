@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795711052770-2",
+ "account": "Quickhandjob",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 1,
+ "claim": "552bada6-33b3-4abe-ae67-ef6bbec55c0a",
+ "count": 1,
+ "ok": true,
+ "at": 1795711808840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795711808117
+ },
+ "logout": {
+  "attemptId": "1795711740393-0000022920-0000000001",
+  "at": 1795711808832,
+  "sha256": "eefa67f90957cf4067dbe8c5e12d6a53560897ee7f1ab11c97015a4f1a0c8392"
+ },
+ "screen": true
+}

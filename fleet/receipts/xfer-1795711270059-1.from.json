@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795711270059-1",
+ "account": "Shaftsinker",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "e234b753-ca49-465d-9f7e-9844b018efd0",
+ "count": 0,
+ "ok": false,
+ "at": 1795711799097,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795711707375
+ },
+ "logout": {
+  "attemptId": "1795711697633-0000021508-0000000001",
+  "at": 1795711798862,
+  "sha256": "b26293bdb69b094f496240ff00875e80c0c448b0bf09fa78c7713c043141498e"
+ },
+ "screen": false
+}
