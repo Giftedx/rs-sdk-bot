@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795707969534-6",
  "account": "mmtha0205",
  "partner": "Nockitoff",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 60,
  "claim": "ffa9dd98-b8fd-4715-a788-669cdced93b7",
- "count": 0,
- "ok": false,
- "at": 1795708060885,
- "detail": "trade claimed",
+ "count": 60,
+ "ok": true,
+ "at": 1795708174284,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795708071497
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795708071089
+ },
+ "logout": {
+  "attemptId": "1795708060894-0000013568-0000000001",
+  "at": 1795708174206,
+  "sha256": "7622ae4ca8d43af303490b14d4e99d66803e517d8ff5b02e445edde097277ee7"
+ },
+ "screen": true
 }
