@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708922714-2",
+ "account": "Abracadickra",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "100c7b95-5727-4d84-b84c-87cb6c411b6c",
+ "count": 0,
+ "ok": false,
+ "at": 1795709051616,
+ "detail": "trade claimed"
+}

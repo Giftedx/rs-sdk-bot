@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708927126-1",
+ "account": "Wandwanker",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 28,
+ "claim": "9dc2cd30-2d21-4769-83a2-d1e680563f08",
+ "count": 0,
+ "ok": false,
+ "at": 1795709080665,
+ "detail": "trade claimed"
+}

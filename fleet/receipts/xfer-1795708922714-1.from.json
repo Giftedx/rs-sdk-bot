@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708922714-1",
+ "account": "SporranDip",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "534ad948-5403-4ae3-97da-1ebb348185c4",
+ "count": 0,
+ "ok": false,
+ "at": 1795709057176,
+ "detail": "trade claimed"
+}
