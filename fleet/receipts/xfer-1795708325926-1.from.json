@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795708325926-1",
+ "account": "Abracadickra",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 6,
+ "claim": "f21723bf-ce7a-491f-ab3a-d14e3e06646b",
+ "count": 6,
+ "ok": true,
+ "at": 1795708718597,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Diamond",
+   "requested": 5,
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795708700266
+   }
+  }
+ ],
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795708699871
+ },
+ "logout": {
+  "attemptId": "1795708691931-0000014520-0000000001",
+  "at": 1795708718587,
+  "sha256": "d1c35e3b6ce33aec4b6e5ced8130222bd9805bb28e23abff85a82c686da3f67c"
+ },
+ "screen": true
+}
