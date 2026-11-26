@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795714151993,
+ "at": 1795714211297,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1174",
+    "MAX_ITEMS": "1129",
     "COIN_RESERVE": "1000",
-    "FLOAT": "236800",
+    "FLOAT": "227800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1174"
+    "BATCH_UNITS": "1129"
    },
    "enabled": true,
    "repeat": false,
