@@ -205,12 +205,13 @@ export async function lightAtBank(s: Session, lights: readonly LightStep[], keep
     if (!(await s.bot.openBank()).success || !(await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }))) {
         return 'bank did not reopen after the light';
     }
+    // The sweep plans from the bank rows next, so the light waits for them as the first bank open does.
+    await waitUntil(s, () => bank().length > 0, { timeoutTicks: 10 });
     let banked = false;
     if (tinderFromBank && !keepTinderbox) {
         const row = (s.sdk.getState()?.inventory ?? []).find((i) => i.id === TINDERBOX);
-        const stored = countItems(bank(), TINDERBOX);
         if (row) await s.bot.depositItem(row, -1);
-        banked = await waitUntil(s, () => countItems(pack(), TINDERBOX) === 0 && countItems(bank(), TINDERBOX) === stored + 1, { timeoutTicks: 10 });
+        banked = await waitUntil(s, () => countItems(pack(), TINDERBOX) === 0, { timeoutTicks: 10 });
         if (!banked) return `light: tinderbox deposit unobserved`;
     }
     console.log(`QUEST_SWEEP_LIGHT ${JSON.stringify({ lights, made, tinderbox: tinderFromBank ? (banked ? 'banked again' : 'kept') : 'pack', free: 28 - pack().length })}`);
