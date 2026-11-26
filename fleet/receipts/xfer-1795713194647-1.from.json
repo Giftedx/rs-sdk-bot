@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713194647-1",
  "account": "BowBeforeMe",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 2,
  "claim": "980b53d6-f9b9-4ef1-be4a-ba552f8127df",
- "count": 0,
- "ok": false,
- "at": 1795713281777,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795713465188,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795713429258
+ },
+ "logout": {
+  "attemptId": "1795713281786-0000016372-0000000001",
+  "at": 1795713465164,
+  "sha256": "69f7c7734aa4ee604ee43da323b2eb83cbcf50c499ad211badac2ca3d037dd5c"
+ },
+ "screen": true
 }

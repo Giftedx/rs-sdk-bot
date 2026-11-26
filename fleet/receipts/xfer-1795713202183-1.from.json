@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795713202183-1",
+ "account": "Wandwaver",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "444257a4-0d56-4f7c-93e6-6a9ebbf925b3",
+ "count": 1,
+ "ok": true,
+ "at": 1795713472867,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795713456443
+ },
+ "logout": {
+  "attemptId": "1795713447970-0000027768-0000000001",
+  "at": 1795713472842,
+  "sha256": "8f444b9131b71f1dce4cd7d8b2a79a57ab8dcaa581f3beded91b09ff60e4e010"
+ },
+ "screen": true
+}
