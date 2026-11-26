@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795710626422-1",
  "account": "Abracadickra",
  "partner": "FishAndChips",
@@ -12,13 +12,19 @@
  "claim": "efe93e83-b93b-4e02-8b5d-3717e5753ab1",
  "count": 0,
  "ok": false,
- "at": 1795710751332,
- "detail": "trade claimed",
+ "at": 1795711056557,
+ "detail": "Error: sender pack full: need 32 slots for Copper ore, 28 free",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 32,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795710751340-0000005224-0000000001",
+  "at": 1795711056492,
+  "sha256": "c875c67243d55ea3d10c33b495fb043bba066196e80729b95d7736897b61893a"
+ },
+ "screen": false
 }
