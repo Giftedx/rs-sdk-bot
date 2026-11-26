@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727305044-1",
+ "account": "YewFirst",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 27,
+ "claim": "2e22c0e6-436f-465c-8bec-26cf4a83a1c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795727435497,
+ "detail": "trade claimed"
+}
