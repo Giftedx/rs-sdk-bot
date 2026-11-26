@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795711888881-2",
  "account": "BoneToPick",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,16 @@
  "claim": "f1949a51-5a31-401a-b3bf-f245264781fd",
  "count": 0,
  "ok": false,
- "at": 1795712767421,
- "detail": "trade claimed"
+ "at": 1795712789225,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795712772926
+ },
+ "logout": {
+  "attemptId": "1795712767430-0000013212-0000000001",
+  "at": 1795712789215,
+  "sha256": "ea2e1e63fac10c831c7e7b1500a09561e0fd51631b9a6f76e70a54c9e2db9cdc"
+ },
+ "screen": false
 }

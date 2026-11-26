@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795711888881-2",
+ "account": "MeatNTwoVeg",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "c3b32346-25de-47fb-a03f-a340ca80184f",
+ "count": 0,
+ "ok": false,
+ "at": 1795712791674,
+ "detail": "Error: order window ended before work",
+ "logout": {
+  "attemptId": "1795712788250-0000019964-0000000001",
+  "at": 1795712791606,
+  "sha256": "30b222cc944687e24d8bcc7727ecd3ffa357dc109c51c75d72ec88c5fafbbec9"
+ },
+ "screen": false
+}
