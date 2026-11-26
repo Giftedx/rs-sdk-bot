@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795733153044,
+ "at": 1795733163997,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -78,7 +78,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=227 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2100 TARGET_COUNT=210 PRODUCT_TARGET=227 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=227 -- cooking food"
    ],
    "env": {
@@ -105,7 +105,7 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "Spitroaster",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -118,10 +118,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
-   "role": "army"
+   "role": "auto"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Billionaire",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -137,12 +137,11 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=7 STOCK_TARGET=7 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=7 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=8 STOCK_TARGET=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=8 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -282,56 +281,6 @@
    "repeat": false,
    "goal": "goal:pk_army:MeatNTwoVeg",
    "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-starter"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-starter"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=554 \"ITEMS=Fire rune\" MAX_ITEMS=27 STOCK_TARGET=27 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
-    "scripts/aio-market.ts ITEM_ID=556 \"ITEMS=Air rune\" MAX_ITEMS=68 STOCK_TARGET=81 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=27 -- magic teleport varrock 50 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto"
   }
  ],
  "army": [
@@ -350,6 +299,7 @@
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
+  "mmtha0205",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
