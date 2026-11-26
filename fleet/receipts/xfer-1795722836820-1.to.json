@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722836820-1",
+ "account": "SporranBulge",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 608,
+ "claim": "0b99612d-ba9a-43aa-8819-fc9185ea5d62",
+ "count": 0,
+ "ok": false,
+ "at": 1795723442840,
+ "detail": "trade claimed"
+}

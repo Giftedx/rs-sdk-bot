@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723381017-3",
+ "account": "BoneToPick",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "3e340b8f-467c-4a4f-9f02-96d1735664b5",
+ "count": 0,
+ "ok": false,
+ "at": 1795723459335,
+ "detail": "trade claimed"
+}

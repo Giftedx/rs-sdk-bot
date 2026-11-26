@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723015141-1",
+ "account": "Swordinhand",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harralander",
+ "requested": 1,
+ "claim": "5ea81ce8-2078-4cb3-802c-8c2ee0432997",
+ "count": 1,
+ "ok": true,
+ "at": 1795723461956,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795723444803
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795723444374
+ },
+ "logout": {
+  "attemptId": "1795723435115-0000007344-0000000001",
+  "at": 1795723461945,
+  "sha256": "d794f538ea6e35e47a369feaa8b38eff4fee51652119e501e0d775d3b3939032"
+ },
+ "screen": true
+}

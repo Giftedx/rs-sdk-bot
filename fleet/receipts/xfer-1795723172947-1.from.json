@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723172947-1",
+ "account": "Wandwaver",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 6,
+ "claim": "abc001e6-f4cc-41c3-b8a5-557edc74370a",
+ "count": 0,
+ "ok": false,
+ "at": 1795723420534,
+ "detail": "trade claimed"
+}

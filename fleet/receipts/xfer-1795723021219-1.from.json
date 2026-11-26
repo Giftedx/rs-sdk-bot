@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795723021219-1",
+ "account": "Spitroaster",
+ "partner": "AFKnight",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 360,
+ "claim": "3987bbad-2ba4-4e6c-a8a2-a43bec28d31f",
+ "count": 0,
+ "ok": false,
+ "at": 1795723449786,
+ "detail": "trade claimed"
+}
