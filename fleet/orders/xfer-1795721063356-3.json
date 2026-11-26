@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795721063356-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 2485,
+  "start": 1795721063356,
+  "end": 1795721963356,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
