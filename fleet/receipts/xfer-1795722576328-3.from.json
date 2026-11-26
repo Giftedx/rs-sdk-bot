@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795722576328-3",
  "account": "Woodenstaff",
  "partner": "Quickhandjob",
@@ -12,6 +12,16 @@
  "claim": "b9324ad8-7b80-47cd-9621-a8e565906028",
  "count": 0,
  "ok": false,
- "at": 1795722711201,
- "detail": "trade claimed"
+ "at": 1795722748793,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 220,
+  "at": 1795722717579
+ },
+ "logout": {
+  "attemptId": "1795722711225-0000023440-0000000001",
+  "at": 1795722748779,
+  "sha256": "73eee71d2d35bd508530933fdae6c53d8de6381301c606433f6dfd936ad3fc44"
+ },
+ "screen": false
 }

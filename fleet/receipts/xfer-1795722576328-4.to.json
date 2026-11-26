@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795722576328-4",
+ "account": "BoneToPick",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "fbafe868-d56b-4db2-a392-0983f872abf9",
+ "count": 300,
+ "ok": true,
+ "at": 1795722771523,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795722770773
+ },
+ "logout": {
+  "attemptId": "1795722760450-0000024484-0000000001",
+  "at": 1795722771511,
+  "sha256": "f12ad5e62a314a91ddaa25f4a17412fba113d9521cad3df6658116960390ae24"
+ },
+ "screen": true
+}

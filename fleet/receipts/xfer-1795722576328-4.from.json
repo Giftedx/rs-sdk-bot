@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722576328-4",
  "account": "Billionaire",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 300,
  "claim": "1c777d6f-0b22-4c8e-8c5f-bc7290558b6b",
- "count": 0,
- "ok": false,
- "at": 1795722738780,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795722770247,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795722747995
+ },
+ "logout": {
+  "attemptId": "1795722738790-0000021768-0000000001",
+  "at": 1795722769986,
+  "sha256": "57d7e44b0043e4c838a4d756a50933d130ec72558687f7f2cfd8e93e9179cb2b"
+ },
+ "screen": true
 }

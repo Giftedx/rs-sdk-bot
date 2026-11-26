@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722576328-1",
+ "account": "AFKnight",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 360,
+ "claim": "2632325f-43bc-4b17-8686-f94d98ebc79c",
+ "count": 0,
+ "ok": false,
+ "at": 1795722751436,
+ "detail": "trade claimed"
+}
