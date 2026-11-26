@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727853765-2",
  "account": "Quickhandjob",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Chaos rune",
  "requested": 2,
  "claim": "5e8f8dca-c2b0-4e52-9649-e051baa34e65",
- "count": 0,
- "ok": false,
- "at": 1795728116767,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795728129548,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795728128789
+ },
+ "logout": {
+  "attemptId": "1795728116775-0000026120-0000000001",
+  "at": 1795728129535,
+  "sha256": "1dbd2eb184623b227964af3864480add28dade1e0cc66827124f4584510c8bbb"
+ },
+ "screen": true
 }
