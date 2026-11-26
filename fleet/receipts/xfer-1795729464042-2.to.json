@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795729464042-2",
  "account": "Shaftsinker",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "0e6be4a5-499d-413b-b1e6-986875bc9f1f",
- "count": 0,
- "ok": false,
- "at": 1795729667718,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795729679159,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795729678330
+ },
+ "logout": {
+  "attemptId": "1795729667726-0000026016-0000000001",
+  "at": 1795729679066,
+  "sha256": "df9085f62cf0e1298018ce4f747041e09ad1cf4c07eb56a9707b334fc33687cf"
+ },
+ "screen": true
 }
