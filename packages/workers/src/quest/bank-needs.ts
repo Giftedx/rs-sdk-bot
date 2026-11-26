@@ -4,21 +4,31 @@
 // The steps follow the sweep's need list: needs(), the resumed-stage spent items, STURDY_OPTIONAL, prayerCovers,
 // ANTIPOISONS and QUEST_FINDS, fireRunesFor, buildPack and the required worn kit; then the gather plan from the start
 // tile and the shop sellers.
+import { NPC_SOURCES } from '../../../core/src/gather';
 import { sellersByDistance } from '../../../core/src/shop-index';
+import type { Tile } from '../../../core/src/world';
 import { fireRunesFor } from './fire-spells';
 import { QUEST_RESUME } from './resume';
 import {
     ANTIPOISONS,
+    BOAT_FARES,
     buildPack,
     catalogItem,
     COINS,
+    eastOfPass,
+    fares,
     FIRE_QUESTS,
+    HECKEL_DUST,
+    heckelDustNeed,
+    manorFoodNeed,
+    manorPoisonNeed,
     needs,
     prayerCovers,
     PRAYER_POTIONS,
     presetFor,
     QUEST_FINDS,
     questGatherPlan,
+    sellersByTravel,
     shopPlan,
     STURDY,
     STURDY_OPTIONAL,
@@ -38,16 +48,24 @@ export type QuestSweepItem = {
     readonly name?: string;
 };
 
+// Coins that the sweep pays outside a shop for a preset item that the account lacks: the gather plan's NPC crafts
+// (gather.coins, NPC_SOURCES) and Heckel's chocolate dust (HECKEL_DUST). `tiles` are the NPCs the trip visits, for the fares.
+export type QuestSweepFee = { readonly for: number; readonly forCount: number; readonly coins: number; readonly tiles: readonly Tile[] };
+
 export type QuestSweepNeeds = {
+    readonly quest: string;
+    // The quest's start tile (the preset position), where the sweep walks after the bank.
+    readonly start: Tile;
     // No shop sells it and no gather plan covers it: the sweep ends with "missing <id>:<count>" unless the bank holds it.
     readonly bank: readonly QuestSweepItem[];
     // A shop sells it: the sweep buys it with banked coins.
     readonly shop: readonly QuestSweepItem[];
+    readonly fees: readonly QuestSweepFee[];
     // The preset's coins, which the sweep withdraws with the pack.
     readonly coins: number;
 };
 
-const EMPTY: QuestSweepNeeds = { bank: [], shop: [], coins: 0 };
+const EMPTY = (quest: string): QuestSweepNeeds => ({ quest, start: { x: 0, z: 0, level: 0 }, bank: [], shop: [], fees: [], coins: 0 });
 const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer', 'Magic', 'Ranged'] as const;
 const memo = new Map<string, QuestSweepNeeds>();
 
@@ -79,8 +97,9 @@ export function questSweepNeeds(quest: string, level: (skill: string) => number,
     try {
         preset = presetFor(quest);
     } catch {
-        memo.set(key, EMPTY);
-        return EMPTY;
+        const empty = EMPTY(quest);
+        memo.set(key, empty);
+        return empty;
     }
     let base = needs(preset, false, quest);
     const coins = base.get(COINS) ?? 0;
@@ -101,29 +120,61 @@ export function questSweepNeeds(quest: string, level: (skill: string) => number,
     };
     const bank: QuestSweepItem[] = [];
     const shop: QuestSweepItem[] = [];
+    const fees: QuestSweepFee[] = [];
     for (const [id, count] of base) {
+        const one = [{ id, count }];
+        // The sweep picks the Draynor Manor fish food and poison on the way (manorFoodNeed, manorPoisonNeed) and buys the
+        // chocolate dust from Heckel for HECKEL_DUST.coins (heckelDustNeed): neither goes to a shop.
+        if (manorFoodNeed(quest, one) || manorPoisonNeed(quest, one)) continue;
+        if (heckelDustNeed(quest, one)) {
+            fees.push({ for: id, forCount: count, coins: HECKEL_DUST.coins, tiles: [HECKEL_DUST.ground] });
+            continue;
+        }
         // The sweep passes Ranged and Magic only with a bow or a staff kit in the bank: without one it kills by melee.
-        const gather = questGatherPlan(quest, [{ id, count }], at, sellerAt, undefined, lv('Attack'), 1, undefined, 1, lv('Strength'));
+        const gather = questGatherPlan(quest, one, at, sellerAt, undefined, lv('Attack'), 1, undefined, 1, lv('Strength'));
+        const tiles = gather.gathers.flatMap((g) => (g.how === 'npc' && NPC_SOURCES[g.id] ? [NPC_SOURCES[g.id]!.tile] : []));
+        if (gather.coins > 0 || tiles.length > 0) fees.push({ for: id, forCount: count, coins: gather.coins, tiles });
         for (const m of [...gather.still, ...gather.tools]) {
             const name = catalogItem(m.id)?.name;
             const row = { id: m.id, count: m.count, for: id, forCount: count, ...(name ? { name } : {}) };
             (sellerAt(m.id) === Infinity ? bank : shop).push(row);
         }
     }
-    const out = { bank, shop, coins };
+    const out = { quest, start: at, bank, shop, fees, coins };
     memo.set(key, out);
     return out;
 }
 
-// The coins that the sweep takes from the bank: the preset's coins and the shop plan's price (shopPlan) of the shop
-// items that the account lacks. `owned` counts an item in the pack, the bank and the worn slots.
-export function questSweepCoins(need: QuestSweepNeeds, owned: (id: number) => number): number {
+// The coins that the sweep takes from the bank (sweep.ts, the shop.coins sum): the preset's coins, the shop plan's price
+// (shopPlan) of the shop items that the account lacks, the fees of the lacking items, and the boat fares (fares,
+// eastOfPass) from `from` to the sellers, the fee NPCs and the start tile. `owned` counts an item in the pack, the bank
+// and the worn slots. `from` is the account's tile; without it the fares are not counted. `skills` has lowercase names.
+export function questSweepCoins(
+    need: QuestSweepNeeds,
+    owned: (id: number) => number,
+    from?: Tile,
+    skills?: Readonly<Record<string, number>>,
+): number {
     const lacking: Item[] = [];
     for (const s of need.shop) {
         if (s.for !== s.id && owned(s.for) >= s.forCount) continue;
         const lack = s.count - owned(s.id);
         if (lack > 0) lacking.push({ id: s.id, count: lack });
     }
-    const priced = shopPlan(lacking, { x: 0, z: 0, level: 0 }, catalogItem, () => ({ npc: '', npcId: 0, tile: { x: 0, z: 0, level: 0 } }));
-    return need.coins + priced.coins;
+    const acct = skills ? { skills: { ...skills } } : undefined;
+    const at = from ?? need.start;
+    const seller = (debugname: string, here: Tile) => sellersByTravel(sellersByDistance(debugname, here), here, need.start, acct)[0] ?? null;
+    const priced = shopPlan(lacking, at, catalogItem, seller);
+    let coins = priced.coins;
+    const tiles: Tile[] = [];
+    for (const f of need.fees) {
+        if (owned(f.for) >= f.forCount) continue;
+        coins += f.coins;
+        tiles.push(...f.tiles);
+    }
+    if (from) {
+        coins += fares(from, [...priced.buys.map((b) => b.tile), need.start, ...tiles], acct);
+        if (need.quest === 'itgronigen' && acct && eastOfPass(from, acct)) coins += BOAT_FARES;
+    }
+    return need.coins + coins;
 }

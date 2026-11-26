@@ -87,6 +87,25 @@ test('the coin need is the preset coins and the shop price of the shop items tha
     expect(questSweepCoins(squire, (id) => (squire.shop.some((s) => s.id === id) ? 99 : 0))).toBe(squire.coins);
 });
 
+test('the coin need holds the NPC fees of a lacking gather item, the Heckel dust price and the boat fares', () => {
+    // Goblin Diplomacy: Wyson's woad leaves and Aggie's dye make the blue dye (1767) for 25 coins (NPC_SOURCES).
+    const gobdip = questSweepNeeds('gobdip', () => 30);
+    expect(gobdip.fees).toContainEqual(expect.objectContaining({ for: 1767, forCount: 1, coins: 25 }));
+    const shopItems = (id: number) => (gobdip.shop.some((s) => s.id === id) ? 99 : 0);
+    expect(questSweepCoins(gobdip, (id) => shopItems(id) || (id === 1769 ? 1 : 0))).toBe(gobdip.coins + 25);
+    expect(questSweepCoins(gobdip, (id) => shopItems(id) || (id === 1769 || id === 1767 ? 1 : 0))).toBe(gobdip.coins);
+    // The Plague City chocolate dust is Heckel's, 106 coins (sweep-plan.ts HECKEL_DUST), not a shop item.
+    const elena = questSweepNeeds('elena', () => 30);
+    expect(elena.shop.some((s) => s.id === 1975)).toBe(false);
+    expect(elena.fees).toContainEqual(expect.objectContaining({ for: 1975, coins: 106 }));
+    // A boat fare (60) from west of the White Wolf Mountain to a start tile east of it (sweep-plan.ts fares).
+    const lowSkills = { attack: 30, strength: 30, defence: 30, hitpoints: 30 };
+    const all = () => 99;
+    const ardougne = { x: 2655, z: 3283, level: 0 };
+    expect(questSweepCoins(gobdip, all, ardougne, lowSkills) - questSweepCoins(gobdip, all)).toBe(60);
+    expect(questSweepCoins(gobdip, all, { x: 3185, z: 3436, level: 0 }, lowSkills)).toBe(questSweepCoins(gobdip, all));
+});
+
 test('a quest preflight raises missing_supply for each bank-only item the account lacks', () => {
     const acct = makeAcct();
     expect(missing(acct, 'magearena')).toEqual(['2434:4']);

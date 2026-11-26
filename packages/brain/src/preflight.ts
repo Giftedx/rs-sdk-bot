@@ -1346,8 +1346,8 @@ interface StaticActivityPreflight {
 }
 
 // The items and coins that the quest sweep takes from the bank for an account (packages/workers/src/quest/bank-needs.ts):
-// the preset items that no shop sells and no gather plan covers, and the preset coins with the price of the shop items
-// that the account lacks. A complete quest needs none.
+// the preset items that no shop sells and no gather plan covers, and the preset coins with the price of the shop items,
+// the NPC fees of the gather items that the account lacks and the boat fares from its tile. A complete quest needs none.
 export function questSweepRequirements(
     acct: WorkerAccountView,
     quest: { readonly slug: string; readonly name: string },
@@ -1364,7 +1364,8 @@ export function questSweepRequirements(
         byId.set(row.id, { count: (prev?.count ?? 0) + row.count, ...(row.name ? { name: row.name } : {}) });
     }
     const items: RequiredItemSpec[] = [...byId].map(([itemId, r]) => ({ itemId, count: r.count, ...(r.name ? { itemName: r.name } : {}) }));
-    return { items, coins: questSweepCoins(need, owned) };
+    const skills = Object.fromEntries(Object.entries(acct.skills).map(([name, s]) => [name.toLowerCase(), s.level]));
+    return { items, coins: questSweepCoins(need, owned, acct.pos ?? undefined, skills) };
 }
 
 const staticPreflightCache = new WeakMap<object, StaticActivityPreflight>();
