@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795713061354-1",
  "account": "Billionaire",
  "partner": "Hocuspokeus",
@@ -12,6 +12,12 @@
  "claim": "09c092c8-e530-44a2-892e-693f093566c4",
  "count": 0,
  "ok": false,
- "at": 1795713154531,
- "detail": "trade claimed"
+ "at": 1795713335213,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795713154570-0000024016-0000000001",
+  "at": 1795713335199,
+  "sha256": "b55be4ae86157e3860a59d207ab27562dd8f57f2385ca8abe49566df0ffc9ac1"
+ },
+ "screen": false
 }
