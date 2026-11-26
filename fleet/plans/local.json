@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721295332,
+ "at": 1795721360785,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,21 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:TossTheCaber",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
-  },
-  {
    "account": "Earlyshooter",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -108,8 +93,9 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-453-148-p517 ITEM_ID=453 QUANTITY=148 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=74 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-1-p97 ITEM_ID=440 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-160-p517 ITEM_ID=453 QUANTITY=160 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=80 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -203,21 +189,6 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/magic-order.ts",
    "args": [],
@@ -235,13 +206,13 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -253,8 +224,8 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -262,51 +233,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Magicwanda",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Magicwanda",
-   "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic orbs water 27 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   },
   {
@@ -325,12 +251,29 @@
    "role": "helper"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/ranged-train.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/magic-order.ts",
    "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
     "DEMAND_ID": "goal:pk_army:YewGotWood",
     "BATCH_UNITS": "250"
    },
@@ -338,67 +281,6 @@
    "repeat": false,
    "goal": "goal:pk_army:YewGotWood",
    "role": "auto"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:AFKnight",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:AFKnight",
-   "role": "auto"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "helper"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "chompybird"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:chompybird",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
-   "role": "army"
   }
  ],
  "army": [
@@ -411,6 +293,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -419,10 +302,12 @@
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "oreelse",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "undermykilt",
