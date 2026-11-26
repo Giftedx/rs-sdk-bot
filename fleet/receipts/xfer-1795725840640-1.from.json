@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795725840640-1",
+ "account": "Swordinhand",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "ee6026ad-b480-4f1c-b873-b0934cb68245",
+ "count": 6,
+ "ok": true,
+ "at": 1795726052844,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795726037286
+ },
+ "logout": {
+  "attemptId": "1795726028727-0000009276-0000000001",
+  "at": 1795726052833,
+  "sha256": "625961f31d9ee207f84af12d283a7cac110f340a6ab3674f5df6d755e451855e"
+ },
+ "screen": true
+}
