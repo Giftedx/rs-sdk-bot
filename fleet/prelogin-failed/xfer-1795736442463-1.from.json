@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795736442463-1",
+ "role": "from",
+ "account": "Woodenstaff",
+ "partner": "Moneyshot",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795736555513,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
