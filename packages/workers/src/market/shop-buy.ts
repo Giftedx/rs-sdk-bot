@@ -173,14 +173,18 @@ export function shopFinishOk(bought: number, targetMet: boolean, stop: string, o
     return bought > 0 || targetMet || stop === 'stock-wait';
 }
 
-// The failure text of a short planned order. "out of stock" and "insufficient coins" are the
-// phrases the brain outcome classifier reads as a market cooldown and a coin shortfall.
-export function shopOrderShortText(bought: number, orderUnits: number, stop: string): string {
+// The failure text of a short planned order, in the phrases the brain outcome classifier reads:
+// "out of stock" is a market cooldown on the shop, "insufficient coins" a coin shortfall, and
+// "missing supply" with itemId and need a supply shortfall that the planner replans without a
+// penalty. Only an empty shelf is a venue fault: a tick cap or a full pack says nothing of the shop.
+export function shopOrderShortText(bought: number, orderUnits: number, stop: string, itemId?: number): string {
     const units = Number.isFinite(orderUnits) ? String(orderUnits) : 'target';
     if (stop === 'coin-reserve' || stop === 'spend-cap' || stop === 'bounded-purchase-unaffordable') {
         return `order short bought=${bought}/${units}: insufficient coins`;
     }
-    return `order short bought=${bought}/${units}: shop out of stock`;
+    if (stop === 'stock-wait') return `order short bought=${bought}/${units}: shop out of stock`;
+    const need = Number.isFinite(orderUnits) ? ` need=${Math.max(1, orderUnits - bought)}` : '';
+    return `order short${itemId !== undefined ? ` itemId=${itemId}` : ''}${need} bought=${bought}/${units}: missing supply after stop=${stop || 'none'}`;
 }
 
 export function maximumUnitCost(
@@ -895,7 +899,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
     const ok = !strandedOnDeck && shopFinishOk(boughtTotal, targetMet, stopReason, FILL_ORDER ? MAX_ITEMS : undefined);
     const ticks = used();
     const coinsLeft = coins();
-    const orderShort = FILL_ORDER && !ok && !strandedOnDeck ? `${shopOrderShortText(boughtTotal, MAX_ITEMS, stopReason)} ` : '';
+    const orderShort = FILL_ORDER && !ok && !strandedOnDeck ? `${shopOrderShortText(boughtTotal, MAX_ITEMS, stopReason, cfg.itemId)} ` : '';
     const summary = `${strandedOnDeck ? `stranded on deck level=${pos()?.level} ` : ''}${orderShort}ticks=${ticks} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coinsLeft} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`;
     return {
         ok,

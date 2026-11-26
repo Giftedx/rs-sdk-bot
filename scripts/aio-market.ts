@@ -285,6 +285,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         blindBuy: merged.BLIND_BUY === '1',
                         stopAtTarget: merged.STOP_AT_TARGET === '1',
                         fillOrder: merged.FILL_ORDER === '1',
+                        ...(Number.isSafeInteger(itemIdFilter) ? { itemId: itemIdFilter } : {}),
                         bankPack: merged.BANK_PACK === '1',
                         stockPollTicks: optInt(merged.STOCK_POLL_TICKS),
                     }, () => stopped);
