@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795720261889-1",
+ "account": "Shaftsinker",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 123,
+ "claim": "386e4d10-4f1a-419d-b5f7-abdfb504a311",
+ "count": 123,
+ "ok": true,
+ "at": 1795720597459,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 123
+ },
+ "bank": {
+  "count": 123,
+  "at": 1795720596343
+ },
+ "logout": {
+  "attemptId": "1795720584042-0000015268-0000000001",
+  "at": 1795720597317,
+  "sha256": "23bc50c1fc0f98c497b4134f30eb007a7a869c5248360adc3d025c9aa275e7ec"
+ },
+ "screen": true
+}

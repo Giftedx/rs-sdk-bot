@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720293437-1",
  "account": "Woodpecker",
  "partner": "BoneToPick",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 100,
  "claim": "578c2a4b-ba7e-48e0-b9e0-4a76aac9dc05",
- "count": 0,
- "ok": false,
- "at": 1795720566871,
- "detail": "trade claimed"
+ "count": 100,
+ "ok": true,
+ "at": 1795720590977,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1423,
+  "after": 1323
+ },
+ "logout": {
+  "attemptId": "1795720566879-0000025556-0000000001",
+  "at": 1795720590954,
+  "sha256": "327897a656480ad79031a9f44d92786add5787bb0266814f754abddacd88c6c2"
+ },
+ "screen": true
 }
