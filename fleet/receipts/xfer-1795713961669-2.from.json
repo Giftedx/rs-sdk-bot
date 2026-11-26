@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713961669-2",
+ "account": "Hocuspokeus",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "1c657b83-890a-4822-a722-12b42f2bc0fd",
+ "count": 0,
+ "ok": false,
+ "at": 1795714637980,
+ "detail": "trade claimed"
+}

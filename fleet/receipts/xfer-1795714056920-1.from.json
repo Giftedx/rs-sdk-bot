@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795714056920-1",
+ "account": "CoinCock",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 153,
+ "claim": "91287506-a1bc-4190-b357-1859b97a1dee",
+ "count": 0,
+ "ok": false,
+ "at": 1795714627546,
+ "detail": "Error: sender pack full: need 153 slots for Dragon bones, 28 free",
+ "logout": {
+  "attemptId": "1795714618866-0000025448-0000000001",
+  "at": 1795714627528,
+  "sha256": "896070c2ede2b96f688ecaa0849264846367baf77df626e3cd6847ea45356c33"
+ },
+ "screen": false
+}
