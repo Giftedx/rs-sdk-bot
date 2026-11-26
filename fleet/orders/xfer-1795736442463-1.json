@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795736442463-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Moneyshot",
+  "item": "Logs",
+  "count": 5,
+  "itemId": 1511,
+  "start": 1795736442463,
+  "end": 1795737342463,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

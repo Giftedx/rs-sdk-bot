@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795736438517-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Quickhandjob",
+  "item": "Chaos rune",
+  "count": 6,
+  "itemId": 562,
+  "start": 1795736438517,
+  "end": 1795737338517,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
