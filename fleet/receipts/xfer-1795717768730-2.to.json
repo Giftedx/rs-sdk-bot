@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795717768730-2",
+ "account": "Unsheathed",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 6,
+ "claim": "61a5e27c-c63b-47d1-9558-a03550aec015",
+ "count": 0,
+ "ok": false,
+ "at": 1795718374664,
+ "detail": "trade claimed"
+}

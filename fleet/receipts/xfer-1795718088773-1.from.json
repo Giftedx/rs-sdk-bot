@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795718088773-1",
  "account": "Hocuspokeus",
  "partner": "Quickhandjob",
@@ -12,6 +12,12 @@
  "claim": "9c0d9fc0-72c0-4834-952f-6d7c4b59e4da",
  "count": 0,
  "ok": false,
- "at": 1795718365734,
- "detail": "trade claimed"
+ "at": 1795718374974,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795718365742-0000004876-0000000001",
+  "at": 1795718374963,
+  "sha256": "3aeff71a118a08d283e36f17cca0df385cb25746bf105f3730aa4e23d8a3bcda"
+ },
+ "screen": false
 }

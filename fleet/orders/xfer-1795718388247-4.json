@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795718388247-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmthv2350",
+  "to": "ChaosInPants",
+  "item": "Chocolate bar",
+  "count": 1,
+  "itemId": 1973,
+  "start": 1795718388247,
+  "end": 1795719288247,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

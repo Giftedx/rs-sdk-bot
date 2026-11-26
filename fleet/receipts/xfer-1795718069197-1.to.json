@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795718069197-1",
+ "account": "Woodpecker",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 500,
+ "claim": "ce8047cd-48af-4ba4-8945-00dc1945716a",
+ "count": 500,
+ "ok": true,
+ "at": 1795718390158,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795718389396
+ },
+ "logout": {
+  "attemptId": "1795718379228-0000016620-0000000001",
+  "at": 1795718390146,
+  "sha256": "e40f5f27da5162560121144230a0495c1e283052681766cc2498825a04b51596"
+ },
+ "screen": true
+}
