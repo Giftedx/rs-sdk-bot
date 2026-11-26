@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795708927126-1",
  "account": "Wandwanker",
  "partner": "Billionaire",
@@ -12,6 +12,16 @@
  "claim": "9dc2cd30-2d21-4769-83a2-d1e680563f08",
  "count": 0,
  "ok": false,
- "at": 1795709080665,
- "detail": "trade claimed"
+ "at": 1795709105381,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 28,
+  "at": 1795709089451
+ },
+ "logout": {
+  "attemptId": "1795709080675-0000027476-0000000001",
+  "at": 1795709105371,
+  "sha256": "2e0387f5125ae519a293af44dd8f617638366ce3be971721dca2994c02aab941"
+ },
+ "screen": false
 }
