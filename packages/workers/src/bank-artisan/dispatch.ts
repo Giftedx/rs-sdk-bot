@@ -348,6 +348,7 @@ export async function runArtisan(
                             partial: setting('ORDER_MODE') === 'best-effort',
                             reserve: Number(setting('RAW_RESERVE', '0')),
                             members: setting('MEMBERS') === '1',
+                            ...(setting('PRODUCT_TARGET') ? { productTarget: Number(setting('PRODUCT_TARGET')) } : {}),
                             stop: halted,
                         });
                         return { ok: res.ok, summary: `made=${res.made}`, ticks: res.ticks, produced: res.made, failure: res.ok ? undefined : res.failure };

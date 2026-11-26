@@ -617,6 +617,8 @@ function resolveAcquireOrGearSource(
                     const resolved = resolveActivityWorkerRoute(act, {
                         CAP: String(Math.max(1000, params.quantity * 10)),
                         TARGET_COUNT: String(params.quantity),
+                        // Inventory production makes only what the bank lacks of this owned total.
+                        ...(params.stockTarget !== undefined ? { PRODUCT_TARGET: String(params.stockTarget) } : {}),
                     });
                     return { account, stepKind, executionMode: 'worker', ...resolved };
                 }
