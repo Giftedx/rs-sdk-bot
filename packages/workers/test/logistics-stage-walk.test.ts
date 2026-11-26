@@ -1048,7 +1048,8 @@ test('ferry fallbacks cover Taverley, east-to-Ardougne, Kandarin banks, Zanaris,
             expect(calls).toEqual([home, 'fare 60', '3185,3436', '2679,3275', 'npc:captain_barnaby:brimhaven@2679,3275', '2953,3147', 'npc:customs_officer:port-sarim@2953,3147', '3185,3436']);
         }
         const stuck: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 2619,3332,0', ticks: 3 };
-        expect(await walkWithFerryFallback({ x: 2809, z: 3441, level: 0 }, to, async () => stuck, sailOk, () => 60)).toEqual(stuck);
+        // No route to Ardougne North: the walk then searches the direct route, which has none here either.
+        expect(await walkWithFerryFallback({ x: 2809, z: 3441, level: 0 }, to, async () => stuck, sailOk, () => 60)).toEqual({ ...stuck, ticks: 6 });
         const direct: string[] = [];
         const plain = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => { direct.push(x + ',' + z); return { ok: true, ticks: 2 }; };
         expect(await walkWithFerryFallback({ x: 2895, z: 3440, level: 0 }, to, plain, sailOk, () => 0)).toEqual({ ok: true, ticks: 2 });

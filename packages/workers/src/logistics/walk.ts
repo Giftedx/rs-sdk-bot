@@ -4,6 +4,7 @@ import { accountOf, getWorld } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { loadTravel, travelAllowed, type Travel } from '../../../core/src/travel';
+import { knownBanks } from '../../../core/src/trip';
 import { goTo, sessionWalker, walkPath, walkRoute, type PathDeps } from '../../../core/src/walk';
 import type { Account, Tile } from '../../../core/src/world';
 import { guardCowWalker, leaveRuneStarter, onStarterIsland } from './walk-helpers';
@@ -212,8 +213,10 @@ export async function walkWithFerryFallback(
     if ((upstairs || !inArdougne(from) && inKandarin(from)) && inEast(to)) {
         const home = await walk(ARDOUGNE_NORTH, FERRY_LEG_PLAN_MS);
         ticks += home.ticks;
-        if (!home.ok) return { ...home, ticks };
-        from = ARDOUGNE_NORTH;
+        // No route to Ardougne North (a weak account east of White Wolf Mountain is still inside the Kandarin box,
+        // MeatNTwoVeg at 2793,3516): the walk below searches its own route from where the account stands.
+        if (home.ok) from = ARDOUGNE_NORTH;
+        else if (!noRoute(home)) return { ...home, ticks };
     }
     const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
     const east = !west && inArdougne(from) && inEast(to);
@@ -263,12 +266,76 @@ export function stagedBoat(boat: Travel | undefined, from: Tile, to: Tile, accou
     return { kind: 'travel' as const, travel: boat, at: boat.from, to: boat.to };
 }
 
+// Options after `<x> <z> [level]`: one of `--ground` or `--boat=<id>`, or the fallbacks of a planned walk:
+// `--or=<x>,<z>,<level>[;...]` tiles to try in order, and `--or-bank` for the known banks nearest the account.
+export type WalkToOptions = { ground: boolean; boatId?: string; or: Tile[]; orBank: boolean };
+export function parseWalkOptions(opts: readonly string[]): WalkToOptions {
+    const out: WalkToOptions = { ground: false, or: [], orBank: false };
+    for (const o of opts) {
+        if (o === '--ground' && !out.ground) out.ground = true;
+        else if (o.startsWith('--boat=') && out.boatId === undefined) out.boatId = o.slice(7);
+        else if (o === '--or-bank') out.orBank = true;
+        else if (o.startsWith('--or=')) {
+            for (const part of o.slice(5).split(';')) {
+                const [x, z, level, extra] = part.split(',').map(Number);
+                if (extra !== undefined || ![x, z, level].every(Number.isInteger)) throw Error(`bad walk fallback tile "${part}"`);
+                out.or.push({ x: x!, z: z!, level: level! });
+            }
+        } else throw Error('unknown walk option');
+    }
+    if (Number(out.ground) + Number(out.boatId !== undefined) + Number(out.or.length > 0 || out.orBank) > 1) throw Error('unknown walk option');
+    return out;
+}
+
+const FALLBACK_BANKS = 3;     // known banks a fallback walk tries after its listed tiles
+const SAME_PLACE_TILES = 8;   // a bank this near a tile already in the list is the same place
+const noRoute = (r: { ok: boolean; reason?: string; detail?: string }) => !r.ok && r.reason === 'precondition' && /^no route\b/.test(r.detail ?? '');
+const cheb = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+
+// The tiles a fallback walk tries, in order: the target, the listed tiles, then (orBank) the known banks on the
+// account's floor nearest it. A tile within SAME_PLACE_TILES of an earlier one is left out.
+export function fallbackTiles(to: Tile, or: readonly Tile[], orBank: boolean, at: Tile | null, banks: readonly Tile[]): Tile[] {
+    const list: Tile[] = [];
+    const add = (t: Tile) => { if (!list.some(u => u.level === t.level && cheb(u, t) <= SAME_PLACE_TILES)) list.push(t); };
+    add(to);
+    for (const t of or) add(t);
+    if (orBank && at) {
+        const near = banks.filter(b => b.level === at.level).sort((a, b) => cheb(a, at) - cheb(b, at));
+        let n = 0;
+        for (const b of near) {
+            if (n >= FALLBACK_BANKS) break;
+            const before = list.length;
+            add(b);
+            if (list.length > before) n++;
+        }
+    }
+    return list;
+}
+
+// Walks to the first tile the route search reaches for this account. A tile is passed over only when the search
+// found no route to it; any other failure, a walk that started and stopped included, ends the walk there.
+export async function walkFirstReachable(
+    tiles: readonly Tile[],
+    walk: (to: Tile) => Promise<{ ok: boolean; reason?: string; detail?: string }>,
+    log: (line: string) => void = console.log,
+): Promise<{ ok: boolean; reason?: string; detail?: string }> {
+    let last: { ok: boolean; reason?: string; detail?: string } = { ok: false, reason: 'precondition', detail: 'no walk target' };
+    for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i]!;
+        last = await walk(t);
+        if (!noRoute(last)) {
+            if (i > 0) log(`WALK_FALLBACK_TARGET ${JSON.stringify({ to: t, ok: last.ok, tried: i })}`);
+            return last;
+        }
+        log(`WALK_FALLBACK ${JSON.stringify({ to: t, detail: last.detail, next: tiles[i + 1] ?? null })}`);
+    }
+    return last;
+}
+
 export async function runWalkTo(s: Session, args: readonly string[]): Promise<{ ok: boolean; summary: string }> {
-    const { to } = parseTarget([s.name, ...args]);
-    const opt = args[3];
-    const ground = opt === '--ground';
-    const boatId = opt?.startsWith('--boat=') ? opt.slice(7) : undefined;
-    if (args.length > 4 || opt && !ground && !boatId) throw Error('unknown walk option');
+    const { to } = parseTarget([s.name, ...args.slice(0, 3)]);
+    const opts = parseWalkOptions(args.slice(3));
+    const { ground, boatId } = opts;
     const boat = boatId ? loadTravel().find(t => t.id === boatId) : undefined;
     if (boatId && !boat) throw Error('unknown boat');
     const here = () => {
@@ -278,9 +345,12 @@ export async function runWalkTo(s: Session, args: readonly string[]): Promise<{ 
     const t0 = s.tick();
     console.log(`WALK_START from=${here()} to=${to.x},${to.z},${to.level} mode=${ground ? 'ground' : boat ? 'boat' : 'planned'}`);
     const p = s.sdk.getState()!.player!;
+    const fallback = opts.or.length > 0 || opts.orBank;
     const r = boat
         ? await walkRoute(s, [stagedBoat(boat, { x: p.worldX, z: p.worldZ, level: p.level }, to, accountOf(s))], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 })
-        : await walkTarget(s, to, ground);
+        : fallback
+            ? await walkFirstReachable(fallbackTiles(to, opts.or, opts.orBank, { x: p.worldX, z: p.worldZ, level: p.level }, knownBanks()), t => walkTarget(s, t, false))
+            : await walkTarget(s, to, ground);
     return { ok: r.ok, summary: `walk-to ${JSON.stringify(r)} at=${here()} ticks=${s.tick() - t0}` };
 }
 

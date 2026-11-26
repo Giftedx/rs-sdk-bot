@@ -149,7 +149,9 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(locRec.executionMode).toBe('worker');
     expect(locRec.family).toBe('logistics');
     expect(locRec.routeKey).toBe('walk-to');
-    expect(locRec.args[0]).toBe('walk-to');
+    // The walk checks the route for the account and falls back to the other hub, then to the nearest banks.
+    expect(locRec.args).toEqual(['walk-to', '2619', '3332', '0', '--or=3185,3436,0', '--or-bank']);
+    expect(locRec.config).toMatchObject({ targetHub: 'ardougne', fallbacks: [{ x: 3185, z: 3436, level: 0 }], orBank: true });
 
     const plan: AccountPlan = {
         account: 'Packhorse',

@@ -4,6 +4,7 @@ import { WORKER_FAMILIES, type WorkerFamily } from '../../workers/src/contracts'
 import {
     DEFAULT_OPERATING_COIN_FLOAT,
     HUB_BANKER_LOCATIONS,
+    type HubBankId,
     type AccountPlan,
     type AcquireSourceKind,
     type ActivityDefinition,
@@ -696,6 +697,12 @@ export function resolvePlannedStepWorkerRoute(
             }
             const hub = planned.targetHub ?? 'varrock_west';
             const tile = HUB_BANKER_LOCATIONS[hub].bankTile;
+            // The planner picks the hub by distance and runs no route search. The walk searches the route for the
+            // account: its levels close the ground of monsters that would kill it, and its coins pay the boats. From
+            // Burthorpe a 10 HP account has no route to Ardougne (White Wolf Mountain) but has one to Varrock West.
+            // When the search finds no route, the walk tries the other hub, then the known banks nearest the account.
+            const others = (Object.keys(HUB_BANKER_LOCATIONS) as HubBankId[]).filter(id => id !== hub).map(id => HUB_BANKER_LOCATIONS[id].bankTile);
+            const or = others.map(t => `${t.x},${t.z},${t.level}`).join(';');
             return {
                 account,
                 stepKind: 'recover',
@@ -703,9 +710,9 @@ export function resolvePlannedStepWorkerRoute(
                 family: 'logistics',
                 workerId: 'logistics',
                 routeKey: 'walk-to',
-                args: ['walk-to', String(tile.x), String(tile.z), String(tile.level)],
+                args: ['walk-to', String(tile.x), String(tile.z), String(tile.level), ...(or ? [`--or=${or}`] : []), '--or-bank'],
                 env: { RECOVERY_TARGET_HUB: hub },
-                config: { role: 'walk-to', targetHub: hub, tile },
+                config: { role: 'walk-to', targetHub: hub, tile, fallbacks: others, orBank: true },
                 warnings: [],
             };
         }

@@ -162,6 +162,33 @@ describe('catalog-worker parity', () => {
         }
     });
 
+    test('a generated quest runs through the quest sweep, and a started quest with no resume stage is not planned', () => {
+        const catalog = createActivityCatalog();
+        const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
+        // The sweep stages the preset's items and walks to the start tile; a bare script started with no pie and
+        // far from Narnode (live: "fail talk thurgo pie", "fail talk narnode 1" at ticks=6).
+        for (const slug of ['squire', 'ball', 'tree', 'grandtree', 'arena']) {
+            const act = catalog.require(`quest:${slug}`);
+            expect(act.config.script).toBeUndefined();
+            const route = resolveActivityWorkerRoute(act);
+            expect(route.args).toEqual(['sweep', slug]);
+            expect(route.config.standaloneScript).toBeUndefined();
+        }
+        // The sweep has no route to these two scripts.
+        expect(catalog.require('quest:dwarfcannon').config.script).toBe('scripts/generated/dwarfcannon.ts');
+        expect(catalog.require('quest:waterfall').config.script).toBe('scripts/generated/waterfall.ts');
+        expect(catalog.require('quest:squire').config.questResumable).toBe(true);
+        expect(catalog.require('quest:ball').config.questResumable).toBe(false);
+
+        const started = makeTestAccount({ quests: { "Witch's House": 'started', "The Knight's Sword": 'started' }, skills: { Hitpoints: { level: 60, xp: 300_000 } } });
+        const ball = activityPreflightFromConfig(started, catalog.require('quest:ball'), world, 1);
+        expect(ball.blockers.some((b) => b.kind === 'invalid_config' && /started and its script has no resume stage/.test(b.message))).toBe(true);
+        const squire = activityPreflightFromConfig(started, catalog.require('quest:squire'), world, 1);
+        expect(squire.blockers.some((b) => b.kind === 'invalid_config')).toBe(false);
+        const fresh = activityPreflightFromConfig(makeTestAccount({ skills: { Hitpoints: { level: 60, xp: 300_000 } } }), catalog.require('quest:ball'), world, 1);
+        expect(fresh.blockers.some((b) => b.kind === 'invalid_config')).toBe(false);
+    });
+
     test('herblore:meats gives 0 XP, herblore:potions requires druid, and runnable CLI defaults are populated', () => {
         const catalog = createActivityCatalog();
         const meats = catalog.require('bank-artisan:herblore-meats');

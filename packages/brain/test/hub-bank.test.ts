@@ -1,5 +1,13 @@
 import { test, expect } from 'bun:test';
-import { nearestHubBank } from '../src/contracts';
+import { hubBanksByDistance, nearestHubBank } from '../src/contracts';
+
+test('hub banks by distance list every hub, nearest first', () => {
+    // Burthorpe: Ardougne is nearer by distance, Varrock West follows as the fallback.
+    expect(hubBanksByDistance({ x: 2821, z: 3552, level: 0 })).toEqual(['ardougne', 'varrock_west']);
+    expect(hubBanksByDistance({ x: 3210, z: 3420, level: 0 })).toEqual(['varrock_west', 'ardougne']);
+    expect(hubBanksByDistance(null, 'ardougne')).toEqual(['ardougne', 'varrock_west']);
+    expect(hubBanksByDistance(undefined)).toEqual(['varrock_west', 'ardougne']);
+});
 
 test('a dungeon tile picks the hub bank nearest the land above it', () => {
     // The pocket under the Ikov dark stairs lies below East Ardougne (2639,3337).
