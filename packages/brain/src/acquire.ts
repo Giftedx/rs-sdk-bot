@@ -42,6 +42,7 @@ import {
     type AccountLookupCache,
     type ItemMeta,
 } from './preflight';
+import { ferryFallbackFare } from './ferry-fare';
 import { readJsonStatCached } from './json-cache';
 import { RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
 
@@ -704,6 +705,22 @@ export function resolveAcquireItem(
                 if (!reachDonor.reachable) {
                     if (!skipDiag) rejectReason = reachDonor.message ?? `donor ${donor.name} cannot reach ${hub}`;
                     continue;
+                }
+                // The trade worker's walk takes both boat fares between the east mainland and Ardougne before it
+                // moves (./ferry-fare.ts, workers/src/logistics/walk.ts ferryWalk). A party that owns fewer coins
+                // ends its trade at the first bank: "ferry needs 60 coins and the bank holds 0".
+                const recipFare = acct.pos ? ferryFallbackFare(acct.pos, hubTile) : 0;
+                if (recipFare > coinBalance.totalUnreserved) {
+                    if (!skipDiag) rejectReason = `recipient owns ${coinBalance.totalUnreserved} coins and the ferry to ${hub} needs ${recipFare}`;
+                    continue;
+                }
+                const donorFare = donor.pos ? ferryFallbackFare(donor.pos, hubTile) : 0;
+                if (donorFare > 0) {
+                    const donorCoins = availableSpendableCoins(donor, world, 0, { includeBank: true, requireTrustedBank: true }).totalUnreserved;
+                    if (donorFare > donorCoins) {
+                        if (!skipDiag) rejectReason = `donor ${donor.name} owns ${donorCoins} coins and the ferry to ${hub} needs ${donorFare}`;
+                        continue;
+                    }
                 }
                 const sameSideBonus = donor.side === acct.side ? 0 : 120;
                 const ticks = Math.max(45, reachRecip.travelTicks + reachDonor.travelTicks + 35 + sameSideBonus);
