@@ -42,8 +42,8 @@ import {
     MAX_HOP,
     NET,
     OBSERVATORY_FROM_ARDOUGNE,
-    PRAYER_QUESTS,
     prayerShort,
+    prayerWanted,
     questScriptId,
     RAW_ANCHOVIES,
     RAW_SHRIMPS,
@@ -824,10 +824,10 @@ export async function walkCorridor(deps: PathDeps, points: readonly Pt[], walk: 
 }
 
 export async function prayBefore(s: Session, world: World, quest: string): Promise<string | null> {
-    const wanted = PRAYER_QUESTS[quest];
+    const level = s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
+    const wanted = prayerWanted(quest, level);
     if (wanted === undefined) return null;
     const points = (): number => (s.sdk.getState() as any)?.prayers?.prayerPoints ?? 0;
-    const level = s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
     const before = points();
     if (!prayerShort(before, level, wanted)) return null;
     const walked = await walkFar(s, world, SEERS_ALTAR.stand, 150);

@@ -597,6 +597,13 @@ export const PRAYER_QUESTS: Record<string, number> = {
     trolllove: 43,
 };
 export const prayerShort = (points: number, level: number, wanted: number) => points < Math.min(level, wanted);
+// The prayer points that the sweep restores at the Seers' Village altar before a quest: PRAYER_QUESTS, or for a fight
+// quest whose Prayer level covers its fights (prayerCovers on the base level) the points that the fights use with the
+// margin. The sweep then stages no prayer potion, and the brain preflight (packages/workers/src/quest/bank-needs.ts),
+// which sees only the base level, asks for none (live: Fingerblastr, Prayer 84 with 0 points, "quest-sweep tree
+// missing 2434:2").
+export const prayerWanted = (quest: string, level: number): number | undefined =>
+    PRAYER_QUESTS[quest] ?? (prayerCovers(quest, level) ? PRAYER_USED[quest]! + PRAYER_MARGIN : undefined);
 
 let grid: Promise<PathLength> | undefined;
 export const sameArea = async (a: Tile, b: Tile, load = () => rsPathLength()) => {
