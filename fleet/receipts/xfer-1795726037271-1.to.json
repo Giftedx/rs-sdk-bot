@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795726037271-1",
  "account": "YewGotWood",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "054679df-96c0-4c85-bc69-90e1116d3a2f",
- "count": 0,
- "ok": false,
- "at": 1795726236813,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795726246418,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795726245685
+ },
+ "logout": {
+  "attemptId": "1795726236822-0000010844-0000000001",
+  "at": 1795726246408,
+  "sha256": "e9ef693171dd1825b88144fc5bcbdfe5e30733977b79083e915a66ae847bede4"
+ },
+ "screen": true
 }
