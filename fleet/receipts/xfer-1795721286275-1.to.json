@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795721286275-1",
  "account": "Shaftsinker",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 11,
  "claim": "eff6346e-594b-4169-bae1-2daa98e68498",
- "count": 0,
- "ok": false,
- "at": 1795721738505,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795721752446,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795721751228
+ },
+ "logout": {
+  "attemptId": "1795721738514-0000023176-0000000001",
+  "at": 1795721752437,
+  "sha256": "5c20a128a85b8135ce04514f4ce7580e6e891190ca0fe996403caee58b119e59"
+ },
+ "screen": true
 }

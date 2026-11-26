@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721694129,
+ "at": 1795721769213,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -113,42 +113,21 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "arena"
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-71-p61 ITEM_ID=1436 QUANTITY=71 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=71 -- runecraft air"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
+   "account": "BackdoorMan",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -161,7 +140,23 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "helper"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "helper"
   },
   {
    "account": "YewGotWood",
@@ -177,37 +172,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
-    "DEMAND_ID": "goal:pk_army:TossTheCaber",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
    "role": "auto"
   }
  ],
@@ -238,6 +202,7 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker",

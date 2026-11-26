@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795721744279-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Earlyshooter",
+  "item": "Coins",
+  "count": 84,
+  "itemId": 995,
+  "start": 1795721744279,
+  "end": 1795722644279,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
