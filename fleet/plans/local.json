@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717421504,
+ "at": 1795717438566,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,22 +75,6 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -152,6 +136,21 @@
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
    "role": "auto"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-1182-p61 ITEM_ID=1436 QUANTITY=1182 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=1182 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -221,21 +220,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:99 BATCH_UNITS=1 -- crafting inventory brew:unf_ranarr_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -272,6 +256,36 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1643",
    "role": "army"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "trawler"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Crafting",
+    "TARGET_LEVEL": "40"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "army"
   }
  ],
  "army": [
@@ -296,11 +310,9 @@
   "pocketpool",
   "pocketpython",
   "sausagefest",
-  "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
