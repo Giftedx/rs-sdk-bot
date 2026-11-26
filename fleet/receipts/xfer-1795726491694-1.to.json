@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795726491694-1",
+ "account": "Unsheathed",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 5,
+ "claim": "4841e075-ebf5-46a3-a311-1452e4a90e9b",
+ "count": 5,
+ "ok": true,
+ "at": 1795726689996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795726689270
+ },
+ "logout": {
+  "attemptId": "1795726678731-0000030452-0000000001",
+  "at": 1795726689983,
+  "sha256": "23db0fb86c95b4d2d0a5a15aade9a01a5e3933ecbdd17a023bff9f9a39218fa6"
+ },
+ "screen": true
+}
