@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795716345453-2",
+ "account": "Woodpecker",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "88af31c8-a2ac-4d5a-b6c1-9057eb2b27d6",
+ "count": 3,
+ "ok": true,
+ "at": 1795717049447,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795717041475
+ },
+ "logout": {
+  "attemptId": "1795717034160-0000023380-0000000001",
+  "at": 1795717049428,
+  "sha256": "82299b6d89f85ae8e88db24be89cff0e8308b0189fa44c545672689beca5d1f3"
+ },
+ "screen": true
+}

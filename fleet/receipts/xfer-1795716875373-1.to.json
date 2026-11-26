@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716875373-1",
+ "account": "Packhorse",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "c6c5086c-87d1-413a-8709-61dc663516e1",
+ "count": 0,
+ "ok": false,
+ "at": 1795717043182,
+ "detail": "trade claimed"
+}
