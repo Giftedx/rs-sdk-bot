@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727441156,
+ "at": 1795727452089,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1500 TARGET_COUNT=150 PRODUCT_TARGET=150 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=150 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1510 TARGET_COUNT=151 PRODUCT_TARGET=151 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=151 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -72,25 +72,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "auto"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army",
-   "resources": [
-    "edgeville-yews"
-   ]
   },
   {
    "account": "Packhorse",
@@ -280,6 +261,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fingersmith",
   "hocuspokeus",
