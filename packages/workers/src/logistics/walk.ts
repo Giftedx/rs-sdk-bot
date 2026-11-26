@@ -213,8 +213,10 @@ export async function walkWithFerryFallback(
     if ((upstairs || !inArdougne(from) && inKandarin(from)) && inEast(to)) {
         const home = await walk(ARDOUGNE_NORTH, FERRY_LEG_PLAN_MS);
         ticks += home.ticks;
-        if (!home.ok) return { ...home, ticks };
-        from = ARDOUGNE_NORTH;
+        // No route to Ardougne North (a weak account east of White Wolf Mountain is still inside the Kandarin box,
+        // MeatNTwoVeg at 2793,3516): the walk below searches its own route from where the account stands.
+        if (home.ok) from = ARDOUGNE_NORTH;
+        else if (!noRoute(home)) return { ...home, ticks };
     }
     const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
     const east = !west && inArdougne(from) && inEast(to);

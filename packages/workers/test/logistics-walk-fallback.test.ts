@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { fallbackTiles, parseWalkOptions, walkFirstReachable } from '../src/logistics/walk';
+import type { Outcome } from '../../core/src/act';
+import { fallbackTiles, parseWalkOptions, walkFirstReachable, walkWithFerryFallback } from '../src/logistics/walk';
+import { walkWithFerryFallback as marketWalk } from '../src/market/walk';
 
 const ARDOUGNE = { x: 2619, z: 3332, level: 0 }, VARROCK = { x: 3185, z: 3436, level: 0 };
 const noRoute = (t: { x: number; z: number; level: number }) => ({ ok: false, reason: 'precondition', detail: `no route to ${t.x},${t.z},${t.level}` });
@@ -47,6 +49,26 @@ test('a walk that failed after its route was found ends there', async () => {
     const r = await walkFirstReachable([ARDOUGNE, VARROCK], async t => { tried.push(`${t.x},${t.z}`); return stuck; }, () => {});
     expect(r).toEqual(stuck);
     expect(tried).toEqual(['2619,3332']);
+});
+
+test('from the Kandarin box with no route to Ardougne North, the walk east searches its own route', async () => {
+    const calls: string[] = [];
+    const walk = async (t: { x: number; z: number; level: number }): Promise<Outcome> => {
+        calls.push(`${t.x},${t.z}`);
+        return t.x === ARDOUGNE.x && t.z === ARDOUGNE.z ? { ok: false, reason: 'precondition', detail: noRoute(t).detail, ticks: 0 } : { ok: true, ticks: 5 };
+    };
+    const noSail = async (): Promise<Outcome> => { throw Error('no boat expected'); };
+    // MeatNTwoVeg stood at 2793,3516: inside the Kandarin box, east of White Wolf Mountain.
+    expect(await walkWithFerryFallback({ x: 2793, z: 3516, level: 0 }, VARROCK, walk, noSail, () => 0)).toEqual({ ok: true, ticks: 5 });
+    expect(calls).toEqual(['2619,3332', '3185,3436']);
+    calls.length = 0;
+    expect(await marketWalk({ x: 2859, z: 3486, level: 0 }, VARROCK, walk, noSail, () => 0)).toEqual({ ok: true, ticks: 5 });
+    expect(calls).toEqual(['2619,3332', '3185,3436']);
+    // Any other failure of the walk to Ardougne North still ends the walk.
+    const door = async (t: { x: number; z: number; level: number }): Promise<Outcome> => { calls.push(`${t.x},${t.z}`); return { ok: false, reason: 'rejected', detail: 'door', ticks: 2 }; };
+    calls.length = 0;
+    expect(await walkWithFerryFallback({ x: 2793, z: 3516, level: 0 }, VARROCK, door, noSail, () => 0)).toMatchObject({ ok: false, reason: 'rejected', ticks: 2 });
+    expect(calls).toEqual(['2619,3332']);
 });
 
 test('with no route to any tile the walk reports the last no route', async () => {
