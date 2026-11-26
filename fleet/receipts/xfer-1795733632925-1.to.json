@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795733632925-1",
+ "account": "RearEntry",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 260,
+ "claim": "bb05f0ec-5756-40dd-a4fb-dae6839d845c",
+ "count": 0,
+ "ok": false,
+ "at": 1795734070106,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795733638262-1",
+ "account": "Pocketpython",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 1,
+ "claim": "88ffcf7f-7211-4e15-b02a-a341792cbf61",
+ "count": 1,
+ "ok": true,
+ "at": 1795734050049,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795734007715
+ },
+ "logout": {
+  "attemptId": "1795734002644-0000028076-0000000001",
+  "at": 1795734050037,
+  "sha256": "7ef8c329e520e40056c3362f01b32c9a7d2d8bc40082fd487eebabbe6d79740c"
+ },
+ "screen": true
+}
