@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795732906853-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "BackdoorMan",
+  "item": "Coins",
+  "count": 510,
+  "itemId": 995,
+  "start": 1795732906853,
+  "end": 1795733806853,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
