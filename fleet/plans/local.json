@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795722168115,
+ "at": 1795722188447,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1670 TARGET_COUNT=167 PRODUCT_TARGET=171 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1650 TARGET_COUNT=165 PRODUCT_TARGET=171 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=171 -- cooking food"
    ],
    "env": {
@@ -74,7 +74,7 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "Wandwaver",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -87,22 +87,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
    "role": "army"
   },
   {
@@ -135,6 +119,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
