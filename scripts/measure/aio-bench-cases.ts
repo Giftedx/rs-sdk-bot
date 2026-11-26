@@ -1921,6 +1921,11 @@ return [
   {key: 'extra:walk-out-of-paterdomus', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3405', '3505', '0'], timeoutMs: 300_000,
     pass: s => ok(s) && /WALK_JOURNAL_REPLAN \{[^\n]*"priestperil":5\}[^\n]*"ok":true/.test(s),
     presetConfig: {position: {x: 3428, z: 9891, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, varps: {302: 5}}},
+  // The jungle east of the Tai Bwo Wannai river, where Shilo Village leaves an account: over the river log
+  // (travel.ts RIVER_LOG_TRAVEL) to Trufitus. Agility 1 fails the log roll about 65% of the time, so the slip to the far
+  // bank is a normal end of this case.
+  {key: 'extra:walk-out-of-karamja-east-jungle', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2809', '3086', '0'], pass: ok, timeoutMs: 300_000,
+    presetConfig: {position: {x: 2889, z: 3090, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Agility: 1}}},
 ];
 }
 

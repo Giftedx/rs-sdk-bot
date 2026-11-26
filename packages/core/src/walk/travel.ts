@@ -154,25 +154,37 @@ async function travelLocLeg(
     // Spirit trees by kind: the Gnome Stronghold's and the village's are named ent and stronghold_ent (teleports.json).
     const name = run.loc.includes('spirit') || t.kind === 'spirit_tree' ? /spirit tree/i : /lever|door/i, at = run.at;
     const loc = (st()?.nearbyLocs ?? []).filter((l: any) => at && run.id !== undefined ? l.id === run.id && l.x === at.x && l.z === at.z && l.level === at.level : name.test(l.name ?? ''))
-        .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
+        .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0]
+        // The lite client sends an op for a loc it does not list (lite/actions.ts interactLoc); the server finds it.
+        ?? (run.unlisted && at && run.id !== undefined ? { id: run.id, x: at.x, z: at.z } : undefined);
     if (!loc) return fail('precondition', `no ${run.loc} in sight`);
     // A short passage on one floor (the Grand Tree door moves the player two tiles) ends on its landing: within 8
     // tiles of it the player already stood, on the wrong side.
     const short = !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
     const railing = t.kind === 'passage' && run.loc === 'mcgruborlooserailing' && run.id === 51 ? run.at : undefined;
+    // A failed Agility roll that still crosses ends on its own tile (the river log washes the player 8 tiles down).
+    const slipped = () => { const p = here(); return !!p && (t.slips ?? []).some(k => k.level === p.level && k.x === p.x && k.z === p.z); };
     // mcgrubors_wood.rs2 squeezes onto x=loc.x going in and x<loc.x going out. The railing tile is still inside;
     // accepting it on exit lets the next movement cancel the pending squeeze before it crosses.
     const landed = () => {
         const p = here();
-        return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1
-            && (!railing || (t.to.x < railing.x ? p.x < railing.x : p.x >= railing.x));
+        return (!!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1
+            && (!railing || (t.to.x < railing.x ? p.x < railing.x : p.x >= railing.x))) || slipped();
     };
     if (stop()) return fail('aborted', 'stopped before location travel');
     if (railing && landed()) return { ok: true, ticks: s.tick() - start };
+    if (t.slipDamage) {
+        // A slip must leave the player alive: refuse at a hitpoint level the slip's damage would take to 0.
+        const hp = st()?.skills?.find((k: { name?: string }) => k.name === 'Hitpoints')?.level;
+        if (typeof hp !== 'number') return fail('precondition', `hitpoints not observed before ${run.loc}`);
+        const damage = Math.floor(hp * t.slipDamage.percent / 100) + t.slipDamage.plus;
+        if (hp <= damage) return fail('precondition', `a slip on ${run.loc} deals ${damage} at ${hp} hitpoints`);
+    }
     await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
-    await answerTravelDialog(s, b, choices, short ? landed : arrived, stop, 20);
+    // The river log's slip takes about 12 ticks from the click (shortcuts.rs2:65-89).
+    await answerTravelDialog(s, b, choices, short ? landed : () => arrived() || slipped(), stop, t.slips?.length ? 40 : 20);
     if (short && !landed()) return fail('timeout', `not through ${run.loc} to ${t.to.x},${t.to.z} (at ${JSON.stringify(here())})`);
-    return arrived() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
+    return arrived() || slipped() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
 }
 
 // One travel edge (travel.ts): talk to the NPC and answer its dialogue, cast the spell, rub the jewellery or

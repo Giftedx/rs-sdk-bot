@@ -4,7 +4,8 @@
 // Each edge says what the account needs (coins, quest stages, skills, runes, items held or worn) and how the
 // walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness,
 // jails and random-tile teleports (essence mine), runecraft ruins and portals; shortcuts with a failure roll (a
-// fall hurts a low-level account), a use-item, a first step (via) or a held-item check.
+// fall hurts a low-level account), a use-item, a first step (via) or a held-item check. The river log
+// (RIVER_LOG_TRAVEL) has a failure roll and is in: its slip still crosses, for 6% of hitpoints.
 import { readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { writeAtomicFile } from './atomic-file';
@@ -22,18 +23,39 @@ export type TravelRun =
     | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean; button?: { component: string } }
     | { how: 'spell'; component: string }
     | { how: 'rub'; items: string[]; option: string | null }
-    | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile }
+    // unlisted: the state's loc list never shows this loc, so the walker sends the op by id and tile.
+    | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile; unlisted?: true }
     | { how: 'gate'; loc: string; action: string; at: Tile; choices: string[] };
 export interface Travel {
     id: string; kind: string; name: string;
     from: Tile | null;                   // null: from anywhere outside the Wilderness
     to: Tile;                            // where the player stands after it, on the ground
+    slips?: Tile[];                      // exact tiles a failed Agility roll ends on, on the far side of the crossing
+    slipDamage?: { percent: number; plus: number }; // a slip deals floor(current hitpoints * percent / 100) + plus
     coins: number;                       // coins the account must hold
     needs: TravelNeed[];
     runes: { item: string; count: number }[];
     run: TravelRun;
     cost: number;                        // estimate in ticks
 }
+
+// The river log east of Tai Bwo Wannai (zq_logbalance 2332, skill_agility/scripts/shortcuts.rs2:49-95) joins the
+// jungle east of the river (the Karamja shipyard side) to the land west of it. Its shortcuts.json rows are not
+// usable: the interpreter takes the player tile to be the loc tile, so they land 2903 and 2911 on level 1, where the
+// log lies under the bridge flag. From the tile next to the log the player moves 2 + 2 tiles across on level 0. A
+// failed roll washes the player to $fail_end_coord on the far bank, never back, for floor(hitpoints * 6 / 100) + 1
+// damage (stat(hitpoints) is the current level): 1 hitpoint dies. The client scene keeps the log on level 1, so the
+// state's loc list never shows it (quest-tbwt-owned.ts trioLogLoc).
+const riverLog = (from: Tile, at: Tile, to: Tile, slip: Tile): Travel => ({
+    id: `loc:zq_logbalance@${at.x},${at.z},${at.level}>${to.x},${to.z}`, kind: 'shortcut', name: 'zq_logbalance op1',
+    from, to, slips: [slip], slipDamage: { percent: 6, plus: 1 }, coins: 0, needs: [], runes: [],
+    run: { how: 'loc', loc: 'zq_logbalance', op: 1, option: null, id: 2332, at, unlisted: true }, cost: 8,
+});
+const ground = (x: number, z: number): Tile => ({ x, z, level: 0 });
+export const RIVER_LOG_TRAVEL: readonly Travel[] = [
+    riverLog(ground(2910, 3049), ground(2909, 3049), ground(2906, 3049), ground(2903, 3057)),
+    riverLog(ground(2906, 3049), ground(2907, 3049), ground(2910, 3049), ground(2909, 3059)),
+];
 
 const TELEPORT_COST = 5, NPC_COST = 15, BOAT_COST = 40;
 
