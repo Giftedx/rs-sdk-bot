@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795722188447,
+ "at": 1795722270588,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1650 TARGET_COUNT=165 PRODUCT_TARGET=171 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1640 TARGET_COUNT=164 PRODUCT_TARGET=171 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=171 -- cooking food"
    ],
    "env": {
@@ -93,20 +93,17 @@
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "foraging",
+    "feathers"
    ],
    "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:lochnessrod:item:314",
+   "role": "army"
   }
  ],
  "army": [
