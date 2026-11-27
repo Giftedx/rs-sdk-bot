@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801707227-1",
  "account": "mmtha0205",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "c406affd-5fa4-46f8-b13e-c81043dd6b79",
- "count": 0,
- "ok": false,
- "at": 1795802061246,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795802075611,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795802074852
+ },
+ "logout": {
+  "attemptId": "1795802061255-0000032368-0000000001",
+  "at": 1795802075591,
+  "sha256": "8726a5f80c42f2d1556adb208aa1da399d99d3515b9fe8c377c021727e8de20e"
+ },
+ "screen": true
 }
