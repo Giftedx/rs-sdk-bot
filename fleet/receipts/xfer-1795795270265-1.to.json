@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795270265-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 280,
+ "claim": "b9fe615b-b886-4909-84df-23e29f4a3797",
+ "count": 0,
+ "ok": false,
+ "at": 1795795880593,
+ "detail": "trade claimed"
+}
