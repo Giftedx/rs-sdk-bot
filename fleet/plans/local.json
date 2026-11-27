@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795747965375,
+ "at": 1795747982439,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,7 +71,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "209"
+    "BATCH_UNITS": "201"
    },
    "enabled": true,
    "repeat": false,
