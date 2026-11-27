@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795745702187,
+ "at": 1795745755399,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -225,22 +225,6 @@
    "role": "auto"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
@@ -311,6 +295,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",

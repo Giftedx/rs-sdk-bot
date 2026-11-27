@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795745735069-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "TheFullMonty",
+  "item": "Prayer potion(4)",
+  "count": 4,
+  "itemId": 2434,
+  "extra": [
+    {
+      "item": "Coins",
+      "count": 38668,
+      "itemId": 995
+    }
+  ],
+  "start": 1795745735069,
+  "end": 1795746635069,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
