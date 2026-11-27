@@ -5,6 +5,6 @@
  "account": "FishAndChips",
  "partner": "Shaftsinker",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795751655827,
- "detail": "Error: fleet account claim held by swarm"
+ "at": 1795751784029,
+ "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
 }
