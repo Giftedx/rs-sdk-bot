@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795753207357-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "TheFullMonty",
+  "item": "Unicorn horn dust",
+  "count": 1,
+  "itemId": 235,
+  "extra": [
+    {
+      "item": "Unfinished potion",
+      "count": 1,
+      "itemId": 93
+    }
+  ],
+  "start": 1795753207357,
+  "end": 1795754107357,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

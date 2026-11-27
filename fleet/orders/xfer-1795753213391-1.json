@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795753213391-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "SporranDip",
+  "item": "Marrentill",
+  "count": 1,
+  "itemId": 251,
+  "start": 1795753213391,
+  "end": 1795754113391,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
