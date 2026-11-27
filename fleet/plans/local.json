@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779035899,
+ "at": 1795779061913,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -161,25 +161,19 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:irit_leaf"
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=39 ORE_RESERVE=0 CAP=1000 TARGET_COUNT=39 PRODUCT_TARGET=60 STALL_TICKS=280 -- smithing smelt 1000 iron",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1363 MAX_MAKE=20 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 TARGET_COUNT=20 CAP=1000 STALL_TICKS=280 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 STALL_TICKS=280 -- smithing anvil 1500"
    ],
    "env": {
-    "MAX_MAKE": "8",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:259",
-    "BATCH_UNITS": "8",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:259",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   }
  ],
@@ -205,6 +199,7 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",

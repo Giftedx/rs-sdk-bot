@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795778633271-1",
  "account": "Kiltlifter",
  "partner": "Quickhandjob",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 32,
  "claim": "02e96fc9-5921-4329-8bf4-b280ba0e0af7",
- "count": 0,
- "ok": false,
- "at": 1795778950874,
- "detail": "trade claimed",
+ "count": 32,
+ "ok": true,
+ "at": 1795779039492,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 32,
-   "count": 0
+   "count": 32,
+   "inventory": {
+    "before": 32,
+    "after": 0
+   },
+   "bank": {
+    "count": 32,
+    "at": 1795779025143
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 32,
+  "after": 0
+ },
+ "bank": {
+  "count": 32,
+  "at": 1795779024343
+ },
+ "logout": {
+  "attemptId": "1795778950883-0000019076-0000000001",
+  "at": 1795779039483,
+  "sha256": "172ff7dadcf083a6d18b24a9452a94fb3efc5c6e5afde29ca87cef954b26b672"
+ },
+ "screen": true
 }
