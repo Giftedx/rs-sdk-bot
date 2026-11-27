@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795792877451-1",
+ "account": "Wandwaver",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "1cc205fc-3ac1-4812-95fd-037ca59a6a16",
+ "count": 0,
+ "ok": false,
+ "at": 1795792991881,
+ "detail": "trade claimed"
+}

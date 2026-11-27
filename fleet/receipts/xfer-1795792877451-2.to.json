@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795792877451-2",
+ "account": "SporranDip",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "f84d677e-a727-4ecf-9850-8676eaf5a963",
+ "count": 10,
+ "ok": true,
+ "at": 1795793045687,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795793044874
+ },
+ "logout": {
+  "attemptId": "1795793033191-0000023916-0000000001",
+  "at": 1795793045599,
+  "sha256": "e6d8373474fec933cf6adb791aff2bc57d2f1a6cce557d9f132e25a751297540"
+ },
+ "screen": true
+}

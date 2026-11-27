@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795792877451-2",
  "account": "Hocuspokeus",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "02eae088-8e95-4129-a637-6cd8adfb8524",
- "count": 0,
- "ok": false,
- "at": 1795792967615,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795793044019,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795793026868
+ },
+ "logout": {
+  "attemptId": "1795792967625-0000023028-0000000001",
+  "at": 1795793044007,
+  "sha256": "485b962cd30b4355385a81efcd7b45490c3db1b096f5ef3968e98d6035573d79"
+ },
+ "screen": true
 }
