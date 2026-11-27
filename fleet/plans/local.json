@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821252685,
+ "at": 1795821334926,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,7 +100,7 @@
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
     "DEMAND_ID": "goal:supply_chain:2357",
-    "BATCH_UNITS": "2",
+    "BATCH_UNITS": "14",
     "STALL_TICKS": "280"
    },
    "enabled": true,
@@ -109,7 +109,7 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -119,39 +119,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "353",
+    "MAX_ITEMS": "495",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "21800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "353"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "451",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20040",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "451"
+    "BATCH_UNITS": "495"
    },
    "enabled": true,
    "repeat": false,
@@ -172,6 +147,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "458",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20320",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "458"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
    "role": "army"
   },
   {
