@@ -4,10 +4,11 @@
 // (pocketExitTravel).
 // Each edge says what the account needs (coins, quest stages, skills, runes, items held or worn) and how the
 // walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness (except
-// the chaos altar exit, the only way out of that pocket), jails and random-tile teleports (the wizards' teleports
-// into the essence mine), runecraft ruins; shortcuts with a failure roll (a
+// the chaos altar exit and the Entrana dungeon magic door, the only ways out of their pockets), jails and random-tile
+// teleports (the wizards' teleports into the essence mine), runecraft ruins; shortcuts with a failure roll (a
 // fall hurts a low-level account), a use-item, a first step (via) or a held-item check. The river log
-// (RIVER_LOG_TRAVEL) has a failure roll and is in: its slip still crosses, for 6% of hitpoints.
+// (RIVER_LOG_TRAVEL) and the Trollheim rocks (ROLLED_QUEST_PASSAGES) have a failure roll and are in, with the
+// damage of a fall.
 import { readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { writeAtomicFile } from './atomic-file';
@@ -119,7 +120,15 @@ type TeleRecord = { id: string; kind: string; name: string; trigger: string; fro
     requires: { type: string; skill?: string; level?: number; varp?: string; op?: string; value?: number; item?: string }[];
     runes?: { item: string; count: number }[]; charges?: { item: string }[];
     to: { option: string | null; candidates: (Tile & { wilderness?: number })[]; maxRadius?: number }[] };
-export function teleportTravel(records: TeleRecord[]): Travel[] {
+// An edge that starts beside its shut door names the door by id and tile, so the walker operates that door and not
+// the nearest one with "door" in its name (walk/travel.ts travelLocLeg).
+function doorRun(run: TravelRun, r: TeleRecord, f: Tile | null): TravelRun {
+    if (run.how !== 'loc' || !f || r.from?.some(o => o.x === f.x && o.z === f.z && o.level === f.level)) return run;
+    const door = r.from?.find(o => Math.abs(o.x - f.x) + Math.abs(o.z - f.z) === 1 && o.level === f.level);
+    const id = door?.src ? mapLocId(door.src) : null;
+    return door && id !== null ? { ...run, id, at: { x: door.x, z: door.z, level: door.level } } : run;
+}
+export function teleportTravel(records: TeleRecord[], shutDoors: ReadonlySet<string> = new Set()): Travel[] {
     const out: Travel[] = [];
     for (const r of records) {
         if (!['spell', 'jewellery', 'lever', 'spirit_tree', 'loc'].includes(r.kind)) continue;
@@ -132,16 +141,22 @@ export function teleportTravel(records: TeleRecord[]): Travel[] {
         }
         const op = Number(r.trigger.match(/^\[op(?:loc|npc)(\d)/)?.[1] ?? 1), loc = r.trigger.match(/^\[oploc\d,([a-z0-9_]+)\]/)?.[1];
         for (const d of r.to) {
-            if (d.candidates.length !== 1 || (d.candidates[0]!.wilderness ?? 0) > 0) continue;
+            // A loc with a fixed start may land in the Wilderness: the Entrana dungeon magic door (entrana_dungeon.rs2:6-8,
+            // to 3250,3772) is the only way out of that dungeon (cave_monk.rs2:6: "The only exit from the caves below is
+            // a portal which leads only to the deepest wilderness").
+            if (d.candidates.length !== 1 || ((d.candidates[0]!.wilderness ?? 0) > 0 && !(r.kind === 'loc' && r.from?.length))) continue;
             const c = d.candidates[0]!, to = { x: c.x, z: c.z, level: c.level };
             const run: TravelRun | null = r.kind === 'spell' ? { how: 'spell', component: r.trigger.match(/\[if_button,([a-z0-9_:]+)\]/)?.[1] ?? '' }
                 : r.kind === 'jewellery' ? { how: 'rub', items: (r.charges ?? []).map(c => c.item), option: d.option }
                 : loc ? { how: 'loc', loc, op, option: d.option } : null;
             if (!run || (run.how === 'spell' && !run.component) || (run.how === 'rub' && !run.items.length)) continue;
-            const froms = r.from?.filter(f => (f.wilderness ?? 0) === 0) ?? [null];
+            // A door that is not kind 'open' in doors.json (the Entrana dungeon magic door is 'unknown') stays shut for the
+            // route search, so its own tile cannot be a start: the edge starts on each tile beside it instead.
+            const froms = (r.from?.filter(f => (f.wilderness ?? 0) === 0) ?? [null]).flatMap(f => !f || !shutDoors.has(`${f.x},${f.z},${f.level}`) ? [f]
+                : [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => ({ x: f.x + dx!, z: f.z + dz!, level: f.level })));
             for (const f of froms) out.push({
                 id: `${r.id}:${d.option ?? 'to'}${f ? `@${f.x},${f.z}` : ''}`, kind: r.kind, name: d.option ? `${r.name}: ${d.option}` : r.name,
-                from: f ? { x: f.x, z: f.z, level: f.level } : null, to, coins: 0, needs, runes: r.runes ?? [], run,
+                from: f ? { x: f.x, z: f.z, level: f.level } : null, to, coins: 0, needs, runes: r.runes ?? [], run: doorRun(run, r, f),
                 cost: r.kind === 'spirit_tree' ? NPC_COST : TELEPORT_COST,
             });
         }
@@ -187,19 +202,46 @@ export function passageStart(e: { from: Tile; to: Tile; side?: string[] }): Tile
     return e.side?.length && e.from.level === e.to.level ? { x: 2 * e.from.x - e.to.x, z: 2 * e.from.z - e.to.z, level: e.from.level } : e.from;
 }
 // Locs in quest scripts that the server crosses with no quest check. Other 'quest' rows include traps and wrong portals.
-const UNGATED_QUEST_PASSAGES = new Set(['gertrudefence']);
+// The rows below gertrudefence are the only ways out of their pockets:
+// - watchladderdown: quest_itwatchtower.rs2:268-269, from the Watchtower top (2933,4711,2) to 2549,3112,1.
+// - crandor_rock_opening: crandor.rs2:3-5, from Crandor down to the dungeon under it. Its secret door to the Karamja
+//   volcano (crandor.rs2:11-18, open on one axis without the quest) is kind 'open' in doors.json.
+// - enclavecave: quest_itwatchtower.rs2:462-463, from the shamans' enclave (where the enclave guard sends the player,
+//   enclave_guard.rs2:42) to 2540,3054.
+// - troll_pass_entrance and troll_pass_exit: quest_troll.rs2:121-127, the cave under Death Plateau between Trollheim
+//   (where the Trollheim teleport lands) and the plateau above Burthorpe.
+// - death_fullstyle: quest_death.rs2:103-118, the stile between Death Plateau and Burthorpe.
+export const UNGATED_QUEST_PASSAGES: ReadonlySet<string> = new Set(['gertrudefence', 'watchladderdown', 'crandor_rock_opening', 'enclavecave', 'troll_pass_entrance', 'troll_pass_exit', 'death_fullstyle']);
+// Quest climbs with an Agility roll and no quest check, and the damage of a fall: floor(hitpoints * 5 / 100) + 1
+// (quest_troll.rs2:38, :67, :157, :190). Each needs Agility 15 (:18, :46, :140, :164). A climb down
+// (troll_climbingrocks_top :29-30, troll_mountain_rockstop :147-148) moves before the roll, so a fall still lands below;
+// a climb up or across falls back to its start (:61, :184) and the walk tries again. troll_climbingrocks_top is the
+// way down from the upper Death Plateau. troll_climbingrocks (:1-15) needs Troll Stronghold started (troll_quest >= 10,
+// a shortcuts.json varp need), and climbing boots from z 3611 (:11), which the walker does not check, so starts on that
+// row stay out; it is rockslide_obstacle (upass_obstacles.rs2:22-27): a slip stays put for 3 damage.
+export const ROLLED_QUEST_PASSAGES: Record<string, { percent: number; plus: number; bootsAtZ?: number }> = {
+    troll_climbingrocks: { percent: 0, plus: 3, bootsAtZ: 3611 },
+    troll_climbingrocks_top: { percent: 5, plus: 1 },
+    troll_climbingrocks_bottom: { percent: 5, plus: 1 },
+    troll_mountain_shortcut_climbingrocks1: { percent: 5, plus: 1 },
+    troll_mountain_shortcut_climbingrocks2: { percent: 5, plus: 1 },
+};
 export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
     const out: Travel[] = [];
     for (const e of edges) {
-        if ((e.kind !== 'shortcut' && e.kind !== 'passage' && !(e.kind === 'quest' && UNGATED_QUEST_PASSAGES.has(e.locName))) || e.via || e.failure || e.requires?.useItem || e.requires?.items?.length) continue;
+        const rolled = e.kind === 'quest' ? ROLLED_QUEST_PASSAGES[e.locName] : undefined;
+        if ((e.kind !== 'shortcut' && e.kind !== 'passage' && !(e.kind === 'quest' && (UNGATED_QUEST_PASSAGES.has(e.locName) || rolled))) || e.via || (e.failure && !rolled) || e.requires?.useItem || e.requires?.items?.length) continue;
+        const fall = e.failure as { to?: Tile } | undefined;
+        const slips = fall?.to && fall.to.x === e.to.x && fall.to.z === e.to.z && fall.to.level === e.to.level ? [e.to] : undefined;
         if (e.from.level !== e.to.level && Math.abs(e.from.level - e.to.level) > 3) continue;
         const op = Number(e.option.match(/^op(\d)$/)?.[1]);
         if (!op) continue;
         const id = `loc:${e.locName}@${e.from.x},${e.from.z},${e.from.level}>${e.to.x},${e.to.z}`;
         // One edge for each tile the player can operate the loc from (shortcuts.json starts).
-        for (const from of e.starts ?? [passageStart(e)]) out.push({
+        const slipDamage = rolled && { percent: rolled.percent, plus: rolled.plus };
+        for (const from of e.starts ?? [passageStart(e)]) if (from.z !== rolled?.bootsAtZ) out.push({
             id: e.starts ? `${id}<${from.x},${from.z}` : id, kind: e.kind, name: `${e.locName} ${e.option}`,
-            from, to: e.to, coins: e.requires?.coins ?? 0,
+            from, to: e.to, ...(slips ? { slips } : {}), ...(slipDamage ? { slipDamage } : {}), coins: e.requires?.coins ?? 0,
             needs: [...(e.requires?.skills ?? []).map(k => ({ skill: k.name, level: k.level })), ...(e.requires?.varps ?? []).map(v => ({ varp: v.varp, op: v.op, value: v.value }))],
             runes: [], run: { how: 'loc', loc: e.locName, op, option: null, id: e.id, at: e.from, ...(e.bridged ? { unlisted: true as const } : {}) },
             cost: Math.max(Math.abs(from.x - e.to.x), Math.abs(from.z - e.to.z)) + 3,
@@ -251,7 +293,7 @@ export const fareCrossingAt = (level: number, at: { x: number; z: number }, list
     list.find(c => c.level === level && c.x === at.x && c.z === at.z);
 
 // The stamps cover the data files only: change this name when a builder above changes its output.
-const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v4.json');
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v5.json');
 type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
 const fileStamp = (file: string): string => {
     try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }
@@ -263,17 +305,19 @@ export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
     const npcFile = join(repoRoot, 'knowledge', 'npc-travel.json');
     const teleFile = join(repoRoot, 'knowledge', 'teleports.json');
     const cutsFile = join(repoRoot, 'knowledge', 'shortcuts.json');
-    const npcStamp = fileStamp(npcFile), teleStamp = fileStamp(teleFile), cutsStamp = fileStamp(cutsFile);
+    const doorsFile = join(repoRoot, 'knowledge', 'doors.json');
+    const npcStamp = fileStamp(npcFile), teleStamp = fileStamp(teleFile), cutsStamp = fileStamp(cutsFile), doorsStamp = fileStamp(doorsFile);
     if (cacheFile) {
         try {
             const parsed = JSON.parse(readFileSync(cacheFile, 'utf8')) as TravelCache;
             if (parsed?.v === 1 && Array.isArray(parsed.stamps) && Array.isArray(parsed.travel) && Array.isArray(parsed.staffs)
-                && parsed.stamps.length >= 3
+                && parsed.stamps.length >= 4
                 && parsed.stamps[0]![0] === 'npc' && parsed.stamps[0]![1] === npcStamp
                 && parsed.stamps[1]![0] === 'tele' && parsed.stamps[1]![1] === teleStamp
-                && parsed.stamps[2]![0] === 'cuts' && parsed.stamps[2]![1] === cutsStamp) {
+                && parsed.stamps[2]![0] === 'cuts' && parsed.stamps[2]![1] === cutsStamp
+                && parsed.stamps[3]![0] === 'doors' && parsed.stamps[3]![1] === doorsStamp) {
                 let fresh = true;
-                for (let i = 3; i < parsed.stamps.length; i++) {
+                for (let i = 4; i < parsed.stamps.length; i++) {
                     const [rel, stamp] = parsed.stamps[i]!;
                     if (fileStamp(join(content, rel)) !== stamp) { fresh = false; break; }
                 }
@@ -289,9 +333,11 @@ export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
     const tele = JSON.parse(readFileSync(teleFile, 'utf8')) as { teleports: TeleRecord[]; staffs: { rune: string; staffs: string[] }[] };
     staffs = tele.staffs;
     const cuts = JSON.parse(readFileSync(cutsFile, 'utf8')) as { edges: ShortcutRecord[] };
-    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...pocketExitTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
+    const doors = JSON.parse(readFileSync(doorsFile, 'utf8')) as { x: number; z: number; level: number; kind: string }[];
+    const shutDoors = new Set(doors.filter(d => d.kind !== 'open').map(d => `${d.x},${d.z},${d.level}`));
+    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports, shutDoors), ...pocketExitTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
     if (cacheFile) {
-        const stamps: [string, string][] = [['npc', npcStamp], ['tele', teleStamp], ['cuts', cutsStamp]];
+        const stamps: [string, string][] = [['npc', npcStamp], ['tele', teleStamp], ['cuts', cutsStamp], ['doors', doorsStamp]];
         const seenMap = new Set<string>();
         const mapSrcs = [...npc.records.map(r => r.deck?.gangplank?.src),
             ...tele.teleports.filter(r => r.kind === 'runecraft_portal').flatMap(r => (r.from ?? []).map(f => f.src))];
