@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795809192145,
+ "at": 1795809222954,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,26 +62,39 @@
    "account": "Spitroaster",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "nurmof",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "1275",
-    "ITEMS": "Rune pickaxe",
-    "MAX_ITEMS": "1",
+    "ORDER_KEY": "brain-1513-81-o0-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "81",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "34000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1275",
-    "BATCH_UNITS": "1"
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "81"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1275",
+   "goal": "campaign:haggis:item:1513",
    "role": "auto"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
   },
   {
    "account": "OreElse",
@@ -160,14 +173,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "40",
+    "MAX_ITEMS": "33",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "40"
+    "BATCH_UNITS": "33"
    },
    "enabled": true,
    "repeat": false,
@@ -176,47 +189,6 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-skiller.ts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 -- foraging feathers",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "93",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20600",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "93"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -241,44 +213,95 @@
    "role": "army"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-fighter.ts",
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "druid"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftmaker",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "103",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "22600",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "103"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
-   "role": "auto",
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
    "resources": [
-    "chaos-druids"
+    "draynor-willows"
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
+   "account": "Shaftmaker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:563",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:563",
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
    "role": "army",
    "resources": [
-    "chaos-druids"
+    "draynor-willows"
    ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -335,6 +358,38 @@
    "role": "auto"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -360,22 +415,6 @@
    "role": "auto"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=46 -- thieving knights",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "army"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -384,21 +423,46 @@
     "3000"
    ],
    "env": {
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "7",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "auto"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
     "ITEM_ID": "39",
     "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "45",
+    "MAX_ITEMS": "4",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "45"
+    "BATCH_UNITS": "4"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:39",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "mmtha0205",
@@ -413,31 +477,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -467,7 +506,6 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fingerblastr",
@@ -476,13 +514,11 @@
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
   "pocketpool",
   "quickhandjob",
   "sausagefest",
   "swordinhand",
-  "undermykilt",
-  "woodpecker"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

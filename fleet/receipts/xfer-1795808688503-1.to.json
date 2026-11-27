@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795808688503-1",
  "account": "Woodpecker",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "8cc33c4e-3e84-4a0d-9e93-1f22d2c07ff2",
- "count": 0,
- "ok": false,
- "at": 1795809175564,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795809194882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795809194169
+ },
+ "logout": {
+  "attemptId": "1795809175581-0000016008-0000000001",
+  "at": 1795809194844,
+  "sha256": "47ef2580adbaeadade46b65747a6f2f4b95b1253db7b3816fc362b52067ee92f"
+ },
+ "screen": true
 }

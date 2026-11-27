@@ -14,3 +14,14 @@
  "ok": true,
  "at": 1795809192722,
  "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795809137862-0000031624-0000000001",
+  "at": 1795809192530,
+  "sha256": "d2742e478a9cb860590afe7b9e734061fb5b41f9c89c6e56d5c0c1609d2901c6"
+ },
+ "screen": true
+}
