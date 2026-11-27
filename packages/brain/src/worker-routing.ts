@@ -784,7 +784,11 @@ export function resolvePlannedStepWorkerRoute(
                     workerId: 'logistics',
                     routeKey: 'walk-to',
                     args: ['walk-to', String(tile.x), String(tile.z), String(tile.level)],
-                    env: { RECOVERY_REASON: planned.reason, ...(kit ? { STAGE_KIT: kit } : {}) },
+                    env: {
+                        RECOVERY_REASON: planned.reason,
+                        ...(kit ? { STAGE_KIT: kit } : {}),
+                        ...(planned.keep ? { STAGE_KEEP: planned.keep.join(',') } : {}),
+                    },
                     config: { role: 'walk-to', tile, ...(planned.kit ? { kit: planned.kit } : {}) },
                     warnings: [],
                 };

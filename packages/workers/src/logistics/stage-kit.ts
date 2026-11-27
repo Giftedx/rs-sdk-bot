@@ -3,6 +3,7 @@
 import type { Session } from '../../../core/src/inprocess';
 
 export type StageKitItem = { readonly itemId: number; readonly count: number };
+export const PACK_SLOTS = 28;
 
 // "333:2,954:10" -> [{ itemId: 333, count: 2 }, { itemId: 954, count: 10 }]. Throws on a malformed entry.
 export function parseStageKit(text: string | undefined): StageKitItem[] {
@@ -15,6 +16,22 @@ export function parseStageKit(text: string | undefined): StageKitItem[] {
     });
 }
 
+// "995,333" -> Set{995, 333}: the pack items that a stage deposit keeps (STAGE_KEEP).
+export function parseStageKeep(text: string | undefined): Set<number> {
+    if (!text?.trim()) return new Set();
+    return new Set(text.split(',').map(part => {
+        const id = Number(part.trim());
+        if (!/^\s*\d+\s*$/.test(part) || !Number.isSafeInteger(id)) throw Error(`invalid STAGE_KEEP entry: ${part}`);
+        return id;
+    }));
+}
+
+// The pack slots that the kit shortfall takes: none for a stack the pack holds, one for a new stack, one each for an
+// unstackable item.
+export function stageKitSlots(short: readonly StageKitItem[], pack: readonly { id: number }[], stackable: (id: number) => boolean): number {
+    return short.reduce((n, k) => n + (stackable(k.itemId) ? (pack.some(i => i.id === k.itemId) ? 0 : 1) : k.count), 0);
+}
+
 // The count of each kit item that the pack lacks.
 export function stageKitShortfall(kit: readonly StageKitItem[], pack: readonly { id: number; count: number }[]): StageKitItem[] {
     return kit
@@ -22,8 +39,9 @@ export function stageKitShortfall(kit: readonly StageKitItem[], pack: readonly {
         .filter(k => k.count > 0);
 }
 
-// Withdraws the kit shortfall at the nearest bank. Throws with the missing item when the bank lacks it.
-export async function withdrawStageKit(s: Session, kit: readonly StageKitItem[]): Promise<void> {
+// Withdraws the kit shortfall at the nearest bank. A pack without room for it deposits every item outside `keep`
+// first (the brain plans the same deposit, brain/src/stage.ts). Throws with the missing item when the bank lacks it.
+export async function withdrawStageKit(s: Session, kit: readonly StageKitItem[], keep: ReadonlySet<number> = new Set()): Promise<void> {
     const { waitUntil } = await import('../../../core/src/ticks');
     if (!kit.length) return;
     await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 20 });
@@ -45,6 +63,15 @@ export async function withdrawStageKit(s: Session, kit: readonly StageKitItem[])
         throw Error('stage kit: bank did not open');
     }
     try {
+        const { isItemStackable } = await import('../bank-artisan/catalog');
+        const need0 = stageKitShortfall(kit, s.sdk.getInventory());
+        if (s.sdk.getInventory().length + stageKitSlots(need0, s.sdk.getInventory(), isItemStackable) > PACK_SLOTS) {
+            const { depositPack } = await import('../../../core/src/deposit');
+            await depositPack(s, item => keep.has(item.id) || kit.some(k => k.itemId === item.id));
+            if (s.sdk.getInventory().length + stageKitSlots(stageKitShortfall(kit, s.sdk.getInventory()), s.sdk.getInventory(), isItemStackable) > PACK_SLOTS) {
+                throw Error('stage kit: the kept pack items leave no room for the kit');
+            }
+        }
         for (const need of stageKitShortfall(kit, s.sdk.getInventory())) {
             const row = s.sdk.getState()?.bank?.items.find(i => i.id === need.itemId);
             if (!row || row.count < need.count) throw Error(`stage kit: bank missing itemId=${need.itemId} need=${need.count} have=${row?.count ?? 0}`);
