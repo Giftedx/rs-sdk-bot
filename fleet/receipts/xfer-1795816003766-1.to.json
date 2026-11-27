@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795816003766-1",
  "account": "Fingerblastr",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "b78a2525-d3da-401e-b973-0d3d171587ff",
- "count": 0,
- "ok": false,
- "at": 1795816101571,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795816169726,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795816168963
+ },
+ "logout": {
+  "attemptId": "1795816101581-0000024540-0000000001",
+  "at": 1795816169714,
+  "sha256": "767bd3067176da2f7077998449e0015d18b203875539711bdec6430a7d2ea962"
+ },
+ "screen": true
 }
