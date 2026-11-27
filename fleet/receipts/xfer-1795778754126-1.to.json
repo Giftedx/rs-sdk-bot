@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778754126-1",
+ "account": "SporranDip",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "efb43b2d-5b9b-43a4-bd5d-9703123ac7f5",
+ "count": 10,
+ "ok": true,
+ "at": 1795779259518,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795779258796
+ },
+ "logout": {
+  "attemptId": "1795779246712-0000009244-0000000001",
+  "at": 1795779259505,
+  "sha256": "4a212717643bfaa6d60abcae5b72713be61cc81ad6aa72e16aa751cc5c2cb0a7"
+ },
+ "screen": true
+}

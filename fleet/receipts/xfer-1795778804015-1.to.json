@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778804015-1",
+ "account": "TossTheCaber",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron axe",
+ "requested": 1,
+ "claim": "216d01b0-0874-4872-8e8d-ff7b10298885",
+ "count": 1,
+ "ok": true,
+ "at": 1795779251554,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779250784
+ },
+ "logout": {
+  "attemptId": "1795779238384-0000004188-0000000001",
+  "at": 1795779251468,
+  "sha256": "21e895767daa253da5abd6ddb4aae702bbaea8daec5a51ca0957691729c4a6cf"
+ },
+ "screen": true
+}

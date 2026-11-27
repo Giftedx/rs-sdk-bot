@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779027141-1",
+ "account": "Swordswallow",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 33,
+ "claim": "ee9270ea-152d-4d3a-8b5a-d3ff576a99f8",
+ "count": 0,
+ "ok": false,
+ "at": 1795779190815,
+ "detail": "trade claimed"
+}

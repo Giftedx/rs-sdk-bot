@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779008989-2",
+ "account": "Moneyshot",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 518,
+ "claim": "dd7f5184-5683-465c-ae02-df5d20640c48",
+ "count": 0,
+ "ok": false,
+ "at": 1795779234900,
+ "detail": "trade claimed"
+}

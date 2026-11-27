@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778956713-1",
+ "account": "mmtha0205",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "73fdd2a7-56ba-4976-a57a-04a118509d2b",
+ "count": 1,
+ "ok": true,
+ "at": 1795779267895,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779267135
+ },
+ "logout": {
+  "attemptId": "1795779257449-0000019028-0000000001",
+  "at": 1795779267882,
+  "sha256": "2cdc38fb7d5d46c51ad98ddd7d6e9ee0750577ab11f0fd635ecfddb1b0621be6"
+ },
+ "screen": true
+}
