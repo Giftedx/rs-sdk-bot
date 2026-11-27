@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795790931191,
+ "at": 1795790951053,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,22 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1550 TARGET_COUNT=155 PRODUCT_TARGET=177 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=177 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
-   "account": "KnightRider",
+   "account": "Sausagefest",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -99,29 +84,19 @@
    "role": "army"
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
+    "scripts/aio-skiller.ts CAP=1770 TARGET_COUNT=177 PRODUCT_TARGET=177 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=177 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "1307",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "1307"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
   },
   {
    "account": "Swordswallow",
@@ -144,10 +119,35 @@
    ]
   },
   {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1311",
+    "ITEMS": "Steel 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1311",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
+   "role": "army"
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=14 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 PRODUCT_TARGET=14 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=14 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
@@ -158,22 +158,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=14 PRODUCT_TARGET=14 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=8 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=14 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "auto"
   },
   {
    "account": "Unsheathed",
@@ -189,6 +173,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -253,6 +252,25 @@
    "role": "auto"
   },
   {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1229"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -266,27 +284,6 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fletching",
-    "arrows"
-   ],
-   "env": {
-    "MODE": "headless",
-    "SHAFT_RESERVE": "100",
-    "FEATHER_RESERVE": "100",
-    "DEMAND_ID": "campaign:haggis:item:53",
-    "BATCH_UNITS": "775",
-    "MAX_MAKE": "780",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "helper"
   }
  ],
  "army": [
