@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753516908,
+ "at": 1795753547753,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -157,27 +157,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_marrentill_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:93",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:93",
-   "role": "army"
   }
  ],
  "army": [
@@ -206,6 +185,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",
