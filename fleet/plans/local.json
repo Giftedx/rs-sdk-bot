@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805750031,
+ "at": 1795805764312,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Bigpackage",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "428",
+    "MAX_ITEMS": "332",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "428"
+    "BATCH_UNITS": "332"
    },
    "enabled": true,
    "repeat": false,
@@ -84,7 +84,23 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Spitroaster",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -94,38 +110,19 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "313",
+    "MAX_ITEMS": "456",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "20240",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "313"
+    "BATCH_UNITS": "456"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1037"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "role": "auto"
   },
   {
    "account": "PickpockDick",
