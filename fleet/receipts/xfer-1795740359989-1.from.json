@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795740359989-1",
+ "account": "mmtha0205",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 20,
+ "claim": "a015f0e2-026d-423c-a2c3-c4681fffb777",
+ "count": 0,
+ "ok": false,
+ "at": 1795740487412,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1795740479778-0000006484-0000000001",
+  "at": 1795740487326,
+  "sha256": "d7de572e00168b6ba79b0a39c9f261becb4dd76abea5ed6b18d2c600d70e9445"
+ },
+ "screen": false
+}

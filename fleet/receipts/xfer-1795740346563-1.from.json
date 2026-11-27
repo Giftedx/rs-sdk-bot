@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795740346563-1",
+ "account": "Quickhandjob",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "bcd0d62e-0b83-4b6f-90e1-4a28a1949ef7",
+ "count": 0,
+ "ok": false,
+ "at": 1795740446659,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1795740437850-0000019336-0000000001",
+  "at": 1795740446615,
+  "sha256": "aefcc994a3e900b526dfc1cd9721a80333ca0458483dba155cae06bdbd3f37a7"
+ },
+ "screen": false
+}

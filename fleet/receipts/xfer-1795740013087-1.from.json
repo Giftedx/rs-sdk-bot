@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795740013087-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "724da1a1-9214-4bf8-96f4-16eefc09fb82",
+ "count": 1,
+ "ok": true,
+ "at": 1795740558137,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795740541796
+ },
+ "logout": {
+  "attemptId": "1795740467879-0000009212-0000000001",
+  "at": 1795740558123,
+  "sha256": "8a9e379aedcf2fff2377b848c7fbcbc93c00b983eddcaf0af011fed4243e0550"
+ },
+ "screen": true
+}

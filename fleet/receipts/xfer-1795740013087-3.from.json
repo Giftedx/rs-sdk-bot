@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740013087-3",
+ "account": "Billionaire",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 6,
+ "claim": "db5e33ae-d750-4e99-b215-8161c23d4cda",
+ "count": 0,
+ "ok": false,
+ "at": 1795740531534,
+ "detail": "trade claimed"
+}

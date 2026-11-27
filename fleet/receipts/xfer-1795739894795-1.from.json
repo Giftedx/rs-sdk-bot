@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795739894795-1",
+ "account": "SporranBulge",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 2,
+ "claim": "a5125391-2c0c-43d0-9d64-1d30688f769a",
+ "count": 0,
+ "ok": false,
+ "at": 1795740465325,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795740434179
+ },
+ "logout": {
+  "attemptId": "1795740426006-0000016380-0000000001",
+  "at": 1795740465313,
+  "sha256": "2662bd8a55df30ae52e8b5d70c15aa14d6e2f53d45d0e1f46f0db6576b170eb9"
+ },
+ "screen": false
+}

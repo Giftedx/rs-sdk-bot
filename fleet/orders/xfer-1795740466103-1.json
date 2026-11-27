@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795740466103-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "Ballbag",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "extra": [
+    {
+      "item": "Unicorn horn",
+      "count": 3,
+      "itemId": 237
+    }
+  ],
+  "start": 1795740466103,
+  "end": 1795741366103,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

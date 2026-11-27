@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795739894795-1",
+ "account": "Fingerblastr",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 2,
+ "claim": "94b1d0e3-0297-4581-9894-7bd72233b804",
+ "count": 0,
+ "ok": false,
+ "at": 1795740462553,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795740456899-0000025124-0000000001",
+  "at": 1795740462540,
+  "sha256": "257b5d005b6738f412291d77ec24987e7ec359a95c81bb4a44152119ed3c96c6"
+ },
+ "screen": false
+}
