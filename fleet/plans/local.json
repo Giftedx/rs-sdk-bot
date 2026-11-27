@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749531746,
+ "at": 1795749542891,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Woodpecker",
+   "account": "Moneyshot",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -141,7 +141,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpool",
@@ -153,6 +152,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
