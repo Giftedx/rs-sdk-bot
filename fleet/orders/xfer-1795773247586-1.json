@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795773247586-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Unsheathed",
+  "item": "Dragon bones",
+  "count": 11,
+  "itemId": 536,
+  "start": 1795773247586,
+  "end": 1795774147586,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
