@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795800617119-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "YewGotWood",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795800617119,
+  "end": 1795801517119,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

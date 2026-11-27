@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795800563715,
+ "at": 1795800627787,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "326",
+    "MAX_ITEMS": "318",
     "COIN_RESERVE": "1000",
-    "FLOAT": "132400",
+    "FLOAT": "129200",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "326"
+    "BATCH_UNITS": "318"
    },
    "enabled": true,
    "repeat": false,
@@ -97,40 +97,6 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "252"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "loot-trip"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "590"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
   },
   {
    "account": "Fingersmith",
@@ -172,22 +138,25 @@
    "account": "Swordswallow",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-1511-4-o0-p50",
-    "ITEM_ID": "1511",
-    "QUANTITY": "4",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "15",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "50",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "4"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "15"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1511",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -195,25 +164,91 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "gemshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "142",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "142"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1623",
+   "goal": "campaign:haggis:item:554",
    "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-317-2-o0-p13",
+    "ITEM_ID": "317",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "13",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:317",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:317",
+   "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_irit_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "3",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:101",
+    "BATCH_UNITS": "3",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
   },
   {
    "account": "Woodenstaff",
@@ -259,29 +294,24 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
+   "account": "FishAndChips",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "gemshop2",
-    "3000"
+    "cow"
    ],
    "env": {
-    "ITEM_ID": "1621",
-    "ITEMS": "Uncut emerald",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1621",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1621",
-   "role": "army"
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "Pullmybow",
@@ -302,26 +332,6 @@
    "role": "auto",
    "resources": [
     "chaos-druids"
-   ]
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:FishAndChips",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
    ]
   },
   {
@@ -349,29 +359,63 @@
    ]
   },
   {
-   "account": "Kiltlifter",
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "238"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 BANK_PACK=1 -- trooper"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftmaker",
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "fishingshop",
+    "magic_guild",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "309",
-    "ITEMS": "Fly fishing rod",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "12",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:309",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "12"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:309",
-   "role": "army"
+   "goal": "campaign:haggis:item:554",
+   "role": "auto"
   }
  ],
  "army": [
@@ -388,6 +432,7 @@
   "fatstack",
   "fingerblastr",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
@@ -400,8 +445,7 @@
   "sporrandip",
   "swordinhand",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

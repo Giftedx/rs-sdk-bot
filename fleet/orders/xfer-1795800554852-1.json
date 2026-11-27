@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795800554852-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Quickhandjob",
+  "item": "Air rune",
+  "count": 38,
+  "itemId": 556,
+  "start": 1795800554852,
+  "end": 1795801454852,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
