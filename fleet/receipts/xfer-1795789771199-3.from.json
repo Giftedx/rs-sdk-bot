@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789771199-3",
  "account": "OreElse",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 1,
  "claim": "09f6bf4d-1ce2-4196-a270-e3c6df2e180a",
- "count": 0,
- "ok": false,
- "at": 1795790514677,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790594992,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790583424
+ },
+ "logout": {
+  "attemptId": "1795790514700-0000002064-0000000001",
+  "at": 1795790594952,
+  "sha256": "2d50ae22b83a9fb185fe4a3327e41c7186caee113f35a4fbb58db80975863584"
+ },
+ "screen": true
 }

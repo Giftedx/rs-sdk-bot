@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790107185-1",
  "account": "SporranDip",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "82ccdd4a-671c-418f-b984-6b6c080e0acf",
- "count": 0,
- "ok": false,
- "at": 1795790525751,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795790591753,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795790590999
+ },
+ "logout": {
+  "attemptId": "1795790525760-0000021992-0000000001",
+  "at": 1795790591741,
+  "sha256": "e32d23c3ad5ad1acd452cd731cde5c336047b63b14e6914db46d64ef0125ccbe"
+ },
+ "screen": true
 }
