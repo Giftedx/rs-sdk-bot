@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795802522053-2",
  "account": "YewGotWood",
  "partner": "Shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "ea2257ef-9546-41d9-b371-e27ebc5efe12",
- "count": 0,
- "ok": false,
- "at": 1795803017609,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795803053557,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795803027207
+ },
+ "logout": {
+  "attemptId": "1795803017619-0000021100-0000000001",
+  "at": 1795803053544,
+  "sha256": "48fa59fe835578f254fce88ff5a453b4e11032a7b88503e4c5723548b6e157d2"
+ },
+ "screen": true
 }
