@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805438465-1",
  "account": "UnderMyKilt",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 3,
  "claim": "ca470401-d841-4a60-a352-f14a45692490",
- "count": 0,
- "ok": false,
- "at": 1795805681207,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795805879088,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795805861469
+ },
+ "logout": {
+  "attemptId": "1795805681217-0000032560-0000000001",
+  "at": 1795805879075,
+  "sha256": "70b5a4a024bc2851e093163b351ac8847a6a4f1a120c53eebc09e8cd54de68d3"
+ },
+ "screen": true
 }

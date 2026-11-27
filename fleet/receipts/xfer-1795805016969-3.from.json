@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805016969-3",
+ "account": "Billionaire",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 14,
+ "claim": "09e6e4fc-1495-448e-ae3c-4f3b4ea1fff4",
+ "count": 0,
+ "ok": false,
+ "at": 1795805893764,
+ "detail": "trade claimed"
+}

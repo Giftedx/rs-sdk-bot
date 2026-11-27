@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805536555-1",
  "account": "YewFirst",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "d943af4c-9bb3-4993-be51-6cea30ea31ec",
- "count": 0,
- "ok": false,
- "at": 1795805726062,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795805804215,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795805803474
+ },
+ "logout": {
+  "attemptId": "1795805726071-0000026920-0000000001",
+  "at": 1795805804201,
+  "sha256": "f2288d2edc1db2a719d7334948da90040531bdee9c01943a0364eaaaa3e09f17"
+ },
+ "screen": true
 }
