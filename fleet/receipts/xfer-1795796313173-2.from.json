@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796313173-2",
  "account": "PickpockDick",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Unfinished potion",
  "requested": 1,
  "claim": "74c4bb2b-106e-4dd8-9a98-5d5318d1b6e1",
- "count": 0,
- "ok": false,
- "at": 1795796957576,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795796973432,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795796965101
+ },
+ "logout": {
+  "attemptId": "1795796957585-0000026824-0000000001",
+  "at": 1795796973421,
+  "sha256": "2b782beda79ae62e006fb975b4ead7fcee303137599e4996ee4c8af4bf9b7d6d"
+ },
+ "screen": true
 }
