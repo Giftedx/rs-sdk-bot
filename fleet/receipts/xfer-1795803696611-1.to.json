@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795803696611-1",
+ "account": "Fingerblastr",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "aca28365-5f78-4574-b6e2-5a079641905c",
+ "count": 3,
+ "ok": true,
+ "at": 1795804404774,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795804403944
+ },
+ "logout": {
+  "attemptId": "1795804342148-0000033764-0000000001",
+  "at": 1795804404686,
+  "sha256": "ec8b74061623be4b2b766525ed97311ef72b1638421c56b825eed1687a36ce5e"
+ },
+ "screen": true
+}

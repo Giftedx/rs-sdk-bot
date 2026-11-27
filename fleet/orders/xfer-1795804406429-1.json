@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795804406429-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "mmsmk1232",
+  "item": "Unfinished potion",
+  "count": 1,
+  "itemId": 93,
+  "start": 1795804406429,
+  "end": 1795805306429,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

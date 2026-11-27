@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795804153498-1",
+ "account": "SporranDip",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 8,
+ "claim": "bc227d5a-7522-4027-9713-9d17dab0a438",
+ "count": 0,
+ "ok": false,
+ "at": 1795804354874,
+ "detail": "trade claimed"
+}

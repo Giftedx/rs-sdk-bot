@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795803918687-3",
+ "account": "Pocketrocket",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "79bec72b-f09e-436a-b923-e38f0d75abcf",
+ "count": 10,
+ "ok": true,
+ "at": 1795804360262,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795804359548
+ },
+ "logout": {
+  "attemptId": "1795804345893-0000015580-0000000001",
+  "at": 1795804360246,
+  "sha256": "bbaf4e93572597c2e34cf64b4b0291c63877f929aea330ce183b81972a8e5c86"
+ },
+ "screen": true
+}
