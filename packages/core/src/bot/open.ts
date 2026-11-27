@@ -271,7 +271,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // moves the player the floor lets it walk; to walk itself it stops the watcher and that job.
     hpFloorOf(s)?.configure({
         log,
-        stop: reason => { if (!stopping && !settling.has(s)) { stopping = true; stop(reason); } },
+        stop: reason => { if (stopping || settling.has(s)) return false; stopping = true; stop(reason); return true; },
         reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {},
         fleeActive: () => randomEvents.get(s)?.busy() ?? false,
         takeOver: () => randomEvents.get(s)?.stop(),

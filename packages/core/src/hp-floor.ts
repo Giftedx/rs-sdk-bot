@@ -24,12 +24,13 @@
 // - Each eat, the escape start and the stop write one `HP_FLOOR <kind> ...` line.
 //
 // A death ends the escape at once: death recovery (death-recovery.ts) owns the session after it.
-// SESSION_HP_FLOOR=0 turns the floor off on a local practice server only (scripts/measure/death-probe.ts dies on purpose).
+// Only a local practice server runs a session with no floor (hpFloorOff): with SESSION_HP_FLOOR=0
+// (scripts/measure/death-probe.ts dies on purpose), and for a PvP worker, whose spar benches fight to a death.
 
 import { PLAIN_FOOD } from './eat-guard';
 import { wildernessLevel } from './prayer-guard/threats';
 import { npcMaxHitEstimate } from './randomevents/combat';
-import { targetsMe } from './randomevents/model';
+import { targetsMe, tileOf } from './randomevents/model';
 import { allFoodIds, selectQuestFood } from './sustain';
 
 export interface HpFloorSession {
@@ -46,7 +47,8 @@ export interface HpFloorConfig {
     // Receives each HP_FLOOR line. Default console.log.
     log?: (line: string) => void;
     // Ends the run with this reason (openBot: RESULT fail <reason>, then the logout). Default: bot/settle.ts finish.
-    stop?: (reason: string) => void;
+    // false: the run already ends for another reason (a flee stop), and its RESULT keeps that reason.
+    stop?: (reason: string) => boolean | void;
     // For each item id, the count the floor never eats (quest-sweep questReserved).
     reserved?: () => Readonly<Record<number, number>>;
     // True while another guard's flee walk holds the session (the random event watcher's flee job).
@@ -71,6 +73,14 @@ const STUCK_TICKS = 3;
 const RESEND_TICKS = 3;
 // The client routes inside its build area; a farther trail tile only gives a walk to the scene edge.
 const TRAIL_REACH = 40;
+
+/**
+ * True when a session gets no floor. Only on a local practice server: with SESSION_HP_FLOOR=0, and for a PvP worker
+ * (the file-name rule of the flee guard in bot/open.ts), whose benches measure fights to a death. A live session always
+ * gets the floor.
+ */
+export const hpFloorOff = (env: Readonly<Record<string, string | undefined>>, local: boolean, script: string): boolean =>
+    local && (env.SESSION_HP_FLOOR === '0' || /pk|pvp|spar|gang/i.test(script.split(/[\\/]/).at(-1) ?? ''));
 
 /** An estimate of a player's max hit from its combat level: level 100 hits up to 26. */
 export const playerMaxHitEstimate = (combatLevel: number | null | undefined): number =>
@@ -260,8 +270,9 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
     const endRun = (reason: string) => {
         if (stats.stopped) return;
         stats.stopped = true;
-        log(`HP_FLOOR stop ${reason}${s.name ? ` bot=${s.name}` : ''}`);
-        if (cfg.stop) { cfg.stop(reason); return; }
+        const bot = s.name ? ` bot=${s.name}` : '';
+        if (cfg.stop) { const took = cfg.stop(reason); log(`HP_FLOOR stop ${reason}${took === false ? ' run=already-ending' : ''}${bot}`); return; }
+        log(`HP_FLOOR stop ${reason}${bot}`);
         void import('./bot/settle').then(m => m.finish([s as any], false, reason)).catch(() => {});
     };
 
@@ -318,8 +329,7 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
             }
         }
 
-        const canEat = holdsFood(st) && refusedStreak < REFUSED_EATS;
-        if (!escape && h.hp <= curFloor && attacked && !canEat) {
+        if (!escape && h.hp <= curFloor && attacked && !(holdsFood(st) && refusedStreak < REFUSED_EATS)) {
             stats.escapes++;
             escape = {
                 at: now, from: me, dest: null, sentAt: -Infinity, sentFrom: '', refused: new Set(), teleport: 'none', teleportAt: -Infinity,
@@ -368,9 +378,9 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
             const stuck = now - e.sentAt >= STUCK_TICKS && now - e.lastMoveAt >= STUCK_TICKS;
             if (reached || stuck) { e.refused.add(key(e.dest)); stats.refusedTiles++; e.dest = null; }
         }
-        const att0 = [...att.npcs, ...att.players];
+        const att0 = [...att.npcs, ...att.players].map((a: any) => tileOf(a)).filter(t => Number.isFinite(t.x) && Number.isFinite(t.z));
         const danger = att0.length
-            ? { x: Math.round(att0.reduce((n, a: any) => n + a.x, 0) / att0.length), z: Math.round(att0.reduce((n, a: any) => n + a.z, 0) / att0.length) }
+            ? { x: Math.round(att0.reduce((n, a) => n + a.x, 0) / att0.length), z: Math.round(att0.reduce((n, a) => n + a.z, 0) / att0.length) }
             : e.from;
         if (!e.dest) {
             e.dest = pickDest(me, danger, e.refused);

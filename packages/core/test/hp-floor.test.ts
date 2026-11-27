@@ -7,7 +7,7 @@ import { classifyRawWorkerExit } from '../../brain/src/outcome-classifier';
 import { classify as classifyHost } from '../../practice/src/supervise-host';
 import { isHpFloorLine, isHpFloorStop, supervise } from '../../practice/src/supervise';
 import { startEatGuard } from '../src/eat-guard';
-import { CALM_TICKS, ESCAPE_BUDGET, floorLine, hpFloorOf, playerMaxHitEstimate, startHpFloor, type HpFloorConfig } from '../src/hp-floor';
+import { CALM_TICKS, ESCAPE_BUDGET, floorLine, hpFloorOf, hpFloorOff, playerMaxHitEstimate, startHpFloor, type HpFloorConfig } from '../src/hp-floor';
 import { startInProcessSession } from '../src/inprocess';
 import { questFoodDefinitions } from '../src/sustain';
 
@@ -270,6 +270,14 @@ test('every session that startInProcessSession opens has the floor; SESSION_HP_F
         if (prior === undefined) delete process.env.SESSION_HP_FLOOR; else process.env.SESSION_HP_FLOOR = prior;
         rmSync(base, { recursive: true, force: true });
     }
+});
+
+test('only a local server runs a session with no floor', () => {
+    expect(hpFloorOff({}, false, 'scripts/pk.ts')).toBe(false);
+    expect(hpFloorOff({ SESSION_HP_FLOOR: '0' }, false, 'scripts/woodcutting.ts')).toBe(false);
+    expect(hpFloorOff({ SESSION_HP_FLOOR: '0' }, true, 'scripts/woodcutting.ts')).toBe(true);
+    expect(hpFloorOff({}, true, 'C:\\repo\\scripts\\measure\\pk-spar-climb.ts')).toBe(true);
+    expect(hpFloorOff({}, true, 'scripts/gather-combat.ts')).toBe(false);
 });
 
 test('a hp-floor end is a defect: the supervisor blocks the job and the brain quarantines the activity', async () => {
