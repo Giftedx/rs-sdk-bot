@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795816978756-1",
  "account": "Hocuspokeus",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "acfd4698-2bec-4061-9ffb-f7feb30504cc",
- "count": 0,
- "ok": false,
- "at": 1795817237373,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795817384474,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795817304147
+ },
+ "logout": {
+  "attemptId": "1795817237417-0000021624-0000000001",
+  "at": 1795817384435,
+  "sha256": "c3591c5d888c9d3084a5665f8a749be9849dc24e80ed04baabe6ae58b225044e"
+ },
+ "screen": true
 }

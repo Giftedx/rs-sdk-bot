@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795816978756-1",
+ "account": "Fingerblastr",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "fe1f9777-5aa7-4a46-91d3-64fa9f0ff217",
+ "count": 1,
+ "ok": true,
+ "at": 1795817386108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795817385298
+ },
+ "logout": {
+  "attemptId": "1795817314924-0000017612-0000000001",
+  "at": 1795817386055,
+  "sha256": "8098440225a7c93152d7cd1692c3c780251391adfe1a582653536a805dbb4f3d"
+ },
+ "screen": true
+}
