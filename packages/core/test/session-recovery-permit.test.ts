@@ -458,6 +458,25 @@ test('a completed launch binds its child although each process lookup ages the b
  const first=launchObservations(f.options);first.matches!(1,'a');first.matches!(1,'a');launchObservations(f.options).matches!(1,'a');
  expect(calls).toBe(2);
 });
+test('a launch binds its child when its own issue ages the unchanged controller heartbeat past the limit',()=>{
+ // The live fault: the heartbeat is 8 s old when issue reads it, and issue itself takes 3 s. The controller cannot
+ // write a heartbeat inside its synchronous launch, so binding judges the unchanged bytes at the issue-time read.
+ for(const shared of [false,true]){
+  const f=completedFixture();let clock=now+8000;
+  f.options.now=()=>clock;
+  const checks=shared?launchObservations(f.options):f.options;
+  issueRecoveryPermit(f.request,f.base,checks);clock+=3000;
+  const paths=recoveryPermitPaths(f.request,f.base);
+  if(shared){bindRecoveryChild(f.request,process.pid,f.base,checks);expect(existsSync(paths.child)).toBe(true);}
+  else{expect(()=>bindRecoveryChild(f.request,process.pid,f.base,checks)).toThrow('recovery fleet ownership unresolved: stale');expect(existsSync(paths.child)).toBe(false);}
+ }
+ // Changed heartbeat bytes are a new observation and are judged at the binding clock.
+ const f=completedFixture();let clock=now+8000;f.options.now=()=>clock;
+ const checks=launchObservations(f.options);issueRecoveryPermit(f.request,f.base,checks);clock+=3000;
+ f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'},{account:'Other',state:'disabled'}]});
+ expect(()=>bindRecoveryChild(f.request,process.pid,f.base,checks)).toThrow('recovery fleet ownership unresolved: stale');
+ expect(existsSync(recoveryPermitPaths(f.request,f.base).child)).toBe(false);
+});
 const fleetFaults:Record<string,[string,(f:ReturnType<typeof fixture>)=>void]>={
  missing:['missing',f=>rmSync(join(f.base,'.practice/swarm-state.json'))],
  torn:['malformed',f=>writeFileSync(join(f.base,'.practice/swarm-state.json'),'{"at":17932')],

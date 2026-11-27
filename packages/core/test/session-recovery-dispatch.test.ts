@@ -57,6 +57,15 @@ test('setup refusals retain bounded permit causes without exposing arbitrary exc
   expect(JSON.stringify(f.results())).not.toContain('PASSWORD=private');expect(f.calls()).toBe(0);
  }
 });
+test('a held child records its bounded cause without exposing arbitrary exception text',async()=>{
+ for(const cause of ['recovery fleet ownership unresolved: stale','PASSWORD=private']){
+  const f=fixture(),lines:string[]=[];const d=createRecoveryDispatch({...f.options,log:(l:string)=>{lines.push(l);}});f.claim();d.handle(f.raw);
+  f.reject(Error(cause));await Promise.resolve();await Promise.resolve();
+  const want=cause==='PASSWORD=private'?'unclassified setup error':cause;
+  expect(f.results()[0].result).toMatchObject({sessionRecovered:false,child:{cause:want}});expect(lines).toContain('SWARM recovery child held: '+want);
+  expect(JSON.stringify(f.results())).not.toContain('PASSWORD=private');
+ }
+});
 test('failed child keeps the old failure; malformed or ordinary JSON is not consumed as a recovery',async()=>{
  const f=fixture(),before=readFileSync(f.ends,'utf8');f.claim();f.controller.handle(f.raw);f.reject(Error('timeout'));await Promise.resolve();await Promise.resolve();
  expect(f.results()[0].result.sessionRecovered).toBe(false);expect(readFileSync(f.ends,'utf8')).toBe(before);expect(f.controller.active).toBeUndefined();

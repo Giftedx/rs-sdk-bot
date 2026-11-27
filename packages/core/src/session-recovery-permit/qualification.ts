@@ -38,11 +38,14 @@ export const FLEET_REFUSALS = ['missing', 'malformed', 'controller', 'future', '
 
 // The controller publishes fleet state from its own process. The age is measured from a clock read taken after the
 // fleet read, never from an earlier one, and FLEET_HEARTBEAT_MAX_MS bounds it.
-export function assertFleetResolved(path: string, account: string, controllerPid: number, clock: () => number = Date.now) {
+// Within one launch (reads from launchObservations), bytes identical to an earlier read keep that read's clock: the
+// controller cannot write a heartbeat while it issues and binds synchronously. Changed bytes are a new read.
+export function assertFleetResolved(path: string, account: string, controllerPid: number, clock: () => number = Date.now, reads?: Map<string, { raw: string; observedAt: number }>) {
     const refuse = (field: (typeof FLEET_REFUSALS)[number]) => { throw Error('recovery fleet ownership unresolved: ' + field); };
     let raw: string; try { raw = readFileSync(path, 'utf8'); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') refuse('missing'); throw error; }
     let fleet: any; try { fleet = JSON.parse(raw); } catch { refuse('malformed'); }
-    const observedAt = clock();
+    const earlier = reads?.get(path), observedAt = earlier?.raw === raw ? earlier.observedAt : clock();
+    reads?.set(path, { raw, observedAt });
     if (!fleet || typeof fleet !== 'object' || Array.isArray(fleet)) refuse('malformed');
     if (fleet.schemaVersion === 1 && Number.isFinite(fleet.emittedAt) && fleet.accounts && typeof fleet.accounts === 'object' && !Array.isArray(fleet.accounts)) {
         if (fleet.controllerPid !== undefined && fleet.controllerPid !== controllerPid) refuse('controller');
