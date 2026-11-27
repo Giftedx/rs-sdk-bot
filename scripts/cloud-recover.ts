@@ -24,7 +24,7 @@ import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swa
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 // The end reasons the recovery permit accepts (packages/core/src/session-recovery-permit.ts), less a death. A death
 // needs planner diagnosis without a recovery login.
-const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:\b| )/;
+import { RECOVERABLE_END } from '../packages/core/src/session-mission';
 
 export type ClaimView = { phase: 'held' | 'released'; kind?: string; pid?: number; host?: string } | null;
 export type Eligibility = { eligible: true; endedAt: number } | { eligible: false; reason: string; log: boolean; diagnose?: true };
