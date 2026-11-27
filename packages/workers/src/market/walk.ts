@@ -272,14 +272,17 @@ export async function walkTargetPersist(
 ) {
     let best = Infinity;
     let last: { ok: boolean; reason?: string; detail?: string } = { ok: false };
+    const tileOf = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ},${p.level}` : ''; };
     for (let n = 1; n <= tries; n++) {
+        const before = tileOf();
         last = await walk(to);
         if (last.ok) return last;
         const p = s.sdk.getState()?.player;
         const distance = p && p.level === to.level ? Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) : Infinity;
         console.log(`WALK_RETRY try=${n} reason=${last.reason ?? '-'} detail=${last.detail ?? '-'} distance=${distance}`);
-        // A route search that found no route from this tile finds none again: each try costs the full search budget.
-        if (noRouteResult(last)) break;
+        // A route search that found no route from a tile finds none again from it: each try costs the full search
+        // budget. A walk that moved first (a leg, a boat) plans again from where it ended.
+        if (noRouteResult(last) && tileOf() === before) break;
         if (distance >= best) break;
         best = distance;
     }
