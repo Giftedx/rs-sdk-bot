@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744811265-1",
+ "account": "Shaftsinker",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 9,
+ "claim": "b6fbc166-0e45-4821-8d43-c912b5870dfb",
+ "count": 0,
+ "ok": false,
+ "at": 1795745124143,
+ "detail": "trade claimed"
+}
