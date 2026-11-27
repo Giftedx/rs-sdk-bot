@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779894723,
+ "at": 1795779906987,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magicshop",
     "3000"
    ],
    "env": {
