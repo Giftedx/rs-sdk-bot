@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795745434058-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Fatstack",
+  "item": "Unicorn horn dust",
+  "count": 1,
+  "itemId": 235,
+  "start": 1795745434058,
+  "end": 1795746334058,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
