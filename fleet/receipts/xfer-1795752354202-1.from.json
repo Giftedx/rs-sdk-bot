@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795752354202-1",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chaos rune",
+ "requested": 6,
+ "claim": "e84c5864-e3f5-461a-9c10-266d0451ff4e",
+ "count": 6,
+ "ok": true,
+ "at": 1795752456413,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795752438802
+ },
+ "logout": {
+  "attemptId": "1795752429549-0000002256-0000000001",
+  "at": 1795752456402,
+  "sha256": "37ca2beeb99175a9de9306b4f86d6ba074ba56ef1f19a5eee955e63cb3903c63"
+ },
+ "screen": true
+}
