@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740013087-2",
+ "account": "WellHung",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "b8f83ea1-5a30-4c85-9148-c9e403aad7bd",
+ "count": 0,
+ "ok": false,
+ "at": 1795740859490,
+ "detail": "trade claimed"
+}
