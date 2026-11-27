@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791550647-2",
  "account": "PickpockDick",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "62672663-b5c3-4c66-912d-c01d8c2e3ce8",
- "count": 0,
- "ok": false,
- "at": 1795792156106,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795792322125,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795792321305
+ },
+ "logout": {
+  "attemptId": "1795792156122-0000024296-0000000001",
+  "at": 1795792322040,
+  "sha256": "283e401a72dc2abd60e2fa5974cd5676f231d6a6efa93b67bdf96a567c4e7d8f"
+ },
+ "screen": true
 }
