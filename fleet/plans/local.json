@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799200329,
+ "at": 1795799213762,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,31 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "69",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "69"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -94,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "115",
+    "MAX_ITEMS": "119",
     "COIN_RESERVE": "1000",
-    "FLOAT": "25000",
+    "FLOAT": "25800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "115"
+    "BATCH_UNITS": "119"
    },
    "enabled": true,
    "repeat": false,
@@ -128,6 +103,31 @@
    "resources": [
     "chaos-druids"
    ]
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "69",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "69"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
   },
   {
    "account": "Fingersmith",
@@ -172,20 +172,17 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "scripts/aio-skiller.ts CAP=82000 TARGET_COUNT=8200 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -204,31 +201,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "10",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "10"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
@@ -257,28 +229,46 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
+    "druid"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:shaftshooter:item:175",
    "role": "army"
   },
   {
@@ -304,17 +294,27 @@
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=71520 TARGET_COUNT=7152 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
+    "shop-buy",
+    "magic_guild",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "3",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "3"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
