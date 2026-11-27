@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795798309963-2",
+ "account": "Pocketrocket",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 33,
+ "claim": "e7a2c404-99ff-464e-826f-74c98c1c4eda",
+ "count": 0,
+ "ok": false,
+ "at": 1795798690194,
+ "detail": "trade claimed"
+}
