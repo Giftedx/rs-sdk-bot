@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795745434058-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "8f47c0cd-65af-45cb-8345-5c1de54f9534",
+ "count": 0,
+ "ok": false,
+ "at": 1795745541303,
+ "detail": "trade claimed"
+}
