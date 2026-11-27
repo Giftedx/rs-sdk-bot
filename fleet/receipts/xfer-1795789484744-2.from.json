@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789484744-2",
  "account": "Shaftsinker",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "11e15230-c0da-4b3e-a020-e392df51a17e",
- "count": 0,
- "ok": false,
- "at": 1795789748747,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795789862996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795789754714
+ },
+ "logout": {
+  "attemptId": "1795789748757-0000024536-0000000001",
+  "at": 1795789862984,
+  "sha256": "0859b2c9e202a0dd62a7f06eab7af332125de1e650b579bba195f4db11ea8e04"
+ },
+ "screen": true
 }
