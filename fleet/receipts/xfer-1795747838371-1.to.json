@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795747838371-1",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "41828456-3d28-40f3-8874-b55b1daafd22",
+ "count": 1,
+ "ok": true,
+ "at": 1795747963456,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795747962655
+ },
+ "logout": {
+  "attemptId": "1795747950875-0000019968-0000000001",
+  "at": 1795747963444,
+  "sha256": "8b165ef17665958a90461dc7b16d4879c739ae22ea1119b872fffa0fe34e9883"
+ },
+ "screen": true
+}
