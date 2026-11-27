@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795817663582-1",
  "account": "Fingerblastr",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "99b1cd64-75c9-49ce-879c-d586a838b316",
- "count": 0,
- "ok": false,
- "at": 1795817896318,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795817935621,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795817906117
+ },
+ "logout": {
+  "attemptId": "1795817896378-0000025820-0000000001",
+  "at": 1795817935607,
+  "sha256": "6f47ab8825dbd1c1f13e19cd0cf1b31d5027ae98c641f80cda74d66be31effe5"
+ },
+ "screen": true
 }
