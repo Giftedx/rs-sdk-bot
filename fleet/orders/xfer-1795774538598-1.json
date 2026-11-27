@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774538598-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "mmtha0205",
+  "item": "Magic shortbow",
+  "count": 1,
+  "itemId": 861,
+  "start": 1795774538598,
+  "end": 1795775438598,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

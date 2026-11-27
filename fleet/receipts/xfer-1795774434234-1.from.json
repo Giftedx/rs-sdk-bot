@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795774434234-1",
+ "account": "Fatstack",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 5,
+ "claim": "34e07654-1c64-4651-b706-4ab08a01cf13",
+ "count": 0,
+ "ok": false,
+ "at": 1795774605731,
+ "detail": "trade claimed"
+}

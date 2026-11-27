@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795773803934-1",
  "account": "Shaftmaker",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "974065e2-6156-4d42-a519-35d2a9b99f29",
- "count": 0,
- "ok": false,
- "at": 1795774408455,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774586126,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795774585359
+ },
+ "logout": {
+  "attemptId": "1795774408466-0000028000-0000000001",
+  "at": 1795774586113,
+  "sha256": "c4b1bb4f66c63f091c30342660811edaf4a518897badff45470f5084b4c5e7da"
+ },
+ "screen": true
 }
