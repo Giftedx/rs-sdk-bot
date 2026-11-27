@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800037902-2",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 120,
+ "claim": "21610e85-089f-4072-be6d-1d1d22e9cab8",
+ "count": 120,
+ "ok": true,
+ "at": 1795800891597,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 120,
+  "after": 0
+ },
+ "bank": {
+  "count": 120,
+  "at": 1795800878503
+ },
+ "logout": {
+  "attemptId": "1795800867988-0000034856-0000000001",
+  "at": 1795800891237,
+  "sha256": "ba2a8f132e37806f220b14252fd245e3327db3da3aedabb42fc51cefd352451d"
+ },
+ "screen": true
+}
