@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775356955-1",
  "account": "Fatstack",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 1,
  "claim": "5410d9e8-8830-4205-9cfb-f3b7fd119722",
- "count": 0,
- "ok": false,
- "at": 1795775931660,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795776000034,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795775999307
+ },
+ "logout": {
+  "attemptId": "1795775931669-0000030884-0000000001",
+  "at": 1795776000020,
+  "sha256": "2f1204f99041da064b2682026947bae73190bc8d7636a5f78a3cfc2417184096"
+ },
+ "screen": true
 }

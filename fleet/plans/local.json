@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795775985352,
+ "at": 1795776026858,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -99,25 +99,28 @@
    "role": "army"
   },
   {
-   "account": "Swordswallow",
+   "account": "Hocuspokeus",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-1515-15-o0-p456",
-    "ITEM_ID": "1515",
-    "QUANTITY": "15",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "171",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "456",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "15"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "171"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -143,23 +146,51 @@
    "role": "auto"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Swordswallow",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "thieving",
-    "knights"
+    "ge-buy"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1034"
+    "ORDER_KEY": "brain-2353-7-o0-p872",
+    "ITEM_ID": "2353",
+    "QUANTITY": "7",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "872",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "7"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "fishingshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "311",
+    "ITEMS": "Harpoon",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:311",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:311",
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -181,44 +212,34 @@
    ]
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_tarromin_potion"
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-o0-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:95",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:95",
+   "goal": "campaign:haggis:item:2552",
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "essence"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory brew:unf_marrentill_potion"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
   }
  ],
  "army": [
@@ -230,10 +251,10 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
-  "fatstack",
-  "fingerblastr",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
