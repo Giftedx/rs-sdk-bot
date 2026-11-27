@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795790916719-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "TheFullMonty",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 213,
+  "start": 1795790916719,
+  "end": 1795791816719,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
