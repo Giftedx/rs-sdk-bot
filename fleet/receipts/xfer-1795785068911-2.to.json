@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795785068911-2",
+ "account": "Shaftmaker",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "78c42d68-ad1b-4a3a-a8ce-92699aa1dda7",
+ "count": 0,
+ "ok": false,
+ "at": 1795785674389,
+ "detail": "trade claimed"
+}

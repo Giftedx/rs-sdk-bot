@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785648290,
+ "at": 1795785680877,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -232,6 +232,44 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:2434",
    "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "140"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1228"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   }
  ],
  "army": [
@@ -247,8 +285,6 @@
   "bowbeforeme",
   "dipstick",
   "fatstack",
-  "fingerblastr",
-  "hocuspokeus",
   "kiltlifter",
   "mmtha0205",
   "mmthv2350",
