@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795782211134-1",
+ "account": "Unsheathed",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "e3714bdf-9245-490d-bcd0-de2ee27f53af",
+ "count": 0,
+ "ok": false,
+ "at": 1795782356740,
+ "detail": "trade claimed"
+}

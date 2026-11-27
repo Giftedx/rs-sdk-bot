@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795781891708-1",
  "account": "MeatNTwoVeg",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Cosmic rune",
  "requested": 1,
  "claim": "ef3c3141-9710-423a-b43a-6e8424d38f9e",
- "count": 0,
- "ok": false,
- "at": 1795782152271,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795782363738,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795782346987
+ },
+ "logout": {
+  "attemptId": "1795782152280-0000030124-0000000001",
+  "at": 1795782363727,
+  "sha256": "0386a6f039245c2044d4badbc47364ce0d8997d1a2eab328984757cc2bc6e900"
+ },
+ "screen": true
 }

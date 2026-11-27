@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781935025-1",
+ "account": "Shaftmaker",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "f327496a-4f72-4b46-bb4e-070b87c99e04",
+ "count": 10,
+ "ok": true,
+ "at": 1795782376150,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795782352220
+ },
+ "logout": {
+  "attemptId": "1795782344434-0000017192-0000000001",
+  "at": 1795782376140,
+  "sha256": "258daab1a55583dc003ff22f9835bb2abca202bef93d5e1c349da04e7f04c206"
+ },
+ "screen": true
+}
