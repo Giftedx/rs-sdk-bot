@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797741160-1",
  "account": "Nockitoff",
  "partner": "Woodenstaff",
@@ -10,15 +10,37 @@
  "item": "Air rune",
  "requested": 132,
  "claim": "4131cef5-292f-41ec-a485-ddca46994fe4",
- "count": 0,
- "ok": false,
- "at": 1795798079663,
- "detail": "trade claimed",
+ "count": 132,
+ "ok": true,
+ "at": 1795798155787,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Mind rune",
    "requested": 142,
-   "count": 0
+   "count": 142,
+   "inventory": {
+    "before": 0,
+    "after": 142
+   },
+   "bank": {
+    "count": 142,
+    "at": 1795798155039
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 11,
+  "after": 143
+ },
+ "bank": {
+  "count": 132,
+  "at": 1795798154636
+ },
+ "logout": {
+  "attemptId": "1795798079673-0000024528-0000000001",
+  "at": 1795798155772,
+  "sha256": "1131911b12ef4b9dad1576ea86f0b2a799c18a2413180b70b821a339d677da85"
+ },
+ "screen": true
 }

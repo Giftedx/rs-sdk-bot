@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795798163060-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "Woodenstaff",
+  "item": "Coins",
+  "count": 58,
+  "itemId": 995,
+  "start": 1795798163060,
+  "end": 1795799063060,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

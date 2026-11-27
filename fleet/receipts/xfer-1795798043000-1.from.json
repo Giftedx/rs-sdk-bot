@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795798043000-1",
+ "account": "Pocketrocket",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 89,
+ "claim": "36307034-f1b0-4849-bfad-0efc4b09eb84",
+ "count": 0,
+ "ok": false,
+ "at": 1795798213655,
+ "detail": "trade claimed"
+}

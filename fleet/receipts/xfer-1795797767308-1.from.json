@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797767308-1",
  "account": "Fingerblastr",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "b471ae63-d322-45e1-92d8-d91a58c70b76",
- "count": 0,
- "ok": false,
- "at": 1795798038300,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795798210578,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795798191834
+ },
+ "logout": {
+  "attemptId": "1795798038310-0000008540-0000000001",
+  "at": 1795798210565,
+  "sha256": "85e041111851f7b8175e3e7825fa7b7c7a8c43ab8c2d74ff8cd951acea761c80"
+ },
+ "screen": true
 }
