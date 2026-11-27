@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795781189181-1",
+ "account": "Abracadickra",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "9cfb3924-b432-403b-be05-d2d19ea8e82d",
+ "count": 0,
+ "ok": false,
+ "at": 1795782089773,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795782070029-0000008720-0000000001",
+  "at": 1795782089760,
+  "sha256": "229918d5f597dd220b031948f553cfe0b4ea7b1f5a340666e8522c2c38d391d0"
+ },
+ "screen": false
+}

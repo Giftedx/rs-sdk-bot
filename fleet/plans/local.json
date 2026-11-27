@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795782008910,
+ "at": 1795782133431,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -225,7 +225,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "1025",
+    "BATCH_UNITS": "725",
     "STALL_TICKS": "280"
    },
    "enabled": true,
@@ -235,6 +235,28 @@
    "resources": [
     "earth-altar"
    ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:irit_leaf"
+   ],
+   "env": {
+    "MAX_MAKE": "9",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:259",
+    "BATCH_UNITS": "9",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
+   "role": "army"
   },
   {
    "account": "SporranDip",
@@ -349,6 +371,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:44",
    "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "21",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -370,7 +407,6 @@
   "mmtha0205",
   "mmthv2350",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketrocket",
   "sausagefest",
