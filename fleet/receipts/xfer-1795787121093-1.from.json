@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787121093-1",
+ "account": "Kiltlifter",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 1,
+ "claim": "60b29a4e-eb44-4dcc-9e60-678ba53ce6f0",
+ "count": 0,
+ "ok": false,
+ "at": 1795787298209,
+ "detail": "trade claimed"
+}
