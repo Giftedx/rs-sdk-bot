@@ -815,13 +815,17 @@ const requestRefusal = (result: TradeResult) => !result.success && !result.partn
     && ['player_not_found', 'no_response', 'busy'].includes(result.reason ?? '')
     && !result.gave.length && !result.received.length && !result.possiblyDropped?.length;
 
-export function partnerFailed(dir: string, order: Order, role: TradeRole, preloginDir = join(dirname(dir), 'prelogin-failed')): boolean {
+// A failed or reconcile receipt of the partner ends its side for good. A refused login of the partner counts only when
+// it is not older than `since`, the start of this run: the agent starts both parties again after a refused login, and
+// a party that read the earlier refusal stopped while its partner logged in and waited out the window alone.
+export function partnerFailed(dir: string, order: Order, role: TradeRole, preloginDir = join(dirname(dir), 'prelogin-failed'), since = -Infinity): boolean {
     const other: TradeRole = role === 'from' ? 'to' : 'from';
     try {
         const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${other}.json`), 'utf8'));
         if (receipt?.version === 2 && receipt.id === order.id && (receipt.state === 'failed' || receipt.state === 'reconcile')) return true;
     } catch { /* absent or unreadable */ }
-    return readPreloginFailure(preloginDir, order, other) !== null;
+    const refused = readPreloginFailure(preloginDir, order, other);
+    return refused !== null && !(refused.at < since);
 }
 
 export const giverReadyFile = (base: string, id: string) => join(base, '.practice', 'fleet-ready', `${id}.ready`);

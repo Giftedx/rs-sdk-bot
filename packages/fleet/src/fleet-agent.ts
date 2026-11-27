@@ -6,7 +6,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileS
 import { join, resolve } from 'node:path';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
-import { readHeldFleetTradeClaims } from '../../core/src/fleet-trade-claim';
+import { fleetTradeClaimRefusal, isFleetSwarmClaim, readHeldFleetAccountClaims, type FleetAccountClaim, type FleetTradeClaim } from '../../core/src/fleet-trade-claim';
 import { validOrder, type Order, type Receipt, type TradeRole } from '../../core/src/fleet-trade-settlement';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
@@ -21,6 +21,7 @@ import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker
 import { drainedFiles, readPendingUpdate } from './live-update/pending';
 import { clearSwarmStop, SWARM_STOP, swarmWroteStop, writeSwarmStop } from './swarm';
 import { buildOrderPicker, readAgentJobs, swarmBusy } from './trade-plan';
+import { tradePreflight } from './trade-preflight';
 import { askWorkersToLogOut } from './worker-stop';
 
 const root = repoRoot;
@@ -157,7 +158,11 @@ const drainText = (drained: readonly string[], target: string) =>
 // and waits for its partner until the order window ends (performFleetTransfer), and while a live update drains, that
 // run holds the update for the whole window. So a side starts only when its partner runs this order, or wrote its
 // side of it, or starts it in this pass: its first due order is this one and nothing holds it. Returns why the
-// partner cannot join, or null. A partner on another side starts there; this side cannot see it and does not wait.
+// partner cannot join, or null. A partner on another side starts there, and this side cannot see its process. Its
+// trade claim is the sign that it started: a giver ('from') starts at once, and with `crossSideClaims` (the held
+// claims, as readTradeClaims gives them) a taker waits until its giver holds a claim for this order or wrote its side.
+// Without that wait a taker whose giver never started stood at the meet for the whole order window ("order window
+// ended during work", the partner with no receipt). The giver never waits, so two sides that both apply it start.
 export function tradePartnerWait(
     trade: { account: string; order: Pick<Order, 'id' | 'from' | 'to'> },
     side: string,
@@ -166,11 +171,17 @@ export function tradePartnerWait(
     waits: ReadonlyMap<string, string>,
     runningOrders: ReadonlyMap<string, string>,
     wrote: (id: string, role: TradeRole) => boolean,
+    crossSideClaims?: ReadonlyMap<string, string> | null,
 ): string | null {
     const { order } = trade, me = trade.account.toLowerCase();
     const role: TradeRole = order.from.toLowerCase() === me ? 'from' : 'to';
     const partner = role === 'from' ? order.to : order.from, key = partner.toLowerCase();
-    if (key === me || sideOf(partner, owners) !== side) return null;
+    if (key === me) return null;
+    const partnerSide = sideOf(partner, owners);
+    if (partnerSide !== side) {
+        if (role !== 'to' || !crossSideClaims || crossSideClaims.get(key) === order.id || wrote(order.id, 'from')) return null;
+        return `partner ${partner} on side ${partnerSide} holds no claim for this order`;
+    }
     if (runningOrders.get(key) === order.id || wrote(order.id, role === 'from' ? 'to' : 'from')) return null;
     const other = runningOrders.get(key);
     if (other) return `partner ${partner} runs order ${other}`;
@@ -185,12 +196,26 @@ export function tradePartnerWait(
 // claims: the login refuses a held claim in any case (acquireFleetTradeClaim). A claim with a pre-network marker of this
 // checkout (.practice/fleet-account-pending/<nonce>.json) is left out: acquireFleetTradeClaim takes over such a claim
 // when its process is gone, so a wait on it would hold the account for good.
-export function heldTradeClaims(base: string, accounts: readonly string[], read = readHeldFleetTradeClaims): ReadonlyMap<string, string> {
+// A held swarm claim maps to SWARM_HELD when the trade login would refuse it (fleetTradeClaimRefusal): a swarm run
+// holds the account. Returns null when the claim authority is unreadable.
+export const SWARM_HELD = 'swarm';
+export function readTradeClaims(
+    base: string,
+    accounts: readonly string[],
+    read: (base: string, accounts: readonly string[]) => readonly FleetAccountClaim[] = readHeldFleetAccountClaims,
+    refusal: (claim: FleetAccountClaim) => string | undefined = claim => fleetTradeClaimRefusal(base, claim, { account: claim.account, server: claim.server, side: mySide() }),
+): ReadonlyMap<string, string> | null {
     try {
-        return new Map(read(base, accounts)
-            .filter(c => !existsSync(join(base, '.practice', 'fleet-account-pending', `${c.nonce}.json`)))
-            .map(c => [c.account.toLowerCase(), c.orderId]));
-    } catch { return new Map(); }
+        const out = new Map<string, string>();
+        for (const c of read(base, accounts)) {
+            if (isFleetSwarmClaim(c)) { if (refusal(c)) out.set(c.account.toLowerCase(), SWARM_HELD); continue; }
+            if (!existsSync(join(base, '.practice', 'fleet-account-pending', `${c.nonce}.json`))) out.set(c.account.toLowerCase(), (c as FleetTradeClaim).orderId);
+        }
+        return out;
+    } catch { return null; }
+}
+export function heldTradeClaims(base: string, accounts: readonly string[], read: Parameters<typeof readTradeClaims>[2] = readHeldFleetAccountClaims): ReadonlyMap<string, string> {
+    return readTradeClaims(base, accounts, read) ?? new Map();
 }
 
 export type TradeWait = { account: string; order: Order; kind: 'held' | 'busy'; why: string };
@@ -227,20 +252,27 @@ export function planTradePass(o: {
     drain?: { drained: readonly string[]; target: string; others?: readonly string[] } | null;
     stopHeld?: (account: string) => string | undefined;
     wrote?: (id: string, role: TradeRole) => boolean;
-    claimHeld?: (accounts: readonly string[]) => ReadonlyMap<string, string>;
+    claimHeld?: (accounts: readonly string[]) => ReadonlyMap<string, string> | null;
+    // Checks before a start that the login and the route of this party would pass (trade-preflight.ts). A refusal
+    // holds this party, and through tradePartnerWait its partner on this side.
+    admit?: (account: string, order: Order, role: TradeRole) => string | undefined;
 }): { starts: { account: string; order: Order }[]; waits: TradeWait[]; ends: TradeEnd[] } {
     const due = dueTrades(o.orders, o.receipts, o.side, o.owners, o.busy, new Set(o.running.keys()), o.now, o.lead);
-    const claimed = !o.halt && due.length && o.claimHeld ? o.claimHeld([...new Set(due.flatMap(t => [t.order.from, t.order.to]))]) : new Map<string, string>();
+    const read = !o.halt && due.length && o.claimHeld ? o.claimHeld([...new Set(due.flatMap(t => [t.order.from, t.order.to]))]) : null;
+    const claimed = read ?? new Map<string, string>();
     const drained = o.drain?.drained ?? [];
     const wrote = (id: string, role: TradeRole) => o.receipts.some(r => r?.id === id && r.role === role) || (o.wrote?.(id, role) ?? false);
     // A partner that wrote its receipt of this order is done with it: its claim for a later order holds nothing here.
+    // A swarm claim that the login refuses holds both parties: "fleet account claim held by swarm" at the login of one
+    // party left the other party to stop with "partner failed before login" each pass.
     const claimWait = (order: Order, account: string) => {
         const me = account.toLowerCase(), mine = order.from.toLowerCase() === me, partner = mine ? order.to : order.from;
         const parties: [string, string][] = [[me, account]];
         if (!wrote(order.id, mine ? 'to' : 'from')) parties.push([partner.toLowerCase(), partner]);
         for (const [who, name] of parties) {
             const held = claimed.get(who);
-            if (held !== undefined && held !== order.id) return who === me ? `trade claim held for order ${held}` : `partner ${name} trade claim held for order ${held}`;
+            const text = held === SWARM_HELD ? 'account claim held by swarm' : `trade claim held for order ${held}`;
+            if (held !== undefined && held !== order.id) return who === me ? text : `partner ${name} ${text}`;
         }
         return undefined;
     };
@@ -249,11 +281,14 @@ export function planTradePass(o: {
         const drainHold = o.drain ? tradeDrainHold(t.order, t.account, drained, o.drain.target, o.runningOrders, o.receipts, o.drain.others) : null;
         const stopHeld = o.halt || t.busy || drainHold ? undefined : o.stopHeld?.(t.account);
         const claimHeld = o.halt || t.busy || drainHold || stopHeld ? undefined : claimWait(t.order, t.account);
+        const refused = o.halt || t.busy || drainHold || stopHeld || claimHeld || !o.admit ? undefined
+            : o.admit(t.account, t.order, t.order.from.toLowerCase() === t.account.toLowerCase() ? 'from' : 'to');
         const wait = o.halt ? { kind: 'held' as const, why: o.halt }
             : t.busy ? { kind: 'busy' as const, why: 'enabled swarm job' }
                 : drainHold ? { kind: 'held' as const, why: drainHold }
                     : stopHeld ? { kind: 'held' as const, why: stopHeld }
-                        : claimHeld ? { kind: 'held' as const, why: claimHeld } : null;
+                        : claimHeld ? { kind: 'held' as const, why: claimHeld }
+                            : refused ? { kind: 'held' as const, why: refused } : null;
         if (wait) own.set(t.account.toLowerCase(), wait);
     }
     const dueBy = new Map(due.map(t => [t.account.toLowerCase(), t]));
@@ -263,7 +298,7 @@ export function planTradePass(o: {
     for (const t of due) {
         const key = t.account.toLowerCase(), wait = own.get(key);
         if (wait) { waits.push({ account: t.account, order: t.order, ...wait }); continue; }
-        const partner = tradePartnerWait(t, o.side, o.owners, dueBy, ownWhy, runs, wrote);
+        const partner = tradePartnerWait(t, o.side, o.owners, dueBy, ownWhy, runs, wrote, read);
         if (partner) { waits.push({ account: t.account, order: t.order, kind: 'held', why: partner }); continue; }
         starts.push({ account: t.account, order: t.order });
         runs.set(key, t.order.id);
@@ -487,7 +522,8 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             drain: pending ? { drained: tradeDrained, target: pending.target, others: pending.others } : null,
             stopHeld: account => tradeStop(base, account, now, false).held,
             wrote: (id, role) => existsSync(join(dir, 'receipts', `${id}.${role}.json`)),
-            claimHeld: accounts => heldTradeClaims(base, accounts),
+            claimHeld: accounts => readTradeClaims(base, accounts),
+            admit: tradePreflight({ base, dir, now, env: () => tradeEnvironment(dir) }),
         });
         for (const w of pass.waits) log(`FLEET_AGENT ${w.kind} ${w.account}: order ${w.order.id} waits (${w.why})`);
         // A due reload waits for the running trades, and new trades keep it waiting: each new trade runs the old
