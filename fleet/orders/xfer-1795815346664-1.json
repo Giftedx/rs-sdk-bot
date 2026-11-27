@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795815346664-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "BoneToPick",
+  "item": "Trout",
+  "count": 10,
+  "itemId": 333,
+  "start": 1795815346664,
+  "end": 1795816246664,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

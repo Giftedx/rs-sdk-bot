@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795815245960-1",
+ "account": "Hocuspokeus",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 3,
+ "claim": "4a2082dd-1d6e-4620-832a-b76462dc8e43",
+ "count": 0,
+ "ok": false,
+ "at": 1795815368819,
+ "detail": "trade claimed"
+}
