@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795761455678-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Hocuspokeus",
+  "item": "Emerald ring",
+  "count": 2,
+  "itemId": 1639,
+  "start": 1795761455678,
+  "end": 1795762355678,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
