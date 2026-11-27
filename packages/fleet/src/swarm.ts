@@ -12,6 +12,8 @@ import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type AccountPlan, type PlannedStep } from '../../brain/src/index';
 import { DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs, shopStockWaitText } from '../../brain/src/outcome-classifier';
+import { fencedInAt, isStrandedPosition } from '../../brain/src/snapshot';
+import { noOpRunsFile, NoOpRunGuard, statusFingerprint, type RunFingerprint } from '../../core/src/noop-runs';
 import { accountClassLevels, defectBlocksAccount } from '../../brain/src/planner';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
@@ -91,9 +93,11 @@ export type Job = {
     marketItemId?: number;
     marketVenue?: string;
     demandId?: string;
+    // The brain plan starts with a location recovery: an ok end at a tile that is not stranded ends its stranded hold.
+    locationRecovery?: boolean;
 };
 
-type Plan = { maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
+type Plan ={ maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
 
 type Run = {
     pid: number;
@@ -117,6 +121,10 @@ type Run = {
     // The brain plan started this run. `finite` marks a brain job with a restart limit (quest, market, chain, walk).
     brain?: boolean;
     finite?: boolean;
+    locationRecovery?: boolean;
+    // The account state at the start (noop-runs.ts statusFingerprint) and a short name of the job.
+    fingerprint?: RunFingerprint;
+    label?: string;
 };
 
 export type SavedRun = Run & { key: string };
@@ -263,8 +271,25 @@ export function brainJobFor(
             ...(selected.marketItemId !== undefined ? { marketItemId: selected.marketItemId } : {}),
             ...(selected.marketVenue ? { marketVenue: selected.marketVenue } : {}),
             ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
+            ...(isLocationRecoveryStep(accountSteps[0]) ? { locationRecovery: true } : {}),
         },
     };
+}
+
+const isLocationRecoveryStep = (s: PlannedStep | undefined): boolean => s?.stepKind === 'recover' && s.recoveryKind === 'location';
+
+const isPlainTile = (v: unknown): v is { x: number; z: number; level: number } =>
+    typeof v === 'object' && v !== null && [(v as any).x, (v as any).z, (v as any).level].every(Number.isFinite);
+
+// The tile where a run ended: the "at=x,z,level" of its RESULT line (logistics walk-to and others).
+export function resultEndTile(line: string | undefined): { x: number; z: number; level: number } | undefined {
+    const m = line ? /\bat=(\d+),(\d+),(\d+)\b/.exec(line) : null;
+    return m ? { x: Number(m[1]), z: Number(m[2]), level: Number(m[3]) } : undefined;
+}
+
+// True when a location recovery run ended ok at a tile where the account is not stranded.
+export function locationRecoveryArrived(endReason: string, tile: { x: number; z: number; level: number } | undefined): boolean {
+    return successfulEnd(endReason) && !!tile && !isStrandedPosition(tile) && !fencedInAt(tile);
 }
 
 export const BRAIN_RECOVERY_WAIT = 'waiting: standalone session recovery';
@@ -282,6 +307,7 @@ export function brainPlanHold(
     statusStarted?: (a: string) => number | undefined,
     now = Date.now(),
     releaseOf?: (job: Job) => string | undefined,
+    noOpHold?: (account: string, signature: string) => string | undefined,
 ): string | undefined {
     if (built.selected.mode === 'session_recovery') return BRAIN_RECOVERY_WAIT;
     if (!built.job) return undefined;
@@ -289,6 +315,8 @@ export function brainPlanHold(
     if ('error' in p || p.accounts.length !== 1) return undefined;
     const why = startable(p.accounts, p.job.repeat, ended, statusAge, statusStarted, missionSignature(p.job), undefined, () => true, releaseOf?.(p.job)).blocked[p.accounts[0]!];
     if (why?.startsWith('ended: ')) return why;
+    const noOp = noOpHold?.(p.accounts[0]!, missionSignature(p.job));
+    if (noOp) return noOp;
     const { selected } = built;
     if (selected.mode !== 'worker' || selected.marketItemId === undefined || !selected.marketVenue) return undefined;
     const end = endedMapByLower(ended).get(p.accounts[0]!.toLowerCase())?.[1];
@@ -1654,6 +1682,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const deathsFile = join(prac, 'swarm-deaths.json');
     const repairFile = join(prac, 'swarm-repair.json');
     const ended = loadEnded(deathsFile);
+    const noOpGuard = new NoOpRunGuard(noOpRunsFile(liveRoot(root)));
+    const noOpHold = (account: string, signature: string): string | undefined =>
+        noOpGuard.hold(account, signature, statusFingerprint(statusHit(account)?.data));
     const holdsFile = join(prac, 'swarm-script-holds.json');
     const holds: ScriptHold[] = [];
     let holdsStamp = syncDeathHolds(holdsFile, holds, { mtimeMs: -1, size: -1 });
@@ -1785,6 +1816,22 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             }
                         } catch { /* outcome persistence errors never stop controller */ }
                     }
+                    if (run.accounts.length === 1) {
+                        try {
+                            const endStatus = readAccountStatus(root, account)?.data;
+                            // A recovery run has no activity, so no outcome above ends its stranded hold. The end tile
+                            // of its RESULT line is where it stands now; the status file is the fallback.
+                            const endTile = resultEndTile(lastResultLine) ?? (isPlainTile(endStatus?.pos) ? endStatus.pos : undefined);
+                            if (run.locationRecovery && locationRecoveryArrived(own, endTile) && classifier.clearLocationRecovery(account)) {
+                                console.log(`SWARM recovery done ${account} at ${endTile!.x},${endTile!.z},${endTile!.level}: stranded hold cleared`);
+                            }
+                            const held = noOpGuard.note({
+                                account, signature: run.revision, job: run.label ?? run.revision.slice(0, 120), ok: successfulEnd(own),
+                                before: run.fingerprint, after: statusFingerprint(endStatus), now: Date.now(),
+                            });
+                            if (held) console.log(`SWARM no-op hold ${account} after ${held.runs} ok runs with no change at ${held.fingerprint.pos}: ${held.job}`);
+                        } catch { /* a no-op note never stops the controller */ }
+                    }
                     if (keepEnded) {
                         const endReason = run.brain ? brainStopEnd(own, lastResultLine, readStopFile(account, root)) : own;
                         ended.set(account, { at: Date.now(), reason: endReason, revision: run.revision, ...(run.workerRelease ? { release: run.workerRelease } : {}), ...stockOutEnd(run, own, lastResultLine) });
@@ -1835,6 +1882,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const cmd = supervisorCommand(p, accounts);
         rotateLog(logPath);
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
+        const fingerprint = accounts.length === 1 && !p.host ? statusFingerprint(readAccountStatus(root, accounts[0]!)?.data) : undefined;
         const baseline = accounts.length === 1 && job.activityId
             ? captureRunBaseline(root, accounts[0]!, LIVE_SERVER) ?? undefined
             : undefined;
@@ -1873,6 +1921,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             ...(workRelease ? { workerRelease: workRelease } : {}),
             ...(workEntries.length ? { workerEntries: workEntries } : {}),
             ...(baseline ? { baseline } : {}),
+            ...(fingerprint ? { fingerprint } : {}),
+            ...(job.locationRecovery ? { locationRecovery: true } : {}),
+            label: job.outcomeActivityId ?? job.activityId ?? [job.script, ...(job.args ?? [])].join(' ').slice(0, 120),
             ...(brainDispatchedNow.has(accounts[0]!.toLowerCase())
                 ? { brain: true, ...(job.maxRestarts !== undefined ? { finite: true } : {}) }
                 : {}),
@@ -1997,7 +2048,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const endedLower = endedMapByLower(ended);
                     const heldPlan = (account: string, accountPlan: AccountPlan): string | undefined =>
                         endedLower.has(account.toLowerCase()) || accountPlan.steps[0]?.stepKind === 'recover'
-                            ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted, Date.now(), jobReleaseOf)
+                            ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted, Date.now(), jobReleaseOf, noOpHold)
                             : undefined;
                     // A cycle that throws keeps the last result: without brain jobs in the plan, the stop pass
                     // below would write SWARM_STOP.removed for every brain-dispatched worker.

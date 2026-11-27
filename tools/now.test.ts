@@ -129,6 +129,17 @@ test('with no dashboard the local facts still print, and a worktree also shows t
         'main    master @ abc1234, 2 changed files, 7 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied']);
 });
 
+test('the noops line lists the accounts held after repeated ok runs with no change, and is left out without them',()=>{
+    const fingerprint={xp:'Mining:2155812',items:'1269:1||',pos:'3185,3436,0',quests:'||'};
+    const noops=[{account:'Woodpecker',signature:'s',job:'scripts/aio-logistics.ts walk-to 3185 3436 0',runs:2,fingerprint,at:NOW},
+        {account:'Once',signature:'s',job:'x',runs:1,fingerprint,at:NOW}];
+    const lines=nowLines(state(),local({noops}),NOW);
+    const at=lines.findIndex(l=>l.startsWith('noops'));
+    expect(lines.slice(at,at+2)).toEqual(['noops   1 accounts held after 2 or more ok runs with no change (.practice/live/noop-runs.json):',
+        '  noop  Woodpecker 2x ok with no change at 3185,3436,0: scripts/aio-logistics.ts walk-to 3185 3436 0']);
+    expect(nowLines(state(),local({noops:[]}),NOW).some(l=>l.startsWith('noops'))).toBe(false);
+});
+
 test('the logins line names each status row that refuses live logins, says none, or is left out when not read', () => {
     const blockers = [
         { name: 'Swordinhand', dir: 'F:\\repo\\.practice\\live\\status', ageMs: 8 * MIN, attemptId: 'a', ownerPid: 27940, ownerAlive: true },

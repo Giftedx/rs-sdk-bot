@@ -16,6 +16,7 @@ import {progressLine,readProgress,sharedIdleBlockers,SHARED_IDLE_MIN,type Progre
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
 import {loginBlockers,SILENT_SESSION_DROP_MS,type LoginBlocker} from '../packages/core/src/worker-release';
+import {noOpLines,noOpRunsFile,readNoOpRuns,NOOP_RUN_LIMIT,type NoOpRecord} from '../packages/core/src/noop-runs';
 
 type BrainChain = { account: string; goal?: string; step?: string };
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
@@ -42,7 +43,7 @@ export type Checkout={path:string;branch:string;head:string;dirty:number;behind:
 export type SyncedLease={side:string;pid:number|null;at:number|null};
 // `logins`: the status rows that make every live login fail "release peer state unknown" (worker-release/peers.ts
 // loginBlockers); null when they were not readable.
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null;logins?:LoginBlocker[]|null};
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;noops?:NoOpRecord[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null;logins?:LoginBlocker[]|null};
 
 // Fleet-data mirrors are a saved observation, not a remote process or network health check.
 export function readSyncedLeases(dir:string):SyncedLease[]|null{
@@ -183,6 +184,11 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         if(!repeats?.length)return null;
         return [`repeats ${repeats.length} errors ended short runs of 3 or more accounts in 24 h (bun tools/fail-loops.ts):`,...crossAccountLines(repeats,3).map(l=>`  fault ${l}`)];
     });
+    // A job that ends ok with no change, again and again, is a login for nothing (packages/core/src/noop-runs.ts).
+    add('noops',()=>{
+        const lines=noOpLines(local.noops??[]);
+        return lines.length?[`noops   ${lines.length} accounts held after ${NOOP_RUN_LIMIT} or more ok runs with no change (.practice/live/noop-runs.json):`,...lines.map(l=>`  noop  ${l}`)]:null;
+    });
     add('here',()=>checkoutLine('here   ',local.here,now));
     add('main',()=>local.main?checkoutLine('main   ',local.main,now):null);
     return out;
@@ -313,10 +319,12 @@ if(import.meta.main){
         loops=failLoops(rows,now);
         repeats=crossAccountFaults(rows,now);
     }catch{/* an unreadable results file hides only these lines */}
+    let noops:NoOpRecord[]|null=null;
+    try{noops=readNoOpRuns(noOpRunsFile(join(main,'.practice','live')));}catch{/* unreadable records hide only this line */}
     const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
     const progressPromise=readProgress(main,24,now).catch(()=>null);
     let logins:LoginBlocker[]|null=null;
     try{logins=loginBlockers('rs-sdk-demo.fly.dev',main,Date.now());}catch{/* unreadable rows print as not known */}
     const [state,procs,hereCheckout,mainCheckout,progress]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise,progressPromise]);
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,syncedLeases,progress,logins},Date.now()))console.log(line);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,noops,syncedLeases,progress,logins},Date.now()))console.log(line);
 }

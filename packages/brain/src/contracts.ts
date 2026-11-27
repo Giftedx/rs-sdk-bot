@@ -357,6 +357,18 @@ export const UNDERGROUND_Z_OFFSET = 6400;
 export function nearestHubBank(pos: { x: number; z: number; level: number } | null | undefined, fallback: HubBankId = 'varrock_west'): HubBankId {
     return hubBanksByDistance(pos, fallback)[0]!;
 }
+// A location recovery ends at a hub bank tile. An account on the floor of a hub bank tile and at most this many tiles
+// from it stands at that hub: a recovery walk to it would end where it starts.
+export const HUB_ARRIVAL_TILES = 8;
+// True when the account stands at the given hub bank, or at any hub bank when no hub is given.
+export function standsAtHubBank(pos: { x: number; z: number; level: number } | null | undefined, hub?: HubBankId): boolean {
+    if (!pos) return false;
+    const ids = hub ? [hub] : (Object.keys(HUB_BANKER_LOCATIONS) as HubBankId[]);
+    return ids.some((id) => {
+        const t = HUB_BANKER_LOCATIONS[id].bankTile;
+        return pos.level === t.level && Math.max(Math.abs(pos.x - t.x), Math.abs(pos.z - t.z)) <= HUB_ARRIVAL_TILES;
+    });
+}
 // Every hub bank, nearest first by the same distance as nearestHubBank. An unknown tile puts the fallback first.
 export function hubBanksByDistance(pos: { x: number; z: number; level: number } | null | undefined, fallback: HubBankId = 'varrock_west'): HubBankId[] {
     const ids = Object.keys(HUB_BANKER_LOCATIONS) as HubBankId[];

@@ -16,6 +16,7 @@ import {
     isProtectedAccountName,
     marketCooldownKey,
     nearestHubBank,
+    standsAtHubBank,
     type AccountPlan,
     type AccountState,
     type AcquireSourceKind,
@@ -1275,10 +1276,19 @@ function planAccountCore(
         // Inside a walled place no walk reaches a hub: the reason names the quest exit, which worker-routing.ts
         // dispatches to the quest worker in place of the hub walk.
         const walled = walledInAt(acct.pos ?? null, acct.quests);
+        const targetHub = nearestHub(acct.pos);
+        // A walk to the hub bank that the account stands at ends where it starts: each such run is a login for
+        // nothing, and the next pass plans it again.
+        if (!walled && standsAtHubBank(acct.pos, targetHub)) {
+            return {
+                bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: `recovery_target_reached:${targetHub}` },
+                candidates: [],
+            };
+        }
         const recStep: RecoverPlannedStep = {
             stepKind: 'recover',
             recoveryKind: 'location',
-            targetHub: nearestHub(acct.pos),
+            targetHub,
             estimatedTicks: 60,
             reason: walled ? walledRecoveryReason(walled) : 'stranded off-hub or non-ground plane',
         };
@@ -2143,7 +2153,12 @@ function planAccountCore(
                             break;
                         }
                     } else if (blocker.kind === 'unreachable_tile') {
-                        if (blocker.reason === 'unknown_pos' || blocker.reason === 'plane_mismatch') {
+                        if (blocker.reason === 'plane_mismatch' && standsAtHubBank(acct.pos, nearestHub(acct.pos))) {
+                            // The recovery walk would end at the hub bank where the account stands.
+                            noteBlocker('unreachable_tile:plane_mismatch');
+                            chainFeasible = false;
+                            break;
+                        } else if (blocker.reason === 'unknown_pos' || blocker.reason === 'plane_mismatch') {
                             const recStep: RecoverPlannedStep = {
                                 stepKind: 'recover',
                                 recoveryKind: 'location',

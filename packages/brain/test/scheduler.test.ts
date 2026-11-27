@@ -99,7 +99,8 @@ function confirmedProof(name: string): LogoutProof {
 test('unblock order prioritizes needs_logout_recovery by frozen GP+supply value, then needs_location_recovery, then idle under maxBots', () => {
     const lowLogout = makeAcct({ name: 'LogLow', lifecycle: 'needs_logout_recovery', inventory: { 995: 100 }, bank: { items: {}, observedAt: NOW - 5000, trusted: true } });
     const highLogout = makeAcct({ name: 'LogHigh', lifecycle: 'needs_logout_recovery', inventory: { 995: 500_000 }, bank: { items: { 383: 500 }, observedAt: NOW - 5000, trusted: true } });
-    const locRec = makeAcct({ name: 'LocStranded', lifecycle: 'needs_location_recovery', inventory: { 995: 900_000 } });
+    // Off a hub bank: at one, the recovery walk has already arrived and the planner plans none.
+    const locRec = makeAcct({ name: 'LocStranded', lifecycle: 'needs_location_recovery', inventory: { 995: 900_000 }, pos: { x: 3285, z: 3365, level: 0 } });
     const idleAcct = makeAcct({ name: 'IdleOne', lifecycle: 'idle' });
     const pausedAcct = makeAcct({ name: 'PausedOne', lifecycle: 'paused_owner' });
     const haggis = makeAcct({ name: 'Haggis', role: 'main', protectedClock: true, lifecycle: 'needs_logout_recovery', inventory: { 995: 9_999_999 } });
@@ -152,7 +153,7 @@ test('an account that the swarm will not start keeps its plan but takes no slot,
         accounts: {
             LogHigh: makeAcct({ name: 'LogHigh', lifecycle: 'needs_logout_recovery', inventory: { 995: 500_000 } }),
             LogLow: makeAcct({ name: 'LogLow', lifecycle: 'needs_logout_recovery', inventory: { 995: 100 } }),
-            LocStranded: makeAcct({ name: 'LocStranded', lifecycle: 'needs_location_recovery', inventory: { 995: 900_000 } }),
+            LocStranded: makeAcct({ name: 'LocStranded', lifecycle: 'needs_location_recovery', inventory: { 995: 900_000 }, pos: { x: 3285, z: 3365, level: 0 } }),
             IdleOne: makeAcct({ name: 'IdleOne', lifecycle: 'idle' }),
         },
     };
