@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795740020436-1",
+ "account": "DropMyLoad",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 560,
+ "claim": "e59531a9-4367-46b1-bc92-8c99c2460fcc",
+ "count": 560,
+ "ok": true,
+ "at": 1795740600161,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 560
+ },
+ "bank": {
+  "count": 560,
+  "at": 1795740599397
+ },
+ "logout": {
+  "attemptId": "1795740572360-0000018744-0000000001",
+  "at": 1795740600150,
+  "sha256": "b166710e47411c4fece528faf0bf39ba2fed5109e06333a90c97df6b547d28df"
+ },
+ "screen": true
+}
