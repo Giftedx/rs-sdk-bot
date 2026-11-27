@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795775434147-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Unsheathed",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795775434147,
+  "end": 1795776334147,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
