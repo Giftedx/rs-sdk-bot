@@ -140,6 +140,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         opponentMod,
         eatGuardMod,
         randomEventsMod,
+        { hpFloorOf },
     ] = await Promise.all([
         import('../inprocess'),
         import('../ledger'),
@@ -154,6 +155,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         prayerGuardOn ? import('../opponent') : Promise.resolve(null),
         eatGuardOn ? import('../eat-guard') : Promise.resolve(null),
         import('../randomevents'),
+        import('../hp-floor'),
     ]);
     // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
     // connected client that does not answer holds the tick of a lockstep world for every other client.
@@ -264,6 +266,16 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // The damage of the last ticks, by source, for the DEATH line (death-recovery.ts damageLog).
     const damage = damageLog();
     const stop = (reason: string) => void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
+    // The session's HP floor (packages/core/src/hp-floor.ts) was installed when the session opened; here it gets this
+    // run's log, stop and quest reserve. Its stop prints `RESULT fail stop=hp-floor ...`. While the flee guard's job
+    // moves the player the floor lets it walk; to walk itself it stops the watcher and that job.
+    hpFloorOf(s)?.configure({
+        log,
+        stop: reason => { if (!stopping && !settling.has(s)) { stopping = true; stop(reason); } },
+        reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {},
+        fleeActive: () => randomEvents.get(s)?.busy() ?? false,
+        takeOver: () => randomEvents.get(s)?.stop(),
+    });
     const localServer = isLocalServer(server);
     // A live death also goes to .practice/alerts.jsonl (death-recovery.ts deathAlert), so it alerts with no monitor running.
     const logDeath = () => {

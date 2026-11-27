@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isHpFloorStop, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {hasStopFile} from '../../core/src/practice-paths';
@@ -23,6 +23,8 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     if (stopFile || /stop file/.test(r)) return 'stopped';
     // A death means the route or the food plan failed; a blind restart repeats it.
     if (/died=true|RESULT fail died/.test(r)) return 'died';
+    // The session HP floor escaped at low Hitpoints (supervise.ts isHpFloorStop): a defect to fix, never a retry.
+    if (isHpFloorStop(r)) return 'blocked';
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
     if (isWorkerReleaseHold(r)) return 'release-paused';

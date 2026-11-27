@@ -250,5 +250,8 @@ export async function startInProcessSession(
             releaseConfirmed();
         },
     };
+    // Every session gets the HP floor (hp-floor.ts) here, before any script or guard holds it: a script that starts
+    // no guard of its own still cannot fight on to a death. SESSION_HP_FLOOR=0 turns it off on a local practice server only.
+    if (!(process.env.SESSION_HP_FLOOR === '0' && isLocalServer(host))) (await import('../hp-floor')).installHpFloor(result);
     return result;
 }

@@ -131,9 +131,9 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
 
     const slotItem = (slot: unknown): any => (s.sdk.getState()?.inventory ?? []).find((i: any) => i.slot === slot);
     // The food of a script's eat input, null for every other input. The eat inputs of a holder are not a script's own
-    // eater.
+    // eater, and neither are the eats of the session's HP floor (hp-floor.ts, reason 'hp-floor').
     const scriptEat = (a: Action): { id: number } | null => {
-        if (a.type !== 'useInventoryItem' || own.has(a) || holders > 0) return null;
+        if (a.type !== 'useInventoryItem' || own.has(a) || holders > 0 || a.reason === 'hp-floor') return null;
         const item = slotItem(a.slot);
         const op = item?.optionsWithIndex?.find((v: any) => v.opIndex === a.optionIndex);
         return item && edible.has(item.id) && op && /^(eat|drink)$/i.test(op.text) ? item : null;
