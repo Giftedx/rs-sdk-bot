@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739700933,
+ "at": 1795739711564,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -274,7 +274,7 @@
    "role": "helper"
   },
   {
-   "account": "FishAndChips",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -287,7 +287,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
+   "role": "army"
   }
  ],
  "army": [
@@ -313,7 +313,6 @@
   "pocketrocket",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker",
