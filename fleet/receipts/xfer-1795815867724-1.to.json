@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795815867724-1",
  "account": "KnightRider",
  "partner": "Nockitoff",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "72bb0d15-8a59-4a0a-8013-a3cfcae2f0c2",
- "count": 0,
- "ok": false,
- "at": 1795815989194,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795816056119,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795816055380
+ },
+ "logout": {
+  "attemptId": "1795815989203-0000033192-0000000001",
+  "at": 1795816056109,
+  "sha256": "5145e595729952ac8fb992dfba456dd4f7a0cfad9f1f89fd00db614e3c2b17ee"
+ },
+ "screen": true
 }
