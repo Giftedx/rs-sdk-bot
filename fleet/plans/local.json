@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795790372223,
+ "at": 1795790409579,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,6 +84,31 @@
    "role": "army"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
    "account": "UnderMyKilt",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -134,11 +159,11 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=17 PRODUCT_TARGET=17 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=17 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=20 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -152,8 +177,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=17 PRODUCT_TARGET=17 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=17 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=20 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -164,7 +189,7 @@
    "role": "army"
   },
   {
-   "account": "Swordswallow",
+   "account": "BoneToPick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "chompy"
@@ -172,63 +197,33 @@
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Swordswallow",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "khazardshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1933",
-    "ITEMS": "Pot of flour",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1933",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1933",
-   "role": "auto"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
@@ -241,10 +236,10 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
