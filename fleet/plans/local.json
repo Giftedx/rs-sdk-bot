@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795789091110,
+ "at": 1795789121750,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "117",
+    "MAX_ITEMS": "119",
     "COIN_RESERVE": "1000",
-    "FLOAT": "25400",
+    "FLOAT": "25800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "117"
+    "BATCH_UNITS": "119"
    },
    "enabled": true,
    "repeat": false,
@@ -87,7 +87,7 @@
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2950 TARGET_COUNT=295 PRODUCT_TARGET=303 -- mining essence",
+    "scripts/aio-skiller.ts CAP=2830 TARGET_COUNT=283 PRODUCT_TARGET=303 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=303 -- runecraft air"
    ],
    "env": {
