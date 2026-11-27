@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742267788-1",
  "account": "TheFullMonty",
  "partner": "FishAndChips",
@@ -12,6 +12,16 @@
  "claim": "a3a07ef6-9a59-449d-8409-e935ad3a337c",
  "count": 0,
  "ok": false,
- "at": 1795742530983,
- "detail": "trade claimed"
+ "at": 1795742679252,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 4,
+  "at": 1795742663319
+ },
+ "logout": {
+  "attemptId": "1795742530995-0000029872-0000000001",
+  "at": 1795742679239,
+  "sha256": "bfd09d0a7d9d86af467317412f5d5bf8b459c61802db2f4e3138d9a58e20f3ee"
+ },
+ "screen": false
 }
