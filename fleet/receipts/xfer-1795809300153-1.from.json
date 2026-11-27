@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795809300153-1",
  "account": "mmtha0205",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "140ce7d5-95ed-45d2-bcdc-db6865b1405f",
- "count": 0,
- "ok": false,
- "at": 1795809869152,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795810046026,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795810035270
+ },
+ "logout": {
+  "attemptId": "1795809869182-0000025900-0000000001",
+  "at": 1795810045999,
+  "sha256": "d178e8fad17afe81d49b77e88e8dea589d468489caba623310ce5b94c1fab55f"
+ },
+ "screen": true
 }
