@@ -26,10 +26,16 @@ function createRepoTemplate(): RepoTemplate {
     const remote = join(dir, 'origin.git'), remoteUrl = remote.replaceAll('\\', '/');
     const a = join(dir, 'a'), b = join(dir, 'b');
     git(dir, 'init', '--bare', remote);
+    // Each push to the bare remote would start `git gc --auto` after it, and each commit in a checkout would check
+    // for automatic maintenance: one more Git process each, and a process start costs most on Windows.
+    git(remote, 'config', 'receive.autogc', 'false');
+    git(remote, 'config', 'gc.auto', '0');
     for (const d of [a, b]) {
         mkdirSync(d);
         git(d, 'init');
         git(d, 'remote', 'add', 'origin', remoteUrl);
+        git(d, 'config', 'gc.auto', '0');
+        git(d, 'config', 'maintenance.auto', 'false');
     }
     return {
         dir,
@@ -54,6 +60,8 @@ async function withRepos(run: (a: string, b: string) => void | Promise<void>) {
     }
 }
 
+// A case name that makes a worker exit with code 3 (the pool test below).
+const CRASH_CASE = '__crash_worker__';
 const CONCURRENT_CASES: Array<{ name: string; fn: () => void | Promise<void>; timeout: number }> = [];
 const test = (name: string, fn: () => void | Promise<void>, timeout = 30_000) => {
     CONCURRENT_CASES.push({ name, fn, timeout });
@@ -797,21 +805,39 @@ if (!isWorker) {
         windowsHide: true,
         env: { ...process.env, FLEET_CLAIM_WORKER: '1', FLEET_CLAIM_TEMPLATE: JSON.stringify(tpl) },
     });
-    type Job = { name: string; resolve: () => void; reject: (err: Error) => void };
-    type WorkerSlot = { proc: ReturnType<typeof spawnSlot> };
-    const idle: WorkerSlot[] = [], queue: Job[] = [];
-    const pending = new Map<number, Job & { slot: WorkerSlot }>();
+    // A case's timeout counts from its dispatch to a worker. Every case starts at once under bun test.concurrent and
+    // waits here for a free worker, so a bun timeout alone also counts the queue: on the 2 workers of a 4-vCPU runner
+    // the last of 34 cases waited past 60 s and failed.
+    type Job = { name: string; timeout: number; resolve: () => void; reject: (err: Error) => void };
+    type WorkerSlot = { proc: ReturnType<typeof spawnSlot>; stopped?: boolean };
+    const idle: WorkerSlot[] = [], queue: Job[] = [], workers: WorkerSlot[] = [];
+    const pending = new Map<number, Job & { slot: WorkerSlot; timer: ReturnType<typeof setTimeout>; started: number }>();
+    const times: { name: string; ms: number }[] = [];
     let seq = 0, closed = false;
+    const release = (slot: WorkerSlot) => {
+        const next = queue.shift();
+        if (next && !closed) dispatch(slot, next);
+        else if (!closed) idle.push(slot);
+    };
     const dispatch = (slot: WorkerSlot, job: Job) => {
         const id = ++seq;
-        pending.set(id, { slot, ...job });
+        // A case past its own timeout fails, and its worker (it can be blocked in a synchronous Git call) is replaced.
+        const timer = setTimeout(() => {
+            if (!pending.delete(id)) return;
+            job.reject(new Error(`case ran over its ${job.timeout} ms timeout`));
+            slot.stopped = true;
+            slot.proc.kill();
+            if (!closed) release(addSlot());
+        }, job.timeout);
+        pending.set(id, { slot, ...job, timer, started: performance.now() });
         slot.proc.stdin.write(JSON.stringify({ id, name: job.name }) + '\n');
     };
-    const workers = Array.from({ length: Math.max(2, Math.min(6, Math.floor(cpus().length / 2))) }, () => {
+    const addSlot = (): WorkerSlot => {
         const proc = spawnSlot(), slot: WorkerSlot = { proc };
+        workers.push(slot);
         const failAll = (err: Error) => {
             for (const [id, entry] of pending) {
-                if (entry.slot === slot) { pending.delete(id); entry.reject(err); }
+                if (entry.slot === slot) { pending.delete(id); clearTimeout(entry.timer); entry.reject(err); }
             }
         };
         void (async () => {
@@ -829,43 +855,55 @@ if (!isWorker) {
                     const entry = pending.get(id);
                     if (!entry) continue;
                     pending.delete(id);
-                    const next = queue.shift();
-                    if (next && !closed) dispatch(slot, next);
-                    else if (!closed) idle.push(slot);
+                    clearTimeout(entry.timer);
+                    times.push({ name: entry.name, ms: Math.round(performance.now() - entry.started) });
+                    release(slot);
                     if (error) entry.reject(new Error(error));
                     else entry.resolve();
                 }
                 if (done) break;
             }
         })();
+        // A worker that exits by itself fails its case at once with its exit code and error text, and is replaced.
+        // `slot.stopped` marks the workers this file stops (Bun's `killed` is also true after an exit of its own).
         void proc.exited.then(async code => {
-            if (!closed && code !== 0) failAll(new Error(`claim test worker exited with ${code}: ${await new Response(proc.stderr).text()}`));
+            if (closed || slot.stopped) return;
+            const at = idle.indexOf(slot);
+            if (at >= 0) idle.splice(at, 1);
+            failAll(new Error(`claim test worker exited with ${code}: ${await new Response(proc.stderr).text()}`));
+            if (!closed) release(addSlot());
         });
-        idle.push(slot);
         return slot;
-    });
-    const runInPool = (name: string) => new Promise<void>((resolve, reject) => {
-        const slot = idle.pop(), job = { name, resolve, reject };
+    };
+    for (let i = 0; i < Math.max(2, Math.min(6, Math.floor(cpus().length / 2))); i++) idle.push(addSlot());
+    const runInPool = (name: string, timeout: number) => new Promise<void>((resolve, reject) => {
+        const slot = idle.pop(), job = { name, timeout, resolve, reject };
         if (slot) dispatch(slot, job);
         else queue.push(job);
     });
     afterAll(async () => {
         closed = true;
+        if (process.env.FLEET_CLAIM_TIMES === '1') console.log('FLEET_CLAIM_TIMES ' + JSON.stringify(times.sort((a, b) => b.ms - a.ms)));
         await Promise.all(workers.map(async ({ proc }) => {
             try { proc.stdin.end(); } catch { /* exited */ }
             await proc.exited;
         }));
         if (dirname(tpl.dir) === tmpdir()) rmSync(tpl.dir, { recursive: true, force: true, maxRetries: 5 });
     });
-    // Longest-timeout cases launch first; bound wait-plus-run above queue delay under busy 4-vCPU CI shards.
-    for (const { name, timeout } of [...CONCURRENT_CASES].sort((a, b) => b.timeout - a.timeout)) {
-        bunTest.concurrent(name, () => runInPool(name), Math.max(timeout, 60_000));
-    }
+    // Longest-timeout cases launch first. The bun timeout bounds queue wait plus run: a case ahead in the queue ends by
+    // its own timeout at the latest, so the sum of all timeouts is never reached while the dispatch timers work.
+    const cases = [...CONCURRENT_CASES].sort((a, b) => b.timeout - a.timeout), queueBound = cases.reduce((n, c) => n + c.timeout, 0);
+    for (const { name, timeout } of cases) bunTest.concurrent(name, () => runInPool(name, timeout), queueBound);
+    // The crash, not the case timer, fails the case: the error names the exit code.
+    bunTest.concurrent('a worker that crashes fails its case at once with its exit code, and the pool goes on', async () => {
+        await expect(runInPool(CRASH_CASE, 60_000)).rejects.toThrow('claim test worker exited with 3');
+    }, queueBound);
 } else {
     const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
     rl.on('line', async line => {
         if (!line.trim()) return;
         const { id, name } = JSON.parse(line) as { id: number; name: string };
+        if (name === CRASH_CASE) process.exit(3);
         try {
             const entry = CONCURRENT_CASES.find(c => c.name === name);
             if (!entry) throw new Error(`missing test case ${name}`);
