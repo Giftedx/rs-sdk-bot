@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beginSessionAttempt } from '../../core/src/session-lifecycle';
+import { recordShopShelf } from '../../core/src/shop-shelf';
 import {
     classifyAccountLifecycle,
     createExpiringHold,
@@ -189,7 +190,14 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
             quests: [{ name: 'cooks_assistant', state: 'complete' }],
             bank: [{ id: 995, count: 250_000 }],
             bankAt: NOW - 300_000,
+            inventory: [
+                { id: 1351, baseId: 1351, count: 1, slot: 0 },
+                { id: 2352, baseId: 2351, count: 11, slot: 1 },
+                { id: 379, baseId: 379, count: 1, slot: 2 },
+                { id: 379, baseId: 379, count: 1, slot: 3 },
+            ],
         });
+        recordShopShelf(DEFAULT_LIVE_SERVER, 'gemshop2', [{ id: 1621, count: 0 }], NOW - 60_000, tempRoot);
 
         // HelperTwo: legacy .practice/status/, bank observed BEFORE latest login attempt (without logout proof -> held)
         const attempt2 = beginSessionAttempt(
@@ -257,6 +265,9 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(h1.lifecycle).toBe('idle');
         expect(h1.bank.trusted).toBe(true);
         expect(h1.bank.items[995]).toBe(250_000);
+        // Each status pack row is one slot; a noted stack counts under its base id.
+        expect(h1.packSlots).toEqual({ 1351: 1, 2351: 1, 379: 2 });
+        expect(snapshot.shopShelves).toEqual({ '1621:shop:gemshop2': { count: 0, at: NOW - 60_000 } });
         expect(h1.systemHolds?.map((h) => h.key)).toEqual(['check-me']);
         expect(h1.cooldowns).toEqual({ '1333:ge': NOW + 60_000 });
 

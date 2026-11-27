@@ -740,7 +740,62 @@ test('a shop whose restock wait exceeds one shop-buy run is no source for a full
     expect(shelf.step?.quantity).toBe(2);
 });
 
-test('a venue that failed sends the next plan to the next seller, then the GE; a GE buy that cannot be placed is no source', () => {
+test('an empty seller shelf sends the order to the GE unless the next seller is cheaper in ticks and coins', () => {
+    const acct = makeAcct({ bank: { items: { 995: 10_000 }, observedAt: NOW - 10_000, trusted: true } });
+    const base: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
+    const tile = { x: 3093, z: 3245, level: 0 };
+    const emptied = { shop: 'stall_a', itemId: 383, stock: 5, restockTicks: 100, cost: 250, tile };
+    const next = (cost: number) => ({ shop: 'stall_b', itemId: 383, stock: 5, restockTicks: 100, cost, tile });
+    const quotes = { 383: { ask: 300, sell: 500, trades: 20 } };
+    const req = () => ({ itemId: 383, quantity: 1, allowedSources: ['npc_shop' as const, 'ge' as const] });
+    // Another account saw stall_a empty a minute ago (core/src/shop-shelf.ts).
+    const seenEmpty: WorldSnapshot = { ...base, shopShelves: { '383:shop:stall_a': { count: 0, at: NOW - 60_000 } } };
+
+    const pricier = resolveAcquireItem(acct, req(), { world: seenEmpty, marketQuotes: quotes, customShops: [emptied, next(400)] });
+    expect(pricier.step?.source).toBe('ge');
+    expect(pricier.skippedReasons.map((r) => r.reason)).toContainEqual(expect.stringMatching(/shop:stall_b is not cheaper than the GE/));
+    // A cheaper and quicker seller next to the account keeps the order.
+    const cheaper = resolveAcquireItem(acct, req(), { world: seenEmpty, marketQuotes: quotes, customShops: [emptied, next(200)] });
+    expect(cheaper.step).toMatchObject({ source: 'npc_shop', shopId: 'stall_b' });
+    // A stock-out cooldown on stall_a is the same signal.
+    const cooled = resolveAcquireItem(acct, req(), {
+        world: { ...base, marketCooldowns: { [marketCooldownKey(383, 'shop:stall_a')]: NOW + 600_000 } }, marketQuotes: quotes, customShops: [emptied, next(400)],
+    });
+    expect(cooled.step?.source).toBe('ge');
+    // With no empty shelf known, the shop order keeps its source order.
+    const fresh = resolveAcquireItem(acct, req(), { world: base, marketQuotes: quotes, customShops: [next(400)] });
+    expect(fresh.step).toMatchObject({ source: 'npc_shop', shopId: 'stall_b' });
+    // An empty shelf seen longer ago than the stock-out window is no signal.
+    const old = resolveAcquireItem(acct, req(), {
+        world: { ...base, shopShelves: { '383:shop:stall_a': { count: 0, at: NOW - 20 * 60_000 } } }, marketQuotes: quotes, customShops: [emptied],
+    });
+    expect(old.step).toMatchObject({ source: 'npc_shop', shopId: 'stall_a' });
+
+    // A fresh part shelf adds the restock wait for the rest of the order.
+    const full = resolveAcquireItem(acct, { itemId: 383, quantity: 5, allowedSources: ['npc_shop'] }, { world: base, customShops: [next(200)] });
+    const part = resolveAcquireItem(acct, { itemId: 383, quantity: 5, allowedSources: ['npc_shop'] }, {
+        world: { ...base, shopShelves: { '383:shop:stall_b': { count: 2, at: NOW - 60_000 } } }, customShops: [next(200)],
+    });
+    expect(part.step!.estimatedTicks - full.step!.estimatedTicks).toBe(100);
+});
+
+test('a GE buy whose pack would hold over 26 items after banking coins and the item is refused before login', () => {
+    const slots = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [1000 + i, 1]));
+    const world = (a: AccountState): WorldSnapshot => ({ schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: a } });
+    const quotes = { 314: { ask: 5, sell: 500, trades: 10 } };
+    const geOnly = { itemId: 314, quantity: 100, allowedSources: ['ge' as const] };
+    const full = makeAcct({ packSlots: slots(27) });
+    const refused = resolveAcquireItem(full, geOnly, { world: world(full), marketQuotes: quotes });
+    expect(refused.ok).toBe(false);
+    expect(refused.skippedReasons).toContainEqual({ source: 'ge', reason: 'pack holds 27 items after banking coins and the item, over 26: two collection slots unavailable' });
+    // The buy banks coins and the item itself, so their slots do not count.
+    const banked = makeAcct({ packSlots: { ...slots(25), 995: 1, 314: 2 } });
+    expect(resolveAcquireItem(banked, geOnly, { world: world(banked), marketQuotes: quotes }).step?.source).toBe('ge');
+    // A status with no pack rows leaves the check to the worker.
+    expect(resolveAcquireItem(makeAcct(), geOnly, { world: world(makeAcct()), marketQuotes: quotes }).step?.source).toBe('ge');
+});
+
+test('a venue that failed is not planned again and the plan reaches the GE; a GE buy that cannot be placed is no source', () => {
     const acct = makeAcct({ bank: { items: { 995: 10_000 }, observedAt: NOW - 10_000, trusted: true } });
     const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
     const quotes = { 314: { ask: 5, sell: 500, trades: 10 } };

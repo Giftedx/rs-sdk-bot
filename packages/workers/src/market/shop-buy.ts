@@ -649,6 +649,15 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         console.log(`MILESTONE realm-leave t=${used()} out=${inRealm() ? 0 : 1} weapon=${weapon()}`);
     };
     const shelfOf = (name: string) => conf.items.find(t => t.re.test(name))?.shelf;
+    let shelfSent = '';
+    const reportShelf = (items: readonly { id: number; name: string; count: number }[]) => {
+        if (!cfg.onShelf) return;
+        const rows = items.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ id: i.id, count: i.count }));
+        const sig = JSON.stringify(rows);
+        if (!rows.length || sig === shelfSent) return;
+        shelfSent = sig;
+        try { cfg.onShelf(profileKey, rows); } catch (e) { console.log(`WARN shelf record failed: ${String(e)}`); }
+    };
 
     console.log(`START shop-buyer ${s.name} profile=${profileKey} coins=${coins()}`);
     let loggedEmpty = false;
@@ -800,6 +809,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
             }
 
             if (shop?.isOpen && shop.shopItems) {
+                reportShelf(shop.shopItems);
                 const purchases = planShopPurchases(
                     planTargets,
                     shop.shopItems,

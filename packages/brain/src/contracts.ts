@@ -97,6 +97,9 @@ export interface AccountState extends WorkerAccountView {
     readonly pos: WorkerTile | null;
 
     readonly inventory: Readonly<Record<number, number>>;
+    // The pack slots that each base item id fills in the latest status (a noted stack counts under its base id).
+    // A buy that needs free pack slots reads it before login; absent means the slots are unknown.
+    readonly packSlots?: Readonly<Record<number, number>>;
     readonly equipment: Readonly<Record<number, number>>;
     readonly bank: AccountBankState;
 
@@ -125,6 +128,8 @@ export interface WorldSnapshot extends WorkerWorldView {
     readonly reserves?: Readonly<Record<string, Readonly<Record<number, number>>>>;
     readonly globalReserves?: Readonly<Record<number, number>>;
     readonly marketCooldowns?: Readonly<Record<string, number>>;
+    // The latest shelf count any account saw for an item at a shop, keyed like marketCooldowns (core/src/shop-shelf.ts).
+    readonly shopShelves?: Readonly<Record<string, { readonly count: number; readonly at: number }>>;
     readonly spotOccupancy?: Readonly<Record<string, number>>;
     readonly geEscrowCoins?: Readonly<Record<string, number>>;
     readonly activeTransfers?: readonly TransferOrder[];
@@ -1039,6 +1044,7 @@ function pushAccountStateErrors(v: unknown, errors: string[], prefix = ''): void
 
     if (v.pos !== null && !isWorkerTile(v.pos)) errors.push(`${prefix}pos must be a valid tile or null`);
     checkItemCountMap(v.inventory, 'inventory', errors, false, prefix);
+    if (v.packSlots !== undefined) checkItemCountMap(v.packSlots, 'packSlots', errors, false, prefix);
     checkItemCountMap(v.equipment, 'equipment', errors, false, prefix);
 
     if (!isPlainRecord(v.bank)) {

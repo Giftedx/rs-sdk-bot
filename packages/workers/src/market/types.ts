@@ -336,6 +336,8 @@ export type ShopBuyConfig = {
     readonly fillOrder?: boolean;
     readonly bankPack?: boolean;
     readonly stockPollTicks?: number;
+    // Receives the shelf counts of the order's items each time they change (core/src/shop-shelf.ts).
+    readonly onShelf?: (shop: string, rows: readonly { id: number; count: number }[]) => void;
 };
 
 export type EarthShopConfig = {

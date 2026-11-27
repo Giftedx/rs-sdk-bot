@@ -391,6 +391,7 @@ describe('market WorkerModule contract compliance', () => {
             Object.assign(floorFixture.pos, { worldX: to.x, worldZ: to.z });
             return { ok: true, ticks: 1 } as any;
         });
+        const shelves: { shop: string; rows: readonly { id: number; count: number }[] }[] = [];
         try {
             const out = await runMarketWorker(floorFixture.session, {
                 mode: 'shop-buy',
@@ -399,10 +400,13 @@ describe('market WorkerModule contract compliance', () => {
                 cap: 200,
                 noBuyTicks: 0,
                 stockTarget: 500,
+                onShelf: (shop, rows) => shelves.push({ shop, rows }),
             });
             validateRunOutcome(out);
             expect(out.kind).toBe('missing_supply');
             expect(out.ticksElapsed).toBeLessThan(20);
+            // The shelf counts of the order's items reach the shelf store once while they stay the same.
+            expect(shelves).toEqual([{ shop: 'catherby', rows: [{ id: 44, count: 100 }, { id: 43, count: 200 }] }]);
         } finally {
             worldSpy.mockRestore();
             walkerSpy.mockRestore();

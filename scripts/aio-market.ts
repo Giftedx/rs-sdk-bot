@@ -264,6 +264,9 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         onStop: async () => { stopped = true; },
                         onSessionEnd: async () => { stopped = true; },
                     });
+                    // The shelf store is advice for later plans: a run with no readable server records nothing.
+                    const shelfServer = await serverForActor(account).catch(() => undefined);
+                    const { recordShopShelf } = await import('../packages/core/src/shop-shelf');
                     const itemIdFilter = merged.ITEM_ID ? Number(merged.ITEM_ID) : NaN;
                     const resolvedName = Number.isSafeInteger(itemIdFilter)
                         ? loadGeItemCatalogue().find(r => r.id === itemIdFilter)?.name
@@ -288,6 +291,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         ...(Number.isSafeInteger(itemIdFilter) ? { itemId: itemIdFilter } : {}),
                         bankPack: merged.BANK_PACK === '1',
                         stockPollTicks: optInt(merged.STOCK_POLL_TICKS),
+                        ...(shelfServer ? { onShelf: (shop: string, rows: readonly { id: number; count: number }[]) => recordShopShelf(shelfServer, shop, rows) } : {}),
                     }, () => stopped);
                     return settleResult([s], res.ok, res.summary);
                 } catch (e) {
