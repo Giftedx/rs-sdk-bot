@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797006810-1",
  "account": "Woodpecker",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "d70ceb67-76c2-4bac-9346-4f63612bc642",
- "count": 0,
- "ok": false,
- "at": 1795797338122,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795797377837,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797345870
+ },
+ "logout": {
+  "attemptId": "1795797338134-0000004756-0000000001",
+  "at": 1795797377824,
+  "sha256": "9716038fd87530b690e646510a3ca93696bc2802e45e3035d6670075b5979455"
+ },
+ "screen": true
 }

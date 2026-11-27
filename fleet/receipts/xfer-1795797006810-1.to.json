@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795797006810-1",
+ "account": "Unsheathed",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "d51b4679-edd3-49f2-9874-ee016c110bfb",
+ "count": 1,
+ "ok": true,
+ "at": 1795797379415,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797378661
+ },
+ "logout": {
+  "attemptId": "1795797368827-0000028700-0000000001",
+  "at": 1795797379403,
+  "sha256": "ff7765e38360b71c9bdd5461844f93baffba7123f871b510b1e188fc6fb89b0a"
+ },
+ "screen": true
+}

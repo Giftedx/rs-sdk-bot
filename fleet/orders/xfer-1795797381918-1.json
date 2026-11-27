@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795797381918-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Fatstack",
+  "item": "Rune axe",
+  "count": 1,
+  "itemId": 1359,
+  "start": 1795797381918,
+  "end": 1795798281918,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
