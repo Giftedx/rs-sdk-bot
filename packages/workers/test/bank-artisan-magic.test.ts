@@ -1652,6 +1652,12 @@ describe('magic:bones', () => {
 });
 
 describe('magic:earth-production', () => {
+    test('a brain batch is a whole count of new runes', async () => {
+        const run = (batch: number) => runEarthProduction({} as any, { mode: 'craft', cap: 2000, target: 100, batch, reserve: 0, stop: () => false });
+        await expect(run(-1)).rejects.toThrow('invalid earth production bounds');
+        await expect(run(1.5)).rejects.toThrow('invalid earth production bounds');
+    });
+
     test('death during approach returns uncredited and selects fresh goblins without extending the no-progress bound', async () => {
         const world = spyOn(coreBot, 'getWorld').mockResolvedValue({} as any);
         const account = spyOn(coreBot, 'accountOf').mockReturnValue({ skills: {} } as any);
