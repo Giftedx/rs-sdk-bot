@@ -73,6 +73,10 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail {"ok":false,"recipe":"brew:3doseprayerrestore","made":0,"failure":"production session stopped"}')).toBe(true);
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail magic-order stop requested level=15 target=56 casts=11 spent=0 chain rounds=1 ok=0 failed=1')).toBe(true);
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail Error: smelt travel to Al Kharid bank failed: walk to 3269,3167,0: Error: smelt original session/input owner/life/stop unavailable')).toBe(true);
+        // The swarm stop aborts a route signal: a run that crafted 1053 earth runes ended with the abort as its failure.
+        const aborted = 'RESULT fail ok=false mode=craft talismansReady=0 crafted=1053 failure=Error: earth production route: {"ok":false,"reason":"aborted","detail":"AbortError: The operation was aborted.","ticks":40}';
+        expect(gateHeldRunEnd('stopped after 1 runs', aborted)).toBe(true);
+        expect(gateHeldRunEnd('gave-up after 2 runs', aborted)).toBe(false);
         expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: cargo stopped')).toBe(false);
         expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required chain rounds=1 ok=0 failed=1')).toBe(false);
         expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: account, native spell and NPC ID required')).toBe(false);

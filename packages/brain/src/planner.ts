@@ -570,8 +570,32 @@ export const FLEET_DEATH_HOLD_MS = 24 * 3_600_000;
  */
 export function isFleetWideDefect(d: DefectRecord, now?: number): boolean {
     if (d.outcomeKind === 'death') return !d.deathLevels || now === undefined || now < d.quarantinedAt + FLEET_DEATH_HOLD_MS;
+    if (ACCOUNT_SCOPED_DEFECT_ACTIVITY_IDS.has(d.activityId)) return false;
     return (d.count ?? 1) >= FLEET_QUARANTINE_MIN_COUNT;
 }
+
+/**
+ * The idle reason of an account that no candidate plans: the blocker that stopped the most candidates, the first such
+ * blocker on a tie. The last blocker names only the candidate tried last, which can be a goal of little weight.
+ */
+export function dominantBlocker(counts: ReadonlyMap<string, number>): string | undefined {
+    let best: string | undefined;
+    let bestCount = 0;
+    for (const [reason, count] of counts) {
+        if (count > bestCount) {
+            best = reason;
+            bestCount = count;
+        }
+    }
+    return best;
+}
+
+/**
+ * The shop and GE buy activities are the acquire route of every chain that needs a supply. A worker defect of a buy
+ * holds only the account that failed: a fleet-wide hold makes each missing supply unresolvable for every account,
+ * and the fleet has no work. A stock-out or a missing offer is a market cooldown of its item and venue, not a defect.
+ */
+export const ACCOUNT_SCOPED_DEFECT_ACTIVITY_IDS: ReadonlySet<string> = new Set(['market:shop-buy', 'market:ge-buy']);
 
 /** The base levels that a death defect compares (DefectRecord.deathLevels). */
 export type AccountClassLevels = { readonly hitpoints: number; readonly defence: number };
@@ -1622,6 +1646,11 @@ function planAccountCore(
     let bestPlan: AccountPlan | null = null;
     const demandCandidates: AccountPlan[] = [];
     let lastBlockerReason = 'no_matching_demand_or_activity';
+    const blockerCounts = new Map<string, number>();
+    const noteBlocker = (reason: string): void => {
+        lastBlockerReason = reason;
+        blockerCounts.set(reason, (blockerCounts.get(reason) ?? 0) + 1);
+    };
 
     for (const demand of input.demands) {
         if (!demand.active || demand.remaining <= 0) continue;
@@ -1892,7 +1921,7 @@ function planAccountCore(
                         || blocker.kind === 'capacity_full'
                         || blocker.kind === 'invalid_config'
                     ) {
-                        lastBlockerReason = `${activity.id}:${blocker.kind}`;
+                        noteBlocker(`${activity.id}:${blocker.kind}`);
                         chainFeasible = false;
                         break;
                     }
@@ -1906,7 +1935,7 @@ function planAccountCore(
                     }
 
                     if (prepSteps.length >= MAX_ACCOUNT_PLAN_STEPS - 1) {
-                        lastBlockerReason = `${activity.id}:exceeds_${MAX_ACCOUNT_PLAN_STEPS}_steps`;
+                        noteBlocker(`${activity.id}:exceeds_${MAX_ACCOUNT_PLAN_STEPS}_steps`);
                         chainFeasible = false;
                         break;
                     }
@@ -1916,13 +1945,13 @@ function planAccountCore(
                             (a) => !shared || !hasActExclusions || isActAllowed(a),
                         );
                         if (!unlockAct) {
-                            lastBlockerReason = `missing_quest_unlock:${blocker.quest}`;
+                            noteBlocker(`missing_quest_unlock:${blocker.quest}`);
                             chainFeasible = false;
                             break;
                         }
                         const unlockPre = getPreflight(unlockAct, 1);
                         if (!unlockPre.ok) {
-                            lastBlockerReason = `quest_unlock_blocked:${blocker.quest}`;
+                            noteBlocker(`quest_unlock_blocked:${blocker.quest}`);
                             chainFeasible = false;
                             break;
                         }
@@ -1975,7 +2004,7 @@ function planAccountCore(
                                     continue;
                                 }
                                 if (prepSteps.length >= MAX_ACCOUNT_PLAN_STEPS - 1) {
-                                    lastBlockerReason = `${activity.id}:exceeds_${MAX_ACCOUNT_PLAN_STEPS}_steps`;
+                                    noteBlocker(`${activity.id}:exceeds_${MAX_ACCOUNT_PLAN_STEPS}_steps`);
                                     chainFeasible = false;
                                     break;
                                 }
@@ -1989,9 +2018,9 @@ function planAccountCore(
                         const acquireRoom = MAX_ACCOUNT_PLAN_STEPS - 2 - prepSteps.length;
                         const choice = chooseSkillUnlock(blocker.skill, needXp, activity, acquireRoom, committedCoins);
                         if (!choice) {
-                            lastBlockerReason = skillUnlockCandidates(blocker.skill).length > 0
+                            noteBlocker(skillUnlockCandidates(blocker.skill).length > 0
                                 ? `unlock_inputs_unavailable:${blocker.skill}`
-                                : `missing_skill_unlock:${blocker.skill}`;
+                                : `missing_skill_unlock:${blocker.skill}`);
                             chainFeasible = false;
                             break;
                         }
@@ -2048,7 +2077,7 @@ function planAccountCore(
                                     break;
                                 }
                             }
-                            lastBlockerReason = `unresolvable_supply:${blocker.itemId}`;
+                            noteBlocker(`unresolvable_supply:${blocker.itemId}`);
                             chainFeasible = false;
                             break;
                         }
@@ -2066,7 +2095,7 @@ function planAccountCore(
                             committedCoinSpend: committedCoins,
                         });
                         if (!acq.ok || !acq.step) {
-                            lastBlockerReason = `missing_coins:${shortfall}`;
+                            noteBlocker(`missing_coins:${shortfall}`);
                             chainFeasible = false;
                             break;
                         }
@@ -2076,14 +2105,14 @@ function planAccountCore(
                         if (blocker.reason === 'food') {
                             const foodStep = stageCombatFood(activity, blocker, committedCoins);
                             if (!foodStep) {
-                                lastBlockerReason = 'missing_food_supply';
+                                noteBlocker('missing_food_supply');
                                 chainFeasible = false;
                                 break;
                             }
                             prepSteps.push(foodStep);
                             committedCoins += stepCommittedCoinCost(foodStep);
                         } else {
-                            lastBlockerReason = `combat_survivability:${blocker.reason}`;
+                            noteBlocker(`combat_survivability:${blocker.reason}`);
                             chainFeasible = false;
                             break;
                         }
@@ -2098,7 +2127,7 @@ function planAccountCore(
                             };
                             prepSteps.push(recStep);
                         } else {
-                            lastBlockerReason = `unreachable_tile:${blocker.reason ?? 'no_route'}`;
+                            noteBlocker(`unreachable_tile:${blocker.reason ?? 'no_route'}`);
                             chainFeasible = false;
                             break;
                         }
@@ -2163,7 +2192,7 @@ function planAccountCore(
             }
 
             if (prepSteps.length >= MAX_ACCOUNT_PLAN_STEPS) {
-                lastBlockerReason = `${activity.id}:exceeds_max_steps`;
+                noteBlocker(`${activity.id}:exceeds_max_steps`);
                 continue;
             }
 
@@ -2247,7 +2276,7 @@ function planAccountCore(
         account: acct.name,
         steps: [],
         scorePerHour: 0,
-        idleReason: lastBlockerReason,
+        idleReason: dominantBlocker(blockerCounts) ?? lastBlockerReason,
     };
     return { bestPlan: emptyPlan, candidates: [] };
 }

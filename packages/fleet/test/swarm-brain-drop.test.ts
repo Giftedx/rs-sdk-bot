@@ -82,6 +82,36 @@ test('a brain run that a swarm stop ended is released; an owner stop, no food or
     expect(brainStopEnd('blocked after 2 runs', 'RESULT fail stop file', undefined)).toBe('blocked after 2 runs');
 });
 
+test('an old repeating run whose re-plan ends at a planner blocker keeps running while its own demand is open', async () => {
+    const { brainJobOpen } = await import('../src/swarm');
+    const run = { accounts: ['OreElse'], started: NOW - 602_000, brain: true };
+    const old = { run, dropCycles: BRAIN_DROP_CYCLES };
+    for (const reason of ['unresolvable_supply:1289', 'missing_quest_unlock:druid', 'missing_skill_unlock:Smithing', 'bank-artisan:jewellery-ruby_ring:exceeds_3_steps']) {
+        expect(brainDropKeep(base({ ...old, idleReason: () => reason, ownJobOpen: () => true }))).toBe('its demand is open and the plan has no other work');
+        // A closed demand or a held activity stops the run after the drop cycles.
+        expect(brainDropKeep(base({ ...old, idleReason: () => reason, ownJobOpen: () => false }))).toBeUndefined();
+    }
+    // Slot pressure and a saturated demand give the slot to other work: no keep for an open demand.
+    for (const reason of ['max_bots_limit', 'demand_saturated', 'spot_capacity_full']) {
+        expect(brainDropKeep(base({ ...old, idleReason: () => reason, ownJobOpen: () => true }))).toBeUndefined();
+    }
+    expect(brainDropKeep(base({ ...old, idleReason: () => 'paused_owner', ownJobOpen: () => true }))).toBeUndefined();
+
+    const goal = { id: 'campaign:haggis:item:557', goalKind: 'main_supply', valueScore: 1, target: { kind: 'item', itemId: 557, count: 5000 }, fulfilled: 0, remaining: 4256, priorityWeight: 1, active: true };
+    const defect = { id: 'd', activityId: 'bank-artisan:magic-earth-production', faultSignature: 'x', outcomeKind: 'worker_defect', account: 'Magicwanda', observedAt: NOW, quarantinedAt: NOW, expiresAt: NOW + 60_000, quarantined: true, logPath: 'x', detail: 'x', count: 1 };
+    const brain = (goals: unknown[], quarantinedDefects: unknown[]) => ({ fleetState: { goals, quarantinedDefects }, world: { accounts: {} } }) as any;
+    const job = { activityId: 'bank-artisan:magic-earth-production', demandId: 'campaign:haggis:item:557' };
+    expect(brainJobOpen(brain([goal], []), job, 'OreElse', NOW)).toBe(true);
+    expect(brainJobOpen(brain([{ ...goal, remaining: 0 }], []), job, 'OreElse', NOW)).toBe(false);
+    expect(brainJobOpen(brain([{ ...goal, active: false }], []), job, 'OreElse', NOW)).toBe(false);
+    expect(brainJobOpen(brain([], []), job, 'OreElse', NOW)).toBe(false);
+    // Another account's first defect does not hold the job; this account's defect or a fleet-wide one does.
+    expect(brainJobOpen(brain([goal], [defect]), job, 'OreElse', NOW)).toBe(true);
+    expect(brainJobOpen(brain([goal], [{ ...defect, account: 'OreElse' }]), job, 'OreElse', NOW)).toBe(false);
+    expect(brainJobOpen(brain([goal], [{ ...defect, count: 2 }]), job, 'OreElse', NOW)).toBe(false);
+    expect(brainJobOpen(brain([goal], []), { activityId: 'x' }, 'OreElse', NOW)).toBe(false);
+});
+
 test('a finite brain run (a location recovery) that a re-plan drops at a combat floor runs to its end', () => {
     const run = { accounts: ['BackdoorMan'], started: NOW - 7_000, brain: true, finite: true };
     expect(brainDropKeep(base({ run, idleReason: () => 'combat_survivability:defence' }))).toBe('finite job runs to its end');
