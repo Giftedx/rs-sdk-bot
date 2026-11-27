@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781195203-1",
+ "account": "Unsheathed",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 12,
+ "claim": "077664cd-4db4-4ac7-a5f4-2f2d6b90b5cb",
+ "count": 12,
+ "ok": true,
+ "at": 1795781511792,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795781511049
+ },
+ "logout": {
+  "attemptId": "1795781502358-0000019964-0000000001",
+  "at": 1795781511773,
+  "sha256": "417ad372c4c43f51aa772fb982b933360b618d0e2c77228a48b78de80f15a8b2"
+ },
+ "screen": true
+}
