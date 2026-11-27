@@ -122,23 +122,25 @@ test('unblock order prioritizes needs_logout_recovery by frozen GP+supply value,
         { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 10_000 }, fulfilled: 0, remaining: 10_000, priorityWeight: 1, active: true },
     ];
 
-    // maxBots=2: only LogHigh and LogLow get slots; LocStranded & IdleOne wait for maxBots; Haggis stays excluded!
+    // maxBots=2: the logout recoveries are planned but take no bot slot (the session-recovery controller runs them),
+    // so LocStranded and IdleOne get the two slots. Haggis stays excluded.
     const plan2 = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 2 });
     expect(isFleetPlan(plan2)).toBe(true);
     expect(plan2.recoveryQueue.map((r) => r.account)).toEqual(['LogHigh', 'LogLow', 'LocStranded']);
     expect(plan2.selectedSlots).toBe(2);
     expect(plan2.accountPlans.LogHigh?.steps[0]?.stepKind).toBe('recover');
     expect(plan2.accountPlans.LogLow?.steps[0]?.stepKind).toBe('recover');
-    expect(plan2.accountPlans.LocStranded?.idleReason).toBe('max_bots_limit');
-    expect(plan2.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
+    expect(plan2.accountPlans.LocStranded?.steps[0]?.stepKind).toBe('recover');
+    expect(plan2.accountPlans.IdleOne?.steps[0]?.stepKind).toBe('work');
     expect(plan2.accountPlans.Haggis?.steps).toEqual([]);
     expect(plan2.accountPlans.PausedOne?.idleReason).toBe('paused_owner');
 
-    // maxBots=4: LogHigh, LogLow, LocStranded, and IdleOne all run.
-    const plan4 = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 4 });
-    expect(plan4.selectedSlots).toBe(4);
-    expect(plan4.accountPlans.LocStranded?.steps[0]?.stepKind).toBe('recover');
-    expect(plan4.accountPlans.IdleOne?.steps[0]?.stepKind).toBe('work');
+    // maxBots=1: the location recovery takes the one slot; the logout recoveries still plan.
+    const plan1 = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 1 });
+    expect(plan1.selectedSlots).toBe(1);
+    expect(plan1.accountPlans.LogHigh?.steps[0]?.stepKind).toBe('recover');
+    expect(plan1.accountPlans.LocStranded?.steps[0]?.stepKind).toBe('recover');
+    expect(plan1.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
 });
 
 test('an account that the swarm will not start keeps its plan but takes no slot, so the next account gets the slot', () => {
@@ -184,9 +186,12 @@ test('an account that the swarm will not start keeps its plan but takes no slot,
     expect(isFleetState(state)).toBe(true);
     expect(state.heldAccounts).toEqual(plan.heldAccounts);
 
-    // Without the held set, the same world fills both slots with the two recoveries.
+    // Without the held set the logout recoveries still take no slot (the session-recovery controller runs them), so
+    // the same two accounts get the slots.
     const unheld = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 2 });
-    expect(unheld.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
+    expect(unheld.accountPlans.LogHigh?.steps[0]?.stepKind).toBe('recover');
+    expect(unheld.accountPlans.IdleOne?.steps[0]?.stepKind).toBe('work');
+    expect(unheld.selectedSlots).toBe(2);
     expect(unheld.heldAccounts).toBeUndefined();
 });
 

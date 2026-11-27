@@ -84,6 +84,11 @@ export interface FleetSchedulerInput {
 
 let cachedBaseItemPrices: Readonly<Record<number, number>> | undefined;
 
+// A plan that is only a logout recovery: the session-recovery controller runs it, not a swarm bot.
+export function isLogoutRecoveryPlan(p: AccountPlan): boolean {
+    return p.steps.length > 0 && p.steps.every((s) => s.stepKind === 'recover' && s.recoveryKind === 'logout');
+}
+
 function getBaseItemPrices(): Readonly<Record<number, number>> {
     if (cachedBaseItemPrices) return cachedBaseItemPrices;
     const prices: Record<number, number> = {};
@@ -741,9 +746,13 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             };
             continue;
         }
-        const recPlan = remainingSlots > 0 || input.heldPlan ? planAccount(acct, basePlannerOpts) : undefined;
-        if (recPlan && keepHeldPlan(acct, recPlan)) continue;
-        if (!recPlan || remainingSlots <= 0) {
+        // A logout recovery takes no bot slot: the swarm starts no job for it (a session_recovery dispatch), and the
+        // session-recovery controller runs the recoveries one at a time outside maxBots. Counted as a slot, each
+        // waiting recovery kept a working account idle at max_bots_limit.
+        const recPlan = planAccount(acct, basePlannerOpts);
+        if (keepHeldPlan(acct, recPlan)) continue;
+        const needsBot = !isLogoutRecoveryPlan(recPlan);
+        if (needsBot && remainingSlots <= 0) {
             accountPlans[acct.name] = {
                 account: acct.name,
                 steps: [],
@@ -755,7 +764,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         accountPlans[acct.name] = recPlan;
         if (recPlan.steps.length > 0) {
             busyAccounts.add(acct.name.toLowerCase());
-            remainingSlots -= 1;
+            if (needsBot) remainingSlots -= 1;
         }
     }
 
@@ -1090,7 +1099,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         remainingSlots -= 1;
     }
 
-    const plansWithSteps = Object.values(accountPlans).filter((p) => p.steps.length > 0 && !(p.account in heldAccounts)).length;
+    const plansWithSteps = Object.values(accountPlans).filter((p) => p.steps.length > 0 && !(p.account in heldAccounts) && !isLogoutRecoveryPlan(p)).length;
     const selectedSlots = Math.min(maxBots, inTradeAccounts.length + plansWithSteps + assignedIdleDonors.size);
 
     return {
