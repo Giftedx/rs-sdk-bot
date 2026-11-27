@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788829639-1",
  "account": "Sausagefest",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "263c4b6a-fc65-438a-846d-f1b827fd5e0a",
- "count": 0,
- "ok": false,
- "at": 1795789155190,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795789246228,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795789245451
+ },
+ "logout": {
+  "attemptId": "1795789155199-0000015084-0000000001",
+  "at": 1795789246189,
+  "sha256": "b0146b64194fced5d2071f5c671f63aa38b0981b876bc67fb0e0f9c8aef391ba"
+ },
+ "screen": true
 }
