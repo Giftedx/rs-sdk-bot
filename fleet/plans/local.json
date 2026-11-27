@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804110651,
+ "at": 1795804123398,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,7 +97,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "180"
+    "BATCH_UNITS": "179"
    },
    "enabled": true,
    "repeat": false,
