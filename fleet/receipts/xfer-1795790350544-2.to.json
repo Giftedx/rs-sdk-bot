@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790350544-2",
  "account": "WellHung",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Tin ore",
  "requested": 10,
  "claim": "3ed0b738-4725-41af-bc78-2b0b0eef516d",
- "count": 0,
- "ok": false,
- "at": 1795791134580,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795791148533,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795791147795
+ },
+ "logout": {
+  "attemptId": "1795791134590-0000008388-0000000001",
+  "at": 1795791148519,
+  "sha256": "83d54dfe2c1a0052d7b0a18742864834e15bd39769a33ee93559f5a50184ada0"
+ },
+ "screen": true
 }
