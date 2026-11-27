@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785866969,
+ "at": 1795785902969,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -110,24 +110,6 @@
    "role": "army"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -220,6 +202,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=6 PRODUCT_TARGET=6 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
   }
  ],
  "army": [
@@ -248,7 +245,8 @@
   "quickhandjob",
   "sausagefest",
   "swordinhand",
-  "thefullmonty"
+  "thefullmonty",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
