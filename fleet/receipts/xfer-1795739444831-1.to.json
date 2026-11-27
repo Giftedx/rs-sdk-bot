@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739444831-1",
  "account": "Hocuspokeus",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "df9852c5-fe77-4a23-acce-1647ad6ab89a",
- "count": 0,
- "ok": false,
- "at": 1795739881789,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795739893782,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795739892996
+ },
+ "logout": {
+  "attemptId": "1795739881797-0000006180-0000000001",
+  "at": 1795739893771,
+  "sha256": "2121824340717b8532ec1660103b2fda46f116a588a18860ada2e3af140d81dc"
+ },
+ "screen": true
 }

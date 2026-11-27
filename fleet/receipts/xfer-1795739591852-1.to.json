@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795739591852-1",
+ "account": "Woodenstaff",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "459cd657-8c29-4e2a-8ce2-25dbca1c6e89",
+ "count": 0,
+ "ok": false,
+ "at": 1795739885436,
+ "detail": "trade claimed"
+}
