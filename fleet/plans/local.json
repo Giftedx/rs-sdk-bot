@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748623416,
+ "at": 1795748685239,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,22 +60,36 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "magearena"
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:magearena",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
    "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "OreElse",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -88,15 +102,15 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=5 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=5 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -153,6 +167,21 @@
    "role": "auto"
   },
   {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
+  },
+  {
    "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -194,7 +223,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
