@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795771612938-1",
+ "account": "PickpockDick",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "9e81b605-0db8-49ba-a5df-f119f16aa9e8",
+ "count": 0,
+ "ok": false,
+ "at": 1795771776024,
+ "detail": "trade claimed"
+}
