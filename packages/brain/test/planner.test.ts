@@ -1729,7 +1729,7 @@ describe('a skill unlock by inventory production is sized for the XP that it nee
 
 test('a location recovery inside walled West Ardougne names the quest exit, so routing runs the quest, not a hub walk', async () => {
     const { resolvePlannedStepWorkerRoute } = await import('../src/worker-routing');
-    // KnightRider and mmsmk1232: Biohazard started, standing in the Mourner HQ at 2546,3325.
+    // Biohazard started, standing in the Mourner HQ at 2546,3325.
     const acct = makeAcct({ name: 'KnightRider', lifecycle: 'needs_location_recovery', pos: { x: 2546, z: 3325, level: 0 }, quests: { Biohazard: 'started', 'Plague City': 'complete' } });
     const world: WorldSnapshot = { schemaVersion: 1, at: Date.now(), side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { KnightRider: acct } };
     const step = planAccount(acct, { world, activities: [], demands: [] }).steps[0];
