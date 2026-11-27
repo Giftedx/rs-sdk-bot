@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805468594-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Quickhandjob",
+  "item": "Prayer potion(4)",
+  "count": 2,
+  "itemId": 2434,
+  "start": 1795805468594,
+  "end": 1795806368594,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
