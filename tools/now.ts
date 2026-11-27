@@ -15,6 +15,7 @@ import {crossAccountFaults,crossAccountLines,failLoops,loopLines,readRecentResul
 import {progressLine,readProgress,sharedIdleBlockers,SHARED_IDLE_MIN,type ProgressReport} from './progress';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
+import {loginBlockers,SILENT_SESSION_DROP_MS,type LoginBlocker} from '../packages/core/src/worker-release';
 
 type BrainChain = { account: string; goal?: string; step?: string };
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
@@ -39,7 +40,9 @@ export type Checkout={path:string;branch:string;head:string;dirty:number;behind:
 // `loops`: the fast-fail loops of the main checkout's results (tools/fail-loops.ts); null when they were not read.
 // `progress`: the game progress of the main checkout's records (tools/progress.ts); null when it was not read.
 export type SyncedLease={side:string;pid:number|null;at:number|null};
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null};
+// `logins`: the status rows that make every live login fail "release peer state unknown" (worker-release/peers.ts
+// loginBlockers); null when they were not readable.
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null;logins?:LoginBlocker[]|null};
 
 // Fleet-data mirrors are a saved observation, not a remote process or network health check.
 export function readSyncedLeases(dir:string):SyncedLease[]|null{
@@ -105,6 +108,16 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
     add('heavy',()=>procs===null?'heavy   not known: the process scan failed. Do not start a heavy job on this line.'
         :'heavy   '+HEAVY.map(h=>`${h} ${procs.filter(p=>p.scripts.includes(h)).length}`).join(', '));
     add('stop',()=>'stop    '+(local.stops.length?local.stops.map(s=>`${s.file}: "${s.text}"`).join('; '):'no stop-swarm')+(state?.brain?.paused?'; side paused':''));
+    add('logins',()=>{
+        if(local.logins===undefined)return null;
+        if(local.logins===null)return 'logins  not known: the status rows could not be read, so every live login fails "release peer state unknown"';
+        if(!local.logins.length)return 'logins  no unfinished status row holds live logins';
+        return 'logins  REFUSED "release peer state unknown" by '+local.logins.map(b=>{
+            const owner=b.ownerPid===null?'no lifecycle owner':`owner pid ${b.ownerPid} ${b.ownerAlive?'alive':'gone'}`;
+            const ends=b.ageMs===null||b.ageMs<0?'no valid time, so it holds until its row changes':`closes by silence in ${age(Math.max(0,SILENT_SESSION_DROP_MS-b.ageMs))}`;
+            return `${b.name} (row ${b.ageMs===null?'time unknown':age(b.ageMs)+' old'} in ${b.dir.replaceAll('\\','/').replace(/^.*?(\.practice\/)/,'$1')}, ${owner}, ${ends})`;
+        }).join('; ');
+    });
     add('control',()=>procs===null?'control not known: the process scan failed'
         :'control '+CONTROLLERS.map(name=>{const p=procs.find(x=>x.scripts.includes(name));return p?`${name} up ${age(p.up)}`:`${name} DOWN`;}).join(', '));
     add('leases',()=>{
@@ -302,6 +315,8 @@ if(import.meta.main){
     }catch{/* an unreadable results file hides only these lines */}
     const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
     const progressPromise=readProgress(main,24,now).catch(()=>null);
+    let logins:LoginBlocker[]|null=null;
+    try{logins=loginBlockers('rs-sdk-demo.fly.dev',main,Date.now());}catch{/* unreadable rows print as not known */}
     const [state,procs,hereCheckout,mainCheckout,progress]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise,progressPromise]);
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,syncedLeases,progress},Date.now()))console.log(line);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,syncedLeases,progress,logins},Date.now()))console.log(line);
 }

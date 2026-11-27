@@ -25,12 +25,28 @@ export function standingPeer(row: any, standingAccounts: ReadonlySet<string>): b
 }
 // current gives a peer's current release; assertLiveWorkerRelease uses the release of the peer's own workEntry.
 export function assertCompatibleWorkers(pin: string, server: string, statuses: readonly any[], now = Date.now(), closed: (row: any) => boolean = () => false, standing: (row: any) => boolean = () => false, current: (row: any) => string = () => pin): void {
-    const unfinished = statuses.filter(s => s?.server === server && !s.result && !closed(s));
-    if (unfinished.some(s => !Number.isFinite(s.at) || s.at <= 0 || s.at > now || now - s.at >= 30_000))
+    const unfinished = openPeerRows(server, statuses, now, closed);
+    if (unfinished.some(s => unknownPeerRow(s, now)))
         throw Error('no worker progress: release peer state unknown; verify offline before rollout');
     if (unfinished.some(s => !standing(s) && s.workRevision !== current(s)))
         throw Error('no worker progress: active legacy/different release; wait offline for coordinated rollout');
 }
+// A live session's row beats every 5 s (status.ts statusHeartbeatMs); a row older than PEER_STALE_MS names a peer whose
+// state the gate does not know.
+export const PEER_STALE_MS = 30_000;
+// The server forces the logout of a client that sent no bytes for 1000 ticks, 400 s at its 400 ms tick (engine World.ts
+// TIMEOUT_NO_RESPONSE), whatever the state of its socket. A session's status row beats on the same event loop that
+// sends the client's packets, so a row silent for that long names no session on the server: its process is dead, its
+// session is closed or its event loop is blocked. The margin covers a server whose ticks run up to half slow. Such a row
+// is closed whatever its producer lifecycle or owner PID show, so a hung or killed worker, or a legacy row with no
+// lifecycle, cannot refuse every login on the server. A peer that comes back from a blocked loop checks its own release
+// again before it logs in (assertLiveWorkerRelease).
+export const SILENT_SESSION_DROP_MS = 600_000;
+export const silentSessionRow = (row: any, now = Date.now()): boolean =>
+    Number.isFinite(row?.at) && row.at > 0 && row.at <= now && now - row.at >= SILENT_SESSION_DROP_MS;
+const unknownPeerRow = (s: any, now: number) => !Number.isFinite(s.at) || s.at <= 0 || s.at > now || now - s.at >= PEER_STALE_MS;
+const openPeerRows = (server: string, statuses: readonly any[], now: number, closed: (row: any) => boolean) =>
+    statuses.filter(s => s?.server === server && !s.result && !silentSessionRow(s, now) && !closed(s));
 // Every standing job counts, on or off: a job just turned off still owns its open session. Unreadable means none.
 export function standingAccounts(base = root): Set<string> {
     try {
@@ -56,8 +72,19 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
     // A standing owner job (swarm STANDING=1) runs the current source, so neither a publish lock nor release pin holds it.
     if (env.STANDING === '1') return;
     if (existsSync(join(liveRoot(base), 'build-lock.json'))) throw Error('no worker progress: release build in progress; live starts paused');
-    const memo: ReleaseMemo = new Map(), pin = assertWorkerRelease(env, base, memo), statuses: any[] = [];
-    const seenEntries = new Set<string>();
+    const memo: ReleaseMemo = new Map(), pin = assertWorkerRelease(env, base, memo), statuses = readPeerStatuses(base).map(s => s.row);
+    const owners = standingAccounts(base);
+    // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
+    const releases = new Map<string, string>(), current = (row: any) => {
+        const key = typeof row?.workEntry === 'string' ? row.workEntry : '';
+        if (!releases.has(key)) { let value = ''; try { value = cachedReleaseFor(releaseEntries(key), base); } catch { /* stale */ } releases.set(key, value); }
+        return releases.get(key)!;
+    };
+    assertCompatibleWorkers(pin, server, statuses, Date.now(), peerClosed(server, base), row => standingPeer(row, owners), current);
+}
+// The status rows the release gate reads: the live directory first, then the legacy one; one row per account file.
+export function readPeerStatuses(base = root): { dir: string; row: any }[] {
+    const out: { dir: string; row: any }[] = [], seenEntries = new Set<string>();
     let foundStatusDir = false;
     try {
         for (const statusDir of statusReadDirs(base)) {
@@ -68,19 +95,32 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
                 seenEntries.add(entry.toLowerCase());
                 const file = join(statusDir, entry), raw = readFileSync(file);
                 if (crashResidue(raw, statSync(file).mtimeMs)) continue;
-                statuses.push(JSON.parse(raw.toString('utf8')));
+                out.push({ dir: statusDir, row: JSON.parse(raw.toString('utf8')) });
             }
         }
         if (!foundStatusDir) throw Error('missing status directories');
     } catch { throw Error('no worker progress: release peer state unknown; unreadable status evidence'); }
-    const owners = standingAccounts(base);
-    // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
-    const releases = new Map<string, string>(), current = (row: any) => {
-        const key = typeof row?.workEntry === 'string' ? row.workEntry : '';
-        if (!releases.has(key)) { let value = ''; try { value = cachedReleaseFor(releaseEntries(key), base); } catch { /* stale */ } releases.set(key, value); }
-        return releases.get(key)!;
-    };
-    assertCompatibleWorkers(pin, server, statuses, Date.now(), row => closedSessionRow(row, server, { root: typeof row?.name === 'string' ? resolveLifecycleRoot(row.name, server, base) : lifecycleRootForRead(server, base) }), row => standingPeer(row, owners), current);
+    return out;
+}
+const peerClosed = (server: string, base: string) => (row: any) =>
+    closedSessionRow(row, server, { root: typeof row?.name === 'string' ? resolveLifecycleRoot(row.name, server, base) : lifecycleRootForRead(server, base) });
+export type LoginBlocker = { name: string; dir: string; ageMs: number | null; attemptId: string | null; ownerPid: number | null; ownerAlive: boolean | null };
+// Read only: the rows that make assertLiveWorkerRelease refuse "peer state unknown" on `server` now, with the owner of
+// each row's own lifecycle attempt. tools/now.ts prints them.
+export function loginBlockers(server: string, base = root, now = Date.now(), alive: (pid: number) => boolean = pidAlive): LoginBlocker[] {
+    const rows = readPeerStatuses(base), closed = peerClosed(server, base);
+    const open = new Set(openPeerRows(server, rows.map(r => r.row), now, closed).filter(s => unknownPeerRow(s, now)));
+    return rows.filter(r => open.has(r.row)).map(({ dir, row }) => {
+        const attemptId = typeof row.sessionAttemptId === 'string' && row.sessionAttemptId ? row.sessionAttemptId : null;
+        let ownerPid: number | null = null;
+        if (attemptId && typeof row.name === 'string') {
+            try {
+                const pid = listAttempts(row.name, server, { root: resolveLifecycleRoot(row.name, server, base) }).find(a => a.attemptId === attemptId)?.receipt?.owner?.pid;
+                if (Number.isSafeInteger(pid) && pid! > 0) ownerPid = pid!;
+            } catch { /* no readable attempt: the owner is not known */ }
+        }
+        return { name: String(row.name), dir, ageMs: Number.isFinite(row.at) && row.at > 0 ? now - row.at : null, attemptId, ownerPid, ownerAlive: ownerPid === null ? null : alive(ownerPid) };
+    });
 }
 
 // The server drops a session whose client is gone after 200 s.

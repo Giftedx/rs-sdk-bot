@@ -129,6 +129,19 @@ test('with no dashboard the local facts still print, and a worktree also shows t
         'main    master @ abc1234, 2 changed files, 7 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied']);
 });
 
+test('the logins line names each status row that refuses live logins, says none, or is left out when not read', () => {
+    const blockers = [
+        { name: 'Swordinhand', dir: 'F:\\repo\\.practice\\live\\status', ageMs: 8 * MIN, attemptId: 'a', ownerPid: 27940, ownerAlive: true },
+        { name: 'Old', dir: '/repo/.practice/status', ageMs: null, attemptId: null, ownerPid: null, ownerAlive: null },
+    ];
+    expect(nowLines(state(), local({ logins: blockers }), NOW)).toContain('logins  REFUSED "release peer state unknown" by '
+        + 'Swordinhand (row 8 min old in .practice/live/status, owner pid 27940 alive, closes by silence in 2 min); '
+        + 'Old (row time unknown in .practice/status, no lifecycle owner, no valid time, so it holds until its row changes)');
+    expect(nowLines(state(), local({ logins: [] }), NOW)).toContain('logins  no unfinished status row holds live logins');
+    expect(nowLines(state(), local({ logins: null }), NOW).some(l => l.startsWith('logins  not known'))).toBe(true);
+    expect(nowLines(state(), local(), NOW).some(l => l.startsWith('logins'))).toBe(false);
+});
+
 test('the loops line names each fast-fail loop, says none, or is left out when not read', () => {
     const loop = { name: 'Shaftmaker', goal: 'headless arrows', error: 'Error: bank did not open', runs: 6, medianSec: 3, lastAt: NOW };
     const lines = nowLines(state(), local({ loops: [loop] }), NOW);
