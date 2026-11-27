@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744814500-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "TheFullMonty",
+  "item": "Vial of water",
+  "count": 3,
+  "itemId": 227,
+  "start": 1795744814500,
+  "end": 1795745714500,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
