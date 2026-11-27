@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772632935-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "MeatNTwoVeg",
+  "item": "Cosmic rune",
+  "count": 2,
+  "itemId": 564,
+  "start": 1795772632935,
+  "end": 1795773532935,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

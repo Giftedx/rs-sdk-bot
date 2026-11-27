@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772357519-1",
+ "account": "mmsmk1232",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "27f32bfd-14fc-4ca1-a2c1-908ad86f3878",
+ "count": 0,
+ "ok": false,
+ "at": 1795772629564,
+ "detail": "trade claimed"
+}

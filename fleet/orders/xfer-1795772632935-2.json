@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772632935-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "MeatNTwoVeg",
+  "item": "Sapphire ring",
+  "count": 2,
+  "itemId": 1637,
+  "start": 1795772632935,
+  "end": 1795773532935,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

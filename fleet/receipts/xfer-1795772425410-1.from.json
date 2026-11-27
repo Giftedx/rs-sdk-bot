@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772425410-1",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "2d86b994-23e5-49c3-8286-d5dc479e790d",
+ "count": 0,
+ "ok": false,
+ "at": 1795772606049,
+ "detail": "trade claimed"
+}
