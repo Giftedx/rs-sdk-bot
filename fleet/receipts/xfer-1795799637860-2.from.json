@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795799637860-2",
  "account": "YewGotWood",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "79a2c074-4f66-4167-89ad-ad2fafffdf0c",
- "count": 0,
- "ok": false,
- "at": 1795799977149,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795800020085,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795800002543
+ },
+ "logout": {
+  "attemptId": "1795799977158-0000034208-0000000001",
+  "at": 1795800020072,
+  "sha256": "82d8eb8366338617b336f471c11206c7a54f4191f7fd62c9e5560e56b9a3e841"
+ },
+ "screen": true
 }

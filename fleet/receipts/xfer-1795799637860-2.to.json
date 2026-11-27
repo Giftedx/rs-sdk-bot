@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799637860-2",
+ "account": "SporranDip",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "624a0ed1-d826-4be5-82b3-f6e052f613a1",
+ "count": 10,
+ "ok": true,
+ "at": 1795800021670,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 15
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795800020940
+ },
+ "logout": {
+  "attemptId": "1795800009420-0000034460-0000000001",
+  "at": 1795800021662,
+  "sha256": "f36b9827ca93b0da0e149bea73da3f8d976ce257f44f162ee41892ba0c859ee6"
+ },
+ "screen": true
+}

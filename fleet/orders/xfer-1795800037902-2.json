@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795800037902-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "SporranDip",
+  "item": "Feather",
+  "count": 120,
+  "itemId": 314,
+  "start": 1795800037902,
+  "end": 1795800937902,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

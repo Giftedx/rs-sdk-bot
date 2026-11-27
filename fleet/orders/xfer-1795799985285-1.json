@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799985285-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "YewFirst",
+  "item": "Iron ore",
+  "count": 9,
+  "itemId": 440,
+  "start": 1795799985285,
+  "end": 1795800885285,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
