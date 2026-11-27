@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799725100,
+ "at": 1795799739220,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -136,10 +136,29 @@
    "role": "auto"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1143"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=82000 TARGET_COUNT=8200 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=81400 TARGET_COUNT=8140 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
@@ -149,25 +168,6 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1148"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "ardougne-knights"
-   ]
   },
   {
    "account": "Fingersmith",
