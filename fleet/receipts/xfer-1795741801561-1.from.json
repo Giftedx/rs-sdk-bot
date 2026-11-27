@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741801561-1",
  "account": "Hocuspokeus",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 6,
  "claim": "fbf1543c-d1a9-4e32-9c8f-cb3fb3668296",
- "count": 0,
- "ok": false,
- "at": 1795742200401,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795742291676,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795742262113
+ },
+ "logout": {
+  "attemptId": "1795742200409-0000025336-0000000001",
+  "at": 1795742291627,
+  "sha256": "cee52f54ac505d5786c2744bcf576dc09ebcf22cc5605702aafeeff26b378811"
+ },
+ "screen": true
 }
