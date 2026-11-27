@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795741163210-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "SporranDip",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "extra": [
+    {
+      "item": "Chocolate bar",
+      "count": 3,
+      "itemId": 1973
+    }
+  ],
+  "start": 1795741163210,
+  "end": 1795742063210,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

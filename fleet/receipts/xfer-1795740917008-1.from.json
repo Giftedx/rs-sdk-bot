@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740917008-1",
  "account": "Wandwaver",
  "partner": "Fatstack",
@@ -10,15 +10,37 @@
  "item": "Guam leaf",
  "requested": 1,
  "claim": "22c53338-60d6-4ae5-9558-3fc17ed04ab3",
- "count": 0,
- "ok": false,
- "at": 1795741075775,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795741158122,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Vial of water",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795741141371
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795741140961
+ },
+ "logout": {
+  "attemptId": "1795741075784-0000024720-0000000001",
+  "at": 1795741158111,
+  "sha256": "10a20f8e557e053598a495e8c73586d9831548d5b69cf1c87c7b70e5ebc1caa6"
+ },
+ "screen": true
 }

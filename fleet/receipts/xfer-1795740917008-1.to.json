@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795740917008-1",
+ "account": "Fatstack",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "99ece9ec-a5ee-4be2-973a-c00ecf808d12",
+ "count": 1,
+ "ok": true,
+ "at": 1795741160160,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795741159377
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795741158976
+ },
+ "logout": {
+  "attemptId": "1795741146534-0000013904-0000000001",
+  "at": 1795741160148,
+  "sha256": "280db92ca29335ef84c04dd7ae1a6a95ae5f5d695946475392f26187384610e9"
+ },
+ "screen": true
+}
