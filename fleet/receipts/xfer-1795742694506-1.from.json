@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742694506-1",
  "account": "Swordinhand",
  "partner": "Bigpackage",
@@ -12,6 +12,16 @@
  "claim": "7688dbd2-3deb-4600-9d07-825b9c6581d2",
  "count": 0,
  "ok": false,
- "at": 1795743100407,
- "detail": "trade claimed"
+ "at": 1795743262850,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795743246860
+ },
+ "logout": {
+  "attemptId": "1795743100416-0000005864-0000000001",
+  "at": 1795743262838,
+  "sha256": "376250eb8d96382c3dc222f9a731fc2ee9a3a667e71aacd29c3820bf2e9d99f9"
+ },
+ "screen": false
 }
