@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805809459-1",
+ "account": "Shaftmaker",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "516765f1-4444-4e44-b9a3-b21481b1a0bb",
+ "count": 0,
+ "ok": false,
+ "at": 1795806146145,
+ "detail": "trade claimed"
+}

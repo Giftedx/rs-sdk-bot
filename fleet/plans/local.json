@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795806069681,
+ "at": 1795806199066,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -67,6 +67,31 @@
     "3000"
    ],
    "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "110",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "24000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "110"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
     "MAX_ITEMS": "1",
@@ -85,22 +110,6 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-skiller.ts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 -- foraging feathers",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -116,20 +125,49 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "33",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "33"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto",
    "resources": [
-    "draynor-willows"
+    "chaos-druids"
    ]
   },
   {
@@ -155,7 +193,7 @@
    ]
   },
   {
-   "account": "Spitroaster",
+   "account": "BoneToPick",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -165,14 +203,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "80",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -180,21 +218,38 @@
    "role": "auto"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "937"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "goal:coin_fund:fleet",
    "role": "auto",
    "resources": [
-    "draynor-willows"
+    "ardougne-knights"
    ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:93",
+   "role": "auto"
   },
   {
    "account": "MeatNTwoVeg",
@@ -231,27 +286,6 @@
    ]
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Woodenstaff",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
    "account": "Nockitoff",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -269,21 +303,29 @@
    ]
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "DropMyLoad",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:40",
+   "role": "helper"
   },
   {
    "account": "Fingersmith",
@@ -320,22 +362,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=15 TRAIN_SKILL=Agility -- agility order gnome 15",
-    "scripts/aio-skiller.ts CAP=58450 TARGET_COUNT=5845 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:hauntedmine BATCH_UNITS=1 -- sweep hauntedmine"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:hauntedmine",
-   "role": "army"
   }
  ],
  "army": [
@@ -359,6 +385,7 @@
   "moneyshot",
   "pocketpool",
   "pocketrocket",
+  "quickhandjob",
   "sporrandip",
   "swordinhand",
   "undermykilt",

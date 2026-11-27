@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805907411-1",
+ "account": "UnderMyKilt",
+ "partner": "TossTheCaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 6,
+ "claim": "7957a9e7-cb2e-45ba-a2de-f107651f9c16",
+ "count": 0,
+ "ok": false,
+ "at": 1795806178439,
+ "detail": "trade claimed"
+}
