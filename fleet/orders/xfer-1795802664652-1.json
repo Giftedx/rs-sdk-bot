@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795802664652-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "Fatstack",
+  "item": "Rune essence",
+  "count": 23,
+  "itemId": 1436,
+  "start": 1795802664652,
+  "end": 1795803564652,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
