@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795754324365,
+ "at": 1795754355944,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -173,27 +173,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto",
-   "resources": [
-    "earth-altar"
-   ]
   }
  ],
  "army": [
