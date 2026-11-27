@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739520452,
+ "at": 1795739618039,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Woodenstaff",
+   "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -72,10 +72,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
-   "role": "auto"
+   "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "Swordinhand",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -120,22 +120,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
    "role": "army"
   },
   {
@@ -286,23 +270,19 @@
    "role": "helper"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
+   "account": "FishAndChips",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
+    "sweep",
+    "barcrawl"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
+   "goal": "goal:quest_board:barcrawl",
    "role": "auto"
   }
  ],
@@ -329,7 +309,6 @@
   "pocketrocket",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker",
