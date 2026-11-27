@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740718810,
+ "at": 1795740742404,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 PRODUCT_TARGET=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -74,7 +74,7 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
+   "account": "DropMyLoad",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -87,6 +87,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
+   "role": "helper"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "12"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -111,7 +124,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "12"
    },
    "enabled": true,
    "repeat": false,
@@ -126,27 +139,12 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "25"
+    "BATCH_UNITS": "24"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "trawler"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "25"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper"
   },
   {
    "account": "mmsmk1232",
