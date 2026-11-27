@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795803587193-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Fatstack",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 203,
+  "start": 1795803587193,
+  "end": 1795804487193,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

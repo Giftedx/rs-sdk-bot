@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803565155-2",
+ "account": "mmtha0205",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron axe",
+ "requested": 1,
+ "claim": "c0f7be83-d2e2-43f2-9c7b-d5d2b9a28391",
+ "count": 0,
+ "ok": false,
+ "at": 1795803661718,
+ "detail": "trade claimed"
+}
