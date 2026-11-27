@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779539672-2",
  "account": "Unsheathed",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 925,
  "claim": "110d0ef3-1887-44ee-aa93-446692fcbb5c",
- "count": 0,
- "ok": false,
- "at": 1795779976340,
- "detail": "trade claimed"
+ "count": 925,
+ "ok": true,
+ "at": 1795780157442,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 925,
+  "after": 0
+ },
+ "bank": {
+  "count": 925,
+  "at": 1795780149119
+ },
+ "logout": {
+  "attemptId": "1795779976348-0000004188-0000000001",
+  "at": 1795780157432,
+  "sha256": "6c7b10b9f31e7f9c09187a1e99e6cf1bfbad3a881383fe595d3e1d9514d9b115"
+ },
+ "screen": true
 }

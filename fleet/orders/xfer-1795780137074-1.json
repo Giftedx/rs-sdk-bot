@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780137074-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Wandwaver",
+  "item": "Avantoe",
+  "count": 3,
+  "itemId": 261,
+  "start": 1795780137074,
+  "end": 1795781037074,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
