@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795819448328-spitroaster-masterbaiter-79a7a0662a274737",
+ "role": "to",
+ "account": "Masterbaiter",
+ "partner": "Spitroaster",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795821582594,
+ "detail": "Error: account logout is not confirmed: Masterbaiter ended disconnected"
+}
