@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795794406195-1",
  "account": "Fingerblastr",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 2,
  "claim": "bfb05e42-5010-4599-a29b-fe389fc4eb94",
- "count": 0,
- "ok": false,
- "at": 1795794741651,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795794910744,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795794894788
+ },
+ "logout": {
+  "attemptId": "1795794741663-0000025056-0000000001",
+  "at": 1795794910721,
+  "sha256": "b2acfa9c358aab29391abc5b60867e777d428c27ebb2b67758d8ec2882c80700"
+ },
+ "screen": true
 }
