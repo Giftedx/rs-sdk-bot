@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795820431014,
+ "at": 1795820512899,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,7 +87,7 @@
    "role": "pvp"
   },
   {
-   "account": "OreElse",
+   "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -97,14 +97,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "495",
+    "MAX_ITEMS": "310",
     "COIN_RESERVE": "1000",
-    "FLOAT": "21800",
+    "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "495"
+    "BATCH_UNITS": "310"
    },
    "enabled": true,
    "repeat": false,
@@ -122,14 +122,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "353",
+    "MAX_ITEMS": "423",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "353"
+    "BATCH_UNITS": "423"
    },
    "enabled": true,
    "repeat": false,
@@ -153,7 +153,7 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
