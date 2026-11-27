@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819450704-oreelse-mmsmk1232-d8075e55821a22ca",
  "account": "OreElse",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "eb534022-c625-4417-ad8c-a2c2839bdf6e",
- "count": 0,
- "ok": false,
- "at": 1795819700038,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795819767119,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795819722789
+ },
+ "logout": {
+  "attemptId": "1795819700066-0000025100-0000000001",
+  "at": 1795819767110,
+  "sha256": "0dbe24a11f2bba417dd378b1943e499e93727604c27cef5ae5dd8e5fad1c4fcf"
+ },
+ "screen": true
 }

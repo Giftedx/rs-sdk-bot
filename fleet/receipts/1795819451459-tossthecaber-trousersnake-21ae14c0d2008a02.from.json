@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819451459-tossthecaber-trousersnake-21ae14c0d2008a02",
  "account": "TossTheCaber",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "60bfacba-2cb8-4dd1-a281-d04c021d09db",
- "count": 0,
- "ok": false,
- "at": 1795819647038,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795819760760,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795819730051
+ },
+ "logout": {
+  "attemptId": "1795819647074-0000024016-0000000001",
+  "at": 1795819760727,
+  "sha256": "c8b430da2ad76308a5fbff332b3c8a9b00ecdd3e476e52ef235707d83e4742e8"
+ },
+ "screen": true
 }
