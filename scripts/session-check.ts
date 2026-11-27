@@ -1,13 +1,10 @@
-// Log one owned account in, confirm it is in the game, and log it out. No gameplay, except leaving a fight: the server
-// takes no logout while a monster attacks the account, so finishCombat walks it off the monsters' ground, eats if it
-// must, and confirms the logout. An account that is not under attack logs out where it stands.
+// Log one owned account in, confirm it is in the game, and log it out. No gameplay.
 // It follows an authenticated session recovery, so the account ends with a confirmed producer logout.
 // `--verify` checks the delivery's native recovery proof instead (the capability's consumer gate).
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { openBot } from '../packages/core/src/bot';
-import { finishCombat } from '../packages/core/src/combat-end';
+import { openBot, finish } from '../packages/core/src/bot';
 import { waitUntil } from '../packages/core/src/ticks';
 import { RECOVERY_SCRIPT, verifyNativeRecoveryProof } from '../packages/core/src/session-recovery-permit';
 import { cachedLaunchRevision } from '../packages/core/src/worker-release';
@@ -49,6 +46,6 @@ if (import.meta.main) {
     if (!s) process.exit(1);
     try {
         await waitUntil(s, st => st?.inGame && !!st.player && st.player.hp > 0, { timeoutTicks: 100, idleMs: 10000 });
-        await finishCombat(s, true, sessionCheckDetail(s.sdk.getState()));
-    } catch (e) { await finishCombat(s, false, String(e)); }
+        await finish([s], true, sessionCheckDetail(s.sdk.getState()));
+    } catch (e) { await finish([s], false, String(e)); }
 }

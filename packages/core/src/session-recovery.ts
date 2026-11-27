@@ -8,6 +8,19 @@ import {lifecycleRootForServer,resolveBotEnvPath} from './practice-paths';
 import {readLogoutProof,listAttemptsSince} from './session-lifecycle';
 import {cachedLaunchRevision} from './worker-release';
 import {waitUntil} from './ticks';
+import {leaveCombat} from './combat-end';
+
+// The logout of a recovery. The server takes no logout while a monster attacks the account, so an account under attack
+// leaves the fight first: leaveCombat walks it off the monsters' ground with auto-retaliate off, eats if it must, and
+// waits for the logout window. It runs after the recovery's last state snapshot. An account not under attack logs out
+// where it stands.
+export async function recoveryLogout(session:Session,leave:typeof leaveCombat=leaveCombat,logout:typeof logoutSession=logoutSession,log:(line:string)=>void=console.log):Promise<string>{
+ try{
+  const end=await leave(session,{log:()=>{}});
+  if(end.underAttack)log('RECOVERY_LEAVE '+JSON.stringify({left:end.left,quiet:end.quiet,ticks:end.ticks,tiles:end.tiles,eats:end.eats}));
+ }catch{log('RECOVERY_LEAVE failed');}
+ return logout(session);
+}
 
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,consumeRecoveryConnection,spendRecoveryConnection,recoveryLifecycleRoot,recoveryPermitPaths,waitForRecoveryChildBinding,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type RecoveryRequest,type ControlledRecoveryRequest,type RecoveryConnectionAdmission} from './session-recovery-permit';
 export {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,type RecoveryRequest};
@@ -310,7 +323,7 @@ async function cli(){
    return s;
   },
   ready:recoveryReady,closeModal:recoveryCloseModal,
-  logout:logoutSession,close:async s=>{const r=await closeWithin([s],5000);if(r.timedOut)throw Error('close timed out');}}));
+  logout:s=>recoveryLogout(s),close:async s=>{const r=await closeWithin([s],5000);if(r.timedOut)throw Error('close timed out');}}));
  clearTimeout(timer);await recoveryBoundary('output-receipt',()=>writeFileSync(join(out!,'receipt.json'),JSON.stringify(receipt,null,2),{flag:'wx'}));process.exitCode=receipt.state==='confirmed'?0:1;
 }
 if(import.meta.main)cli().catch(error=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(error)));process.exitCode=1;});
