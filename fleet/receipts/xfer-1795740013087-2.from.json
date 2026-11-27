@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795740013087-2",
  "account": "WellHung",
  "partner": "Wandwaver",
@@ -12,6 +12,12 @@
  "claim": "b8f83ea1-5a30-4c85-9148-c9e403aad7bd",
  "count": 0,
  "ok": false,
- "at": 1795740859490,
- "detail": "trade claimed"
+ "at": 1795740913719,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795740859498-0000019572-0000000001",
+  "at": 1795740913712,
+  "sha256": "6b148adca31beac67b264a81a124be6098ad48e8e7828f8320c8596ade92add6"
+ },
+ "screen": false
 }

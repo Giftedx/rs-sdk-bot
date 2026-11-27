@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740624750-1",
+ "account": "YewFirst",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze bar",
+ "requested": 4,
+ "claim": "3839102b-e613-4246-9c66-46aa270f2b05",
+ "count": 0,
+ "ok": false,
+ "at": 1795740916476,
+ "detail": "trade claimed"
+}
