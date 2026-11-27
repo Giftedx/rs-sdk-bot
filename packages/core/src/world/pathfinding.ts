@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, closedOf, escapeTiles, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
+import { activeDanger, closedOf, combatLevel, escapeTiles, routeHarmKeep, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
@@ -133,7 +133,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         return interactionAreasScope || (interactionAreasScope = `kept:${lastShut}${lastDk}`);
     };
     // The changes of a scope as tables (leg-key.ts): the walls of its shut doors and the tiles its danger rule closed.
-    const doorTables = new WeakMap<DoorBlock[], ChangeTable>(), dangerTables = new WeakMap<DangerScope, ChangeTable>();
+    const doorTables = new WeakMap<DoorBlock[], ChangeTable>(), dangerTables = new WeakMap<DangerScope, ChangeTable>(), openedTables = new WeakMap<DangerScope, ChangeTable>();
     let tablesBlocked: DoorBlock[] | undefined, tablesDanger: DangerScope | null | undefined, tables: ChangeTable[] = [NO_CHANGES, NO_CHANGES];
     const doorChanges = (blocked: DoorBlock[]): ChangeTable => {
         (pf as any).initPathfinding();
@@ -171,9 +171,13 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         if (blocked === tablesBlocked && d === tablesDanger) return tables;
         let doors = doorTables.get(blocked);
         if (!doors) { doors = blocked.length ? doorChanges(blocked) : NO_CHANGES; doorTables.set(blocked, doors); }
+        // A scope that opened tiles for a walk from a landing (danger/tiles.ts withOpened) shares the table of the scope
+        // under it and adds a table of the tiles it opened, so keys differ from both the shut and the plain grid.
+        const base = d?.opened ? d.outer : d;
         let danger = NO_CHANGES;
-        if (d) { danger = dangerTables.get(d) ?? dangerChanges(d); dangerTables.set(d, danger); }
+        if (base) { danger = dangerTables.get(base) ?? dangerChanges(base); dangerTables.set(base, danger); }
         tablesBlocked = blocked; tablesDanger = d; tables = [doors, danger];
+        if (d?.opened) { let o = openedTables.get(d); if (!o) openedTables.set(d, o = tileTable([d.opened], 3)); tables = [doors, danger, o]; }
         return tables;
     };
     const interactionKey = (q: InteractionTarget): string => {
@@ -379,7 +383,8 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache.save(); } };
     // A route landing inside the account's closed ground: the closed tiles of the squares that hold it (escapeTiles),
     // which a walk from that landing may cross as a walk from the route start does.
-    measure.escapeAt = (acct, at) => closedOf(escapeTiles(acct, at));
+    // An account that avoids harm (guard.ts guardRoute) also has the harm squares holding the landing closed (exposure.ts routeHarmKeep).
+    measure.escapeAt = (acct, at) => closedOf(acct.avoidHarm ? [...escapeTiles(acct, at), ...routeHarmKeep(combatLevel(acct.skills), [at]).tiles] : escapeTiles(acct, at));
     measure.withOpened = (open, at, query) => withOpened(grid, open, `${at.level},${at.x},${at.z}`, query);
     return measure;
 }

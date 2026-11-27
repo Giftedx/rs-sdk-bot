@@ -15,7 +15,7 @@ const FLOOR = 2097152; // CollisionFlag.FLOOR
 // the closed ground exactly. `closed` holds the packed tiles this scope closed (not kept, and not closed before), and
 // `outer` the scope it runs inside: together they are every tile the danger rule changed in the grid
 // (world/leg-key.ts keys a saved walk length by the changed tiles near the walk).
-export type DangerScope = { key: string; kept: ReadonlySet<string>; closed: Int32Array; outer: DangerScope | null };
+export type DangerScope = { key: string; kept: ReadonlySet<string>; closed: Int32Array; outer: DangerScope | null; opened?: Int32Array };
 let active: DangerScope | null = null;
 export const activeDanger = () => active;
 export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Array, keep: readonly Tile[], query: () => T, key = '?'): T {
@@ -43,40 +43,32 @@ export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Arr
     }
 }
 
-// Runs a path query with `open` (packed tiles) open again where the active scopes closed them: a walk that starts on a
-// route landing inside closed ground leaves it as a walk from the route start does (guard.ts escapeTiles). The query
-// sees a scope chain whose keys name `tag` and whose closed lists leave the opened tiles out, so leg keys
-// (world/leg-key.ts) follow the grid. The chain is built once for each active scope and tag.
-const openedChains = new WeakMap<DangerScope, Map<string, { top: DangerScope; reopened: Int32Array }>>();
+// Runs a path query with `open` (packed tiles that the active scopes closed, closedOf) open again: a walk that starts
+// on a route landing inside closed ground leaves it as a walk from the route start does (guard.ts escapeTiles). The
+// query sees one more scope over the active one, with no closed tiles of its own and `opened` naming the tiles it
+// opened: the closed lists of the chain are shared, not copied, and the leg keys (world/pathfinding.ts dangerChanges)
+// count the opened tiles, so a length measured with them open is never read back with them shut. The scope is built
+// once for each active scope and tag.
+const openedScopes = new WeakMap<DangerScope, Map<string, DangerScope>>();
 export function withOpened<T>(grid: FloorGrid, open: Int32Array, tag: string, query: () => T): T {
     const outer = active;
     if (!outer || !open.length) return query();
-    let byTag = openedChains.get(outer);
-    if (!byTag) openedChains.set(outer, byTag = new Map());
-    let built = byTag.get(tag);
-    if (!built) {
-        const want = new Set<number>(open), reopened: number[] = [];
-        const copy = (s: DangerScope | null): DangerScope | null => {
-            if (!s) return null;
-            const closed: number[] = [], kept = new Set(s.kept);
-            for (let i = 0; i < s.closed.length; i++) {
-                const k = s.closed[i]!;
-                if (want.has(k)) { reopened.push(k); kept.add(`${k >>> 28},${(k >>> 14) & 0x3fff},${k & 0x3fff}`); } else closed.push(k);
-            }
-            return { key: `${s.key}|open:${tag}`, kept, closed: Int32Array.from(closed), outer: copy(s.outer) };
-        };
-        const top = copy(outer)!;
-        byTag.set(tag, built = { top, reopened: Int32Array.from(reopened) });
+    let byTag = openedScopes.get(outer);
+    if (!byTag) openedScopes.set(outer, byTag = new Map());
+    let top = byTag.get(tag);
+    if (!top) {
+        const kept = new Set(outer.kept);
+        for (let i = 0; i < open.length; i++) { const k = open[i]!; kept.add(`${k >>> 28},${(k >>> 14) & 0x3fff},${k & 0x3fff}`); }
+        byTag.set(tag, top = { key: `${outer.key}|open:${tag}`, kept, closed: new Int32Array(0), outer, opened: open });
     }
-    const { top, reopened } = built;
-    for (let i = 0; i < reopened.length; i++) { const k = reopened[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, false); }
+    for (let i = 0; i < open.length; i++) { const k = open[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, false); }
     active = top;
     try {
         const result = query();
         if (result && typeof (result as any).then === 'function') throw Error('Danger queries must be synchronous');
         return result;
     } finally {
-        for (let i = 0; i < reopened.length; i++) { const k = reopened[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, true); }
+        for (let i = 0; i < open.length; i++) { const k = open[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, true); }
         active = outer;
     }
 }
@@ -85,11 +77,12 @@ export function withOpened<T>(grid: FloorGrid, open: Int32Array, tag: string, qu
 const closedSets = new WeakMap<DangerScope, Set<number>>();
 export function closedOf(squares: readonly Tile[]): Int32Array {
     if (!active || !squares.length) return new Int32Array(0);
-    const out: number[] = [];
+    const out = new Set<number>();
     for (let s: DangerScope | null = active; s; s = s.outer) {
+        if (!s.closed.length) continue;
         let set = closedSets.get(s);
         if (!set) closedSets.set(s, set = new Set(s.closed));
-        for (const t of squares) { const k = pack(t.level, t.x, t.z); if (set.has(k)) out.push(k); }
+        for (const t of squares) { const k = pack(t.level, t.x, t.z); if (set.has(k)) out.add(k); }
     }
     return Int32Array.from(out);
 }

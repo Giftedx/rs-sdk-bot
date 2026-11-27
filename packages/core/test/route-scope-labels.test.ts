@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { combatLevel, escapeTiles, routeHarmKeep } from '../src/danger';
 import { legCache, type LegCache } from '../src/leg-cache';
 import { loadPathfinding } from '../src/pathcache';
 import { createWorld, ROUTE_BUDGET_MS, rsPathLength, type Account, type PathLength, type Tile, type World } from '../src/world';
@@ -87,3 +88,17 @@ test('a 10 HP account\'s route through a ladder that lands in a hunter\'s square
     expect(whole.ok).toBe(true);
     if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
 }, 180_000);
+
+// An account that avoids harm (walk/goto.ts) also has the squares of the hunters of its combat level closed for the
+// route (guard.ts guardRoute). A landing in such a square that no deadly hunter holds escapes it as well.
+test('an account that avoids harm escapes a landing that only a harm square holds', () => {
+    const careful: Account = { ...weak, avoidHarm: true };
+    const landing = w.navigationGraph!().transports.map(t => t.to).find(t => !escapeTiles(careful, t).length && routeHarmKeep(combatLevel(careful.skills), [t]).tiles.length);
+    expect(landing).toBeDefined();
+    const far: Tile = { x: 3222, z: 3218, level: 0 }, other: Tile = { x: 3224, z: 3218, level: 0 };
+    const opened = pl.withDanger!(careful, far, other, () => pl.escapeAt!(careful, landing!).length);
+    const plain = pl.withDanger!(weak, far, other, () => pl.escapeAt!(weak, landing!).length);
+    console.log('harm-only landing', JSON.stringify(landing), 'opened', opened, 'without avoidHarm', plain);
+    expect(opened).toBeGreaterThan(0);
+    expect(plain).toBe(0);
+}, 120_000);
