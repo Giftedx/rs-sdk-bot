@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795806037228,
+ "at": 1795806050751,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "PickpockDick",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -67,20 +67,36 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "85",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "85"
+    "DEMAND_ID": "goal:gear_collection:892",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "goal:gear_collection:892",
+   "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -97,31 +113,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "9",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "9"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -284,14 +275,14 @@
    "env": {
     "ITEM_ID": "221",
     "ITEMS": "Eye of newt",
-    "MAX_ITEMS": "2",
+    "MAX_ITEMS": "3",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:221",
-    "BATCH_UNITS": "2"
+    "BATCH_UNITS": "3"
    },
    "enabled": true,
    "repeat": false,
@@ -335,34 +326,28 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=112740 TARGET_COUNT=11274 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:dragon BATCH_UNITS=1 -- sweep dragon"
+    "shop-buy",
+    "herbloreshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
+    "ITEM_ID": "221",
+    "ITEMS": "Eye of newt",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:221",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "campaign:haggis:item:221",
    "role": "army"
   }
  ],
@@ -386,7 +371,7 @@
   "mmthv2350",
   "moneyshot",
   "pocketpool",
-  "sausagefest",
+  "quickhandjob",
   "sporrandip",
   "swordinhand",
   "undermykilt",
