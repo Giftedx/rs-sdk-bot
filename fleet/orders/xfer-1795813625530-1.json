@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795813625530-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 213,
+  "start": 1795813625530,
+  "end": 1795814525530,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

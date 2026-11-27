@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795813614360,
+ "at": 1795813637861,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,31 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -106,22 +81,6 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -146,32 +105,23 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
+    "sweep",
+    "grandtree"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "31",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "31"
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -181,14 +131,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "73",
+    "MAX_ITEMS": "118",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "25600",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "73"
+    "BATCH_UNITS": "118"
    },
    "enabled": true,
    "repeat": false,
@@ -196,7 +146,7 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -206,14 +156,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "17",
+    "MAX_ITEMS": "20",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "17"
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
@@ -221,7 +171,7 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -246,19 +196,44 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-quester.ts",
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "grandtree"
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=310 STOCK_TARGET=310 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=310 STOCK_TARGET=310 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=210 MAX_MAKE=210 STALL_TICKS=150 -- fletching arrows"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "974",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "974"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -270,7 +245,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "444"
+    "BATCH_UNITS": "133"
    },
    "enabled": true,
    "repeat": false,
@@ -281,75 +256,29 @@
    ]
   },
   {
-   "account": "BoneToPick",
+   "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "20",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftmaker",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
-   "role": "auto",
-   "resources": [
-    "chaos-druids"
-   ]
   },
   {
    "account": "SporranBulge",
@@ -360,7 +289,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "415"
+    "BATCH_UNITS": "124"
    },
    "enabled": true,
    "repeat": false,
@@ -371,54 +300,41 @@
    ]
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "KnightRider",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "124"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "goal:coin_fund:fleet",
    "role": "army",
    "resources": [
-    "draynor-willows"
+    "ardougne-knights"
    ]
   },
   {
    "account": "PocketPool",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "124"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
+   "goal": "goal:coin_fund:fleet",
    "role": "army",
    "resources": [
-    "draynor-willows"
+    "ardougne-knights"
    ]
   },
   {
@@ -430,7 +346,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "415"
+    "BATCH_UNITS": "124"
    },
    "enabled": true,
    "repeat": false,
@@ -441,11 +357,11 @@
    ]
   },
   {
-   "account": "FishAndChips",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=444 -- thieving knights"
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=133 -- thieving knights"
    ],
    "env": {
     "ROUNDS": "1"
@@ -473,23 +389,25 @@
    "role": "army"
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "Dipstick",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -543,26 +461,66 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
+   "account": "NabTheKnob",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:kwuarm"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:263",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "12",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "12"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "campaign:haggis:item:43",
    "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
@@ -573,7 +531,6 @@
   "Wandwaver",
   "mmsmk1232",
   "billionaire",
-  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "mineyourbiz",
@@ -581,6 +538,7 @@
   "mmthv2350",
   "moneyshot",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "swordinhand",

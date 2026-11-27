@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795813616999-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Quickhandjob",
+  "item": "Limpwurt root",
+  "count": 6,
+  "itemId": 225,
+  "start": 1795813616999,
+  "end": 1795814516999,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
