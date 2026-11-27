@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795773689732-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "TheFullMonty",
+  "item": "Ranarr weed",
+  "count": 1,
+  "itemId": 257,
+  "start": 1795773689732,
+  "end": 1795774589732,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

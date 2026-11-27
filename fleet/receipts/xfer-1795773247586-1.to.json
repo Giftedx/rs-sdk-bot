@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795773247586-1",
+ "account": "Unsheathed",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "f5fe6822-6514-4aea-8424-ecee2f7778f8",
+ "count": 11,
+ "ok": true,
+ "at": 1795773673386,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795773672612
+ },
+ "logout": {
+  "attemptId": "1795773658487-0000022900-0000000001",
+  "at": 1795773673371,
+  "sha256": "e956f11ae413b06f0c610ea527ca5a863dcbd73442cfe0f8da35458e2235e45b"
+ },
+ "screen": true
+}
