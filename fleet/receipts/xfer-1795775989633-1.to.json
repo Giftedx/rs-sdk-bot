@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775989633-1",
+ "account": "Billionaire",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 460,
+ "claim": "3cf461bc-8aab-4018-b6d2-aba83e4e96f6",
+ "count": 0,
+ "ok": false,
+ "at": 1795776204663,
+ "detail": "trade claimed"
+}
