@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799637860-1",
+ "account": "Unsheathed",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "833ac960-f27d-4a27-b935-341f9ee69e0e",
+ "count": 1,
+ "ok": true,
+ "at": 1795799977696,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795799976938
+ },
+ "logout": {
+  "attemptId": "1795799964018-0000022580-0000000001",
+  "at": 1795799977682,
+  "sha256": "261acc38805cfed16eb21a26b03559bd7030b77f823dc4ceec37899200c22aac"
+ },
+ "screen": true
+}

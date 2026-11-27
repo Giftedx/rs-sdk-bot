@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795799380219-1",
+ "account": "Sausagefest",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "577d0112-5e19-4c6a-b6e9-3783e6f047ee",
+ "count": 0,
+ "ok": false,
+ "at": 1795799971536,
+ "detail": "trade claimed"
+}
