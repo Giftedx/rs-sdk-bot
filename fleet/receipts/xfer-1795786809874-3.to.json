@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786809874-3",
+ "account": "mmsmk1232",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "76743073-cf89-4556-a835-349ef7a78340",
+ "count": 1,
+ "ok": true,
+ "at": 1795787014373,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Unfinished potion",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795787013575
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787013158
+ },
+ "logout": {
+  "attemptId": "1795787001433-0000020408-0000000001",
+  "at": 1795787014289,
+  "sha256": "9c73a80779406f931619de25e9ae93f9c7fe7695d88522ffa65d14106615db16"
+ },
+ "screen": true
+}

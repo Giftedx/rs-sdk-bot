@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795786691974-1",
+ "account": "Shaftsinker",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "22ed1fbe-1ed9-437e-a350-af22b00246c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795786919739,
+ "detail": "trade claimed"
+}

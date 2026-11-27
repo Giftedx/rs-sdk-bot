@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795786769387-1",
+ "account": "CoinCock",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "b5655244-d613-46a6-9a51-5dcf245ae60c",
+ "count": 0,
+ "ok": false,
+ "at": 1795787011858,
+ "detail": "trade claimed"
+}

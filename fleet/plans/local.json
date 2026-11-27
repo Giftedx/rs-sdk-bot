@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795786852580,
+ "at": 1795787030546,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,89 +59,50 @@
    "role": "pvp"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1390 TARGET_COUNT=139 PRODUCT_TARGET=139 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=139 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
    "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 STALL_TICKS=255 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=1390 TARGET_COUNT=139 PRODUCT_TARGET=139 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=139 STALL_TICKS=255 -- cooking food"
+    "smithing",
+    "smelt",
+    "1500",
+    "steel"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BAR_TYPE": "steel",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "6",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=15 PRODUCT_TARGET=15 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=15 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=15 PRODUCT_TARGET=15 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=15 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "BoneToPick",
+   "account": "Shaftmaker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild_elemental",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "22",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "22"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:44",
    "role": "auto"
   },
   {
@@ -160,26 +121,58 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "YewFirst",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "essence"
+    "druid"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:hiltsdeep:item:563",
    "role": "army",
    "resources": [
-    "essence-mine"
+    "chaos-druids"
    ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
   },
   {
    "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=8090 TARGET_COUNT=809 PRODUCT_TARGET=818 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=818 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -198,48 +191,65 @@
    ]
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "clotheshop",
-    "3000"
+    "mining",
+    "essence"
    ],
    "env": {
-    "ITEM_ID": "1061",
-    "ITEMS": "Leather boots",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1061",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1061",
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:3doseprayerrestore"
+   ],
+   "env": {
+    "MAX_MAKE": "5",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:139",
+    "BATCH_UNITS": "5",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:139",
    "role": "army"
   },
   {
-   "account": "Abracadickra",
+   "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "prayer",
-    "bury"
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
    ],
    "env": {
-    "BONE_ID": "536",
-    "TRAIN_SKILL": "Prayer",
-    "TARGET_LEVEL": "70",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "88",
-    "STALL_TICKS": "150"
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "247",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Abracadickra",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   }
  ],
@@ -258,20 +268,20 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "knightrider",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
+  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
