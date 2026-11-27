@@ -755,7 +755,8 @@ export class OutcomeClassifier {
     // Lifts each repeat-fault and worker-defect hold whose worker code changed: the release of its entry files
     // (releaseOf, swarm.ts cachedReleaseFor) is not the release of the runs that failed. A merged fix then runs at the
     // next plan cycle, not after the hold. A hold saved without entry files takes the entries of its activity's
-    // worker (entriesOf, from the catalog and the job builder). A death hold is never lifted. A hold without a
+    // worker (entriesOf, from the catalog and the job builder). A death hold and a quest worker-defect hold are never
+    // lifted. A hold without a
     // release or entries, or entries that do not resolve, keeps its time limit.
     // The release includes shared runtime files, so a change can be unrelated to the fault. The lift is one probe, as
     // a held swarm end runs once more after its release changes (#1567): the fault count stays (releaseProbe), so the
@@ -769,7 +770,11 @@ export class OutcomeClassifier {
         const lifted: DefectRecord[] = [];
         for (const [key, d] of this.defects) {
             if (!d.quarantined || d.outcomeKind === 'death' || !d.workerRelease) continue;
-            if (!d.faultSignature.startsWith('repeat ') && d.outcomeKind !== 'worker_defect') continue;
+            const repeat = d.faultSignature.startsWith('repeat ');
+            if (!repeat && d.outcomeKind !== 'worker_defect') continue;
+            // A quest worker defect never lifts on a release change, with saved or derived entries: every quest runs
+            // on one sweep worker, so a fix of one quest changes the release of all held quests.
+            if (!repeat && d.activityId.startsWith('quest:')) continue;
             if (d.expiresAt !== undefined && now >= d.expiresAt) continue;
             let entries: readonly string[] | undefined = d.workerEntries;
             if (!entries?.length) {

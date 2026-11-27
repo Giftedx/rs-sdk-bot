@@ -692,6 +692,20 @@ describe('repeat faults', () => {
         expect(isFleetWideDefect(cowFault('Billionaire', NOW + 70, 'rel-c'))).toBe(false);
     });
 
+    test('a quest worker-defect hold keeps its time limit when the shared quest worker changes, also with saved entries', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const entries = ['scripts/aio-quester.ts'];
+        for (const [i, account] of ['Fatstack', 'Earlyshooter'].entries()) {
+            c.applyOutcome(
+                { kind: 'worker_defect', activityId: 'quest:druid', account, ticksElapsed: 5, faultSignature: 'RESULT fail talk kaqemeex' },
+                { now: NOW + i, workerRelease: 'rel-a', workerEntries: entries },
+            );
+        }
+        expect(c.quarantinedDefects(NOW + 5)[0]?.workerEntries).toEqual(entries);
+        expect(c.liftChangedReleaseHolds(() => 'rel-b', NOW + 10, () => entries)).toEqual([]);
+        expect(c.quarantinedDefects(NOW + 10).map((d) => d.activityId)).toEqual(['quest:druid']);
+    });
+
     test('repeat faults survive a classifier reload', () => {
         const dir = mkdtempSync(join(tmpdir(), 'repeat-faults-'));
         const file = join(dir, 'outcome-state.json');
