@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795809866969-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "ChaosInPants",
+  "item": "Dragon bones",
+  "count": 48,
+  "itemId": 536,
+  "start": 1795809866969,
+  "end": 1795810766969,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
