@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795787143120,
+ "at": 1795787160874,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -77,7 +77,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1170 TARGET_COUNT=117 PRODUCT_TARGET=134 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1160 TARGET_COUNT=116 PRODUCT_TARGET=134 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=134 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
@@ -130,7 +130,7 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
@@ -145,7 +145,7 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
