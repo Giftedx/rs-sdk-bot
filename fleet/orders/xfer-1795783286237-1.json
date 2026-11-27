@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795783286237-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "KnightRider",
+  "item": "Harralander",
+  "count": 1,
+  "itemId": 255,
+  "start": 1795783286237,
+  "end": 1795784186237,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
