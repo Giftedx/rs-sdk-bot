@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780363982,
+ "at": 1795780377459,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,8 +87,8 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=20 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=31 PRODUCT_TARGET=31 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=31 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -102,9 +102,9 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=31 PRODUCT_TARGET=31 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=20 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=31 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -112,6 +112,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-436-2-o0-p23",
+    "ITEM_ID": "436",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "23",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:436",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:436",
    "role": "army"
   },
   {
@@ -149,21 +171,6 @@
    "resources": [
     "essence-mine"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 STALL_TICKS=280 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
   }
  ],
  "army": [
