@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795771996447-1",
+ "account": "BowBeforeMe",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Necklace mould",
+ "requested": 1,
+ "claim": "2b3b0f0d-9bff-4558-b114-ce6c395ec287",
+ "count": 0,
+ "ok": false,
+ "at": 1795772239104,
+ "detail": "trade claimed"
+}

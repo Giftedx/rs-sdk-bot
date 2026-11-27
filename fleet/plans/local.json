@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795772234093,
+ "at": 1795772247321,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,32 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "171",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "171"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
+   "account": "Woodenstaff",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -106,10 +81,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
-   "role": "army"
+   "role": "auto"
   },
   {
-   "account": "Woodenstaff",
+   "account": "Pocketrocket",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -131,7 +106,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -156,31 +131,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "700",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "700"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -209,6 +159,52 @@
    "role": "army"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "83",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "83"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "auto",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
    "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -217,36 +213,21 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "55",
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "83",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "55"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "83"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:556",
    "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1910 TARGET_COUNT=191 PRODUCT_TARGET=191 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=191 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
   },
   {
    "account": "KnightRider",
@@ -271,6 +252,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:gear_collection:892",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "herbloreshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "221",
+    "ITEMS": "Eye of newt",
+    "MAX_ITEMS": "4",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:221",
+    "BATCH_UNITS": "4"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:221",
    "role": "army"
   },
   {
@@ -299,45 +305,29 @@
    "role": "auto"
   },
   {
-   "account": "Billionaire",
+   "account": "mmtha0205",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "herbloreshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "221",
-    "ITEMS": "Eye of newt",
-    "MAX_ITEMS": "4",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "61",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:221",
-    "BATCH_UNITS": "4"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "61"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:221",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "glass"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
   },
   {
    "account": "Kiltlifter",
@@ -348,21 +338,46 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
+    "ITEM_ID": "1621",
+    "ITEMS": "Uncut emerald",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
+    "DEMAND_ID": "campaign:haggis:item:1621",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1623",
+   "goal": "campaign:haggis:item:1621",
    "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "2000",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "auto"
   },
   {
    "account": "TossTheCaber",
