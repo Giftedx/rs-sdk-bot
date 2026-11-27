@@ -7,6 +7,7 @@ import { accountOf, assertServerAllowed, countItems, finish, getWorld, openBot, 
 import { cargoDir, exactItem, type Cargo } from '../../../core/src/cargo';
 import { depositObserved } from '../../../core/src/deposit';
 import { FLEET_DIR, loadOwners, sideOf } from '../../../core/src/fleet';
+import { readHeldFleetTradeClaims } from '../../../core/src/fleet-trade-claim';
 import { clearPreloginFailure, orderLines, validOrder, writePreloginFailure, writeTradeReceipt, type Order, type OrderLine, type TradeReceipt } from '../../../core/src/fleet-trade-settlement';
 export type { OrderLine };
 import type { Outcome } from '../../../core/src/act';
@@ -26,7 +27,7 @@ import {
     ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, assertTradeAdmission, coinTradeObservation, courierCargo, courierFoodAllocation,
     courierIslandProblem, courierRecord, deliveryRecipientAtBank, deliveryResume, draynorApproach, exactCoinDelta,
     featherBatchAmount, featherPurchaseAmount, featherPurchaseEffect, fleetTradeOutcome, fleetTradeRecord,
-    giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight, noteIdOf,
+    absentTakerWatch, giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight, noteIdOf,
     onKaramja, outboundStart, parseCoins, parseFanin, parseFanout, partnerFailed, performFleetTransfer, pickOrder,
     prepareCoinSlot, releaseWatch, requestCourierFunding, runOrderWork, SARIM, separateTroutNotes,
     waitForGiver, watchTradeScreen, type CoinState, type FleetTradeProgress,
@@ -1156,6 +1157,9 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
     });
     let ok = false, detail: string;
     watchTradeScreen(s, progress);
+    const takerWatch = role === 'from' && !sameSide
+        ? absentTakerWatch({ order, partner, partnerSide: sideOf(partner, owners), receipts, readClaims: () => readHeldFleetTradeClaims(REPO_ROOT, [partner]) })
+        : null;
     try {
         await runOrderWork(order, async () => {
             const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
@@ -1167,12 +1171,14 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
             await s.bot.walkTo(tile.x, tile.z, 0);
             if (role === 'from') await prepareFleetSender(s, order, progress);
             if (role === 'from' && order.takerWaits) markGiverReady(REPO_ROOT, order.id);
-            await performFleetTransfer(s, order, role, progress, { gone: () => failed() || releaseMoved() });
+            takerWatch?.arrived();
+            await performFleetTransfer(s, order, role, progress, { gone: () => failed() || releaseMoved() || !!takerWatch?.why() });
         });
         ok = true;
         detail = 'transfer observed';
     } catch (error) {
-        detail = releaseMoved() ? `release moved under the session: ${String(error)}` : String(error);
+        const absent = takerWatch?.why();
+        detail = releaseMoved() ? `release moved under the session: ${String(error)}` : absent ? `${absent}: ${String(error)}` : String(error);
     }
     await complete(s, ok, detail);
 }

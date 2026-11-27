@@ -19,6 +19,7 @@ import {
     TRANSFER_FAILURE_BASE_BACKOFF_MS,
     TRANSFER_FAILURE_MAX_BACKOFF_MS,
     backoffUntil,
+    hubRouteCooldownKey,
     transferEvent,
     transferMemory,
     uniqueTradeableItemId,
@@ -110,6 +111,37 @@ describe('transferEvent', () => {
     test('a failure older than the lookback is not an event', () => {
         const old = order({ start: NOW - 30 * 3_600_000, end: NOW - 29 * 3_600_000 });
         expect(transferEvent(old, [], NOW)).toBeNull();
+    });
+});
+
+describe('transferMemory: a failed walk to the meet', () => {
+    // Live: orders xfer-1795742541760-2 and xfer-1795742816386-1 (Shaftsinker to Quickhandjob, other items each time).
+    const varrock = (id: string, itemId: number, item: string) => order({ id, itemId, item, meet: [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }] });
+    const route = 'Error: route to 3182, 3440: precondition no route to 3182,3440,0';
+
+    test('backs the party off the hub for every item; the partner that waited is not blamed', () => {
+        const o = varrock('xfer-1795742816386-1', 1387, 'Staff of fire');
+        const ev = transferEvent(o, [receipt('from', 'failed', NOW - 20 * MIN, 'Error: partner failed: no trade', o), receipt('to', 'failed', NOW - 20 * MIN, route, o)], NOW);
+        expect(ev).toMatchObject({ kind: 'failed', recipientFault: true, donorFault: false, routeFault: ['taker'] });
+        const mem = transferMemory([ev!], NOW);
+        expect(mem.accountCooldowns.taker?.[hubRouteCooldownKey('varrock_west')]).toBe(NOW - 20 * MIN + TRANSFER_FAILURE_BASE_BACKOFF_MS);
+        expect(mem.accountCooldowns.giver?.[hubRouteCooldownKey('varrock_west')]).toBeUndefined();
+    });
+
+    test('a donor fare fault backs the donor off the Ardougne hub, and two faults double the backoff', () => {
+        const ardougne = (id: string, at: number) => {
+            const o = order({ id, meet: [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }] });
+            return transferEvent(o, [receipt('from', 'failed', at, 'Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0', o), receipt('to', 'failed', at, 'Error: partner failed: no trade', o)], NOW)!;
+        };
+        const mem = transferMemory([ardougne('xfer-1-1', NOW - 40 * MIN), ardougne('xfer-2-1', NOW - 20 * MIN)], NOW);
+        expect(mem.accountCooldowns.giver?.[hubRouteCooldownKey('ardougne')]).toBe(NOW - 20 * MIN + 2 * TRANSFER_FAILURE_BASE_BACKOFF_MS);
+        expect(mem.accountCooldowns.taker?.[hubRouteCooldownKey('ardougne')]).toBeUndefined();
+    });
+
+    test('other own faults give no hub backoff', () => {
+        const ev = transferEvent(order(), [receipt('from', 'failed', NOW - 20 * MIN, 'Error: stock short: Raw shark 0 banked + 0 held < 10')], NOW)!;
+        expect(ev).not.toHaveProperty('routeFault');
+        expect(Object.keys(transferMemory([ev], NOW).accountCooldowns.giver ?? {})).toEqual([]);
     });
 });
 
