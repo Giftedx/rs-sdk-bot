@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789484744-1",
  "account": "MeatNTwoVeg",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Rune pickaxe",
  "requested": 1,
  "claim": "bdda0eca-da8b-44cf-a535-75f3a3897abb",
- "count": 0,
- "ok": false,
- "at": 1795789866334,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795789879011,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795789875559
+ },
+ "logout": {
+  "attemptId": "1795789866344-0000006088-0000000001",
+  "at": 1795789878976,
+  "sha256": "7558d45c5964714bfa653cd31d3b5c06d1aaed8af0044ff61916f1814a10b889"
+ },
+ "screen": true
 }
