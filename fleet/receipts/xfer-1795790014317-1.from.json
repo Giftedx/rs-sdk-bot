@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790014317-1",
  "account": "Shaftsinker",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "5f9c8b31-a5ed-49e7-824d-b491bf94313d",
- "count": 0,
- "ok": false,
- "at": 1795790217498,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795790474612,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795790392626
+ },
+ "logout": {
+  "attemptId": "1795790217507-0000021784-0000000001",
+  "at": 1795790474599,
+  "sha256": "eae0f817b6229a2b079f98866d5764a54ce974c134a7eaae8d26ca7e21bc0a30"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790107185-1",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "77be7d08-2a0b-4be4-92a2-f696ea6f9ade",
+ "count": 0,
+ "ok": false,
+ "at": 1795790489612,
+ "detail": "trade claimed"
+}

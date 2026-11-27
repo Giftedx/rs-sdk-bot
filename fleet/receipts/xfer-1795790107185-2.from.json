@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790107185-2",
  "account": "mmsmk1232",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "502c67c0-17ee-4b39-b23a-aa2c92694bc2",
- "count": 0,
- "ok": false,
- "at": 1795790234969,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795790475760,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795790425870
+ },
+ "logout": {
+  "attemptId": "1795790234984-0000003820-0000000001",
+  "at": 1795790475746,
+  "sha256": "9d3bf80bf104ce876b2a6eff44e02b3f0ab0daf6f519d6e22401bb3dd14b0f37"
+ },
+ "screen": true
 }
