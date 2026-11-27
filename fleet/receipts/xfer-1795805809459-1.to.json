@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805809459-1",
  "account": "YewFirst",
  "partner": "Shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "548e80ce-3d1b-46fc-abe7-9af935a83c95",
- "count": 0,
- "ok": false,
- "at": 1795806210067,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795806221794,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795806221038
+ },
+ "logout": {
+  "attemptId": "1795806210076-0000033040-0000000001",
+  "at": 1795806221780,
+  "sha256": "76a8a1c4c2e14a2428285905fa0d3c8542e44374687ddd309568714658b8f9e6"
+ },
+ "screen": true
 }

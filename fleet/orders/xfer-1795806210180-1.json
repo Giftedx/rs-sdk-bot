@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795806210180-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Fingerblastr",
+  "item": "Iron ore",
+  "count": 18,
+  "itemId": 440,
+  "start": 1795806210180,
+  "end": 1795807110180,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
