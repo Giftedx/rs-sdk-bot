@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786619318-1",
  "account": "Kiltlifter",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 2,
  "claim": "46bf787b-b7ba-480e-8b95-e794133c76a0",
- "count": 0,
- "ok": false,
- "at": 1795786769664,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795786836730,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795786835987
+ },
+ "logout": {
+  "attemptId": "1795786769674-0000026432-0000000001",
+  "at": 1795786836717,
+  "sha256": "4c57523ac71bc23c9562773a40ecdeae556b1b1f30f4e4746a1dbcc435747f17"
+ },
+ "screen": true
 }
