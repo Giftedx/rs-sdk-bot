@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795761769543,
+ "at": 1795761801411,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,6 +72,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "magearena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
    "role": "army"
   },
   {
@@ -186,7 +202,6 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
