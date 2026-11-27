@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805764312,
+ "at": 1795805779871,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "332",
+    "MAX_ITEMS": "346",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "332"
+    "BATCH_UNITS": "346"
    },
    "enabled": true,
    "repeat": false,
@@ -110,14 +110,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "456",
+    "MAX_ITEMS": "478",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20240",
+    "FLOAT": "21120",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "456"
+    "BATCH_UNITS": "478"
    },
    "enabled": true,
    "repeat": false,
@@ -148,27 +148,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "army"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto",
-   "resources": [
-    "chaos-druids"
-   ]
   },
   {
    "account": "Pocketpython",
@@ -211,6 +190,23 @@
   },
   {
    "account": "MeatNTwoVeg",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "YewGotWood",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
