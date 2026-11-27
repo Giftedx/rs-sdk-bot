@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795745520247-1",
+ "account": "Moneyshot",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "5463853d-75fe-4e96-8a59-dede27b4d5b4",
+ "count": 4,
+ "ok": true,
+ "at": 1795745682756,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795745681947
+ },
+ "logout": {
+  "attemptId": "1795745670111-0000012720-0000000001",
+  "at": 1795745682744,
+  "sha256": "c9e79a172202b5a2dd3bcd4fd0f7b810294afd7999901cf09e04fe690f19cfcb"
+ },
+ "screen": true
+}

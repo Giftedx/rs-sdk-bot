@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795745292010-2",
+ "account": "TheFullMonty",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "8ffec029-a973-40a5-abde-8617ac40cbe1",
+ "count": 0,
+ "ok": false,
+ "at": 1795745639973,
+ "detail": "trade claimed"
+}
