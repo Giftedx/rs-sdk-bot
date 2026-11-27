@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805016969-1",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune axe",
+ "requested": 1,
+ "claim": "423c33c9-4a62-4af2-bbbd-5f2c655fe879",
+ "count": 0,
+ "ok": false,
+ "at": 1795805238069,
+ "detail": "trade claimed"
+}

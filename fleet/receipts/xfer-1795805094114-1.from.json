@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805094114-1",
+ "account": "UnderMyKilt",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nails",
+ "requested": 12,
+ "claim": "519ce87f-f810-42ac-98c0-c0682d741a1c",
+ "count": 0,
+ "ok": false,
+ "at": 1795805232700,
+ "detail": "trade claimed"
+}

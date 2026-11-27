@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795805102594-1",
+ "account": "Quickhandjob",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ed4b8baa-3681-41b9-9849-0ed8e0855596",
+ "count": 1,
+ "ok": true,
+ "at": 1795805240655,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795805239921
+ },
+ "logout": {
+  "attemptId": "1795805228823-0000016932-0000000001",
+  "at": 1795805240641,
+  "sha256": "8a6ac8bdb51189c5144be941b554b57473d1a12276770e4df7b81789a191ca24"
+ },
+ "screen": true
+}
