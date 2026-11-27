@@ -183,6 +183,7 @@ test('world facade preserves the public runtime export surface', async () => {
         'createWorld',
         'doorBlock',
         'doorBlocks',
+        'goalReachable',
         'installDoorPolicy',
         'interactionApproach',
         'npcBlockTiles',

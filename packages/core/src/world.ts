@@ -5,6 +5,7 @@ export type {
     Leg,
     PathLength,
     RouteOptions,
+    ScopeAreas,
     Tile,
     Transport,
     World,
@@ -24,5 +25,5 @@ export {
     interactionApproach,
     rsPathLength,
 } from './world/pathfinding';
-export { createWorld } from './world/search';
+export { createWorld, goalReachable } from './world/search';
 export { blockwalkNpcIds, npcBlockTiles } from './world/npc-blocks';
