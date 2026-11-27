@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795754569611-1",
+ "account": "Quickhandjob",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 5,
+ "claim": "2621ed6f-0e6b-4263-82d1-4b64abd60a7d",
+ "count": 5,
+ "ok": true,
+ "at": 1795754664656,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795754641536
+ },
+ "logout": {
+  "attemptId": "1795754634838-0000015296-0000000001",
+  "at": 1795754664645,
+  "sha256": "8e1eb7aaf2c7ac5b82dd27ea1114dcbfc74b1e42544d0b16e663c8939f6d49bd"
+ },
+ "screen": true
+}
