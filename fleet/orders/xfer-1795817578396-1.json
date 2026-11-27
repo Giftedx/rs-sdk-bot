@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795817578396-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "BowBeforeMe",
+  "item": "Iron ore",
+  "count": 2,
+  "itemId": 440,
+  "start": 1795817578396,
+  "end": 1795818478396,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
