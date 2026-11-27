@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795761903422-1",
+ "account": "Hocuspokeus",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "43d9813c-b8a6-4cb6-b5df-52dc62c4b4af",
+ "count": 0,
+ "ok": false,
+ "at": 1795762043596,
+ "detail": "trade claimed"
+}
