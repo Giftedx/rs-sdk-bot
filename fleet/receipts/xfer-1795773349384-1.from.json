@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795773349384-1",
  "account": "Swordinhand",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 4,
  "claim": "9ed5f46a-e4b2-4bcb-8cac-e772dc5f9ee2",
- "count": 0,
- "ok": false,
- "at": 1795773693027,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795773780155,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795773757017
+ },
+ "logout": {
+  "attemptId": "1795773693061-0000005432-0000000001",
+  "at": 1795773780140,
+  "sha256": "93d30d32681d057512c72daeb2604168959bf34f37eb00b5b8755965bd7b0e1d"
+ },
+ "screen": true
 }
