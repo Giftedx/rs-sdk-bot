@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742816386-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Quickhandjob",
+  "item": "Staff of fire",
+  "count": 1,
+  "itemId": 1387,
+  "start": 1795742816386,
+  "end": 1795743716386,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
