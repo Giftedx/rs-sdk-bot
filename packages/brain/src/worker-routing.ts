@@ -787,7 +787,9 @@ export function resolvePlannedStepWorkerRoute(
                     env: {
                         RECOVERY_REASON: planned.reason,
                         ...(kit ? { STAGE_KIT: kit } : {}),
-                        ...(planned.keep ? { STAGE_KEEP: planned.keep.join(',') } : {}),
+                        ...(planned.keep || planned.keepCounts
+                            ? { STAGE_KEEP: [...(planned.keep ?? []).map(String), ...(planned.keepCounts ?? []).map((k) => `${k.itemId}:${k.count}`)].join(',') }
+                            : {}),
                     },
                     config: { role: 'walk-to', tile, ...(planned.kit ? { kit: planned.kit } : {}) },
                     warnings: [],

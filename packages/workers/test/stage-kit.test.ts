@@ -16,7 +16,8 @@ test('the shortfall is the kit less what the pack holds', () => {
 });
 
 test('STAGE_KEEP parses ids, and the kit slots count stacks once', () => {
-    expect([...parseStageKeep('995,333')]).toEqual([995, 333]);
+    expect([...parseStageKeep('995,333,1205:1')]).toEqual([[995, Infinity], [333, Infinity], [1205, 1]]);
+    expect(() => parseStageKeep('1205:0')).toThrow('invalid STAGE_KEEP entry');
     expect(parseStageKeep(undefined).size).toBe(0);
     expect(() => parseStageKeep('x')).toThrow('invalid STAGE_KEEP entry');
     const stackable = (id: number) => id === 1941;

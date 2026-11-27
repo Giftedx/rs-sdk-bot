@@ -76,6 +76,15 @@ describe('stageForStart', () => {
         expect(fits.staged.inventory[1205]).toBe(15);
     });
 
+    test('a reserve keeps only its count: the surplus copies go to the bank', () => {
+        const reserved = { ...account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } }), reserves: { 1205: 1 } };
+        const r = stageForStart(reserved, byId('combat:boss-trawler'))!;
+        expect(r.step.keepCounts).toEqual([{ itemId: 1205, count: 1 }]);
+        expect(r.staged.inventory[1205]).toBe(1);
+        expect(r.staged.bank.items[1205]).toBe(15);
+        expect(resolvePlannedStepWorkerRoute('StageProbe', r.step).env.STAGE_KEEP).toBe('583,954,995,1941,1205:1');
+    });
+
     test('a pack whose kept items leave no room for the kit gives no step', () => {
         const reserved = { ...account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } }), reserves: { 1205: 16 } };
         expect(stageForStart(reserved, byId('combat:boss-trawler'))).toBeUndefined();

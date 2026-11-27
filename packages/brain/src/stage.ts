@@ -38,19 +38,22 @@ export function packKit(config: Readonly<Record<string, unknown>> | undefined): 
     return out;
 }
 
-// The pack items that a stage deposit keeps: coins, the kit, the tools and food that the route declares
-// (requiredTools, combatSurvivability.foodIds) and any item under a quest or fleet reserve.
+// The pack items that a stage deposit keeps, item id to the count kept: coins, the kit, and the tools and food that
+// the route declares keep every copy (Infinity); an item under a quest or fleet reserve keeps its reserved count.
 export function stageKeep(
     acct: AccountState,
     activity: { readonly config?: Readonly<Record<string, unknown>> },
     world?: WorkerWorldView,
-): Set<number> {
+): Map<number, number> {
     const cfg = activity.config ?? {};
     const ids = (raw: unknown) => (Array.isArray(raw) ? raw.filter((n): n is number => Number.isSafeInteger(n) && (n as number) >= 0) : []);
     const survival = cfg.combatSurvivability && typeof cfg.combatSurvivability === 'object' ? (cfg.combatSurvivability as Record<string, unknown>) : {};
-    const keep = new Set<number>([995, ...packKit(cfg).map((k) => k.itemId), ...ids(cfg.requiredTools), ...ids(survival.foodIds)]);
+    const keep = new Map<number, number>();
+    for (const id of [995, ...packKit(cfg).map((k) => k.itemId), ...ids(cfg.requiredTools), ...ids(survival.foodIds)]) keep.set(id, Infinity);
     for (const id of Object.keys(acct.inventory).map(Number)) {
-        if ((acct.reserves?.[id] ?? 0) > 0 || (world && effectiveItemReserve(acct, world, id) > 0)) keep.add(id);
+        if (keep.has(id)) continue;
+        const reserved = Math.max(acct.reserves?.[id] ?? 0, world ? effectiveItemReserve(acct, world, id) : 0);
+        if (reserved > 0) keep.set(id, reserved);
     }
     return keep;
 }
@@ -85,8 +88,9 @@ export function stageForStart(
         const kept: Record<number, number> = {};
         for (const [k, c] of Object.entries(inventory)) {
             const id = Number(k);
-            if (keep.has(id)) kept[id] = c;
-            else bankItems[id] = (bankItems[id] ?? 0) + c;
+            const n = Math.min(c, keep.get(id) ?? 0);
+            if (n > 0) kept[id] = n;
+            if (c > n) bankItems[id] = (bankItems[id] ?? 0) + c - n;
         }
         if (slotsOf(kept) + added > PACK_SLOTS) return undefined;
         inventory = kept;
@@ -104,7 +108,10 @@ export function stageForStart(
             recoveryKind: 'stage',
             targetTile: tile,
             ...(kit.length > 0 ? { kit } : {}),
-            ...(deposit ? { keep: [...keep].sort((x, y) => x - y) } : {}),
+            ...(deposit ? { keep: [...keep].filter(([, n]) => n === Infinity).map(([id]) => id).sort((x, y) => x - y) } : {}),
+            ...(deposit && [...keep.values()].some((n) => n !== Infinity)
+                ? { keepCounts: [...keep].filter(([, n]) => n !== Infinity).map(([itemId, count]) => ({ itemId, count })).sort((x, y) => x.itemId - y.itemId) }
+                : {}),
             estimatedTicks: Math.max(20, distance + (short.length > 0 ? 20 : 0) + (deposit ? 10 : 0)),
             reason: `stage ${activity.id} at ${tile.x},${tile.z},${tile.level}`,
         },
