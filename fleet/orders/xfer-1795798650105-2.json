@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795798650105-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "MeatNTwoVeg",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795798650105,
+  "end": 1795799550105,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

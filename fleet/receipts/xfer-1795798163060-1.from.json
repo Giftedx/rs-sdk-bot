@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798163060-1",
  "account": "MeatNTwoVeg",
  "partner": "Woodenstaff",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 58,
  "claim": "bd7ade21-30a2-43f6-bfda-8596419f1d20",
- "count": 0,
- "ok": false,
- "at": 1795798398675,
- "detail": "trade claimed"
+ "count": 58,
+ "ok": true,
+ "at": 1795798648148,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1145,
+  "after": 1087
+ },
+ "logout": {
+  "attemptId": "1795798398684-0000006236-0000000001",
+  "at": 1795798648134,
+  "sha256": "781712138342ec541066ac44a112b6bcd9c987f3d083a9fae96a8920ac700548"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798163060-1",
+ "account": "Woodenstaff",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 58,
+ "claim": "ed59834e-9db0-42ae-ad0d-038908febfbb",
+ "count": 58,
+ "ok": true,
+ "at": 1795798650555,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 58
+ },
+ "bank": {
+  "count": 58,
+  "at": 1795798649805
+ },
+ "logout": {
+  "attemptId": "1795798637199-0000006276-0000000001",
+  "at": 1795798650537,
+  "sha256": "9198b318a6892766897cf0c614e155ab68a29a2a31bddcb64aa512869e3f4255"
+ },
+ "screen": true
+}
