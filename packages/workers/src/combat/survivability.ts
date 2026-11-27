@@ -2314,6 +2314,16 @@ export function wildDragonRetreatReason(
     return null;
 }
 
+// A walk in the Wilderness stops for anything the fight loop handles: a retreat reason, or hitpoints to eat at with
+// food in the pack. The green dragon run holds the session eater, so nothing else eats or leaves on the way.
+export function wildDragonWalkHalt(state: BotWorldState, o: { eatAt: number; escapeAt: number }, ours: ReadonlySet<string> = fleetNames()): boolean {
+    const p = state.player;
+    if (!p || wildernessLevel(p.worldZ) <= 0) return false;
+    const hp = state.skills.find(k => k.name === 'Hitpoints')?.level ?? 0;
+    const food = state.inventory.some(i => (DRAGON_FOOD_IDS as readonly number[]).includes(i.id));
+    return !!wildDragonRetreatReason(state, o, ours) || (hp <= o.eatAt && food);
+}
+
 export function wildDragonEscapeAction(state: BotWorldState) {
     const p = state.player;
     if (!p) return { kind: 'out' as const, distance: 0, detail: 'state unknown' };

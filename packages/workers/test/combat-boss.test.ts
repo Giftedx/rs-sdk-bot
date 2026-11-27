@@ -47,6 +47,7 @@ import {
     wildDragonPreflight,
     wildDragonRetreatReason,
     wildDragonThreat,
+    wildDragonWalkHalt,
     type TrawlerDriver,
 } from '../src/combat';
 import { type Session } from '../../../packages/core/src/inprocess';
@@ -200,6 +201,19 @@ test('wildDragonRetreatReason triggers on PKer threat, low HP, full pack, or mis
     expect(wildDragonRetreatReason(baseState({ inventory: Array.from({ length: 28 }, (_, slot) => ({ id: 536, count: 1, slot })) }), { eatAt: 45, escapeAt: 30 }, ours)).toBe('pack-full');
     expect(wildDragonRetreatReason(baseState({ equipment: [{ slot: 3, id: 1333, count: 1 }] }), { eatAt: 45, escapeAt: 30 }, ours)).toBe('shield-missing');
 });
+
+test('wildDragonWalkHalt stops a Wilderness walk for a player threat, low hitpoints or hitpoints to eat at', () => {
+    const ours = new Set<string>(), o = { eatAt: 45, escapeAt: 30 };
+    expect(wildDragonWalkHalt(baseState(), o, ours)).toBe(false);
+    // A player who can attack on the way in (a death at wild 36 had 21 hits from one).
+    expect(wildDragonWalkHalt(baseState({ nearbyPlayers: [{ name: 'Pker', combatLevel: 90, z: GREEN_DRAGON_SPOT.z }] }), o, ours)).toBe(true);
+    expect(wildDragonWalkHalt(baseState({ skills: [{ name: 'Hitpoints', level: 25 }] }), o, ours)).toBe(true);
+    expect(wildDragonWalkHalt(baseState({ skills: [{ name: 'Hitpoints', level: 40 }] }), o, ours)).toBe(true);
+    // Outside the Wilderness the walk does not stop.
+    const south = { worldX: SAFE_SOUTH_TILE.x, worldZ: SAFE_SOUTH_TILE.z, level: 0, combatLevel: 90, lifeId: 1 };
+    expect(wildDragonWalkHalt(baseState({ player: south, skills: [{ name: 'Hitpoints', level: 25 }] }), o, ours)).toBe(false);
+});
+
 
 test('wildDragonEscapeAction runs south above level 30, uses glory below 30, and Varrock Teleport below 20', () => {
     expect(wildernessLevel(SAFE_SOUTH_TILE.z)).toBe(0);
@@ -401,3 +415,4 @@ test('bailing cycles finish with same empty bucket and no XP claim',async()=>{
  expect((await runTrawlerSupport(d,{mode:'bail',maximum:2,cap:50,maxAttempts:2})).completed).toBe(2);expect(current.inventory[0]!.id).toBe(583);
 });
 });
+
