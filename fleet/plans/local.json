@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780165909,
+ "at": 1795780185688,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -157,6 +157,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
    "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "1022"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
@@ -173,7 +192,6 @@
   "dipstick",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
