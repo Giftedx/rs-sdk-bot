@@ -231,6 +231,17 @@ export function workStats(state: { emittedAt?: unknown; activeChains?: unknown; 
     return { at: finite(state.emittedAt) ? state.emittedAt : null, withWork: chains, idle: sortDesc(idle) };
 }
 
+// Idle reasons that an owner or the slot limit sets on purpose. Every other reason is a blocker that the planner
+// could not resolve.
+const PLANNED_IDLE_RE = /^(paused_owner|side_paused_owner|dead|in_trade|max_bots_limit|reserved_for_transfer|campaign_state_staging|spot_capacity_full|demand_saturated|protected_clock_|owned_by_other_side:)/;
+
+// The blocker idle reasons that hold `min` or more accounts. One blocker on many accounts is a fault of shared code or
+// a fleet-wide hold, not of one account.
+export const SHARED_IDLE_MIN = 10;
+export function sharedIdleBlockers(work: Work | null | undefined, min = SHARED_IDLE_MIN): [string, number][] {
+    return (work?.idle ?? []).filter(([reason, n]) => n >= min && !PLANNED_IDLE_RE.test(reason));
+}
+
 export function campaignGates(campaigns: unknown, now: number): CampaignGates {
     let staging = 0, noProof = 0, marginShort = 0, hiscoreStale = 0, oldest: number | null = null;
     const onlyStale: string[] = [];

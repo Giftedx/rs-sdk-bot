@@ -6,7 +6,7 @@ import { disembark as disembarkBoat, sail as sailBoat } from '../../../core/src/
 import { accountOf, assertServerAllowed, countItems, finish, getWorld, openBot, serverFromEnv, sessionDied, settle } from '../../../core/src/bot';
 import { cargoDir, exactItem, type Cargo } from '../../../core/src/cargo';
 import { depositObserved } from '../../../core/src/deposit';
-import { FLEET_DIR } from '../../../core/src/fleet';
+import { FLEET_DIR, loadOwners, sideOf } from '../../../core/src/fleet';
 import { clearPreloginFailure, orderLines, validOrder, writePreloginFailure, writeTradeReceipt, type Order, type OrderLine, type TradeReceipt } from '../../../core/src/fleet-trade-settlement';
 export type { OrderLine };
 import type { Outcome } from '../../../core/src/act';
@@ -1113,11 +1113,20 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
         return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}${extra}: ${detail}`;
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
-    if (role === 'to' && order.takerWaits) {
-        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(REPO_ROOT, order.id)), failed: () => partnerFailed(receipts, order, role, preloginDir) });
+    // The fleet agent starts both parties on one side in the same pass, so a refused login of the partner from before
+    // this run is an earlier attempt. The margin covers the start of the partner's process before this one; the agent
+    // waits PRELOGIN_RETRY_MS (fleet/src/trade-preflight.ts) after a refusal. A partner on another side runs on its own
+    // clock: each refusal counts.
+    const owners = loadOwners(), sameSide = sideOf(partner, owners) === sideOf(account, owners);
+    const since = sameSide ? performance.timeOrigin - 30_000 : -Infinity;
+    const failed = () => partnerFailed(receipts, order, role, preloginDir, since);
+    // The giver writes its ready file in this checkout, so only a giver on this side can mark it. The agent starts a
+    // taker whose giver is on another side once that giver holds its claim for the order (fleet-agent.ts tradePartnerWait).
+    if (role === 'to' && order.takerWaits && sameSide) {
+        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(REPO_ROOT, order.id)), failed });
         console.log(`FLEET_TAKER_WAIT ${order.id} ${waited}`);
     }
-    if (partnerFailed(receipts, order, role, preloginDir)) {
+    if (failed()) {
         await finish([], false, `fleet-trade ${order.id}: partner failed before login`);
         return;
     }
@@ -1158,7 +1167,7 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
             await s.bot.walkTo(tile.x, tile.z, 0);
             if (role === 'from') await prepareFleetSender(s, order, progress);
             if (role === 'from' && order.takerWaits) markGiverReady(REPO_ROOT, order.id);
-            await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role, preloginDir) || releaseMoved() });
+            await performFleetTransfer(s, order, role, progress, { gone: () => failed() || releaseMoved() });
         });
         ok = true;
         detail = 'transfer observed';

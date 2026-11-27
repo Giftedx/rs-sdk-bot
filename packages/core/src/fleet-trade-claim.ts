@@ -113,6 +113,11 @@ export function readFleetAccountClaim(root: string, target: Identity): FleetAcco
 }
 
 export function readHeldFleetTradeClaims(root: string, accounts?: readonly string[]): FleetTradeClaim[] {
+    return readHeldFleetAccountClaims(root, accounts).filter((claim): claim is FleetTradeClaim => !isSwarmClaim(claim));
+}
+
+// The held claims of both kinds, trade and swarm, in one round trip.
+export function readHeldFleetAccountClaims(root: string, accounts?: readonly string[]): FleetAccountClaim[] {
     const names = accounts ? [...new Set(accounts.map(accountName))] : undefined;
     if (names?.length === 0) return [];
     const git = gitForTrade(root);
@@ -125,12 +130,12 @@ export function readHeldFleetTradeClaims(root: string, accounts?: readonly strin
     const heads = [...pending.keys()];
     fetchMissingHeads(git, heads);
     const rows = git(['show', '-s', '--format=%H%x00%b%x00', ...heads]).split('\0');
-    const held: FleetTradeClaim[] = [];
+    const held: FleetAccountClaim[] = [];
     while (rows.length > 1) {
         const head = rows.shift()!.trim(), raw = rows.shift()!, account = pending.get(head);
         if (!account) throw Error('fleet trade claim authority has an unexpected record');
         const claim = parseClaim(raw, account);
-        if (claim.phase === 'held' && !isSwarmClaim(claim)) held.push(claim);
+        if (claim.phase === 'held') held.push(claim);
         pending.delete(head);
     }
     if (pending.size || rows[0]?.trim()) throw Error('fleet trade claim authority has incomplete records');
@@ -271,6 +276,21 @@ export function releaseFleetTradeClaims(root: string, targets: readonly (Identit
     return pending.length;
 }
 
+function claimRefusal(root: string, claim: FleetAccountClaim | null, input: ClaimIdentity, pending: ReturnType<typeof abandonedPending>): string | undefined {
+    if (claim?.phase !== 'held' || (pending && !pending.inherited)) return;
+    if (!isSwarmClaim(claim)) return 'fleet trade claim held for order ' + claim.orderId;
+    if (matchedWorkerProof(root, claim, input)?.state !== 'confirmed') return 'fleet account claim held by swarm';
+}
+
+// The refusal that a trade login (acquireFleetTradeClaim) gives for this claim of `input.account`, or undefined when
+// the login can take it. A controller checks it before it starts a trade, so it does not log in an account to be refused.
+export function fleetTradeClaimRefusal(root: string, claim: FleetAccountClaim | null, input: ClaimIdentity): string | undefined {
+    const { account, server } = identity(input), target = { ...input, account, server };
+    return claimRefusal(root, claim, target, claim?.phase === 'held' ? abandonedPending(root, claim, target) : undefined);
+}
+
+export const isFleetSwarmClaim = (claim: FleetAccountClaim): boolean => isSwarmClaim(claim);
+
 // Acquisition is the durable attempt intent. A held claim has no wall-clock
 // timeout, since a killed client can leave its transfer or logout uncertain.
 export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now = Date.now, options: TradePushOptions = {}) {
@@ -279,10 +299,8 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
     const git = gitForTrade(root, undefined, options.gitWindow), { ref, head, claim } = loadClaim(git, account, server);
     const pending = claim?.phase === 'held' ? abandonedPending(root, claim, input) : undefined;
-    if (claim?.phase === 'held' && !(pending && !pending.inherited)) {
-        if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
-        if (matchedWorkerProof(root, claim, input)?.state !== 'confirmed') throw Error('fleet account claim held by swarm');
-    }
+    const refused = claimRefusal(root, claim, input, pending);
+    if (refused) throw Error(refused);
     const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
     const subject = 'Fleet trade attempt ' + key;
     // One attempt for each order role, so that no order is traded two times. The one exception: the head is the claim

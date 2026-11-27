@@ -12,7 +12,7 @@ import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
 import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
 import {crossAccountFaults,crossAccountLines,failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type CrossAccountFault,type FailLoop} from './fail-loops';
-import {progressLine,readProgress,type ProgressReport} from './progress';
+import {progressLine,readProgress,sharedIdleBlockers,SHARED_IDLE_MIN,type ProgressReport} from './progress';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
 
@@ -153,6 +153,11 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         });
     }else out.push('dashboard: no answer, so the fleet lines are missing. The other lines come from this PC.');
     add('progress',()=>local.progress===undefined?null:local.progress===null?'progress not known: tools/progress.ts did not finish':progressLine(local.progress));
+    // One blocker that idles many accounts is a fault of shared code or a fleet-wide hold, not of one account.
+    add('idle',()=>{
+        const shared=sharedIdleBlockers(local.progress?.work);
+        return shared.length?`idle    WARN ${shared.map(([r,n])=>`${n} accounts on ${r}`).join(', ')} (one blocker on ${SHARED_IDLE_MIN} or more accounts; bun tools/progress.ts)`:null;
+    });
     add('loops',()=>{
         const loops=local.loops;
         if(loops==null)return null;

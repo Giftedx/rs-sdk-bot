@@ -169,6 +169,23 @@ test('a trade and a swarm racing on the same account have exactly one winner', a
     });
 }, 30_000);
 
+test('the controller check before a trade start gives the refusal that the trade login gives', async () => {
+    await withRepos(async (a, b) => {
+        const swarm = acquireFleetSwarmClaim(a, { account: 'Receiver', server, side: 'local' });
+        const trade = acquireFleetTradeClaim(a, input);
+        const held = claimApi.readHeldFleetAccountClaims(b, ['Trader', 'Receiver']);
+        expect(held.map(c => c.account).sort()).toEqual(['receiver', 'trader']);
+        expect(readHeldFleetTradeClaims(b, ['Trader', 'Receiver']).map(c => c.account)).toEqual(['trader']);
+        const refusal = (account: string) => claimApi.fleetTradeClaimRefusal(b, held.find(c => c.account === account)!, { account, server, side: 'local' });
+        expect(refusal('receiver')).toBe('fleet account claim held by swarm');
+        expect(() => acquireFleetTradeClaim(b, { ...input, account: 'Receiver', orderId: 'order-two', role: 'to' })).toThrow('fleet account claim held by swarm');
+        expect(refusal('trader')).toBe('fleet trade claim held for order order-one');
+        expect(claimApi.fleetTradeClaimRefusal(b, null, { account: 'Trader', server, side: 'local' })).toBeUndefined();
+        trade.release();
+        expect(swarm.nonce).toBeString();
+    });
+}, 30_000);
+
 test('a dead swarm producer remains held, and pre-network recovery refusal restores the prior hold', async () => {
     await withRepos(async (a, b) => {
         const claimModule = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
