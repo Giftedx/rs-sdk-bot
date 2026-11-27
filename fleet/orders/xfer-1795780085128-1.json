@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780085128-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Swordinhand",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795780085128,
+  "end": 1795780985128,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
