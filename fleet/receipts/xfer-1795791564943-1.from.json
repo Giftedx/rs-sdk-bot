@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791564943-1",
  "account": "Fingerblastr",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 99,
  "claim": "bf59ac01-a1de-4301-b4db-cfdf425831ba",
- "count": 0,
- "ok": false,
- "at": 1795791893706,
- "detail": "trade claimed"
+ "count": 99,
+ "ok": true,
+ "at": 1795792046088,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 99,
+  "after": 0
+ },
+ "bank": {
+  "count": 99,
+  "at": 1795792026925
+ },
+ "logout": {
+  "attemptId": "1795791893715-0000023104-0000000001",
+  "at": 1795792046075,
+  "sha256": "7c0f26c03911688a938b78681769aa4a9b2c5ea9b7b3f6fabe5fdabaffdf9e83"
+ },
+ "screen": true
 }
