@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775356955-1",
+ "account": "UnderMyKilt",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "f1f026c9-aefc-44d6-a42b-31bc2fefee9a",
+ "count": 0,
+ "ok": false,
+ "at": 1795775854235,
+ "detail": "trade claimed"
+}

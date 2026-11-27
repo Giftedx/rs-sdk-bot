@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795775439373-1",
+ "account": "Shaftsinker",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "2df5fe2d-9415-42f0-8591-a3906217c40a",
+ "count": 1,
+ "ok": true,
+ "at": 1795775857652,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795775781749
+ },
+ "logout": {
+  "attemptId": "1795775775099-0000029080-0000000001",
+  "at": 1795775857640,
+  "sha256": "7b4ad46743a5a3be3fe11ffe9031dff4e097f88f1adb0a2cdab2749c0fe8aae5"
+ },
+ "screen": true
+}

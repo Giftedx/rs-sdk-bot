@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775607503-1",
+ "account": "TheFullMonty",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 9,
+ "claim": "35b169a8-e413-4e31-951f-61abf80ebb2e",
+ "count": 0,
+ "ok": false,
+ "at": 1795775811073,
+ "detail": "trade claimed"
+}

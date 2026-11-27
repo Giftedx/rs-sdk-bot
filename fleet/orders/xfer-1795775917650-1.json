@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795775917650-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "PickpockDick",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 209,
+  "start": 1795775917650,
+  "end": 1795776817650,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
