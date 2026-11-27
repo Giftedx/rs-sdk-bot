@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795811890853-1",
  "account": "TossTheCaber",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "1401cc63-f5fb-486c-94aa-d8a938291097",
- "count": 0,
- "ok": false,
- "at": 1795812016523,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795812094716,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795812074759
+ },
+ "logout": {
+  "attemptId": "1795812016535-0000025176-0000000001",
+  "at": 1795812094703,
+  "sha256": "9b413c0c671ce5e6f2a62da4f72f3fdceea752958f4e5d720cbf244cc939e008"
+ },
+ "screen": true
 }
