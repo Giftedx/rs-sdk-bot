@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786336446-1",
  "account": "Woodenstaff",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "d7a63b13-a999-4c48-a305-e31d5e2b0f68",
- "count": 0,
- "ok": false,
- "at": 1795786783656,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795786809917,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795786791585
+ },
+ "logout": {
+  "attemptId": "1795786783665-0000000408-0000000001",
+  "at": 1795786809906,
+  "sha256": "4432e811a7084d3121954fdd458af272e11fc69c6110c139e04ee3d6d5176892"
+ },
+ "screen": true
 }

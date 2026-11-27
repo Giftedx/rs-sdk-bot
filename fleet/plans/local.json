@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795786788640,
+ "at": 1795786812356,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -117,20 +117,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "266",
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "198",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "266"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "198"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -162,37 +162,47 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1610 TARGET_COUNT=161 PRODUCT_TARGET=161 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=161 -- runecraft air"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=3 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chompy"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
    "role": "army"
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "steel"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=3 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "BAR_TYPE": "steel",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "21",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
@@ -211,7 +221,7 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
+   "account": "Ballbag",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -224,13 +234,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1436",
-   "role": "army",
+   "role": "helper",
    "resources": [
     "essence-mine"
    ]
   },
   {
-   "account": "Ballbag",
+   "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -243,7 +253,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1436",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "essence-mine"
    ]
@@ -265,7 +275,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
@@ -277,7 +286,8 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786336446-1",
+ "account": "Abracadickra",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "06338774-5e3c-4079-9af5-09eedc71c0af",
+ "count": 1,
+ "ok": true,
+ "at": 1795786811613,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795786810770
+ },
+ "logout": {
+  "attemptId": "1795786799945-0000024412-0000000001",
+  "at": 1795786811598,
+  "sha256": "6206de76e7cce139de5dbcabbdcd3c7094b852ddeab21ad2bf0727bc06a554ea"
+ },
+ "screen": true
+}

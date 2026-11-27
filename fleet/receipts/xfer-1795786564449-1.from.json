@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786564449-1",
  "account": "Swordswallow",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 84,
  "claim": "a712efcb-5974-42b6-9b0d-0b713face724",
- "count": 0,
- "ok": false,
- "at": 1795786709337,
- "detail": "trade claimed"
+ "count": 84,
+ "ok": true,
+ "at": 1795786804734,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 84,
+  "after": 0
+ },
+ "bank": {
+  "count": 81,
+  "at": 1795786717182
+ },
+ "logout": {
+  "attemptId": "1795786709346-0000018696-0000000001",
+  "at": 1795786804719,
+  "sha256": "17e0aa03a5d754aa4fd0e2634ccfb82cb6ef756efff0717c5e90cb8c9c05e3dc"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786564449-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 84,
+ "claim": "cc1bc0bf-8db8-4fe5-995e-872b5d838ebe",
+ "count": 84,
+ "ok": true,
+ "at": 1795786806336,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 16,
+  "after": 100
+ },
+ "bank": {
+  "count": 84,
+  "at": 1795786805541
+ },
+ "logout": {
+  "attemptId": "1795786796346-0000004340-0000000001",
+  "at": 1795786806320,
+  "sha256": "700875c4d043b411ddcdc76aca92f52be44c830568e201a786f07d46d9f0a71f"
+ },
+ "screen": true
+}
