@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795803467273,
+ "at": 1795803480331,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,6 +97,23 @@
    ]
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Shaftmaker",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -112,24 +129,6 @@
    "resources": [
     "draynor-willows"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
   },
   {
    "account": "Fingersmith",
