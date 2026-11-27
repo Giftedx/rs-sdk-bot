@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795752458690-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth talisman",
+ "requested": 1,
+ "claim": "fd08ae7c-df8f-44ac-bf6a-164d804b4b97",
+ "count": 1,
+ "ok": true,
+ "at": 1795752561966,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795752549271
+ },
+ "logout": {
+  "attemptId": "1795752542179-0000024172-0000000001",
+  "at": 1795752561956,
+  "sha256": "00290de01c38806aee39216390809e1135cc2e7803b3d28da0d149a49750ba2c"
+ },
+ "screen": true
+}
