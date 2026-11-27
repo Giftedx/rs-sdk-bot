@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795742541760-2",
+ "account": "Quickhandjob",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 20,
+ "claim": "40bb5e2f-8c78-4468-bece-b786244fcb99",
+ "count": 0,
+ "ok": false,
+ "at": 1795742806880,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795742801881-0000015136-0000000001",
+  "at": 1795742806870,
+  "sha256": "065a2eb70a22eaff7e2215931a71e4d40d8c35a8b0b560e6935c7aa732ef397e"
+ },
+ "screen": false
+}

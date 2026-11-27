@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742541760-2",
  "account": "Billionaire",
  "partner": "Quickhandjob",
@@ -12,6 +12,12 @@
  "claim": "16f1c096-67b3-4905-9b60-ec313b0865aa",
  "count": 0,
  "ok": false,
- "at": 1795742771854,
- "detail": "trade claimed"
+ "at": 1795742812480,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795742771862-0000014456-0000000001",
+  "at": 1795742812414,
+  "sha256": "8dfff79150b5c0662190a573a9eaea0e6e3a2fc7bb1d96bd7d116e5168432f8a"
+ },
+ "screen": false
 }
