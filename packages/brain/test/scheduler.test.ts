@@ -1086,6 +1086,41 @@ test('scheduleFleet caps market:shop-buy and market:ge-buy to 1 concurrent buyer
     expect(thieversWithGe).toHaveLength(4);
 });
 
+test('scheduleFleet keeps the shop venue of a running buy reserved when its account re-plans to other work', () => {
+    // Live: Fatstack started a one-ruby buy at the Ardougne gem stall, and 23 s later OreElse started the same buy at the
+    // same stall. The swarm keeps a finite brain run to its end, so its venue stays taken while it runs.
+    const shopBuy: ActivityDefinition = {
+        id: 'market:shop-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'shop',
+        label: 'Buy item from NPC shop',
+        config: { mode: 'shop-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 2, gpPerTick: 0, setupTicks: 25, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const skills = { Ranged: { level: 50, xp: 105_000 }, Cooking: { level: 80, xp: 2_000_000 }, Thieving: { level: 60, xp: 280_000 } };
+    const runner = makeAcct({
+        name: 'RunnerBot', lifecycle: 'running', skills,
+        bank: { items: { 995: 500_000, 383: 500 }, observedAt: NOW - 5_000, trusted: true },
+        activeJob: { activityId: 'market:shop-buy', demandId: 'd:arrows', startedAt: NOW - 20_000 },
+    });
+    const idle = makeAcct({ name: 'IdleBot', skills, bank: { items: { 995: 500_000 }, observedAt: NOW - 5_000, trusted: true } });
+    const plan = scheduleFleet({
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { RunnerBot: runner, IdleBot: idle } },
+        activities: [ACTIVITIES[1]!, shopBuy],
+        demands: [
+            { id: 'd:arrows', goalKind: 'main_supply', valueScore: 50, valuePerHour: 500, target: { kind: 'item', itemId: 892, itemName: 'Rune arrow', count: 200 }, fulfilled: 0, remaining: 200, priorityWeight: 1, active: true },
+            { id: 'd:cooked-sharks', goalKind: 'main_supply', valueScore: 5000, valuePerHour: 500_000, target: { kind: 'item', itemId: 385, count: 400 }, fulfilled: 0, remaining: 400, priorityWeight: 1, active: true },
+        ],
+        maxBots: 5,
+    });
+    const buysArrows = (name: string) => (plan.accountPlans[name]?.steps ?? []).some((s) => s.stepKind === 'work' && s.activityId === 'market:shop-buy');
+    // The runner re-plans to the cooking demand; its arrow buy still runs, so the idle account gets no second buy there.
+    expect(buysArrows('RunnerBot')).toBe(false);
+    expect(buysArrows('IdleBot')).toBe(false);
+});
+
 test('scheduleFleet materializes TransferOrder for stagingHolder consolidation and prevents non-holder over-buying', () => {
     const holder = makeAcct({
         name: 'StageHolder',

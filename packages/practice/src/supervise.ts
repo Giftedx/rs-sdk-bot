@@ -207,6 +207,15 @@ export const diedInRun = (stdout: string) => lastMatchingLine(stdout, isDeathLin
 
 // The openBot flee guard (packages/core/src/bot/open.ts) stops the session `fled at low hitpoints: ...`, and the combat
 // workers put `fled=true` in their RESULT. pk-spar's `fled=<count>` is a fight tally, not a flee stop.
+// The session HP floor (packages/core/src/hp-floor.ts) ends a run `stop=hp-floor ...` after it escaped at low
+// Hitpoints, and logs `HP_FLOOR escape ...` when the escape starts. The floor acts only when the other guards and the
+// script's food plan did not keep the account alive, so the next run of the same job walks into the same fight: the
+// job ends as blocked, a defect to fix, never a retry.
+const HP_FLOOR_LINE_RE = /^(?:\s*\|\s*)?HP_FLOOR escape /;
+export const isHpFloorLine = (line: string) => HP_FLOOR_LINE_RE.test(line);
+export const isHpFloorStop = (result: string) => /^RESULT fail\b/.test(result) && /\bstop=hp-floor\b/.test(result);
+export const hpFloorInRun = (stdout: string) => lastMatchingLine(stdout, isHpFloorLine) !== undefined;
+
 export const isFleeStop = (result: string) => /^RESULT fail\b/.test(result) && /\bfled=true\b|fled at low hitpoints/.test(result);
 
 export function isEntryRefusal(result: string): boolean {
@@ -323,6 +332,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (d.stopped() || /stop file/.test(result)) return { reason: d.drainStopped?.() ? 'release-paused' : 'stopped', runs };
         // A death means the route or the food plan failed; a blind restart repeats it.
         if (/died=true|RESULT fail died/.test(result) || diedInRun(r.stdout)) return { reason: 'died', runs };
+        if (isHpFloorStop(result) || hpFloorInRun(r.stdout)) return { reason: 'blocked', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         // A flee stop leaves the account at low hitpoints with no food next to the same monsters. A restart logs in at
@@ -366,7 +376,7 @@ if (import.meta.main) {
                 accounts: participants,
                 root: process.cwd(),
                 match: {
-                    stdout: l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : null,
+                    stdout: l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : isHpFloorLine(l) ? 'HP_FLOOR' : null,
                     stderr: l => isUncaughtErrorLine(l) ? 'ERROR' : null,
                 },
             });

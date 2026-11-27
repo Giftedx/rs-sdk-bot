@@ -9,6 +9,8 @@ if (import.meta.main) {
     const bot = process.argv[2];
     if (!bot) throw new Error('usage: death-probe.ts <bot>');
     process.env.DEATH_RECOVERY = '1';
+    // The probe dies on purpose: the session HP floor (packages/core/src/hp-floor.ts) would escape first.
+    process.env.SESSION_HP_FLOOR = '0';
     // openBot calls onStop after the recovery: the run passes when the recovery line says ok.
     let recovered = '';
     const s = await openBot(bot, {

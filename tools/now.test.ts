@@ -138,6 +138,14 @@ test('the loops line names each fast-fail loop, says none, or is left out when n
     expect(nowLines(state(), local(), NOW).some(l => l.startsWith('loops'))).toBe(false);
 });
 
+test('the repeats line names each error that ended short runs of many accounts, and is left out when none', () => {
+    const fault = { error: 'quest-sweep tree missing #:# (unsold; others in shops)', runs: 17, accounts: 10, goals: 1, lostSec: 190, lastAt: NOW };
+    const lines = nowLines(state(), local({ repeats: [fault] }), NOW);
+    expect(lines).toContain('repeats 1 errors ended short runs of 3 or more accounts in 24 h (bun tools/fail-loops.ts):');
+    expect(lines).toContain('  fault 17x on 10 accounts, 1 goals, 190 s in runs: quest-sweep tree missing #:# (unsold; others in shops)');
+    expect(nowLines(state(), local({ repeats: [] }), NOW).some(l => l.startsWith('repeats'))).toBe(false);
+});
+
 test('the progress line prints the game progress, says when it was not read, and is left out when not asked for', () => {
     const progress: ProgressReport = { hours: 24, since: NOW - 24 * 3_600_000, now: NOW, maxBots: 25,
         sessions: { botMs: 12 * 3_600_000, logins: 40, shortLogins: 30, failedLogins: 0, open: 0, byScript: [] },

@@ -6,6 +6,7 @@ import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { startQuestSustain, selectQuestFood, questFoodDefinitions, defaultEatAt } from '../quest-sustain';
 import { holdSessionEater } from '../../packages/core/src/sustain';
+import { hpFloorOf } from '../../packages/core/src/hp-floor';
 import { walkQuestCorridorRecovering } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -568,6 +569,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const scriptQuest = basename(process.argv[1] ?? '').match(/^quest-([a-z0-9]+)\.ts$/)?.[1];
     const presetReserved: Readonly<Record<number, number>> = scriptQuest && PRESETS[`quest_${scriptQuest}`] ? reservedEdible(needs(PRESETS[`quest_${scriptQuest}`]!)) : {};
     const reservedNow = (): Readonly<Record<number, number>> => ({ ...presetReserved, ...((s as { questReserved?: Record<number, number> }).questReserved ?? {}), ...((typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {}) });
+    // The session HP floor (packages/core/src/hp-floor.ts) keeps the same reserve as the quest sustain.
+    hpFloorOf(s)?.configure({ reserved: reservedNow });
     // Food is what the eater would eat: the quest's food list and its later forms, beyond the reserved counts. A shrimp in
     // the pack of a lobster-only quest is not food and does not hold the retreat back.
     const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });

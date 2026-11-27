@@ -1,7 +1,8 @@
-// Prints one line for each recent fast-fail loop recorded in the main checkout results file.
+// Prints one line for each recent fast-fail loop recorded in the main checkout results file, then one line for each error
+// that ended short runs of 3 or more accounts in 24 h (crossAccountFaults). It reads the file and changes nothing.
 // Usage: bun tools/fail-loops.ts [hours]
 import { join, resolve } from 'node:path';
-import { failLoops, loopLines, readRecentResults } from '../packages/core/src/fail-loops';
+import { crossAccountFaults, crossAccountLines, failLoops, loopLines, readRecentResults } from '../packages/core/src/fail-loops';
 
 export * from '../packages/core/src/fail-loops';
 
@@ -13,7 +14,11 @@ if (import.meta.main) {
     const main = resolve(/^worktree (.+)$/m.exec(list)?.[1] ?? here);
     const file = process.env.RESULTS_FILE ?? join(main, '.practice', 'results.jsonl');
     console.log(`results ${file}`);
-    const loops = failLoops(readRecentResults(file, 40_000_000), Date.now(), { windowMs: hours * 3600_000 });
+    const rows = readRecentResults(file, 40_000_000), now = Date.now();
+    const loops = failLoops(rows, now, { windowMs: hours * 3600_000 });
     if (!loops.length) console.log(`no fast-fail loops in ${hours} h`);
     for (const line of loopLines(loops, 50)) console.log(line);
+    const cross = crossAccountFaults(rows, now);
+    console.log(cross.length ? `cross-account faults in 24 h (${cross.length}):` : 'no cross-account faults in 24 h');
+    for (const line of crossAccountLines(cross, 20)) console.log(`  ${line}`);
 }

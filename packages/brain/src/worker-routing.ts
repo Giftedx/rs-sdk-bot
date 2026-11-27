@@ -10,7 +10,7 @@ import {
     type ActivityDefinition,
     type PlannedStep,
 } from './contracts';
-import { GE_LIMIT_BUFFER, SHOP_BUY_CAP_TICKS } from './acquire';
+import { GE_LIMIT_BUFFER, SHOP_BUY_CAP_TICKS, shopRestockTicks } from './acquire';
 import { loadItemsMap } from './preflight';
 
 export interface WorkerRoutingContext {
@@ -485,6 +485,15 @@ export function resolveActivityWorkerRoute(
 // Ardougne Adventurers' Store restocks each 30 ticks, so the wait spans more than one restock.
 export const PLANNED_SHOP_NO_BUY_TICKS = 100;
 const MARKET_WORK_NO_BUY_TICKS = 25;
+// A shelf that restocks one unit in more ticks than the planned wait gives no unit in a wait: the Ardougne gem stall
+// restocks a ruby each 60000 ticks, and Fatstack waited 100 ticks at its empty shelf. Such a shop is polled this long.
+export const SLOW_RESTOCK_NO_BUY_TICKS = 5;
+
+export function shopNoBuyTicks(itemId: number, shopId: string | undefined, plannedOrder: boolean): number {
+    const wait = plannedOrder ? PLANNED_SHOP_NO_BUY_TICKS : MARKET_WORK_NO_BUY_TICKS;
+    const restock = shopId ? shopRestockTicks(itemId, shopId) : undefined;
+    return restock !== undefined && restock > PLANNED_SHOP_NO_BUY_TICKS ? SLOW_RESTOCK_NO_BUY_TICKS : wait;
+}
 
 function resolveAcquireOrGearSource(
     account: string,
@@ -536,7 +545,7 @@ function resolveAcquireOrGearSource(
             const items = escapedItemName ?? String(params.itemId);
             // A gear upgrade wants one owned copy; an acquire names the owned total its consumer needs.
             const stockTarget = !plannedOrder ? undefined : stepKind === 'gear_upgrade' ? 1 : params.stockTarget;
-            const noBuyTicks = plannedOrder ? PLANNED_SHOP_NO_BUY_TICKS : MARKET_WORK_NO_BUY_TICKS;
+            const noBuyTicks = shopNoBuyTicks(params.itemId, params.shopId, plannedOrder);
             return {
                 account,
                 stepKind,

@@ -190,6 +190,19 @@ async function travelLocLeg(
     return arrived() || slipped() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
 }
 
+// The NPC an NPC edge talks to: the edge's config id when the state carries ids, else its name. Of those, the one
+// nearest the edge's start tile (the NPC's spawn, npc-travel.json `from`), then nearest the player. An NPC the
+// client marks unreachable comes last: the other Border Guard stands one tile away, behind the fence.
+export function travelNpc<N extends { id?: number; name?: string; distance?: number; x?: number; z?: number; reachable?: boolean }>(
+    npcs: readonly N[], run: { npc: string; npcId?: number }, from: { x: number; z: number } | null,
+): N | undefined {
+    const named = npcs.filter(n => n.name?.toLowerCase() === run.npc.toLowerCase());
+    const byId = run.npcId === undefined ? [] : named.filter(n => n.id === run.npcId);
+    const pool = byId.length ? byId : named;
+    const off = (n: N) => from && Number.isFinite(n.x) && Number.isFinite(n.z) ? Math.max(Math.abs(n.x! - from.x), Math.abs(n.z! - from.z)) : 0;
+    return [...pool].sort((x, y) => Number(x.reachable === false) - Number(y.reachable === false) || off(x) - off(y) || (x.distance ?? 0) - (y.distance ?? 0))[0];
+}
+
 // One travel edge (travel.ts): talk to the NPC and answer its dialogue, cast the spell, rub the jewellery or
 // operate the lever or tree; then cross the gangplank when the edge lands on a ship deck. Ok when the player
 // stands within 8 tiles of the edge's arrival tile.
@@ -202,18 +215,30 @@ export async function travelLeg(s: Walker, leg: TravelLeg, opts: WalkOptions): P
     const shortNpc = run.how === 'npc' && !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
     const reach = shortNpc ? Math.max(0, Math.min(1, cheb(t.to, { worldX: t.from!.x, worldZ: t.from!.z }) - 1)) : 8;
     const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= reach; };
-    const fail: FailFn = (reason, detail) => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
+    // A paid edge that fails says why: the walk after it retries the edge (legs.ts), and a route that then goes round
+    // it costs far more ticks. The line names the dialogue text the account saw and the coins it held.
+    const talk: string[] = [];
+    const seeTalk = () => { const d = b.sdk.getDialog?.(); const x = d?.isOpen ? ((d as { text?: string }).text || d.options?.map(o => o.text).join(' | ')) : undefined; if (x && talk[talk.length - 1] !== x) talk.push(x.slice(0, 160)); };
+    const fail: FailFn = (reason, detail) => {
+        const r = stop() ? 'aborted' : reason;
+        if (t.coins > 0 && r !== 'aborted') {
+            seeTalk();
+            const coins = st()?.inventory?.filter((i: any) => i.id === 995).reduce((n: number, i: any) => n + (i.count ?? 0), 0) ?? null;
+            console.log(`WALK_FARE_FAIL ${JSON.stringify({ edge: t.id, fare: t.coins, coins, at: here(), reason: r, detail, dialog: talk.slice(-4) })}`);
+        }
+        return { ok: false, reason: r, detail: `${t.name}: ${detail}`, ticks: s.tick() - start };
+    };
     // A spirit tree with several destinations asks "Where can I go?" before its destination menu ([oploc1,stronghold_ent]
     // and [oploc1,ent]); a young spirit tree with one asks "Yes please." ([oploc1,loc_1317]; spirit_tree.rs2).
     const tree = t.kind === 'spirit_tree' ? (run.how === 'loc' && run.option ? ['Where can I go?'] : ['Yes please.']) : [];
     const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? [...(run.option ? [run.option] : []), ...tree] : [];
     const onDeck = () => here()?.level === 1;
     if (run.how === 'npc') {
-        const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.name?.toLowerCase() === run.npc.toLowerCase()).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
+        const npc = travelNpc<any>(st()?.nearbyNpcs ?? [], run, t.from);
         if (!npc) return fail('precondition', `no ${run.npc} in sight`);
         if (run.button) return travelNpcButtonLeg(s, b, t, run, npc, start, stop, st, here, fail);
         await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
-        await answerTravelDialog(s, b, choices, () => arrived() || (!!run.deck && onDeck()), stop, 60);
+        await answerTravelDialog(s, b, choices, () => { seeTalk(); return arrived() || (!!run.deck && onDeck()); }, stop, 60);
         if (run.deck && onDeck()) { const { disembark } = await import('../boat'); const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
     } else if (run.how === 'spell') {
         // The plan admitted the spell on the account as it stood when the route was planned; a cast on the way can have

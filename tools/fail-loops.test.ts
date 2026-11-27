@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { errorKey, failLoops, loopLines, readRecentResults, type ResultRow } from './fail-loops';
+import { crossAccountFaults, crossAccountLines, errorKey, failLoops, loopLines, readRecentResults, type ResultRow } from './fail-loops';
 
 const now = 1_800_000_000_000;
 const run = (name: string, endAgo: number, secs: number, text: string, ok = false, goal = 'headless arrows'): ResultRow =>
@@ -34,4 +34,16 @@ test('readRecentResults reads the tail and skips a cut first line and bad lines'
     expect(readRecentResults(file).map(r => r.name)).toEqual(['Old', 'New']);
     expect(readRecentResults(file, 40).map(r => r.name)).toEqual(['New']);
     expect(readRecentResults(join(dir, 'missing.jsonl'))).toEqual([]);
+});
+
+test('an error that ends short runs of three accounts in 24 h is a cross-account fault, whatever the goal', () => {
+    const tree = 'fail quest-sweep tree missing 2434:2 (unsold; others in shops)';
+    const rows = [run('Fatstack', 60_000, 20, tree, false, 'goal:quest_board:tree'), run('Fingerblastr', 7200_000, 7, tree, false, 'goal:quest_board:tree'),
+        run('Earlyshooter', 20 * 3600_000, 22, tree.replace('2434:2', '2434:3'), false, 'goal:quest_board:arena'),
+        // A long run, a run older than 24 h and a passed run do not count; two accounts are not enough.
+        run('Billionaire', 60_000, 300, tree), run('Billionaire', 25 * 3600_000, 5, tree), run('Billionaire', 90_000, 5, 'RESULT ok', true),
+        run('A', 1, 3, 'fail x'), run('B', 2, 3, 'fail x')];
+    const faults = crossAccountFaults(rows, now);
+    expect(faults).toEqual([{ error: 'quest-sweep tree missing #:# (unsold; others in shops)', runs: 3, accounts: 3, goals: 2, lostSec: 49, lastAt: now - 60_000 }]);
+    expect(crossAccountLines(faults)).toEqual(['3x on 3 accounts, 2 goals, 49 s in runs: quest-sweep tree missing #:# (unsold; others in shops)']);
 });
