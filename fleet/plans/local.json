@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795796708983,
+ "at": 1795796743215,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,51 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -129,6 +84,26 @@
    "role": "army"
   },
   {
+   "account": "Nockitoff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Nockitoff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -147,6 +122,31 @@
    "resources": [
     "chickens"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "142",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "142"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
   },
   {
    "account": "SporranDip",
@@ -176,40 +176,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
    "resources": [
     "draynor-willows"
    ]
@@ -249,6 +215,23 @@
    ]
   },
   {
+   "account": "UnderMyKilt",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -266,26 +249,45 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "BackdoorMan",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:irit_leaf"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:259",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "1996"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:259",
-   "role": "army"
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "237",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "237"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
   }
  ],
  "army": [
