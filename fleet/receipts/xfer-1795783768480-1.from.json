@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795783768480-1",
  "account": "SporranDip",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 15,
  "claim": "22f84587-67c5-484e-aeb7-a5ec79a71943",
- "count": 0,
- "ok": false,
- "at": 1795784027805,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795784296468,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795784194906
+ },
+ "logout": {
+  "attemptId": "1795784027815-0000029752-0000000001",
+  "at": 1795784296454,
+  "sha256": "53e7d02b9fb3168caadaeaa8f1db4aec6c889a8afba4f62db0f9ef5557638541"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795784167754,
+ "at": 1795784329027,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1980 TARGET_COUNT=198 PRODUCT_TARGET=198 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=198 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1720 TARGET_COUNT=172 PRODUCT_TARGET=172 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=172 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -77,8 +77,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1980 TARGET_COUNT=198 PRODUCT_TARGET=198 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=198 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1720 TARGET_COUNT=172 PRODUCT_TARGET=172 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=172 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -86,6 +86,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "steel"
+   ],
+   "env": {
+    "BAR_TYPE": "steel",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "9",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
@@ -111,45 +133,7 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "KnightRider",
+   "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -171,15 +155,15 @@
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=612 -- runecraft supply"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:1436",
    "role": "army"
   },
   {
@@ -187,32 +171,14 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=612 -- runecraft supply"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
    "role": "army"
   },
   {
@@ -256,62 +222,68 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
+   "account": "MineYourBiz",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "smithing",
-    "smelt",
-    "1500",
-    "steel"
+    "anvil",
+    "1000"
    ],
    "env": {
-    "BAR_TYPE": "steel",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "5",
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "1115",
+    "MAX_MAKE": "3",
+    "BAR_RESERVE": "0",
+    "TRAIN_SKILL": "Smithing",
+    "TARGET_LEVEL": "44",
+    "TARGET_COUNT": "3",
+    "CAP": "1000",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "44",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "44"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:97 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_harralander_potion"
+    "scripts/aio-market.ts ITEM_ID=561 \"ITEMS=Nature rune\" MAX_ITEMS=3 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:97",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fletching",
-    "arrows"
-   ],
-   "env": {
-    "MODE": "headless",
-    "SHAFT_RESERVE": "100",
-    "FEATHER_RESERVE": "100",
-    "DEMAND_ID": "campaign:haggis:item:53",
-    "BATCH_UNITS": "155",
-    "MAX_MAKE": "165",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   }
  ],
  "army": [
@@ -322,12 +294,14 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "billionaire",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
+  "knightrider",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
@@ -336,7 +310,6 @@
   "pocketpython",
   "pocketrocket",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "undermykilt"
  ],

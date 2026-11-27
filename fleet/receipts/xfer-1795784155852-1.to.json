@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795784155852-1",
+ "account": "Fingerblastr",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 22,
+ "claim": "8fd5c7cc-2c2d-416d-9bca-87113b907dfb",
+ "count": 22,
+ "ok": true,
+ "at": 1795784319319,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 22,
+   "count": 22,
+   "inventory": {
+    "before": 0,
+    "after": 22
+   },
+   "bank": {
+    "count": 22,
+    "at": 1795784318234
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 22
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795784316995
+ },
+ "logout": {
+  "attemptId": "1795784301066-0000027680-0000000001",
+  "at": 1795784319269,
+  "sha256": "4170e142187dc9e3c9784cf95c1c97dcf63a8857eb9792c0517c90377f81d5c5"
+ },
+ "screen": true
+}
