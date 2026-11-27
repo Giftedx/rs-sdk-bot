@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821334926,
+ "at": 1795821416417,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,7 +100,7 @@
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
     "DEMAND_ID": "goal:supply_chain:2357",
-    "BATCH_UNITS": "14",
+    "BATCH_UNITS": "27",
     "STALL_TICKS": "280"
    },
    "enabled": true,
@@ -109,7 +109,7 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -150,29 +150,21 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
+   "account": "SporranDip",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "458",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20320",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "458"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Quickhandjob",
