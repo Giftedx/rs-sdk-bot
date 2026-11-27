@@ -525,15 +525,18 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
 const GENERIC_COMBAT_FOOD_IDS: readonly number[] = [385, 379];
 const SHARK_ONLY_FOOD_IDS: readonly number[] = [385];
 
+// The cow runner (melee-gather.ts runCows) takes trout from the bank at the start and refuses the fight without
+// COW_FOOD_HP (14) of food: 2 trout. The cow floor stages them.
+const COW_FOOD_IDS: readonly number[] = [333];
+const COW_TROUT_PIECES = 2;
+
 // Fighter and boss targets with no brain combatSurvivability floor. packages/brain/test/catalog-survivability.test.ts
-// fails on any other fighter or boss row without a floor. Chickens hit 0 or 1. The cow runner refuses before the fight
-// without held trout or cake (melee-gather.ts "cow prerequisite"). The Ranged workers (workers/src/combat/ranged.ts)
+// fails on any other fighter or boss row without a floor. Chickens hit 0 or 1. The Ranged workers (workers/src/combat/ranged.ts)
 // withdraw only trout or salmon and refuse without them, so a brain food floor would stage food that they never take.
 // The imp and chompy runners take no bank food. The starter, loot and specialist routes own their food and targets.
 // The Fishing Trawler is not a fight.
 export const COMBAT_FLOOR_EXEMPT_TARGETS: ReadonlySet<string> = new Set([
     'chicken',
-    'cow',
     'imp',
     'chompy',
     'chompy-at-site',
@@ -579,7 +582,7 @@ export const TUTORIAL_ISLAND_AREA: StartArea = { level: 0, x0: 3070, x1: 3160, z
 
 const FIGHTER_SPECS: readonly FighterSeed[] = [
     { target: 'chicken', script: 'scripts/aio-fighter.ts', label: 'Train melee on Lumbridge/Ardougne chickens', location: HUB_TILES.draynor, spotId: 'chickens', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Strength'], xpPerTick: 38, unitsPerTick: 0.14, gpPerTick: 0.5, minBatchUnits: 20, outputs: [{ itemId: 314, countPerUnit: 10 }, { itemId: 526, countPerUnit: 1 }] },
-    { target: 'cow', script: 'scripts/aio-fighter.ts', label: 'Fight Ardougne cows for melee XP and cowhides', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 52, unitsPerTick: 0.12, gpPerTick: 2.5, minBatchUnits: 25, outputs: [{ itemId: 1739, countPerUnit: 1 }, { itemId: 2132, countPerUnit: 1 }, { itemId: 526, countPerUnit: 1 }] },
+    { target: 'cow', script: 'scripts/aio-fighter.ts', label: 'Fight Ardougne cows for melee XP and cowhides', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 52, unitsPerTick: 0.12, gpPerTick: 2.5, minBatchUnits: 25, combatSurvivability: { minFoodCount: COW_TROUT_PIECES, foodIds: COW_FOOD_IDS, threatNpcIds: [81] }, outputs: [{ itemId: 1739, countPerUnit: 1 }, { itemId: 2132, countPerUnit: 1 }, { itemId: 526, countPerUnit: 1 }] },
     { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS, threatNpcIds: [181] }, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
     { target: 'unicorn', script: 'scripts/aio-fighter.ts', label: 'Kill Edgeville unicorns for unicorn horns', location: HUB_TILES.edgeville, spotId: 'edgeville-unicorns', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 45, unitsPerTick: 0.06, gpPerTick: 3, minBatchUnits: 10, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS, threatNpcIds: [89] }, outputs: [{ itemId: 237, countPerUnit: 1 }] },
     { target: 'wizard', script: 'scripts/aio-fighter.ts', label: 'Kill Wizards Tower wizards for water talismans', location: HUB_TILES.wizards_tower, spotId: 'wizards-tower', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 55, unitsPerTick: 0.09, gpPerTick: 2, minBatchUnits: 15, combatSurvivability: { minHitpoints: 20, minFoodCount: 5, foodIds: GENERIC_COMBAT_FOOD_IDS, threatNpcIds: [13] }, outputs: [{ itemId: 1444, countPerUnit: 0.05 }] },

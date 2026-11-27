@@ -531,8 +531,11 @@ export interface DefectRecord {
     readonly expiresAt?: number;
     readonly quarantined: boolean;
     readonly workerRelease?: string;
-    // The worker entry files of the run that failed (swarm.ts workerEntries): the release check of a repeat-fault hold.
+    // The worker entry files of the run that failed (swarm.ts workerEntries): the release check of a worker hold.
     readonly workerEntries?: readonly string[];
+    // True while a hold that a release change lifted waits for its probe run (OutcomeClassifier.liftChangedReleaseHolds):
+    // the same fault on the new release holds the activity again with the old count.
+    readonly releaseProbe?: boolean;
     readonly logPath: string;
     readonly tickRecordPath?: string;
     readonly detail: string;
@@ -1810,6 +1813,7 @@ function pushDefectRecordErrors(v: unknown, errors: string[], prefix = ''): void
     if (v.workerEntries !== undefined && (!Array.isArray(v.workerEntries) || v.workerEntries.length === 0 || !v.workerEntries.every(isNonEmptyStr))) {
         errors.push(`${prefix}DefectRecord.workerEntries must be a non-empty list of non-empty paths`);
     }
+    if (v.releaseProbe !== undefined && typeof v.releaseProbe !== 'boolean') errors.push(`${prefix}DefectRecord.releaseProbe must be boolean`);
     if (!isNonEmptyStr(v.logPath)) errors.push(`${prefix}DefectRecord.logPath must be non-empty`);
     if (v.tickRecordPath !== undefined && !isNonEmptyStr(v.tickRecordPath)) errors.push(`${prefix}DefectRecord.tickRecordPath must be non-empty`);
     if (!isNonEmptyStr(v.detail)) errors.push(`${prefix}DefectRecord.detail must be non-empty`);

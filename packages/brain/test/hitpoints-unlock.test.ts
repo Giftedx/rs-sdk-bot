@@ -98,13 +98,15 @@ describe('every account has a fight that raises Hitpoints', () => {
         expect(failed).toEqual([]);
     });
 
-    // A run of faults can hold every target that needs no food (cows, imps, chompies, the Ranged camps). An account
-    // with the Hitpoints for a food floor then fights a floored target with its food bought first.
-    test('with the food-free targets held, an account at 20 Hitpoints or more fights a floored target with staged food', () => {
+    // A run of faults can hold every target that needs no food (chickens, imps, chompies, the Ranged camps). The cow
+    // floor (2 trout) then serves a 10-Hitpoints account, and the druid, unicorn, wizard and giant floors serve an
+    // account with their Hitpoints, each with its food bought first.
+    test('with the food-free targets held, every account fights a floored target with staged food', () => {
         const held = new Set(catalog.filter((a) => a.family === 'combat' && COMBAT_FLOOR_EXEMPT_TARGETS.has(a.id.replace(/^combat:/, ''))).map((a) => a.id));
-        expect(held.has('combat:cow')).toBe(true);
+        expect(held.has('combat:imp')).toBe(true);
+        expect(held.has('combat:cow')).toBe(false);
         const failed: string[] = [];
-        for (const { hp, defence } of PROFILES.filter((p) => p.hp >= 20)) {
+        for (const { hp, defence } of PROFILES) {
             const { plan, unlock, act } = hitpointsUnlock(hp, defence, held);
             if (!unlock || !act || held.has(act.id)) {
                 failed.push(`HP ${hp} Def ${defence}: ${plan.idleReason ?? plan.steps.map((s) => s.stepKind).join('>')}`);
@@ -117,9 +119,9 @@ describe('every account has a fight that raises Hitpoints', () => {
     });
 
     test('a target whose floor the account fails is no Hitpoints unlock, also with food', () => {
-        // Druids, unicorns and wizards need 20 Hitpoints; the giants need 25. With the food-free targets held a
-        // 12-Hitpoints account has no admitted fight, and the planner names the gate.
-        const held = new Set(catalog.filter((a) => a.family === 'combat' && COMBAT_FLOOR_EXEMPT_TARGETS.has(a.id.replace(/^combat:/, ''))).map((a) => a.id));
+        // Druids, unicorns and wizards need 20 Hitpoints; the giants need 25. With the food-free targets and the cows
+        // held a 12-Hitpoints account has no admitted fight, and the planner names the gate.
+        const held = new Set([...catalog.filter((a) => a.family === 'combat' && COMBAT_FLOOR_EXEMPT_TARGETS.has(a.id.replace(/^combat:/, ''))).map((a) => a.id), 'combat:cow']);
         const { plan, unlock } = hitpointsUnlock(12, 1, held);
         expect(unlock).toBeUndefined();
         expect(plan.idleReason).toBe('missing_skill_unlock:Hitpoints');

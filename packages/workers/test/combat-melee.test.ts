@@ -494,6 +494,20 @@ test('unknown style observation prevents combat instead of assuming selected tra
         expect(r.ok).toBe(false);expect(f.kills()).toBe(0);expect(r.failure).toContain('style unobserved');
     }finally{f.dispose();}
 });
+// The brain stages the cow food in the bank (catalog cow floor): the start at the bank withdraws it.
+test('cow trout that waits in the bank is withdrawn at the start, and no food anywhere refuses before the fight',async()=>{
+    const banked=fixture();try{
+        banked.inv.splice(banked.inv.findIndex(i=>i.id===333),1);
+        const r=await runCows(banked.session,{cap:500,maximum:1,walk:async()=>true});
+        expect(r.ok).toBe(true);expect(r.creditedKills).toBe(1);expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
+        expect(banked.inv.find(i=>i.id===333)?.count).toBe(2);expect(banked.bank.find(i=>i.id===333).count).toBe(3);
+    }finally{banked.dispose();}
+    const none=fixture();try{
+        none.inv.splice(none.inv.findIndex(i=>i.id===333),1);none.bank.splice(0);
+        await expect(runCows(none.session,{cap:500,maximum:1,walk:async()=>true})).rejects.toThrow('cow prerequisite: stage2unnoted Trout');
+        expect(none.kills()).toBe(0);expect(none.inv.map(i=>i.id)).toEqual([1277,1171,995]);
+    }finally{none.dispose();}
+});
 test('food debit before delayed HP publication waits for healing and counts actual consumption',async()=>{
     const f=fixture(false,'delayed-food');try{const r=await runCows(f.session,{cap:500,maximum:5,walk:async()=>true});
         expect(r.ok).toBe(true);expect(r.eaten).toBe(1);expect(r.creditedKills).toBe(5);expect(r.preserved).toBe(true);

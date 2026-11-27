@@ -18,7 +18,7 @@ import {
     stopFilePaths,
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
-import { cachedReleaseFor, isWorkerReleaseHold } from '../../core/src/worker-release';
+import { cachedReleaseFor, isWorkerReleaseHold, workerEntries } from '../../core/src/worker-release';
 import { isClaimHeldResult, isStopResult } from '../../brain/src/outcome-classifier';
 import { parseNoRoute, standsAt } from '../../brain/src/no-route';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
@@ -69,7 +69,7 @@ import {
     type WorldSnapshotDiagnostics,
 } from '../../brain/src/index';
 import { InfraCircuitBreaker } from './infra-circuit-breaker';
-import { dispatchAccountPlan, type DispatchedAccountPlan } from './worker-dispatch';
+import { dispatchAccountPlan, dispatchPlannedStep, type DispatchedAccountPlan } from './worker-dispatch';
 
 export interface AccountOverrideRecord {
     readonly account: string;
@@ -847,6 +847,39 @@ export function applyActivityOverridesToPlan(
     };
 }
 
+// The worker entry files that a work step of this activity starts (the job builder: dispatchPlannedStep, then
+// swarm.ts workerEntries). A hold saved without entry files takes them for its release check; undefined when the
+// catalog has no such activity or the route does not resolve. A quest gets none: every quest runs on one sweep
+// worker, so any quest fix changes that release, and a lift from it would probe each held quest at once.
+export function activityWorkerEntries(catalog: ActivityCatalog, root: string): (activityId: string) => string[] | undefined {
+    const memo = new Map<string, string[] | undefined>();
+    return (activityId) => {
+        if (memo.has(activityId)) return memo.get(activityId);
+        let entries: string[] | undefined;
+        const act = catalog.get(activityId);
+        if (act && act.family !== 'quest') {
+            try {
+                const inv = dispatchPlannedStep('release-probe', {
+                    stepKind: 'work',
+                    activityId,
+                    demandId: 'release-probe',
+                    workerId: act.workerId,
+                    batchUnits: Math.max(1, act.baselineRate.minBatchUnits),
+                    estimatedTicks: 1,
+                    expectedValuePerHour: 0,
+                    config: act.config ?? {},
+                }, { catalog });
+                entries = workerEntries(inv.step.script, inv.step.args, root);
+            } catch {
+                entries = undefined;
+            }
+        }
+        const found = entries?.length ? entries : undefined;
+        memo.set(activityId, found);
+        return found;
+    };
+}
+
 export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const root = resolve(opts.root ?? repoRoot);
     const now = opts.now ?? Date.now();
@@ -888,7 +921,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const worldWithOutcomes = classifier.applyToSnapshot(diagnostics.snapshot, now);
     const world = applyAccountOverridesToWorld(worldWithOutcomes, overrides);
 
-    classifier.liftChangedReleaseHolds(opts.releaseOf ?? ((entries) => cachedReleaseFor(entries, root)), now);
+    classifier.liftChangedReleaseHolds(opts.releaseOf ?? ((entries) => cachedReleaseFor(entries, root)), now, activityWorkerEntries(catalog, root));
     const defects = classifier.quarantinedDefects(now);
     const infraState = combineInfraState(classifier, infraBreaker, now);
     const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root, now);

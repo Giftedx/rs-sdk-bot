@@ -674,7 +674,9 @@ export class OutcomeClassifier {
         const existing = this.defects.get(key);
         // The count says how often the signature failed during one hold. A hold that expired or was cleared ends that
         // count: a later failure is a first defect again, and it holds only its own account (planner.ts isFleetWideDefect).
-        const holding = existing?.quarantined === true && (existing.expiresAt === undefined || params.now < existing.expiresAt);
+        // A hold that a release change lifted for one probe run (liftChangedReleaseHolds) keeps its count.
+        const holding = (existing?.quarantined === true || existing?.releaseProbe === true)
+            && (existing.expiresAt === undefined || params.now < existing.expiresAt);
         const logPath =
             nonEmpty(params.logPath) ??
             existing?.logPath ??
@@ -752,22 +754,39 @@ export class OutcomeClassifier {
         });
     }
 
-    // Lifts each repeat-fault hold whose worker code changed: the release of its entry files (releaseOf, swarm.ts
-    // cachedReleaseFor) is not the release of the runs that failed. A merged fix then runs at the next plan cycle, not
-    // after the 6 h hold. A hold without a release or entries, or entries that do not resolve, keeps its time limit.
+    // Lifts each repeat-fault and worker-defect hold whose worker code changed: the release of its entry files
+    // (releaseOf, swarm.ts cachedReleaseFor) is not the release of the runs that failed. A merged fix then runs at the
+    // next plan cycle, not after the hold. A hold saved without entry files takes the entries of its activity's
+    // worker (entriesOf, from the catalog and the job builder). A death hold and a quest worker-defect hold are never
+    // lifted. A hold without a
+    // release or entries, or entries that do not resolve, keeps its time limit.
     // The release includes shared runtime files, so a change can be unrelated to the fault. The lift is one probe, as
-    // a held swarm end runs once more after its release changes (#1567): the fault count stays, so the first fast run
-    // that fails the same way on the new release holds the activity again at once, bound to that release. Only a run
-    // that meets its target clears the count.
-    liftChangedReleaseHolds(releaseOf: (entries: readonly string[]) => string | undefined, now = Date.now()): DefectRecord[] {
+    // a held swarm end runs once more after its release changes (#1567): the fault count stays (releaseProbe), so the
+    // first run that fails the same way on the new release holds the activity again at once, bound to that release.
+    // Only a run that meets its target clears the count.
+    liftChangedReleaseHolds(
+        releaseOf: (entries: readonly string[]) => string | undefined,
+        now = Date.now(),
+        entriesOf?: (activityId: string) => readonly string[] | undefined,
+    ): DefectRecord[] {
         const lifted: DefectRecord[] = [];
         for (const [key, d] of this.defects) {
-            if (!d.quarantined || !d.faultSignature.startsWith('repeat ') || !d.workerRelease || !d.workerEntries?.length) continue;
+            if (!d.quarantined || d.outcomeKind === 'death' || !d.workerRelease) continue;
+            const repeat = d.faultSignature.startsWith('repeat ');
+            if (!repeat && d.outcomeKind !== 'worker_defect') continue;
+            // A quest worker defect never lifts on a release change, with saved or derived entries: every quest runs
+            // on one sweep worker, so a fix of one quest changes the release of all held quests.
+            if (!repeat && d.activityId.startsWith('quest:')) continue;
             if (d.expiresAt !== undefined && now >= d.expiresAt) continue;
+            let entries: readonly string[] | undefined = d.workerEntries;
+            if (!entries?.length) {
+                try { entries = entriesOf?.(d.activityId); } catch { entries = undefined; }
+            }
+            if (!entries?.length) continue;
             let release: string | undefined;
-            try { release = releaseOf(d.workerEntries); } catch { release = undefined; }
+            try { release = releaseOf(entries); } catch { release = undefined; }
             if (!release || release === d.workerRelease) continue;
-            const next = { ...d, quarantined: false };
+            const next: DefectRecord = { ...d, quarantined: false, releaseProbe: true, workerEntries: [...entries] };
             this.defects.set(key, next);
             lifted.push(next);
         }
@@ -877,6 +896,13 @@ export class OutcomeClassifier {
                 // A run that met its target shows the repeat faults of the activity are gone.
                 const prefix = `${outcome.activityId}::`;
                 for (const key of [...this.repeatFaults.keys()]) if (key.startsWith(prefix)) this.repeatFaults.delete(key);
+                // The probe after a release lift passed: the fault count of that hold ends.
+                for (const [key, d] of this.defects) {
+                    if (d.activityId === outcome.activityId && d.releaseProbe) {
+                        const { releaseProbe: _probe, ...rest } = d;
+                        this.defects.set(key, rest);
+                    }
+                }
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
                 const isDead = overlay.lifecycleOverride === 'dead';
                 const remainingHolds = overlay.holds.filter(
@@ -1095,6 +1121,7 @@ export class OutcomeClassifier {
                     account: outcome.account,
                     now,
                     workerRelease: ctx?.workerRelease,
+                    ...(ctx?.workerEntries?.length ? { workerEntries: ctx.workerEntries } : {}),
                     logPath: outcome.logPath,
                     tickRecordPath: outcome.tickRecordPath,
                     detail: outcome.detail ?? outcome.summary,

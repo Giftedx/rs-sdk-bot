@@ -656,6 +656,56 @@ describe('repeat faults', () => {
         expect(old.quarantinedDefects(NOW + 2)).toHaveLength(1);
     });
 
+    test('a worker-defect hold lifts once on a release change, a death hold never does', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const cowFault = (account: string, at: number, release: string, entries?: readonly string[]) => c.applyOutcome(
+            { kind: 'worker_defect', activityId: 'combat:cow', account, ticksElapsed: 5, faultSignature: 'RESULT fail Error: cow prerequisite' },
+            { now: at, workerRelease: release, ...(entries ? { workerEntries: entries } : {}) },
+        ).defect!;
+        // A hold saved without entry files, as the holds before this field.
+        cowFault('Fatstack', NOW, 'rel-a');
+        expect(isFleetWideDefect(cowFault('Earlyshooter', NOW + 1, 'rel-a'))).toBe(true);
+        c.applyOutcome(
+            { kind: 'death', activityId: 'combat:unicorn', account: 'Fingerblastr', ticksElapsed: 50, faultSignature: 'death' },
+            { now: NOW + 2, workerRelease: 'rel-a' },
+        );
+        const entriesOf = (id: string) => (id.startsWith('combat:') ? ['scripts/aio-fighter.ts'] : undefined);
+        // Without a derived entry list, or with the same release, the hold keeps its time limit.
+        expect(c.liftChangedReleaseHolds(() => 'rel-b', NOW + 10)).toEqual([]);
+        expect(c.liftChangedReleaseHolds(() => 'rel-a', NOW + 10, entriesOf)).toEqual([]);
+
+        const lifted = c.liftChangedReleaseHolds(() => 'rel-b', NOW + 20, entriesOf);
+        expect(lifted.map((d) => [d.activityId, d.releaseProbe, d.workerEntries])).toEqual([['combat:cow', true, ['scripts/aio-fighter.ts']]]);
+        expect(validateDefectRecord(lifted[0])).toEqual([]);
+        expect(c.quarantinedDefects(NOW + 20).map((d) => d.activityId)).toEqual(['combat:unicorn']);
+
+        // The probe fails the same way on the new release: the old count holds every account again at once.
+        const again = cowFault('Billionaire', NOW + 30, 'rel-b', ['scripts/aio-fighter.ts']);
+        expect(again.count).toBe(3);
+        expect(isFleetWideDefect(again)).toBe(true);
+        expect(again.releaseProbe).toBeUndefined();
+        expect(c.liftChangedReleaseHolds(() => 'rel-b', NOW + 40, entriesOf)).toEqual([]);
+
+        // A run that meets its target after a lift ends the count: a later fault holds only its account.
+        expect(c.liftChangedReleaseHolds(() => 'rel-c', NOW + 50, entriesOf)).toHaveLength(1);
+        c.applyOutcome({ kind: 'target_met', activityId: 'combat:cow', account: 'Billionaire', ticksElapsed: 900, durationMs: 400_000 }, { now: NOW + 60 });
+        expect(isFleetWideDefect(cowFault('Billionaire', NOW + 70, 'rel-c'))).toBe(false);
+    });
+
+    test('a quest worker-defect hold keeps its time limit when the shared quest worker changes, also with saved entries', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const entries = ['scripts/aio-quester.ts'];
+        for (const [i, account] of ['Fatstack', 'Earlyshooter'].entries()) {
+            c.applyOutcome(
+                { kind: 'worker_defect', activityId: 'quest:druid', account, ticksElapsed: 5, faultSignature: 'RESULT fail talk kaqemeex' },
+                { now: NOW + i, workerRelease: 'rel-a', workerEntries: entries },
+            );
+        }
+        expect(c.quarantinedDefects(NOW + 5)[0]?.workerEntries).toEqual(entries);
+        expect(c.liftChangedReleaseHolds(() => 'rel-b', NOW + 10, () => entries)).toEqual([]);
+        expect(c.quarantinedDefects(NOW + 10).map((d) => d.activityId)).toEqual(['quest:druid']);
+    });
+
     test('repeat faults survive a classifier reload', () => {
         const dir = mkdtempSync(join(tmpdir(), 'repeat-faults-'));
         const file = join(dir, 'outcome-state.json');

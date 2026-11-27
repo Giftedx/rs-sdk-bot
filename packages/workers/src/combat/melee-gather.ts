@@ -423,7 +423,8 @@ export async function runCows(
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const selectedXp = () => s.sdk.getSkillXp(training.skill) ?? 0;
     const level = () => s.sdk.getSkill(training.skill)?.baseLevel ?? 0;
-    if (!(await waitUntil(s, () => hp() > 0 && (profile.foodBanked || heal() >= COW_FOOD_HP) && level() > 0, { timeoutTicks: 15 }))) {
+    // The food may wait in the bank: the start at the bank withdraws it (restockFood) before the fight.
+    if (!(await waitUntil(s, () => hp() > 0 && level() > 0, { timeoutTicks: 15 }))) {
         throw Error('cow prerequisite: stage2unnoted Trout (or 14HP of cake) and syncedHP/skill');
     }
     const start = s.tick();
@@ -712,6 +713,20 @@ export async function runCows(
             }
         }
     };
+    // At an open bank: withdraw trout (or cake) until the pack holds COW_FOOD_HP of food.
+    const restockFood = async () => {
+        if (profile.foodBanked) return;
+        for (let tries = 0; heal() < COW_FOOD_HP && tries < 6; tries++) {
+            const items = state()?.bank.items ?? [];
+            const trout = items.find(i => i.id === 333);
+            const item = trout ?? cowFoodPick(items);
+            const want = heal() + (trout ? COW_BITE_HEAL[333]! : 0);
+            if (!item || !(await s.bot.withdrawItem(item, trout ? Math.min(trout.count, Math.ceil((COW_FOOD_HP - heal()) / COW_BITE_HEAL[333]!)) : 1, { asNote: false })).success) {
+                break;
+            }
+            await waitUntil(s, () => heal() >= Math.min(COW_FOOD_HP, want), { timeoutTicks: 5 });
+        }
+    };
     const bank = async (reEquip = false) => {
         retreating = true;
         const p = state()?.player;
@@ -728,18 +743,7 @@ export async function runCows(
                 }
             }
         }
-        if (!profile.foodBanked) {
-            for (let tries = 0; heal() < COW_FOOD_HP && tries < 6; tries++) {
-                const items = state()?.bank.items ?? [];
-                const trout = items.find(i => i.id === 333);
-                const item = trout ?? cowFoodPick(items);
-                const want = heal() + (trout ? COW_BITE_HEAL[333]! : 0);
-                if (!item || !(await s.bot.withdrawItem(item, trout ? Math.min(trout.count, Math.ceil((COW_FOOD_HP - heal()) / COW_BITE_HEAL[333]!)) : 1, { asNote: false })).success) {
-                    break;
-                }
-                await waitUntil(s, () => heal() >= Math.min(COW_FOOD_HP, want), { timeoutTicks: 5 });
-            }
-        }
+        await restockFood();
         if (!profile.foodBanked && heal() < COW_FOOD_HP) throw Error('no cow progress: working food restock failed');
         syncBankObs();
         if (reEquip && !goalReached() && creditedKills < o.maximum && !over()) {
@@ -747,6 +751,16 @@ export async function runCows(
             if (!over()) await selectCowStyle();
         }
     };
+    // Food that the brain staged in the bank (catalog cow floor) comes to the pack at the start bank. With no food
+    // anywhere the run refuses before the fight, as a refusal with nothing moved.
+    if (!profile.foodBanked && heal() < COW_FOOD_HP) {
+        await open();
+        await restockFood();
+        if (heal() < COW_FOOD_HP) {
+            await s.bot.closeBank();
+            throw Error('cow prerequisite: stage2unnoted Trout (or 14HP of cake) and syncedHP/skill');
+        }
+    }
     try {
         await open();
         for (const id of ids) baseline[id] = bankCount(id);

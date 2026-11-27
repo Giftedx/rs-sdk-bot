@@ -19,6 +19,7 @@ import { validOrder } from '../../core/src/fleet-trade-settlement';
 import { MARKET_CACHE_MS, writeMarketCache } from '../../core/src/market-cache';
 import { fleetStateFile, liveRoot, liveStatusDir, operatorCommandsDir, practiceRoot } from '../../core/src/practice-paths';
 import {
+    activityWorkerEntries,
     applyActivityOverridesToPlan,
     captureRunBaseline,
     extractWorkerOutcomeInput,
@@ -31,6 +32,17 @@ import {
     writeAccountOverrides,
 } from '../src/brain-runtime';
 import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
+
+describe('activityWorkerEntries', () => {
+    // A hold saved without entry files takes the entries of its activity's job for the release check.
+    test('a fight takes the entry files of its job; a quest and an unknown activity take none', () => {
+        const repo = join(import.meta.dir, '..', '..', '..');
+        const entriesOf = activityWorkerEntries(defaultActivityCatalog(repo), repo);
+        expect(entriesOf('combat:cow')).toEqual(['scripts/aio-fighter.ts']);
+        expect(entriesOf('quest:druid')).toBeUndefined();
+        expect(entriesOf('combat:no-such-target')).toBeUndefined();
+    });
+});
 
 const tempRoots: string[] = [];
 
