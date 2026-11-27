@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795807220253-1",
+ "account": "KnightRider",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "2d0be9be-b0f1-497e-8944-b967b5f8bafe",
+ "count": 0,
+ "ok": false,
+ "at": 1795807471371,
+ "detail": "trade claimed"
+}

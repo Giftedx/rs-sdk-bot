@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795807208342-1",
+ "account": "Fingerblastr",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 15,
+ "claim": "e04822a6-c9bd-47e0-b22b-df6499b8b7eb",
+ "count": 15,
+ "ok": true,
+ "at": 1795807477752,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795807459405
+ },
+ "logout": {
+  "attemptId": "1795807450829-0000032096-0000000001",
+  "at": 1795807477735,
+  "sha256": "924a3a9e308a66620ab5e494a5d57a5866c584182ee00151be4421274d709ab7"
+ },
+ "screen": true
+}
