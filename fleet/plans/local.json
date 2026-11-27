@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740973769,
+ "at": 1795740999249,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2160 TARGET_COUNT=216 PRODUCT_TARGET=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -74,10 +74,9 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
@@ -87,6 +86,34 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -116,7 +143,7 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
+   "account": "YewFirst",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
@@ -129,7 +156,7 @@
    "role": "army"
   },
   {
-   "account": "DropMyLoad",
+   "account": "Unsheathed",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
@@ -139,20 +166,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "mmsmk1232",
@@ -252,22 +266,7 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
+   "account": "CoinCock",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -280,7 +279,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "auto"
   }
  ],
  "army": [
