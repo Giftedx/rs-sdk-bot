@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795746180326-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Moneyshot",
+  "item": "Logs",
+  "count": 5,
+  "itemId": 1511,
+  "start": 1795746180326,
+  "end": 1795747080326,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
