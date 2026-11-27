@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748781637,
+ "at": 1795748794750,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,21 +74,6 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2140 TARGET_COUNT=214 PRODUCT_TARGET=214 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=214 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
@@ -146,6 +131,24 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   },
   {
    "account": "YewGotWood",
