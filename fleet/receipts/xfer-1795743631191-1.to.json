@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795743631191-1",
+ "account": "mmtha0205",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "1b5cfcf7-1fb6-42a3-9369-bbec16a1dd8f",
+ "count": 0,
+ "ok": false,
+ "at": 1795743809560,
+ "detail": "trade claimed"
+}

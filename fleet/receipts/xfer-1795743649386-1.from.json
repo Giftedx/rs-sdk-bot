@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795743649386-1",
  "account": "BowBeforeMe",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Sapphire ring",
  "requested": 1,
  "claim": "a76e703c-604a-462f-b174-cc6a4bd9d6d1",
- "count": 0,
- "ok": false,
- "at": 1795743723325,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795743803395,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795743730026
+ },
+ "logout": {
+  "attemptId": "1795743723334-0000030576-0000000001",
+  "at": 1795743803175,
+  "sha256": "b0267ded38db25f8451fe356df4cb69b058e139d01608988c4739e13aae1a41f"
+ },
+ "screen": true
 }
