@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795753453564-1",
+ "account": "Shaftsinker",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "ab8ba026-131e-4354-b1ad-311c4482c4c5",
+ "count": 1,
+ "ok": true,
+ "at": 1795753637925,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795753637185
+ },
+ "logout": {
+  "attemptId": "1795753624951-0000028912-0000000001",
+  "at": 1795753637916,
+  "sha256": "09aeca3bce092b0098a24ec49af2bc0d6df4fc47bb15ac462364d66576a84fb0"
+ },
+ "screen": true
+}
