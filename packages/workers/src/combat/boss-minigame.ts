@@ -1078,11 +1078,12 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
                     }
                 }
             }
+            // A refusal stop outranks the trip limit: the escape that set it can also spend the last trip.
+            const refused = stop === 'pker-threat' || stop === 'low-hp-before-wild';
             if (ended) stop = 'session-ended';
             else if (died) stop = 'died';
             else if (o.stop?.()) stop = 'stop-file';
-            else if (trips >= o.maxTrips) stop = 'max-trips';
-            const refused = stop === 'pker-threat' || stop === 'low-hp-before-wild';
+            else if (trips >= o.maxTrips && !refused) stop = 'max-trips';
             return { ok: !died && !ended && !refused, kills, bonesBanked, hidesBanked, eaten, escapes, trips, hpMin, died, stop, ticks: s.tick() - start };
         } finally {
             off();
