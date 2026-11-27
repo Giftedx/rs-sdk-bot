@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795807624966-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "ChaosInPants",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "extra": [
+    {
+      "item": "Chocolate bar",
+      "count": 3,
+      "itemId": 1973
+    }
+  ],
+  "start": 1795807624966,
+  "end": 1795808524966,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
