@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796020981-1",
+ "account": "Woodenstaff",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 3,
+ "claim": "a28cc019-9c34-45af-8ee6-a2e42330292d",
+ "count": 0,
+ "ok": false,
+ "at": 1795796409908,
+ "detail": "trade claimed"
+}
