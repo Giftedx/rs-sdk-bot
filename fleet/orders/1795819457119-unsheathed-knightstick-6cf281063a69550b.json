@@ -1,0 +1,24 @@
+{
+ "id": "1795819457119-unsheathed-knightstick-6cf281063a69550b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Knightstick",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819457119,
+ "end": 1795833857119,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

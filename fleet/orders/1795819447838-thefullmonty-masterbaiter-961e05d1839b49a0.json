@@ -1,0 +1,33 @@
+{
+ "id": "1795819447838-thefullmonty-masterbaiter-961e05d1839b49a0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Masterbaiter",
+ "item": "Bronze arrow",
+ "count": 300,
+ "start": 1795819447838,
+ "end": 1795833847838,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 30
+  },
+  {
+   "item": "Nature rune",
+   "count": 20
+  }
+ ],
+ "takerWaits": true
+}

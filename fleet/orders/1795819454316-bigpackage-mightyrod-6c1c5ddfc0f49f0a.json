@@ -1,0 +1,23 @@
+{
+ "id": "1795819454316-bigpackage-mightyrod-6c1c5ddfc0f49f0a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Mightyrod",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795819454316,
+ "end": 1795833854316,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

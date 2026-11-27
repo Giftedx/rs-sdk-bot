@@ -1,0 +1,23 @@
+{
+ "id": "1795819454582-unsheathed-mightyrod-5abf084fbde5283c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Mightyrod",
+ "item": "Iron arrow",
+ "count": 300,
+ "start": 1795819454582,
+ "end": 1795833854582,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

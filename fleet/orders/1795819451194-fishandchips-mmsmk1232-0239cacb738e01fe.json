@@ -1,0 +1,23 @@
+{
+ "id": "1795819451194-fishandchips-mmsmk1232-0239cacb738e01fe",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "mmsmk1232",
+ "item": "Lobster",
+ "count": 19,
+ "start": 1795819451194,
+ "end": 1795833851194,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795819457657-knightrider-knightstick-8ac13d1c10ef2893",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Knightstick",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795819457657,
+ "end": 1795833857657,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

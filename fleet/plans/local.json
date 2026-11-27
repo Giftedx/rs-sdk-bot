@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795819280357,
+ "at": 1795819344746,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -529,6 +529,10 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "TrouserSnake",
+  "Knightstick",
+  "Deeppockets",
+  "UnderMyKilt",
   "billionaire",
   "bowbeforeme",
   "fatstack",
@@ -542,8 +546,7 @@
   "pocketpython",
   "pocketrocket",
   "sausagefest",
-  "swordinhand",
-  "undermykilt"
+  "swordinhand"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

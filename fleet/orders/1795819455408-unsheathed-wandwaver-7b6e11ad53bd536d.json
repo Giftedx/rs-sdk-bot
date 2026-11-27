@@ -1,0 +1,24 @@
+{
+ "id": "1795819455408-unsheathed-wandwaver-7b6e11ad53bd536d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Wandwaver",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819455408,
+ "end": 1795833855408,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

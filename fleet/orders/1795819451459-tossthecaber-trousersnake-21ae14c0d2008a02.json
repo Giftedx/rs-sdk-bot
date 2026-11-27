@@ -1,0 +1,23 @@
+{
+ "id": "1795819451459-tossthecaber-trousersnake-21ae14c0d2008a02",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "TrouserSnake",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795819451459,
+ "end": 1795833851459,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

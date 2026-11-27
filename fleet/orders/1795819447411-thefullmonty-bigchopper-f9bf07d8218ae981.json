@@ -1,0 +1,23 @@
+{
+ "id": "1795819447411-thefullmonty-bigchopper-f9bf07d8218ae981",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Bigchopper",
+ "item": "Antipoison(2)",
+ "count": 1,
+ "start": 1795819447411,
+ "end": 1795833847411,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

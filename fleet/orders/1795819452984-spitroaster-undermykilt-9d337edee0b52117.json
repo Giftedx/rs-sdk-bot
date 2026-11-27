@@ -1,0 +1,23 @@
+{
+ "id": "1795819452984-spitroaster-undermykilt-9d337edee0b52117",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "UnderMyKilt",
+ "item": "Shark",
+ "count": 18,
+ "start": 1795819452984,
+ "end": 1795833852984,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

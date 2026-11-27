@@ -1,0 +1,23 @@
+{
+ "id": "1795819457929-sporranbulge-knightstick-a0d0cde719c69b8c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "Knightstick",
+ "item": "Water rune",
+ "count": 24,
+ "start": 1795819457929,
+ "end": 1795833857929,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

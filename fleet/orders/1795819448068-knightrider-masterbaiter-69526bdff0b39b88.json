@@ -1,0 +1,23 @@
+{
+ "id": "1795819448068-knightrider-masterbaiter-69526bdff0b39b88",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Masterbaiter",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795819448068,
+ "end": 1795833848068,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

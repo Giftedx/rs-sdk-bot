@@ -1,0 +1,23 @@
+{
+ "id": "1795819452758-tossthecaber-undermykilt-b4cf9f46367c1d3d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "UnderMyKilt",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795819452758,
+ "end": 1795833852758,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

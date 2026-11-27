@@ -1,0 +1,23 @@
+{
+ "id": "1795819449266-dipstick-nabtheknob-72e55b90cbbe18a3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "NabTheKnob",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795819449266,
+ "end": 1795833849266,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

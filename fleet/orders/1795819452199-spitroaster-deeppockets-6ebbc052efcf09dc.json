@@ -1,0 +1,23 @@
+{
+ "id": "1795819452199-spitroaster-deeppockets-6ebbc052efcf09dc",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Deeppockets",
+ "item": "Shark",
+ "count": 15,
+ "start": 1795819452199,
+ "end": 1795833852199,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795819456846-knightrider-trousersnake-5f3463d6d0a7118e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "TrouserSnake",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795819456846,
+ "end": 1795833856846,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

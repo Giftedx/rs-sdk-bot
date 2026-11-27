@@ -1,0 +1,23 @@
+{
+ "id": "1795819448328-spitroaster-masterbaiter-79a7a0662a274737",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Masterbaiter",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795819448328,
+ "end": 1795833848328,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

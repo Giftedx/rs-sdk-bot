@@ -1,0 +1,23 @@
+{
+ "id": "1795819448987-hocuspokeus-nabtheknob-bf1a8c2663149e33",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Hocuspokeus",
+ "to": "NabTheKnob",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1795819448987,
+ "end": 1795833848987,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

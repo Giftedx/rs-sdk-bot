@@ -1,0 +1,24 @@
+{
+ "id": "1795819453213-pocketpool-bigchopper-fa7f2f2127ad1f63",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "Bigchopper",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819453213,
+ "end": 1795833853213,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

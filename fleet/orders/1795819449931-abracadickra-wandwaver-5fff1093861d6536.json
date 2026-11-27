@@ -1,0 +1,23 @@
+{
+ "id": "1795819449931-abracadickra-wandwaver-5fff1093861d6536",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Wandwaver",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795819449931,
+ "end": 1795833849931,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

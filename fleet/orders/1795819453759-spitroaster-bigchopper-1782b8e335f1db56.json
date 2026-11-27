@@ -1,0 +1,23 @@
+{
+ "id": "1795819453759-spitroaster-bigchopper-1782b8e335f1db56",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Bigchopper",
+ "item": "Shark",
+ "count": 9,
+ "start": 1795819453759,
+ "end": 1795833853759,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

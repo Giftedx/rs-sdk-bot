@@ -1,0 +1,23 @@
+{
+ "id": "1795819457379-woodpecker-knightstick-f41f32b625f85bae",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "Knightstick",
+ "item": "Iron arrow",
+ "count": 300,
+ "start": 1795819457379,
+ "end": 1795833857379,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

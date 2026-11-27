@@ -1,0 +1,23 @@
+{
+ "id": "1795819453502-mmthv2350-bigchopper-cdf9aac808231555",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Bigchopper",
+ "item": "Iron arrow",
+ "count": 162,
+ "start": 1795819453502,
+ "end": 1795833853502,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

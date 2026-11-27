@@ -1,0 +1,23 @@
+{
+ "id": "1795819455735-fingerblastr-wandwaver-5f225eaf303cceba",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Wandwaver",
+ "item": "Law rune",
+ "count": 1,
+ "start": 1795819455735,
+ "end": 1795833855735,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

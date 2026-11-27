@@ -1,0 +1,23 @@
+{
+ "id": "1795819455127-shaftmaker-nabtheknob-4392943b8503273a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "NabTheKnob",
+ "item": "Lobster",
+ "count": 10,
+ "start": 1795819455127,
+ "end": 1795833855127,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

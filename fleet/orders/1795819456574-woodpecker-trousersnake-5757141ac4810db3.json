@@ -1,0 +1,23 @@
+{
+ "id": "1795819456574-woodpecker-trousersnake-5757141ac4810db3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "TrouserSnake",
+ "item": "Iron arrow",
+ "count": 114,
+ "start": 1795819456574,
+ "end": 1795833856574,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

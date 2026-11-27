@@ -1,0 +1,33 @@
+{
+ "id": "1795819450214-bowbeforeme-wandwaver-3af5ed6ebbe1530d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BowBeforeMe",
+ "to": "Wandwaver",
+ "item": "Bronze arrow",
+ "count": 300,
+ "start": 1795819450214,
+ "end": 1795833850214,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Earth rune",
+   "count": 30
+  },
+  {
+   "item": "Nature rune",
+   "count": 11
+  }
+ ],
+ "takerWaits": true
+}

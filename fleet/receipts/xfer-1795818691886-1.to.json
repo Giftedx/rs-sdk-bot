@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795818691886-1",
+ "account": "KnightRider",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "970a1e74-7ee7-4490-ab0b-c708020e11ff",
+ "count": 1,
+ "ok": true,
+ "at": 1795819318399,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795819317614
+ },
+ "logout": {
+  "attemptId": "1795819295018-0000022720-0000000001",
+  "at": 1795819318389,
+  "sha256": "4a2e6e1daa58fba76d3b447165903b4ae382e92c42e14d6b36a6d2da1d40ffb3"
+ },
+ "screen": true
+}

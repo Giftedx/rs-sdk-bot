@@ -1,0 +1,24 @@
+{
+ "id": "1795819458198-unsheathed-deeppockets-984014e7d9e36228",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Deeppockets",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819458198,
+ "end": 1795833858198,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

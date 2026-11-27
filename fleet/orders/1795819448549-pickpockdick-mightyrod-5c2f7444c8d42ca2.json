@@ -1,0 +1,23 @@
+{
+ "id": "1795819448549-pickpockdick-mightyrod-5c2f7444c8d42ca2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Mightyrod",
+ "item": "Dragon dagger(p)",
+ "count": 1,
+ "start": 1795819448549,
+ "end": 1795833848549,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

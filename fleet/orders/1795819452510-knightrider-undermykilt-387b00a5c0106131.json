@@ -1,0 +1,23 @@
+{
+ "id": "1795819452510-knightrider-undermykilt-387b00a5c0106131",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "UnderMyKilt",
+ "item": "Dragon dagger",
+ "count": 1,
+ "start": 1795819452510,
+ "end": 1795833852510,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

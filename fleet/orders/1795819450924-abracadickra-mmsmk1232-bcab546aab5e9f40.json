@@ -1,0 +1,23 @@
+{
+ "id": "1795819450924-abracadickra-mmsmk1232-bcab546aab5e9f40",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "mmsmk1232",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795819450924,
+ "end": 1795833850924,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

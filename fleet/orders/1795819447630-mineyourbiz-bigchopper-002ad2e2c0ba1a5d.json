@@ -1,0 +1,23 @@
+{
+ "id": "1795819447630-mineyourbiz-bigchopper-002ad2e2c0ba1a5d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Bigchopper",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795819447630,
+ "end": 1795833847630,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

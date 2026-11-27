@@ -1,0 +1,29 @@
+{
+ "id": "1795819450486-mmthv2350-wandwaver-ed5d939bf376f0a4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Wandwaver",
+ "item": "Water rune",
+ "count": 27,
+ "start": 1795819450486,
+ "end": 1795833850486,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 6
+  }
+ ],
+ "takerWaits": true
+}

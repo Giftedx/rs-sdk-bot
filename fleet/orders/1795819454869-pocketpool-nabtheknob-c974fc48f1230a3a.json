@@ -1,0 +1,34 @@
+{
+ "id": "1795819454869-pocketpool-nabtheknob-c974fc48f1230a3a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "NabTheKnob",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819454869,
+ "end": 1795833854869,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Antipoison(3)",
+   "count": 1
+  },
+  {
+   "item": "Water rune",
+   "count": 24
+  }
+ ],
+ "takerWaits": true
+}

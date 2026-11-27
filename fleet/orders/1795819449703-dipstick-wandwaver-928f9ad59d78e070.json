@@ -1,0 +1,23 @@
+{
+ "id": "1795819449703-dipstick-wandwaver-928f9ad59d78e070",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Wandwaver",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1795819449703,
+ "end": 1795833849703,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

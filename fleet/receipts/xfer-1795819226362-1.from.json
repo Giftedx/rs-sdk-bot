@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795819226362-1",
+ "account": "Pocketpython",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 14,
+ "claim": "349d0987-6a91-49eb-9e80-d9d5097453eb",
+ "count": 0,
+ "ok": false,
+ "at": 1795819343336,
+ "detail": "trade claimed"
+}

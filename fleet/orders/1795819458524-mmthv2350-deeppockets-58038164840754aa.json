@@ -1,0 +1,29 @@
+{
+ "id": "1795819458524-mmthv2350-deeppockets-58038164840754aa",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Deeppockets",
+ "item": "Steel arrow",
+ "count": 257,
+ "start": 1795819458524,
+ "end": 1795833858524,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Iron arrow",
+   "count": 43
+  }
+ ],
+ "takerWaits": true
+}

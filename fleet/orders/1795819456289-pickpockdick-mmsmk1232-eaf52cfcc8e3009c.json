@@ -1,0 +1,23 @@
+{
+ "id": "1795819456289-pickpockdick-mmsmk1232-eaf52cfcc8e3009c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "mmsmk1232",
+ "item": "Water rune",
+ "count": 10,
+ "start": 1795819456289,
+ "end": 1795833856289,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795819449486-knightrider-wandwaver-07b781b616c83809",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Wandwaver",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795819449486,
+ "end": 1795833849486,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+ "id": "1795819454030-pocketpython-masterbaiter-149e789ff74f70c5",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Masterbaiter",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795819454030,
+ "end": 1795833854030,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
