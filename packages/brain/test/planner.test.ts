@@ -1742,3 +1742,16 @@ test('a location recovery inside walled West Ardougne names the quest exit, so r
     const openStep = planAccount(open, { world: { ...world, accounts: { KnightRider: open } }, activities: [], demands: [] }).steps[0];
     expect(openStep?.stepKind === 'recover' && openStep.reason).toBe('stranded off-hub or non-ground plane');
 });
+
+test('a coin demand never sends PvP work: the Wilderness gold is a model guess that risks the account', () => {
+    const acct = makeAcct({ name: 'Fingerblastr', role: 'army', pos: { x: 3093, z: 3493, level: 0 } });
+    const world: WorldSnapshot = { schemaVersion: 1, at: Date.now(), side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Fingerblastr: acct } };
+    const pvp = createActivityCatalog().list().filter((a) => a.family === 'pvp');
+    expect(pvp.length).toBeGreaterThan(5);
+    const coinFund: GoalDemand = {
+        id: 'goal:coin_fund:fleet', goalKind: 'coin_fund', sourceId: 'owner:coin_fund', valueScore: 500,
+        target: { kind: 'coins', amount: 1_000_000 }, fulfilled: 0, remaining: 1_000_000, priorityWeight: 0.9, active: true,
+    };
+    const plan = planAccount(acct, { world, activities: pvp, demands: [coinFund] });
+    expect(plan.steps.filter((s) => s.stepKind === 'work' && s.activityId.startsWith('pvp:'))).toEqual([]);
+});
