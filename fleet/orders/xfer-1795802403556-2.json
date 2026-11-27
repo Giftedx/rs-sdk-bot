@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795802403556-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketrocket",
+  "to": "TossTheCaber",
+  "item": "Steel bar",
+  "count": 3,
+  "itemId": 2353,
+  "start": 1795802403556,
+  "end": 1795803303556,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

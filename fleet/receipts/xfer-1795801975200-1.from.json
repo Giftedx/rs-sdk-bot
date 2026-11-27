@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801975200-1",
  "account": "Bigpackage",
  "partner": "Unsheathed",
@@ -10,8 +10,18 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "48e8921f-16e2-4ec1-83a4-a7025ba4e960",
- "count": 0,
- "ok": false,
- "at": 1795802333525,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795802407598,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795802333535-0000034408-0000000001",
+  "at": 1795802407585,
+  "sha256": "cf83034bd7ade16147cc69879450b6f0e247bb4a95045df8c748d95c1fc6d4a5"
+ },
+ "screen": true
 }
