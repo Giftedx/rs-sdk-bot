@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774887949-1",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "cb8894be-87c7-4c04-8942-d6b4832ad048",
- "count": 0,
- "ok": false,
- "at": 1795775065831,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795775110475,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795775072146
+ },
+ "logout": {
+  "attemptId": "1795775065842-0000002296-0000000001",
+  "at": 1795775110462,
+  "sha256": "9afcb36e7ecea6d5ab4642ef38ce1acf0f10cedb92c4d573b5ee6d580cc6a054"
+ },
+ "screen": true
 }
