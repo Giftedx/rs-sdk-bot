@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795776260157-1",
+ "account": "TheFullMonty",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 67,
+ "claim": "825b16e6-67c6-48de-821f-9713aaa98424",
+ "count": 0,
+ "ok": false,
+ "at": 1795776714278,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Fire rune",
+   "requested": 495,
+   "count": 0
+  }
+ ]
+}
