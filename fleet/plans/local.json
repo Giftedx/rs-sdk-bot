@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795788036954,
+ "at": 1795788063303,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,26 +59,36 @@
    "role": "pvp"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=87 PRODUCT_TARGET=87 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=87 STALL_TICKS=255 -- cooking food"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "22",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
   },
   {
    "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "runeshop",
     "3000"
    ],
    "env": {
@@ -99,29 +109,26 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "21",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "21"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "11",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
+   "goal": "campaign:haggis:item:2349",
+   "role": "auto"
   },
   {
    "account": "Woodenstaff",
@@ -143,23 +150,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:257",
-   "role": "auto"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Abracadickra",
    "role": "auto"
   },
   {
@@ -289,6 +279,31 @@
    "role": "army"
   },
   {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "156",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "156"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
+  },
+  {
    "account": "Ballbag",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -332,7 +347,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1017"
+    "BATCH_UNITS": "857"
    },
    "enabled": true,
    "repeat": false,
