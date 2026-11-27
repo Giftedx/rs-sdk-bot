@@ -15,14 +15,20 @@ export {
     releaseRevision,
     workerEntries,
 } from './worker-release/revision';
+export type { LoginBlocker } from './worker-release/peers';
 export {
     LOST_SESSION_DROP_MS,
+    PEER_STALE_MS,
+    SILENT_SESSION_DROP_MS,
     assertCompatibleWorkers,
     assertLiveWorkerRelease,
     assertWorkerRelease,
     closedSessionRow,
     crashResidue,
     isWorkerReleaseHold,
+    loginBlockers,
+    readPeerStatuses,
+    silentSessionRow,
     standingAccounts,
     standingPeer,
 } from './worker-release/peers';
