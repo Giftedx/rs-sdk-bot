@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739279980-1",
  "account": "Fatstack",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "09de8f2a-d15b-4d49-8bf6-92b91213bcbc",
- "count": 0,
- "ok": false,
- "at": 1795740000236,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795740010977,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795740010219
+ },
+ "logout": {
+  "attemptId": "1795740000246-0000026536-0000000001",
+  "at": 1795740010964,
+  "sha256": "a788d5fe056c14f0cdf41be1f447917446aa57c3f42e33cdfe644159f4000352"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795740013087-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "CoinCock",
+  "item": "Bones",
+  "count": 6,
+  "itemId": 526,
+  "start": 1795740013087,
+  "end": 1795740913087,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
