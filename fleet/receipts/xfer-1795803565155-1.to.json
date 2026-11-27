@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803565155-1",
  "account": "YewFirst",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 2,
  "claim": "c2fd83a8-e5a0-4883-8f4e-6a25aec07ba7",
- "count": 0,
- "ok": false,
- "at": 1795803929446,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795803941538,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795803940768
+ },
+ "logout": {
+  "attemptId": "1795803929456-0000031212-0000000001",
+  "at": 1795803941503,
+  "sha256": "8f399d8371bbfc52e2fcc9eb46fa1744c932d12077cba9c56941bf4e628879cd"
+ },
+ "screen": true
 }
