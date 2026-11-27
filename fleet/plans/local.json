@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748951612,
+ "at": 1795749000765,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,22 +74,6 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -106,7 +90,7 @@
    "role": "army"
   },
   {
-   "account": "Spitroaster",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -119,7 +103,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "mmsmk1232",
@@ -189,6 +173,7 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -196,7 +181,6 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "undermykilt",
   "woodpecker"
  ],

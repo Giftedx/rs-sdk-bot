@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795748980060-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Spitroaster",
+  "item": "Feather",
+  "count": 250,
+  "itemId": 314,
+  "start": 1795748980060,
+  "end": 1795749880060,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
