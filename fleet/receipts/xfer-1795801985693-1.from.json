@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795801985693-1",
+ "account": "Shaftmaker",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 22,
+ "claim": "2278a8cb-5bbd-4404-9b6d-48195b2be56c",
+ "count": 0,
+ "ok": false,
+ "at": 1795802279795,
+ "detail": "trade claimed"
+}
