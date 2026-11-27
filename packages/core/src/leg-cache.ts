@@ -66,8 +66,14 @@ export function routeDangerHash(danger:{key:string;kept:ReadonlySet<string>},cac
 let shared: LegCache | undefined;
 export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     if (shared && file === LEG_CACHE_FILE && source === undefined) return shared;
+    // A v3 key holds the danger tiles near its walk (world/leg-key.ts), so npc data that moves a hunter changes the keys
+    // of the walks near it and no other: the store is tied to the pathfinder and collision data only. With the npc
+    // data in the namespace, each change of knowledge/npcs.json deleted every row of the shared store (372,119 rows),
+    // and each long walk of every account was measured cold again. The prior store keys a length by the whole scope
+    // (hunter indices of that npc data), so its namespace keeps the npc data.
     const src = source ?? pathfindingDataKey() + ':' + npcsDigest(join(repoRoot, 'knowledge', 'npcs.json'));
-    const namespace = createHash('sha256').update(src).digest('base64url');
+    const namespace = createHash('sha256').update(source ?? pathfindingDataKey()).digest('base64url');
+    const priorNamespace = createHash('sha256').update(src).digest('base64url');
     const legacyFile = file.replace(/\.sqlite$/, '.json');
     const legacy = (): Record<string, number | null> => {
         try {
@@ -109,6 +115,8 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     }
     // The shared store only: one checkout has one collision map, so rows of another source are of an older map.
     if (stored && file === LEG_CACHE_FILE && source === undefined) {
+        // Rows written under the namespace that also named the npc data (priorNamespace) of the same data stay valid.
+        try { if (priorNamespace !== namespace && db?.query('SELECT 1 FROM legs WHERE source = ?1 LIMIT 1').get(priorNamespace)) db.query('UPDATE OR IGNORE legs SET source = ?1 WHERE source = ?2').run(namespace, priorNamespace); } catch { /* another process moves them, or the store is busy */ }
         try { if (db?.query('SELECT 1 FROM legs WHERE source < ?1 OR source > ?1 LIMIT 1').get(namespace)) db.query('DELETE FROM legs WHERE source < ?1 OR source > ?1').run(namespace); } catch { /* another process prunes, or the store is busy */ }
     }
     const rememberRead = (key: string, value: number | null) => {
@@ -152,7 +160,7 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
         prior: key => {
             try {
                 if (prior && !priorGetStmt) priorGetStmt = prior.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?');
-                const row = priorGetStmt?.get(namespace, key);
+                const row = priorGetStmt?.get(priorNamespace, key);
                 if (row) return row.value;
             } catch { /* The prior store is optional. */ }
             return undefined;
