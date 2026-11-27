@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749878166,
+ "at": 1795749890759,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,22 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "desertrescue"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:desertrescue",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -142,22 +158,6 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
    "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "auto"
   },
   {
    "account": "mmthv2350",
