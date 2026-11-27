@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795813625530-1",
  "account": "Shaftmaker",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "c4bf6369-d8c0-4850-ba54-e32f53647f70",
- "count": 0,
- "ok": false,
- "at": 1795813894330,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795814085018,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795814068669
+ },
+ "logout": {
+  "attemptId": "1795813894339-0000024136-0000000001",
+  "at": 1795814085004,
+  "sha256": "0c3ce06a29a9c9b37cf55e9435304e32098b8148f95e6df91c13ff341b2a0262"
+ },
+ "screen": true
 }

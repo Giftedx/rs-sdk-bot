@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795813625530-1",
+ "account": "Unsheathed",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "60d69c60-d5c5-488e-bf10-690e93682d19",
+ "count": 2,
+ "ok": true,
+ "at": 1795814086675,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795814085860
+ },
+ "logout": {
+  "attemptId": "1795814075309-0000012256-0000000001",
+  "at": 1795814086589,
+  "sha256": "756e62dc03e5b58b488b5cf7573f2758b540b81307c156c15d6a715e968064de"
+ },
+ "screen": true
+}
