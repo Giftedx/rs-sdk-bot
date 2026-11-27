@@ -739,7 +739,10 @@ export class OutcomeClassifier {
     // Lifts each repeat-fault hold whose worker code changed: the release of its entry files (releaseOf, swarm.ts
     // cachedReleaseFor) is not the release of the runs that failed. A merged fix then runs at the next plan cycle, not
     // after the 6 h hold. A hold without a release or entries, or entries that do not resolve, keeps its time limit.
-    // The lifted signature counts its faults from zero again.
+    // The release includes shared runtime files, so a change can be unrelated to the fault. The lift is one probe, as
+    // a held swarm end runs once more after its release changes (#1567): the fault count stays, so the first fast run
+    // that fails the same way on the new release holds the activity again at once, bound to that release. Only a run
+    // that meets its target clears the count.
     liftChangedReleaseHolds(releaseOf: (entries: readonly string[]) => string | undefined, now = Date.now()): DefectRecord[] {
         const lifted: DefectRecord[] = [];
         for (const [key, d] of this.defects) {
@@ -750,7 +753,6 @@ export class OutcomeClassifier {
             if (!release || release === d.workerRelease) continue;
             const next = { ...d, quarantined: false };
             this.defects.set(key, next);
-            this.repeatFaults.delete(defectKey(d.activityId, d.faultSignature.replace(/ \[[^\]]+\]$/, '')));
             lifted.push(next);
         }
         if (lifted.length) this.saveIfEnabled(now);
