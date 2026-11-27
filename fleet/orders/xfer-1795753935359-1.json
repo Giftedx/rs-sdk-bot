@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795753935359-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "TheFullMonty",
+  "item": "Dragon longsword",
+  "count": 1,
+  "itemId": 1305,
+  "start": 1795753935359,
+  "end": 1795754835359,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
