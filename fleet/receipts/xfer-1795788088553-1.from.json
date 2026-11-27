@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788088553-1",
  "account": "Bigpackage",
  "partner": "NabTheKnob",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 10,
  "claim": "dd022546-3877-4263-9da5-3e2eda63ebe2",
- "count": 0,
- "ok": false,
- "at": 1795788353399,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795788416660,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1019,
+  "after": 1009
+ },
+ "logout": {
+  "attemptId": "1795788353613-0000002508-0000000001",
+  "at": 1795788416647,
+  "sha256": "6236bf44832c10df5437f2085fc39001eaf0922fdc854756ef39a43a4bf79139"
+ },
+ "screen": true
 }

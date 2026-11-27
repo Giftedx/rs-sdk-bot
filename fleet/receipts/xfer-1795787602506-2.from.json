@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795787602506-2",
  "account": "MeatNTwoVeg",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Tin ore",
  "requested": 2,
  "claim": "d8accf7e-d8d6-4359-a86e-ee240049efd3",
- "count": 0,
- "ok": false,
- "at": 1795788413709,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795788429060,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795788421163
+ },
+ "logout": {
+  "attemptId": "1795788413721-0000001836-0000000001",
+  "at": 1795788429048,
+  "sha256": "6cb2fe09f99d0380497a9a2bb4f5438abbe745e401b3ca4279c564d3ca7d768c"
+ },
+ "screen": true
 }

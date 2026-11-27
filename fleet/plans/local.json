@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795788415213,
+ "at": 1795788453833,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,31 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "120",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "26000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "120"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -92,7 +67,26 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1586"
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
@@ -111,7 +105,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1586"
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
@@ -130,7 +124,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1586"
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
@@ -141,44 +135,28 @@
    ]
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-skiller.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "shop-buy",
+    "generalshop3",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "2347",
+    "ITEMS": "Hammer",
+    "MAX_ITEMS": "1",
+    "STOCK_TARGET": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "100",
+    "STOP_AT_TARGET": "1",
+    "FILL_ORDER": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "auto",
-   "resources": [
-    "edgeville-yews"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_avantoe_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:103",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -207,19 +185,86 @@
    "role": "army"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "prayer",
-    "bury"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "BONE_ID": "536",
-    "TRAIN_SKILL": "Prayer",
-    "TARGET_LEVEL": "70",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "99",
-    "STALL_TICKS": "150"
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_avantoe_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:103",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:103",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "485",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "485"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "auto"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts SPLASH_SITE=coop TRAIN_SKILL=Magic TARGET_LEVEL=21 TARGET_COUNT=50 CAP=1000 -- magic splash-coop 21 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Abracadickra BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -227,44 +272,19 @@
    "role": "auto"
   },
   {
-   "account": "Woodenstaff",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+    "scripts/aio-market.ts ITEM_ID=561 \"ITEMS=Nature rune\" MAX_ITEMS=3 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "16",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "16"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
   }
  ],
  "army": [
@@ -285,7 +305,6 @@
   "kiltlifter",
   "mmtha0205",
   "mmthv2350",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",

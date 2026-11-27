@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795787967575-1",
+ "account": "PickpockDick",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "2c774604-4d87-40ff-8242-73dbeaa3acd9",
+ "count": 3,
+ "ok": true,
+ "at": 1795788439069,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795788438277
+ },
+ "logout": {
+  "attemptId": "1795788426956-0000006760-0000000001",
+  "at": 1795788439056,
+  "sha256": "1e747c711eccd111608f4834c33ae07857a3487e7d60a77f441c7b38945fb4f3"
+ },
+ "screen": true
+}

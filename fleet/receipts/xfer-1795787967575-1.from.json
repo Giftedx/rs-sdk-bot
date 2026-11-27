@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795787967575-1",
  "account": "YewFirst",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 3,
  "claim": "494a68ec-8bb5-45af-896d-43d78b64c4d0",
- "count": 0,
- "ok": false,
- "at": 1795788397903,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795788437497,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795788421915
+ },
+ "logout": {
+  "attemptId": "1795788397917-0000003960-0000000001",
+  "at": 1795788437481,
+  "sha256": "4a45c92aedb1c4a026a392c935d5ef6d2cdefd488b0adb6805bdca39cf80a368"
+ },
+ "screen": true
 }
