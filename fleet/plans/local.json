@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795774036290,
+ "at": 1795774049735,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -106,16 +106,15 @@
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-o0-p872 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=872 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-35-o0-p97 ITEM_ID=440 QUANTITY=35 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
