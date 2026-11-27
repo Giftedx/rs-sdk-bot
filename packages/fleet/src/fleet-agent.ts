@@ -208,7 +208,13 @@ export function readTradeClaims(
     try {
         const out = new Map<string, string>();
         for (const c of read(base, accounts)) {
-            if (isFleetSwarmClaim(c)) { if (refusal(c)) out.set(c.account.toLowerCase(), SWARM_HELD); continue; }
+            if (isFleetSwarmClaim(c)) {
+                // A check that throws throws at the login too: the claim holds.
+                let refused: string | undefined;
+                try { refused = refusal(c); } catch (error) { refused = String(error); }
+                if (refused) out.set(c.account.toLowerCase(), SWARM_HELD);
+                continue;
+            }
             if (!existsSync(join(base, '.practice', 'fleet-account-pending', `${c.nonce}.json`))) out.set(c.account.toLowerCase(), (c as FleetTradeClaim).orderId);
         }
         return out;

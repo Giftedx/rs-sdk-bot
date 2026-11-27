@@ -154,6 +154,8 @@ describe('fleet agent: a trade claim held for another order holds both parties',
         const read = () => [swarm('moneyshot'), swarm('knightstick')];
         const held = readTradeClaims('/nowhere', ['Moneyshot', 'Knightstick'], read, c => c.account === 'moneyshot' ? 'fleet account claim held by swarm' : undefined);
         expect([...held!]).toEqual([['moneyshot', SWARM_HELD]]);
+        const failing = readTradeClaims('/nowhere', ['Knightstick'], () => [swarm('knightstick')], () => { throw Error('lifecycle unreadable'); });
+        expect([...failing!]).toEqual([['knightstick', SWARM_HELD]]);
         expect(readTradeClaims('/nowhere', ['Moneyshot'], () => { throw Error('unreadable'); })).toBeNull();
     });
 
