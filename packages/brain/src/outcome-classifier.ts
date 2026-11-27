@@ -727,13 +727,15 @@ export class OutcomeClassifier {
         const now = ctx?.now ?? Date.now();
         const domain = ctx?.domain ?? 'live';
         this.marketCooldowns = pruneExpiredCooldowns(this.marketCooldowns, now);
-        // A run that ended for a reason other than infrastructure got past the claim and the server, so the fault
-        // run is over. An open breaker stays open until its retry time: a run that started before the fault can
-        // end after it.
+        // A run that started after the breaker opened and ended for a reason other than infrastructure got past the
+        // claim and the server again, so the fault run is over. A run that started before the fault proves nothing:
+        // it can end after the retry time without a new claim. An outcome without its duration does not reset.
+        const runStart = outcome.durationMs !== undefined ? now - outcome.durationMs : undefined;
         if (
             outcome.kind !== 'infra_fault'
             && this.infraBreaker.consecutiveFaults > 0
             && (!this.infraBreaker.open || now >= (this.infraBreaker.retryAt ?? now))
+            && runStart !== undefined && runStart >= (this.infraBreaker.trippedAt ?? 0)
         ) {
             this.recordInfraSuccess(now);
         }
