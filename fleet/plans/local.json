@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795803429893,
+ "at": 1795803442242,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -156,6 +156,21 @@
    "role": "army"
   },
   {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 PRODUCT_TARGET=415 -- foraging feathers",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=315 MAX_MAKE=315 STALL_TICKS=150 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "auto"
+  },
+  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -250,31 +265,6 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "fishingshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "309",
-    "ITEMS": "Fly fishing rod",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:309",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:309",
-   "role": "army"
   }
  ],
  "army": [
@@ -290,6 +280,7 @@
   "bowbeforeme",
   "fatstack",
   "fingerblastr",
+  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
