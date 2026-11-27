@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795745262559-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 211,
+  "start": 1795745262559,
+  "end": 1795746162559,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
