@@ -1,6 +1,8 @@
 // The watchdog thread of loop-watchdog.ts. It runs while the main loop is blocked: it reads the main loop's last beat
 // from shared memory, and after `stallMs` with no beat it reports the stall and ends the process.
-import { readFileSync, renameSync, writeFileSync, writeSync } from 'node:fs';
+import { readFileSync, writeSync } from 'node:fs';
+import { basename } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 
 type Start = { kind: 'start'; beat: Float64Array; phaseLength: Int32Array; phase: Uint8Array; stallMs: number; beatMs: number; exit: boolean; pid: number };
 type Files = { kind: 'files'; files: string[] };
@@ -12,16 +14,17 @@ const decoder = new TextDecoder();
 function report(m: Start, blockedMs: number): void {
     const n = Atomics.load(m.phaseLength, 0), phase = decoder.decode(m.phase.slice(0, n)).replace(/\s+/g, ' ').trim();
     const result = `fail stalled: event loop blocked for ${Math.round(blockedMs / 1000)} s; last log line: ${phase || '-'}`;
-    try { writeSync(1, `LOOP_STALL ${JSON.stringify({ pid: m.pid, blockedMs: Math.round(blockedMs), phase })}\nRESULT ${result}\n`); } catch { /* stdout closed */ }
+    // supervise.ts reads the bare RESULT line; supervise-host.ts reads one `[account] RESULT` line for each hosted
+    // account (keptHostLine), named here by the account's status file.
+    const hosted = files.map(f => `[${basename(f, '.json')}] RESULT ${result}\n`).join('');
+    try { writeSync(1, `LOOP_STALL ${JSON.stringify({ pid: m.pid, blockedMs: Math.round(blockedMs), phase })}\nRESULT ${result}\n${hosted}`); } catch { /* stdout closed */ }
     for (const file of files) {
         try {
             const doc = JSON.parse(readFileSync(file, 'utf8'));
             doc.result = result.slice(0, 300);
             doc.stalled = { at: Date.now(), blockedMs: Math.round(blockedMs), phase };
             doc.at = Date.now();
-            const tmp = `${file}.stall-${m.pid}.tmp`;
-            writeFileSync(tmp, JSON.stringify(doc));
-            renameSync(tmp, file);
+            writeAtomicFile(file, JSON.stringify(doc));
         } catch { /* a missing or busy status file must not stop the exit */ }
     }
 }

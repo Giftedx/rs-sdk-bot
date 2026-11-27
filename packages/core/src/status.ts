@@ -102,6 +102,8 @@ function updateLines(e: StatusLines, line: string): void {
 export function noteStatusLine(name: string, line: string): void {
     const key = name.toLowerCase(), e = perBot.get(key) ?? emptyLines(true);
     e.attributed = true;
+    // Hosted sessions (host.ts botSink) log here, not through console.log: the stall report names this line too.
+    noteLoopPhase(`[${name}] ${line}`);
     updateLines(e, line);
     perBot.set(key, e);
 }
