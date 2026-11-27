@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795737914858,
+ "at": 1795738008475,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,7 +90,7 @@
    "role": "army"
   },
   {
-   "account": "Spitroaster",
+   "account": "Billionaire",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -103,26 +103,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:fluffs",
-   "role": "auto"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -138,21 +122,19 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-logistics.ts",
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
   },
   {
@@ -318,6 +300,22 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
    "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=557 \"ITEMS=Earth rune\" MAX_ITEMS=3 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=65 CAP=1000 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
   }
  ],
  "army": [
