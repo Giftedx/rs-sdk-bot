@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751864111,
+ "at": 1795751925727,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,6 +75,24 @@
    "role": "army"
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "green-dragon"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:536",
+    "BATCH_UNITS": "430"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:536",
+   "role": "army",
+   "resources": [
+    "wild-green-dragons"
+   ]
+  },
+  {
    "account": "mmsmk1232",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -121,6 +139,21 @@
    "role": "auto"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
    "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -160,7 +193,6 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
-  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pickpockdick",
@@ -172,8 +204,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
-  "woodpecker"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
