@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795813616999-2",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "274d8b77-77b5-4a78-b6de-35e970172966",
+ "count": 0,
+ "ok": false,
+ "at": 1795814133903,
+ "detail": "trade claimed"
+}
