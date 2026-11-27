@@ -1,0 +1,23 @@
+{
+ "id": "1795819924868-mineyourbiz-masterbaiter-d302251c9eb02e2b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Masterbaiter",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795819924868,
+ "end": 1795834324868,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

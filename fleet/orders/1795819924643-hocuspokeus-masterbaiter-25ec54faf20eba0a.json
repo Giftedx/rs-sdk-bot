@@ -1,12 +1,12 @@
 {
- "id": "1795819447838-thefullmonty-masterbaiter-961e05d1839b49a0",
+ "id": "1795819924643-hocuspokeus-masterbaiter-25ec54faf20eba0a",
  "server": "rs-sdk-demo.fly.dev",
- "from": "TheFullMonty",
+ "from": "Hocuspokeus",
  "to": "Masterbaiter",
  "item": "Bronze arrow",
  "count": 300,
- "start": 1795819447838,
- "end": 1795833847838,
+ "start": 1795819924643,
+ "end": 1795834324643,
  "meet": [
   {
    "x": 3093,
@@ -20,10 +20,6 @@
   }
  ],
  "extra": [
-  {
-   "item": "Water rune",
-   "count": 30
-  },
   {
    "item": "Nature rune",
    "count": 20
