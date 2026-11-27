@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748231100,
+ "at": 1795748244448,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,6 +72,84 @@
    "repeat": false,
    "goal": "campaign:fullblooded:item:385",
    "role": "auto"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "desertrescue"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:desertrescue",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=4 STOCK_TARGET=4 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=4 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
+   "role": "auto"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "biohazard"
+   ],
+   "env": {
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "biohazard"
+   ],
+   "env": {
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   }
  ],
  "army": [
@@ -91,11 +169,9 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpool",
