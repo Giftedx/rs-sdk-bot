@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741582242,
+ "at": 1795741591924,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -178,6 +178,19 @@
    "role": "auto"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "22"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/pk.ts",
    "args": [],
@@ -321,7 +334,7 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
+   "account": "YewFirst",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -334,7 +347,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
+   "role": "army"
   }
  ],
  "army": [
@@ -360,8 +373,7 @@
   "sausagefest",
   "sporrandip",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
