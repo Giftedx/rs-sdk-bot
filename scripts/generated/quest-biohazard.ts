@@ -193,6 +193,14 @@ try {
             await q.walk(`to stairs door out${STRANDED}`, [{ x: 2546, z: 3325, tol: 0 }]);
             await q.openDoor(`stairs door out${STRANDED}`, 2546, 3325);
         }
+        // The open door (loc 1531 at 2547,3325, south edge, doors.rs2 open_door) and the chair at 2548,3325 wall the
+        // doorway tile off from the HQ: every walk on from it is client_rejected. It is shut from the doorway tile.
+        if (x() <= 2548 && z() >= 3325 && z() <= 3326) {
+            const LEAF = { id: 1531, x: 2547, z: 3325 };
+            const leafOpen = () => !!q.locAt(LEAF.x, LEAF.z)?.optionsWithIndex?.some((o: any) => /^close$/i.test(o.text));
+            if (x() <= 2546) await q.walk(`to stairs doorway out${STRANDED}`, [{ x: LEAF.x, z: LEAF.z, tol: 0 }]);
+            if (leafOpen()) await cross(`stairs door shut${STRANDED}`, LEAF, /^close$/i, () => !leafOpen());
+        }
         await q.walk(`to hq door out${STRANDED}`, [{ x: HQ_DOOR.x, z: HQ_DOOR.z + 1, tol: 0 }]);
         await cross(`hq door out${STRANDED}`, HQ_DOOR, /^open$/i, () => z() <= HQ_DOOR.z);
         await q.walk(`to kilron${STRANDED}`, [{ x: KILRON.x, z: KILRON.z + 2, tol: 2 }]);
