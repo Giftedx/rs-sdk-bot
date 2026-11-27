@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749501779,
+ "at": 1795749531746,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -101,24 +101,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
   },
   {
    "account": "YewGotWood",
