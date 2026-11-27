@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795803454551,
+ "at": 1795803467273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -80,7 +80,7 @@
    ]
   },
   {
-   "account": "Quickhandjob",
+   "account": "OreElse",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -95,6 +95,41 @@
    "resources": [
     "draynor-willows"
    ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -155,21 +190,6 @@
    "role": "army"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 PRODUCT_TARGET=415 -- foraging feathers",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=315 MAX_MAKE=315 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "auto"
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -195,25 +215,53 @@
    "role": "auto"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "60",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "60"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "wydinstore",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1933",
+    "ITEMS": "Pot of flour",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1933",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1933",
    "role": "army"
   },
   {
@@ -239,56 +287,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:311",
-   "role": "army"
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "837",
-    "ITEMS": "Crossbow",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:837",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:837",
-   "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "fishingshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "309",
-    "ITEMS": "Fly fishing rod",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:309",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:309",
    "role": "army"
   }
  ],
