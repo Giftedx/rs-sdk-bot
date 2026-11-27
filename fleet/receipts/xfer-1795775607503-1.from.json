@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775607503-1",
  "account": "TheFullMonty",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 9,
  "claim": "35b169a8-e413-4e31-951f-61abf80ebb2e",
- "count": 0,
- "ok": false,
- "at": 1795775811073,
- "detail": "trade claimed"
+ "count": 9,
+ "ok": true,
+ "at": 1795775976113,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9,
+  "after": 0
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795775946888
+ },
+ "logout": {
+  "attemptId": "1795775811100-0000004188-0000000001",
+  "at": 1795775976087,
+  "sha256": "f3277d29365f7a44f80d39fed4f748293f1db467d47daeab585f10ae615fb932"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795775607503-1",
+ "account": "Wandwaver",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 9,
+ "claim": "c060319d-2574-4123-a332-e40eded7fc20",
+ "count": 9,
+ "ok": true,
+ "at": 1795775977234,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 9
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795775976528
+ },
+ "logout": {
+  "attemptId": "1795775963365-0000003032-0000000001",
+  "at": 1795775977222,
+  "sha256": "420149a93b0d15f0ad46aa49a98bc9adbd5073691ef1e9b09ac6e3da0d4e8f13"
+ },
+ "screen": true
+}

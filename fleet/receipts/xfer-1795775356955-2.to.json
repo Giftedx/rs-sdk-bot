@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775356955-2",
+ "account": "Quickhandjob",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "314f029d-baac-4622-8c01-155d84e1794e",
+ "count": 0,
+ "ok": false,
+ "at": 1795775973324,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795775434147-1",
  "account": "mmtha0205",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "3f9be666-7bba-4388-be7f-3108f54e9d54",
  "count": 0,
  "ok": false,
- "at": 1795775927897,
- "detail": "trade claimed"
+ "at": 1795775980832,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795775949708
+ },
+ "logout": {
+  "attemptId": "1795775927907-0000031360-0000000001",
+  "at": 1795775980814,
+  "sha256": "33a322dc52cdab7a4e15043072e9dfdfae6c281b337c056692948d16edf620bb"
+ },
+ "screen": false
 }
