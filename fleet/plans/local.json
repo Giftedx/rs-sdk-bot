@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795796292843,
+ "at": 1795796314661,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,33 +59,11 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2230 TARGET_COUNT=223 PRODUCT_TARGET=223 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=223 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2180 TARGET_COUNT=218 PRODUCT_TARGET=218 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=218 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -99,8 +77,8 @@
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2230 TARGET_COUNT=223 PRODUCT_TARGET=223 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=223 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2180 TARGET_COUNT=218 PRODUCT_TARGET=218 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=218 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -108,6 +86,90 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "105"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "105"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "105"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "105"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "auto"
   },
   {
@@ -131,84 +193,20 @@
    ]
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
    "account": "BackdoorMan",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "105"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=72170 TARGET_COUNT=7217 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   },
   {
    "account": "mmsmk1232",
@@ -229,41 +227,6 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory cut-sapphire",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -281,6 +244,21 @@
    "resources": [
     "chaos-druids"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=70600 TARGET_COUNT=7060 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
   }
  ],
  "army": [
@@ -293,7 +271,6 @@
   "ballspinner",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",

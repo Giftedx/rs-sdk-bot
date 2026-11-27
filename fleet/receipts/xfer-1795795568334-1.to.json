@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795568334-1",
  "account": "TheFullMonty",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 1,
  "claim": "e85d0c5c-66eb-41e0-aaa6-9acca22ebcf7",
- "count": 0,
- "ok": false,
- "at": 1795796187489,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795796311066,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795796310335
+ },
+ "logout": {
+  "attemptId": "1795796187499-0000025260-0000000001",
+  "at": 1795796311052,
+  "sha256": "91fdefda6e2387bf8047a246c3af19990859c0bd2105a4d7e948fcd684633276"
+ },
+ "screen": true
 }
