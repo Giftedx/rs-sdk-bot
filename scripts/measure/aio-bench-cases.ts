@@ -735,6 +735,10 @@ return [
       inventory: [{id: 995, count: 140}, {id: 333, count: 1}, {id: 315, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 2309, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 1277, count: 1}, {id: 1171, count: 1}],
       equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}],
       bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 1739, count: 8}, {id: 526, count: 8}, {id: 2132, count: 8}]}},
+  // The cow food that the brain stages in the bank (catalog cow floor): the start bank withdraws it, then one kill.
+  {key: 'fighter:cow-bank-trout', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['cow', '600', 'cow', 'MAX_KILLS=1', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=20', 'COW_BANK_PROFILE=south', 'COW_FOOD_MODE=held'], pass: ok,
+    presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Attack: 9, Defence: 20, Strength: 20, Hitpoints: 20},
+      inventory: [{id: 995, count: 140}], equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], bank: [{id: 333, count: 5}]}},
   {key: 'fighter:giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
