@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795761404393-1",
  "account": "Kiltlifter",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 6,
  "claim": "c67a4c0d-abd6-4a5c-a92f-c86b589a6302",
- "count": 0,
- "ok": false,
- "at": 1795761507447,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795761547533,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795761519196
+ },
+ "logout": {
+  "attemptId": "1795761507510-0000029424-0000000001",
+  "at": 1795761547513,
+  "sha256": "0d0816325bec333775082eca0cc942028b89053ced7ba474f00ecb2f677e3704"
+ },
+ "screen": true
 }

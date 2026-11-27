@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795761404393-1",
+ "account": "Woodenstaff",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "52c55a1b-1e4b-468f-8c24-2eb0effb0daa",
+ "count": 6,
+ "ok": true,
+ "at": 1795761549159,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795761548401
+ },
+ "logout": {
+  "attemptId": "1795761538097-0000016196-0000000001",
+  "at": 1795761549133,
+  "sha256": "b0bd5f4bab135ad7c11b90a2a9891640a12c227aec814dda8a12e5c88fe5cd49"
+ },
+ "screen": true
+}
