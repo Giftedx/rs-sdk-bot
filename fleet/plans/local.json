@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795774159006,
+ "at": 1795774172640,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,31 @@
    "role": "pvp"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "1269",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1269"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "auto"
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -76,31 +101,6 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "172",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "172"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -109,20 +109,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "49",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "102",
     "COIN_RESERVE": "1000",
-    "FLOAT": "21600",
-    "NO_BUY_TICKS": "5",
+    "FLOAT": "22400",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "49"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "102"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -172,7 +172,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "795"
+    "BATCH_UNITS": "1595"
    },
    "enabled": true,
    "repeat": false,
@@ -219,6 +219,31 @@
    "role": "army"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "172",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "172"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
    "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -227,45 +252,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "gemshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1621",
-    "ITEMS": "Uncut emerald",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1621",
+    "DEMAND_ID": "campaign:haggis:item:892",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1621",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   }
  ],
@@ -282,6 +282,7 @@
   "dipstick",
   "fatstack",
   "fingersmith",
+  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
