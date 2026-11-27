@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795802190497,
+ "at": 1795802206705,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -93,23 +93,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "YewFirst",
@@ -369,6 +352,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1937",
    "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1442"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
   }
  ],
  "army": [
@@ -380,6 +382,7 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
+  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
