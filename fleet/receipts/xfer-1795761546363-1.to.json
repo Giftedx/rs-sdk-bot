@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795761546363-1",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "26f74842-d541-42d0-9402-f5fff5b0da54",
+ "count": 2,
+ "ok": true,
+ "at": 1795761942733,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795761941985
+ },
+ "logout": {
+  "attemptId": "1795761926639-0000023908-0000000001",
+  "at": 1795761942715,
+  "sha256": "d09fe700d8659086edaeb502276d59d6adb60adb53ac7f5d26507dbfcefa236a"
+ },
+ "screen": true
+}

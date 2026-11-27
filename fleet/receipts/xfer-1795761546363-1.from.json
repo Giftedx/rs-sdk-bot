@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795761546363-1",
  "account": "Quickhandjob",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 2,
  "claim": "53ba6aa1-9faa-4286-b195-63534cb753a8",
- "count": 0,
- "ok": false,
- "at": 1795761900597,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795761941140,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795761911167
+ },
+ "logout": {
+  "attemptId": "1795761900614-0000003332-0000000001",
+  "at": 1795761941118,
+  "sha256": "165f294b461c48c35bc89cec642501e808aacde4d1bb2beb852841af918eeff9"
+ },
+ "screen": true
 }
