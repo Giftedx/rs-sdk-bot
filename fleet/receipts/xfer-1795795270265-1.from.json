@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795270265-1",
  "account": "Shaftmaker",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 280,
  "claim": "016f67fd-ac23-4638-b5f6-65ecd9d874b5",
- "count": 0,
- "ok": false,
- "at": 1795795714482,
- "detail": "trade claimed"
+ "count": 280,
+ "ok": true,
+ "at": 1795795944769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 280,
+  "after": 0
+ },
+ "bank": {
+  "count": 280,
+  "at": 1795795933584
+ },
+ "logout": {
+  "attemptId": "1795795714494-0000030528-0000000001",
+  "at": 1795795944694,
+  "sha256": "7abbec8872cf84a2c4b8e046b91898ae39c51644d553e46b3f5bc9e263e06bf8"
+ },
+ "screen": true
 }
