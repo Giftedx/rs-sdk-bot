@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795738241135-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "CoinCock",
+  "item": "Bones",
+  "count": 7,
+  "itemId": 526,
+  "start": 1795738241135,
+  "end": 1795739141135,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

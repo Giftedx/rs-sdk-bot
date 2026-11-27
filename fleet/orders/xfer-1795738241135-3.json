@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795738241135-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "CoinCock",
+  "item": "Nature rune",
+  "count": 3,
+  "itemId": 561,
+  "start": 1795738241135,
+  "end": 1795739141135,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
