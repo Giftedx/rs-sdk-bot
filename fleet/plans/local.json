@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780883260,
+ "at": 1795780899682,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,21 +84,6 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=23 PRODUCT_TARGET=23 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=23 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
@@ -112,6 +97,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
    "role": "auto"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=23 PRODUCT_TARGET=23 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=23 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "Swordinhand",
@@ -154,6 +154,25 @@
    "repeat": false,
    "goal": "goal:pk_army:Unsheathed",
    "role": "army"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "Pocketrocket",
@@ -282,24 +301,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:557",
    "role": "auto"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "chickens"
-   ]
   },
   {
    "account": "NabTheKnob",
