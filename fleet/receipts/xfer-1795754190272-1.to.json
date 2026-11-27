@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795754190272-1",
+ "account": "Shaftsinker",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 4,
+ "claim": "a71f8332-2e41-41a8-a2e1-ac5004a64633",
+ "count": 0,
+ "ok": false,
+ "at": 1795754302413,
+ "detail": "trade claimed"
+}
