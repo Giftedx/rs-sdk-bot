@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780928945,
+ "at": 1795780947721,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,31 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "79",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "79"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
@@ -114,20 +89,28 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "ranged-camp"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "79",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "79"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -153,6 +136,23 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
