@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795793970580-1",
  "account": "Unsheathed",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 1,
  "claim": "0a80fd5a-0f19-4cdd-9f14-468950e762fd",
- "count": 0,
- "ok": false,
- "at": 1795794238510,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795794402810,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795794380807
+ },
+ "logout": {
+  "attemptId": "1795794238519-0000014896-0000000001",
+  "at": 1795794402797,
+  "sha256": "9411b3d55bb2337f83b3c884f261be8f81eed09d56c68e0572d8baf20453b1d2"
+ },
+ "screen": true
 }

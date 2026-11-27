@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793970580-1",
+ "account": "TossTheCaber",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 1,
+ "claim": "2615d47f-cc67-4a56-ac93-1611cd8b7748",
+ "count": 1,
+ "ok": true,
+ "at": 1795794404351,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795794403592
+ },
+ "logout": {
+  "attemptId": "1795794391180-0000015800-0000000001",
+  "at": 1795794404338,
+  "sha256": "d42190538619b2acab7c6564448db40e7b727c4582d23568caef4d3932017bf8"
+ },
+ "screen": true
+}

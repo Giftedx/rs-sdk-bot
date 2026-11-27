@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793910600-1",
+ "account": "Quickhandjob",
+ "partner": "WellHung",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 47,
+ "claim": "d82d281d-a2b3-40c8-ba4b-557cc4bcce1c",
+ "count": 47,
+ "ok": true,
+ "at": 1795794367256,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 47
+ },
+ "bank": {
+  "count": 47,
+  "at": 1795794366155
+ },
+ "logout": {
+  "attemptId": "1795794352632-0000030588-0000000001",
+  "at": 1795794367165,
+  "sha256": "06c8760787b39a1fbedb6a78be52d309ca08292d05dda28df46b8cc94dab28e6"
+ },
+ "screen": true
+}
