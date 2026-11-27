@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795761118394-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Fatstack",
+  "item": "Prayer potion(4)",
+  "count": 4,
+  "itemId": 2434,
+  "start": 1795761118394,
+  "end": 1795762018394,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795761118394-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Fatstack",
+  "item": "Coins",
+  "count": 39979,
+  "itemId": 995,
+  "start": 1795761118394,
+  "end": 1795762018394,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
