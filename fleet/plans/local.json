@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741313061,
+ "at": 1795741324418,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2160 TARGET_COUNT=216 PRODUCT_TARGET=226 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2090 TARGET_COUNT=209 PRODUCT_TARGET=219 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=219 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -74,69 +74,55 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "goal": "campaign:mineshafted:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "goal:quest_board:barcrawl",
    "role": "army"
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "goal:quest_board:barcrawl",
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -165,6 +151,24 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   },
   {
    "account": "mmthv2350",
@@ -273,22 +277,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
   },
   {
    "account": "CoinCock",
