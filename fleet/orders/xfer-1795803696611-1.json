@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795803696611-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Fingerblastr",
+  "item": "Iron bar",
+  "count": 3,
+  "itemId": 2351,
+  "start": 1795803696611,
+  "end": 1795804596611,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

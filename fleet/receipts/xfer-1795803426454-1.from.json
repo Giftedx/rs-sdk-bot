@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803426454-1",
+ "account": "YewGotWood",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "1cd29ffb-2951-458d-bac3-95ba24e7a467",
+ "count": 0,
+ "ok": false,
+ "at": 1795803701930,
+ "detail": "trade claimed"
+}

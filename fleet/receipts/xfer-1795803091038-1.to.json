@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803091038-1",
+ "account": "Unsheathed",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "ea6734ca-5a99-4baf-acc3-0957983cdf3d",
+ "count": 0,
+ "ok": false,
+ "at": 1795803698394,
+ "detail": "trade claimed"
+}

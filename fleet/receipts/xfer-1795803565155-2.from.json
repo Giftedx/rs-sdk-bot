@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803565155-2",
  "account": "mmtha0205",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Iron axe",
  "requested": 1,
  "claim": "c0f7be83-d2e2-43f2-9c7b-d5d2b9a28391",
- "count": 0,
- "ok": false,
- "at": 1795803661718,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795803690070,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795803669171
+ },
+ "logout": {
+  "attemptId": "1795803661905-0000005832-0000000001",
+  "at": 1795803689931,
+  "sha256": "b40f7b14f396be666aee629403e6b5eb30726ff7bc52d4b3069907bd8904626f"
+ },
+ "screen": true
 }
