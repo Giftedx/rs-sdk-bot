@@ -1072,9 +1072,17 @@ export async function enterMagicGuild(
 ): Promise<Walked> {
     const w = await walk(s, world, door, 100);
     if (!w.ok) return w;
-    const loc = (s.sdk.getState()?.nearbyLocs ?? []).filter(
-        (l) => (MAGIC_GUILD.locs as readonly number[]).includes(l.id) && Math.abs(l.x - door.x) <= 1 && Math.abs(l.z - door.z) <= 1,
-    )[0];
+    const inside = () => inMagicGuild(atTile(s)) && atTile(s).level === 0;
+    // The walker treats the guild doors as passable, so its walk can cross them and stop inside.
+    if (inside()) return { ok: true };
+    const shut = () =>
+        (s.sdk.getState()?.nearbyLocs ?? []).filter(
+            (l) => (MAGIC_GUILD.locs as readonly number[]).includes(l.id) && Math.abs(l.x - door.x) <= 1 && Math.abs(l.z - door.z) <= 1,
+        )[0];
+    // An opened double door is an unnamed loc for 3 ticks (doubledoors.rs2 open_double_doors_left2), so wait for it to shut.
+    await waitUntil(s, () => !!shut() || inside(), { timeoutTicks: 5 });
+    if (inside()) return { ok: true };
+    const loc = shut();
     if (!loc) return { ok: false, reason: 'transition', detail: `Magic Guild door unobserved at ${door.x},${door.z}` };
     await s.bot.openDoor(loc);
     if (!(await waitUntil(s, () => inMagicGuild(atTile(s)) && atTile(s).level === 0, { timeoutTicks: 10 }))) {
@@ -1162,8 +1170,10 @@ export async function buyFromShops(
             const rounds = k === sellers.length - 1 ? 12 : 3;
             const had0 = held(b.id);
             const coinsBefore = held(COINS);
+            let stock: number | null = null;
             for (let i = 0; i < rounds && held(b.id) < target; i++) {
                 const row = (st()?.shop?.shopItems ?? []).find((x: any) => x.id === b.id);
+                stock = row?.count ?? null;
                 if (!row || row.count < 1) {
                     await waitTicks(s, 50);
                     continue;
@@ -1173,7 +1183,7 @@ export async function buyFromShops(
                 await s.bot.buyFromShop(row, want);
                 await waitUntil(s, () => held(b.id) >= had + want, { timeoutTicks: 10 });
             }
-            console.log(`QUEST_SWEEP_BUY ${JSON.stringify({ item: b.id, name: b.name, count: b.count, npc: c.npc, before: had0, after: held(b.id), coinsBefore, coins: held(COINS) })}`);
+            console.log(`QUEST_SWEEP_BUY ${JSON.stringify({ item: b.id, name: b.name, count: b.count, npc: c.npc, before: had0, after: held(b.id), coinsBefore, coins: held(COINS), stock })}`);
             await s.bot.closeShop();
         }
         if (!tried) {

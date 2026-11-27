@@ -2333,6 +2333,18 @@ test('a Magic Guild seller is entered by the nearest door at Magic 66 and refuse
   expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door at 2597,3087 left the bot at 2597,3087,0'});
   state.nearbyLocs=[];
   expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[1]!,walk)).toEqual({ok:false,reason:'transition',detail:'Magic Guild door unobserved at 2597,3087'});
+  // Fatstack.log run 2: the walker crossed the west door and stopped inside at 2586,3088; no door is needed.
+  through=true;opened.length=0;
+  const crossed=async(_s:Session,_w:unknown,to:Tile)=>{walks.push(to);player.worldX=2586;player.worldZ=3088;return{ok:true};};
+  expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[0]!,crossed)).toEqual({ok:true});
+  expect(opened).toEqual([]);
+  // Fatstack.log run 3: on the door tile just after the walker opened it; the closed doors return after 3 ticks.
+  player.worldX=outside.x;player.worldZ=outside.z;
+  const shutAt=tick+3;
+  const closed=[{id:1601,name:'Door',x:2584,z:3087},{id:1600,name:'Door',x:2584,z:3088}];
+  Object.defineProperty(state,'nearbyLocs',{get:()=>tick>=shutAt?closed:[],configurable:true});
+  expect(await enterMagicGuild(s,{} as never,MAGIC_GUILD.doors[0]!,walk)).toEqual({ok:true});
+  expect(opened).toEqual([1601]);
  }finally{clearInterval(timer);}
 },30000);
 
