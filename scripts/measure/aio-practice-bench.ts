@@ -526,7 +526,7 @@ console.log('SAVES_DONE');`;
       }),
       run: (script, name, timeoutMs, args = []) => timed('scriptMs', async () => {
         // A case can name the account of this run, a partner and the save file in its arguments and job files.
-        const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w)\}/g, (_all, suffix) => name + suffix)
+        const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w+)\}/g, (_all, suffix) => name + suffix)
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
         const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env, ...(ackFile ? { SIM_ACK_FILE: ackFile } : {}) } }); // Bun.spawn does not pass env set at run time unless given
@@ -685,7 +685,10 @@ async function main() {
             const ackFile = profile ? resolve(profileDir, `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
             if (profile) rmSync(ackFile, { force: true });
             const statFile = statFileOf(slot), statFrom = profile && existsSync(statFile) ? readFileSync(statFile).length : 0;
-            const { row, phase } = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888, profile ? ackFile : undefined, tracker, rivalTicks);
+            // A run name is the base, `x` and 5 characters (runBotName), and a companion adds its suffix: at most 12 in all.
+            const room = Math.max(1, ...(c.companions ?? []).map(k => k.suffix.length));
+            const base = (FRESH ? 'aiobf' : `aiob${i}`).slice(0, Math.max(4, 6 - room));
+            const { row, phase } = await runCase(c, base, FRESH ? slotPort(slot) : 8888, profile ? ackFile : undefined, tracker, rivalTicks);
             if (profile) {
               const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(statFile, statFrom));
               console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ case: c.key, wallMs: row.elapsedMs, engineStartMs, ...phase, engine: sim, client: ack, cappedCostMs: ack.capped * Number(process.env.SIM_BUSY_MS ?? 2000) })}`);
