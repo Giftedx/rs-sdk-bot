@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795814519488-1",
+ "account": "BoneToPick",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 31,
+ "claim": "aa62e01d-0be8-4762-8474-9683e9778383",
+ "count": 0,
+ "ok": false,
+ "at": 1795814678114,
+ "detail": "trade claimed"
+}
