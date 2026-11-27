@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
-import { goalReachable } from '../src/world/search';
-import type { ScopeAreas, Tile, Transport } from '../src/world';
+import { goalReachable, type ScopeAreas, type Tile, type Transport } from '../src/world';
 import type { Travel } from '../src/travel';
 
 // Level 0: area 0 west of x 1000, area 1 from x 1000 to 1999, nothing walkable past it. (500, 0) is a blocked tile whose
