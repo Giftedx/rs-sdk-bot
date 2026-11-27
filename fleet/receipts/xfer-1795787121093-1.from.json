@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795787121093-1",
  "account": "Kiltlifter",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Copper ore",
  "requested": 1,
  "claim": "60b29a4e-eb44-4dcc-9e60-678ba53ce6f0",
- "count": 0,
- "ok": false,
- "at": 1795787298209,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795787333111,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787304361
+ },
+ "logout": {
+  "attemptId": "1795787298218-0000031364-0000000001",
+  "at": 1795787333098,
+  "sha256": "629cfdc835528e6b881edcb300dba9785df43896dbcf3f2d897f7767a08b6378"
+ },
+ "screen": true
 }
