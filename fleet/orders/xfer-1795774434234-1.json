@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774434234-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Wandwaver",
+  "item": "Steel bar",
+  "count": 5,
+  "itemId": 2353,
+  "start": 1795774434234,
+  "end": 1795775334234,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

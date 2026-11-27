@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795773803934-1",
+ "account": "mmsmk1232",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "f1e152a4-f4b1-47b1-a99c-40609a558133",
+ "count": 0,
+ "ok": false,
+ "at": 1795774424868,
+ "detail": "trade claimed"
+}
