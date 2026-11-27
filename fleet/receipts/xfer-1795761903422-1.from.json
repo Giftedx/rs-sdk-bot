@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795761903422-1",
  "account": "Hocuspokeus",
  "partner": "Moneyshot",
@@ -10,8 +10,18 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "43d9813c-b8a6-4cb6-b5df-52dc62c4b4af",
- "count": 0,
- "ok": false,
- "at": 1795762043596,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795762231944,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795762043615-0000023232-0000000001",
+  "at": 1795762231914,
+  "sha256": "bf3323d692b1a07ccfba3be37cf7ffbe4a27db83a7be31f36d9e2576155501b6"
+ },
+ "screen": true
 }

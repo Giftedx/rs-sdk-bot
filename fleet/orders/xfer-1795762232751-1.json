@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795762232751-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Shaftsinker",
+  "item": "Ring of dueling(8)",
+  "count": 1,
+  "itemId": 2552,
+  "start": 1795762232751,
+  "end": 1795763132751,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
