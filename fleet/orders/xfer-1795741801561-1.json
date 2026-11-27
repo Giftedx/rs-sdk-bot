@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795741801561-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Woodenstaff",
+  "item": "Dragon bones",
+  "count": 6,
+  "itemId": 536,
+  "start": 1795741801561,
+  "end": 1795742701561,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

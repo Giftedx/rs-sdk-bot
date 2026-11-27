@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795740923902-1",
  "account": "Ballbag",
  "partner": "SporranBulge",
@@ -12,13 +12,19 @@
  "claim": "7c89ec5d-334a-4d14-b5a1-81e944710f20",
  "count": 0,
  "ok": false,
- "at": 1795741774139,
- "detail": "trade claimed",
+ "at": 1795741824894,
+ "detail": "Error: order window ended during work",
  "lines": [
   {
    "item": "Unicorn horn",
    "requested": 3,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795741774148-0000023572-0000000001",
+  "at": 1795741824886,
+  "sha256": "4b73f555fd86d0e4bb6d659cdd8a8df821c6c167548afaba6cf651e7b2686af8"
+ },
+ "screen": true
 }

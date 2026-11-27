@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741785217,
+ "at": 1795741850049,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,64 +74,12 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
+    "BATCH_UNITS": "18"
    },
    "enabled": true,
    "repeat": false,
@@ -139,82 +87,19 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "account": "Bigpackage",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "trawler"
+   ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
+    "BATCH_UNITS": "36"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -239,6 +124,24 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
@@ -299,6 +202,24 @@
    "role": "auto"
   },
   {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
    "account": "BackdoorMan",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -330,6 +251,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1639",
    "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=557 \"ITEMS=Earth rune\" MAX_ITEMS=2 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy runeshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=62 CAP=1000 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
   }
  ],
  "army": [
@@ -340,11 +277,13 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "bigpackage",
+  "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "pickpockdick",
@@ -354,8 +293,10 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
