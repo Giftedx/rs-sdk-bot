@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795794446528-1",
+ "account": "Woodenstaff",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "028348fd-9ea3-4120-9f57-529bc4c79457",
+ "count": 0,
+ "ok": false,
+ "at": 1795794885679,
+ "detail": "trade claimed"
+}
