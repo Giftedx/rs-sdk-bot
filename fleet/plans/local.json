@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795752790795,
+ "at": 1795752879147,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -141,27 +141,6 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:3doseantipoison"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:shaftshooter:item:175",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:shaftshooter:item:175",
-   "role": "army"
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -189,6 +168,7 @@
   "bigpackage",
   "billionaire",
   "dipstick",
+  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
