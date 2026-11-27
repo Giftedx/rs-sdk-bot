@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795785197517-1",
+ "account": "Abracadickra",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "118922fd-4f65-4418-baa6-b9ce7a89ae92",
+ "count": 0,
+ "ok": false,
+ "at": 1795785411586,
+ "detail": "trade claimed"
+}

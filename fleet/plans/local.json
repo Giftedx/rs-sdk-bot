@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785311132,
+ "at": 1795785416875,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,26 +59,11 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1112 -- mining essence"
    ],
    "env": {
     "ROUNDS": "1"
@@ -165,81 +150,6 @@
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "266",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "266"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "566",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "566"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "184",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "184"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:554",
-   "role": "army"
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -260,46 +170,65 @@
    ]
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "essence"
+    "ge-buy"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "140"
+    "ORDER_KEY": "brain-1513-1-o16-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "16",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "auto",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "campaign:haggis:item:1513",
+   "role": "army"
   },
   {
-   "account": "BoneToPick",
+   "account": "Woodenstaff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
+  },
+  {
+   "account": "Quickhandjob",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
+    "earth-production",
+    "craft",
+    "2000"
    ],
    "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
   },
   {
    "account": "mmtha0205",
@@ -316,6 +245,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_irit_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:grindmyherb:item:101",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:101",
    "role": "army"
   },
   {
@@ -341,19 +292,66 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1597 \"ITEMS=Necklace mould\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy craftingshop2 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory cut-sapphire",
-    "scripts/aio-skiller.ts RECIPE=sapphire_necklace TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=goal:supply_chain:1656 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:ranarr_weed",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:99 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_ranarr_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1656",
+   "goal": "campaign:haggis:item:99",
+   "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "5",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   }
  ],
@@ -365,20 +363,20 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
   "sausagefest",
+  "sporrandip",
   "swordinhand"
  ],
  "builds": {
