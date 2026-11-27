@@ -1141,7 +1141,7 @@ export interface StartArea {
 export const inStartArea = (pos: WorkerTile | null | undefined, area: StartArea): boolean =>
     !!pos && pos.level === area.level && pos.x >= area.x0 && pos.x < area.x1 && pos.z >= area.z0 && pos.z < area.z1;
 
-const parseStartArea = (raw: unknown): StartArea | undefined => {
+export const parseStartArea = (raw: unknown): StartArea | undefined => {
     if (!raw || typeof raw !== 'object') return undefined;
     const r = raw as Record<string, unknown>;
     const keys = ['level', 'x0', 'x1', 'z0', 'z1'] as const;

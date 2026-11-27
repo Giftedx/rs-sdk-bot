@@ -393,8 +393,12 @@ export interface AcquireStep {
 
 export interface RecoverPlannedStep {
     readonly stepKind: 'recover';
-    readonly recoveryKind: 'logout' | 'location';
+    // 'stage' takes the account to the start of a route that runs only in place (catalog startArea and startTile):
+    // it withdraws `kit` into the pack at the nearest bank, then walks to `targetTile`.
+    readonly recoveryKind: 'logout' | 'location' | 'stage';
     readonly targetHub?: HubBankId;
+    readonly targetTile?: { readonly x: number; readonly z: number; readonly level: number };
+    readonly kit?: readonly { readonly itemId: number; readonly count: number }[];
     readonly estimatedTicks: number;
     readonly reason: string;
 }
@@ -1532,7 +1536,14 @@ function pushPlannedStepErrors(v: unknown, errors: string[], prefix = ''): void 
     }
     switch (v.stepKind) {
         case 'recover':
-            if (v.recoveryKind !== 'logout' && v.recoveryKind !== 'location') errors.push(`${prefix}recover.recoveryKind invalid`);
+            if (v.recoveryKind !== 'logout' && v.recoveryKind !== 'location' && v.recoveryKind !== 'stage') errors.push(`${prefix}recover.recoveryKind invalid`);
+            if (v.recoveryKind === 'stage') {
+                const t = v.targetTile as Record<string, unknown> | undefined;
+                if (!isPlainRecord(t) || ![t.x, t.z, t.level].every(isNonNegInt)) errors.push(`${prefix}recover.targetTile invalid`);
+                if (v.kit !== undefined && (!Array.isArray(v.kit) || v.kit.some((k) => !isPlainRecord(k) || !isNonNegInt(k.itemId) || !isNonNegInt(k.count) || (k.count as number) < 1))) {
+                    errors.push(`${prefix}recover.kit invalid`);
+                }
+            }
             if (v.targetHub !== undefined && !isHubBankId(v.targetHub)) errors.push(`${prefix}recover.targetHub invalid`);
             if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}recover.estimatedTicks must be finite non-negative`);
             if (!isNonEmptyStr(v.reason)) errors.push(`${prefix}recover.reason must be non-empty`);

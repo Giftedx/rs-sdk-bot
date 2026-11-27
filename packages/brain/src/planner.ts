@@ -67,6 +67,7 @@ import {
     type CombatSurvivabilityFloor,
     type KnowledgeQuestRow,
 } from './preflight';
+import { stageForStart } from './stage';
 import { accountOwnedItemCount, reserveAdjustedStock } from '../../workers/src/contracts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
@@ -1894,7 +1895,15 @@ function planAccountCore(
 
             const rate = getRate(activity);
             let batchUnits = resolveBatchUnits(acct, effectiveDemand, activity, rate, xpRate, acctCache);
-            let preflight = getPreflight(activity, batchUnits);
+            // A route that runs only in place gets a stage step before its work, and its preflight is the one of
+            // the account as that step leaves it (stage.ts).
+            const stage = stageForStart(acct, activity);
+            const preflightFor = (units: number): PreflightResult => stage
+                ? activityPreflightFromConfig(stage.staged, activity, world, units, {
+                    protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock),
+                })
+                : getPreflight(activity, units);
+            let preflight = preflightFor(batchUnits);
 
             let prepSteps: PlannedStep[] = [];
             let committedCoins = 0;
@@ -2138,7 +2147,7 @@ function planAccountCore(
             }
                 if (shrinkBatchTo !== undefined) {
                     batchUnits = shrinkBatchTo;
-                    preflight = getPreflight(activity, batchUnits);
+                    preflight = preflightFor(batchUnits);
                     continue;
                 }
                 break;
@@ -2193,6 +2202,7 @@ function planAccountCore(
                 }
             }
 
+            if (stage) prepSteps.push(stage.step);
             if (prepSteps.length >= MAX_ACCOUNT_PLAN_STEPS) {
                 noteBlocker(`${activity.id}:exceeds_max_steps`);
                 continue;

@@ -84,6 +84,11 @@ export interface FleetSchedulerInput {
 
 let cachedBaseItemPrices: Readonly<Record<number, number>> | undefined;
 
+// A step that the fleet agent runs as a hub trade (an acquire or gear upgrade from the hub banker).
+export function isHubTradeStep(s: AccountPlan['steps'][number] | undefined): s is AcquireStep | GearUpgradePlannedStep {
+    return !!s && (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker';
+}
+
 // A plan that is only a logout recovery: the session-recovery controller runs it, not a swarm bot.
 export function isLogoutRecoveryPlan(p: AccountPlan): boolean {
     return p.steps.length > 0 && p.steps.every((s) => s.stepKind === 'recover' && s.recoveryKind === 'logout');
@@ -957,7 +962,12 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 (s): s is AcquireStep | GearUpgradePlannedStep =>
                     (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker',
             );
-            if (hubSteps.length > 0) {
+            // A trade order names its recipient in_trade from the next snapshot (snapshot.ts readOrdersAndReceipts),
+            // and the swarm then drops a running job of that account. So an order is staged only when its hub trade
+            // is the first step: a plan with steps before the trade runs those steps (selectBrainDispatchStep stops
+            // at the trade), and a later cycle, which plans the trade first, stages the order.
+            const tradeFirst = isHubTradeStep(plan.steps[0]);
+            if (hubSteps.length > 0 && tradeFirst) {
                 let transfersOk = !tradeHeldAccounts.has(acct.name.toLowerCase());
                 const stagedOrders: TransferOrder[] = [];
                 const updatedSteps = [...plan.steps];

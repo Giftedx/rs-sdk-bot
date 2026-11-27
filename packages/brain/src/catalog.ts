@@ -579,6 +579,8 @@ interface FighterSeed {
     readonly maxSkillXp?: Readonly<Record<string, number>>;
     // Items that the worker needs in the pack at its start (includeBank false) or owned (bank and pack).
     readonly kit?: readonly { itemId: number; count: number; includeBank?: boolean }[];
+    // The tile in startArea that a stage step walks to (brain/src/stage.ts), with the pack kit taken from the bank.
+    readonly startTile?: WorkerTile;
 }
 
 // The Tutorial Island box of freshRangedStart (packages/workers/src/combat/ranged.ts).
@@ -596,7 +598,7 @@ const FIGHTER_SPECS: readonly FighterSeed[] = [
     { target: 'fire-combat', script: 'scripts/aio-fighter.ts', label: 'Fire Giant safespot/melee trip', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Ranged', skills: ['Ranged', 'Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 190, unitsPerTick: 0.03, gpPerTick: 10, minBatchUnits: 15, riskPerHour: 0.05, requiredQuests: ['waterfall'], combatSurvivability: { minHitpoints: 50, minDefence: 40, minFoodCount: 12 } },
     // runImps (packages/workers/src/combat/special-mobs.ts) starts only within 3 tiles of the Ardougne south bank
     // stand 2655,3283 with 2 trout in the pack, and refuses any other start.
-    { target: 'imp', startArea: { level: 0, x0: 2652, x1: 2659, z0: 3280, z1: 3287 }, kit: [{ itemId: 333, count: 2, includeBank: false }], script: 'scripts/aio-fighter.ts', label: 'Hunt imps for Imp Catcher beads', location: HUB_TILES.ardougne_south, spotId: 'ardougne-imps', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 25, unitsPerTick: 0.08, gpPerTick: 1, minBatchUnits: 10, outputs: [{ itemId: 1470, countPerUnit: 0.08 }, { itemId: 1472, countPerUnit: 0.08 }, { itemId: 1474, countPerUnit: 0.08 }, { itemId: 1476, countPerUnit: 0.08 }] },
+    { target: 'imp', startArea: { level: 0, x0: 2652, x1: 2659, z0: 3280, z1: 3287 }, startTile: { x: 2655, z: 3283, level: 0 }, kit: [{ itemId: 333, count: 2, includeBank: false }], script: 'scripts/aio-fighter.ts', label: 'Hunt imps for Imp Catcher beads', location: HUB_TILES.ardougne_south, spotId: 'ardougne-imps', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 25, unitsPerTick: 0.08, gpPerTick: 1, minBatchUnits: 10, outputs: [{ itemId: 1470, countPerUnit: 0.08 }, { itemId: 1472, countPerUnit: 0.08 }, { itemId: 1474, countPerUnit: 0.08 }, { itemId: 1476, countPerUnit: 0.08 }] },
     { target: 'shade', script: 'scripts/aio-fighter.ts', label: 'Fight shades in Mortton for shade remains', location: { x: 3510, z: 3480, level: 0 }, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 120, unitsPerTick: 0.04, gpPerTick: 8, minBatchUnits: 10, riskPerHour: 0.06, requiredQuests: ['priestperil'], combatSurvivability: { minHitpoints: 40, minDefence: 30, minFoodCount: 10 } },
     { target: 'chompy', script: 'scripts/aio-fighter.ts', label: 'Chompy bird hunting trip', location: { x: 2614, z: 3093, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 85, unitsPerTick: 0.03, gpPerTick: 0, minBatchUnits: 5 },
     { target: 'chompy-at-site', script: 'scripts/aio-fighter.ts', label: 'At-site Chompy bird hunting', location: { x: 2547, z: 2982, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.035, gpPerTick: 0, minBatchUnits: 5 },
@@ -615,6 +617,7 @@ const FIGHTER_SPECS: readonly FighterSeed[] = [
     { target: 'specialist-defence', script: 'scripts/defence-specialist.ts', label: 'Defence 1-99 specialist route', location: HUB_TILES.lumbridge, skill: 'Defence', skills: ['Defence'], xpPerTick: 250, unitsPerTick: 0.05, gpPerTick: 0, minBatchUnits: 20 },
 ];
 
+const TRAWLER_DOCK: WorkerTile = { x: 2675, z: 3170, level: 0 };
 const TRAWLER_DOCK_AREA: StartArea = { level: 0, x0: 2655, x1: 2696, z0: 3150, z1: 3191 };
 const TRAWLER_KIT = [{ itemId: 1941, count: 100, includeBank: false }, { itemId: 954, count: 10, includeBank: false }, { itemId: 583, count: 1, includeBank: false }] as const;
 
@@ -640,14 +643,16 @@ const BOSS_SPECS: readonly {
     kit?: readonly { itemId: number; count: number; includeBank?: boolean }[];
     // The worker runs only from a start in this area (preflight.ts StartArea).
     startArea?: StartArea;
+    // The tile in startArea that a stage step walks to (brain/src/stage.ts).
+    startTile?: WorkerTile;
 }[] = [
     { boss: 'kbd', script: 'scripts/aio-boss.ts', label: 'King Black Dragon boss trip', location: HUB_TILES.edgeville, spotId: 'kbd-lair', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 240, unitsPerTick: 0.015, gpPerTick: 35, minBatchUnits: 1, riskPerHour: 0.12, requiredSkills: { Hitpoints: 70, Magic: 25 }, kit: [{ itemId: 1289, count: 1 }, { itemId: 1540, count: 1 }, { itemId: 1113, count: 1 }, { itemId: 1079, count: 1 }, { itemId: 2448, count: 1 }, { itemId: 2452, count: 1 }, { itemId: 2436, count: 1 }, { itemId: 2440, count: 1 }, { itemId: 2434, count: 2 }, { itemId: 563, count: 1 }, { itemId: 556, count: 3 }, { itemId: 554, count: 1 }, { itemId: 385, count: 12 }], combatSurvivability: { minHitpoints: 70, minDefence: 60, requireProtectionPrayer: true, requireAntiDragonShield: true, requireAntipoison: true, minFoodCount: 12 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 2 }] },
     { boss: 'black-dragon', script: 'scripts/aio-boss.ts', label: 'Taverley Black Dragons safespot camp', location: HUB_TILES.falador_west, spotId: 'taverley-black-dragons', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints', 'Defence'], xpPerTick: 210, unitsPerTick: 0.018, gpPerTick: 30, minBatchUnits: 1, riskPerHour: 0.04, requiredSkills: { Hitpoints: 70, Magic: 25 }, kit: [{ itemId: 861, count: 1 }, { itemId: 888, count: 700 }, { itemId: 1590, count: 1 }, { itemId: 563, count: 1 }, { itemId: 556, count: 3 }, { itemId: 554, count: 1 }, { itemId: 385, count: 6 }], combatSurvivability: { minHitpoints: 70, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 1 }] },
     { boss: 'green-dragon', script: 'scripts/aio-boss.ts', label: 'Wilderness Green Dragons bones & hides trip', location: HUB_TILES.edgeville, spotId: 'wild-green-dragons', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 185, unitsPerTick: 0.03, gpPerTick: 28, minBatchUnits: 5, riskPerHour: 0.18, combatSurvivability: { minHitpoints: 55, minDefence: 40, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1753, countPerUnit: 1 }] },
     // runTrawlerTrip (packages/workers/src/combat/boss-minigame.ts) starts only within 20 tiles of the Port Khazard
     // dock 2675,3170 with Fishing 15 and 100 swamp paste, 10 ropes and a bailing bucket in the pack.
-    { boss: 'trawler', script: 'scripts/aio-boss.ts', label: 'Port Khazard Fishing Trawler trip', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02, requiredSkills: { Fishing: 15 }, startArea: TRAWLER_DOCK_AREA, kit: TRAWLER_KIT },
-    { boss: 'trawler-at-site', script: 'scripts/aio-boss.ts', label: 'At-dock Fishing Trawler loop', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02, requiredSkills: { Fishing: 15 }, startArea: TRAWLER_DOCK_AREA, kit: TRAWLER_KIT },
+    { boss: 'trawler', script: 'scripts/aio-boss.ts', label: 'Port Khazard Fishing Trawler trip', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02, requiredSkills: { Fishing: 15 }, startArea: TRAWLER_DOCK_AREA, startTile: TRAWLER_DOCK, kit: TRAWLER_KIT },
+    { boss: 'trawler-at-site', script: 'scripts/aio-boss.ts', label: 'At-dock Fishing Trawler loop', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02, requiredSkills: { Fishing: 15 }, startArea: TRAWLER_DOCK_AREA, startTile: TRAWLER_DOCK, kit: TRAWLER_KIT },
 ];
 
 const MARKET_SPECS: readonly { mode: string; script: string; kind: WorkerKind; label: string; location: WorkerTile; gpPerTick: number }[] = [
@@ -1282,6 +1287,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 ...(spec.startArea ? { startArea: spec.startArea } : {}),
                 ...(spec.maxSkillXp ? { maxSkillXp: spec.maxSkillXp } : {}),
                 ...(spec.kit ? { requiredItems: spec.kit } : {}),
+                ...(spec.startTile ? { startTile: spec.startTile } : {}),
             },
             baselineRate: {
                 xpPerTick: spec.xpPerTick,
@@ -1330,6 +1336,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 ...(spec.combatSurvivability ? { combatSurvivability: spec.combatSurvivability } : {}),
                 ...(spec.kit ? { requiredItems: spec.kit } : {}),
                 ...(spec.startArea ? { startArea: spec.startArea } : {}),
+                ...(spec.startTile ? { startTile: spec.startTile } : {}),
             },
             baselineRate: {
                 xpPerTick: spec.xpPerTick,
