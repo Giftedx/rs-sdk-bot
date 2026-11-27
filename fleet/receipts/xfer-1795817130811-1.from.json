@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795817130811-1",
+ "account": "Woodenstaff",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "f93cba7a-825c-46c4-a27a-1796bc6b7eb3",
+ "count": 0,
+ "ok": false,
+ "at": 1795817420290,
+ "detail": "trade claimed"
+}
