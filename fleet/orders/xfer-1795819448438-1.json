@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795819448438-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "ChaosInPants",
+  "item": "Air rune",
+  "count": 14,
+  "itemId": 556,
+  "extra": [
+    {
+      "item": "Mind rune",
+      "count": 15,
+      "itemId": 558
+    }
+  ],
+  "start": 1795819448438,
+  "end": 1795820348438,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
