@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795819448068-knightrider-masterbaiter-69526bdff0b39b88",
  "account": "KnightRider",
  "partner": "Masterbaiter",
@@ -12,6 +12,16 @@
  "claim": "a402d241-8acd-4149-876e-7da3918511a7",
  "count": 0,
  "ok": false,
- "at": 1795819868611,
- "detail": "trade claimed"
+ "at": 1795819949553,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795819931980
+ },
+ "logout": {
+  "attemptId": "1795819868683-0000028792-0000000001",
+  "at": 1795819948724,
+  "sha256": "2967be58ec54bd6136a627be6faf65beb2b97c126d8cebf15580a70805d4e991"
+ },
+ "screen": false
 }

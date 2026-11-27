@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795819448068-knightrider-masterbaiter-69526bdff0b39b88",
+ "role": "to",
+ "account": "Masterbaiter",
+ "partner": "KnightRider",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795819933848,
+ "detail": "Error: account logout is not confirmed: Masterbaiter ended disconnected"
+}
