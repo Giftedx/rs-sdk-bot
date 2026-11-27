@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795745292010-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "YewFirst",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "start": 1795745292010,
+  "end": 1795746192010,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

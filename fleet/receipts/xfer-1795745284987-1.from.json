@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795745284987-1",
+ "account": "Kiltlifter",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "12c493cd-763b-4a45-abe1-d5e56da380f8",
+ "count": 0,
+ "ok": false,
+ "at": 1795745344306,
+ "detail": "trade claimed"
+}
