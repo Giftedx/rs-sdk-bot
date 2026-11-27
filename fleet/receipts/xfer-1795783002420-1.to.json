@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795783002420-1",
  "account": "TossTheCaber",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "78e9c6e5-2cac-49cf-92c0-444c428d027e",
- "count": 0,
- "ok": false,
- "at": 1795783709129,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795783810461,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795783809718
+ },
+ "logout": {
+  "attemptId": "1795783709140-0000011388-0000000001",
+  "at": 1795783810445,
+  "sha256": "30bd6c36263e9a26987c0b287503361b415b91b0426f09b6256f2d23e4e63aab"
+ },
+ "screen": true
 }
