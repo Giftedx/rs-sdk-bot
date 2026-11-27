@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796783185-1",
+ "account": "YewFirst",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Irit leaf",
+ "requested": 1,
+ "claim": "75a171fc-29fa-48b8-8d75-72f7eec26041",
+ "count": 0,
+ "ok": false,
+ "at": 1795797129827,
+ "detail": "trade claimed"
+}
