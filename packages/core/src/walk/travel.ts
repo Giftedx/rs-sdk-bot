@@ -197,7 +197,11 @@ export async function travelLeg(s: Walker, leg: TravelLeg, opts: WalkOptions): P
     const start = s.tick(), t = leg.travel, run = t.run, b = s as unknown as DirectBoat;
     const stop = () => opts.signal?.aborted === true, st = () => s.sdk.getState() as any;
     const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
-    const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
+    // An NPC that moves the player a few tiles on one floor (the Shantay Guard: 3303,3118 to 3304,3115) ends on its
+    // landing, as a short location passage does: within 8 tiles of it the player already stands, on the wrong side.
+    const shortNpc = run.how === 'npc' && !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
+    const reach = shortNpc ? Math.max(0, Math.min(1, cheb(t.to, { worldX: t.from!.x, worldZ: t.from!.z }) - 1)) : 8;
+    const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= reach; };
     const fail: FailFn = (reason, detail) => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
     // A spirit tree with several destinations asks "Where can I go?" before its destination menu ([oploc1,stronghold_ent]
     // and [oploc1,ent]); a young spirit tree with one asks "Yes please." ([oploc1,loc_1317]; spirit_tree.rs2).
