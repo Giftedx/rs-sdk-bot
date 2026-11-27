@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805316173,
+ "at": 1795805330345,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,31 @@
    "role": "pvp"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "108",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "23600",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "108"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -81,31 +106,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "104",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "22800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "104"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -134,28 +134,6 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army",
-   "resources": [
-    "khazard-troopers"
-   ]
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -178,21 +156,48 @@
    ]
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army",
    "resources": [
-    "draynor-willows"
+    "khazard-troopers"
    ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "iron"
+   ],
+   "env": {
+    "BAR_TYPE": "iron",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "8",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "MeatNTwoVeg",
@@ -224,23 +229,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
    "resources": [
     "draynor-willows"
    ]
@@ -366,12 +354,12 @@
    "account": "Ballbag",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "thieving",
+    "pickpocket"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "TRAIN_SKILL": "Thieving",
+    "TARGET_LEVEL": "55"
    },
    "enabled": true,
    "repeat": false,
@@ -392,6 +380,25 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:castmyload:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:castmyload:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   }
  ],
  "army": [
@@ -407,11 +414,11 @@
   "fatstack",
   "fingerblastr",
   "hocuspokeus",
+  "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
-  "pocketrocket",
   "sausagefest",
   "sporrandip",
   "swordinhand",
