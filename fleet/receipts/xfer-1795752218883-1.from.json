@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795752218883-1",
  "account": "Woodenstaff",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Chaos rune",
  "requested": 220,
  "claim": "b0b57562-dbcf-4e8d-868a-618c100e1763",
- "count": 0,
- "ok": false,
- "at": 1795752326791,
- "detail": "trade claimed"
+ "count": 220,
+ "ok": true,
+ "at": 1795752349989,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 220,
+  "after": 0
+ },
+ "bank": {
+  "count": 220,
+  "at": 1795752334820
+ },
+ "logout": {
+  "attemptId": "1795752326800-0000028984-0000000001",
+  "at": 1795752349980,
+  "sha256": "f3724ecb01ecb56eb85cc64876073d0f8cafe5685b10fd9041d8af3f35b5e2ad"
+ },
+ "screen": true
 }
