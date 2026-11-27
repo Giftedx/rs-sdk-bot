@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795802333303-2",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Unfinished potion",
  "requested": 1,
  "claim": "1c05d3fe-980c-4c74-8b6c-617d39670d3c",
- "count": 0,
- "ok": false,
- "at": 1795802565971,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795802647552,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795802646843
+ },
+ "logout": {
+  "attemptId": "1795802565982-0000035372-0000000001",
+  "at": 1795802647538,
+  "sha256": "d8638cd253633dda923d1a092971a4da8fb53edfdfd37b2cb0f1e1125efd0ba0"
+ },
+ "screen": true
 }
