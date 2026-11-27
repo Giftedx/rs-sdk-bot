@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787602506-1",
+ "account": "mmtha0205",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 2,
+ "claim": "2dfe3b52-de48-4ea1-9e7e-564237335d01",
+ "count": 0,
+ "ok": false,
+ "at": 1795787887314,
+ "detail": "trade claimed"
+}

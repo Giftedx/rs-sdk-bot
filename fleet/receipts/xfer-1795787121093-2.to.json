@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787121093-2",
+ "account": "PickpockDick",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 3,
+ "claim": "0c51b041-e82e-45ad-981e-2f4f9465e52a",
+ "count": 0,
+ "ok": false,
+ "at": 1795787839610,
+ "detail": "trade claimed"
+}

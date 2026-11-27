@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795787381522-1",
+ "account": "BowBeforeMe",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 2,
+ "claim": "42ad2b21-f32a-4007-a898-2bbd13d3af58",
+ "count": 2,
+ "ok": true,
+ "at": 1795787855912,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795787855140
+ },
+ "logout": {
+  "attemptId": "1795787843455-0000006968-0000000001",
+  "at": 1795787855878,
+  "sha256": "9a6d13cbf0e3ff16d7b4a4bae23e14967862ebce4028e1eeb377b8c6ffe423b0"
+ },
+ "screen": true
+}
