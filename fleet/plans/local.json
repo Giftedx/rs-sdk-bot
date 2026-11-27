@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753102032,
+ "at": 1795753175449,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -73,6 +73,88 @@
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
    "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "biohazard"
+   ],
+   "env": {
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "biohazard"
+   ],
+   "env": {
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   }
  ],
  "army": [
@@ -87,11 +169,9 @@
   "billionaire",
   "dipstick",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
@@ -107,8 +187,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
