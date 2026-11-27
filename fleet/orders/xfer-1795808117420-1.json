@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795808117420-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "TossTheCaber",
+  "item": "Coins",
+  "count": 46,
+  "itemId": 995,
+  "start": 1795808117420,
+  "end": 1795809017420,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
