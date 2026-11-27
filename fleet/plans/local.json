@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795815193441,
+ "at": 1795815204253,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -191,14 +191,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
@@ -278,6 +278,23 @@
    ]
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -313,19 +330,21 @@
   },
   {
    "account": "NabTheKnob",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "191"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "goal:coin_fund:fleet",
    "role": "army",
    "resources": [
-    "draynor-willows"
+    "ardougne-knights"
    ]
   },
   {
@@ -337,7 +356,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "218"
+    "BATCH_UNITS": "191"
    },
    "enabled": true,
    "repeat": false,
@@ -356,7 +375,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "218"
+    "BATCH_UNITS": "191"
    },
    "enabled": true,
    "repeat": false,
@@ -365,31 +384,6 @@
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "41",
-    "ITEMS": "Steel arrowtips",
-    "MAX_ITEMS": "22",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:41",
-   "role": "army"
   },
   {
    "account": "Spitroaster",
@@ -416,7 +410,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "218"
+    "BATCH_UNITS": "191"
    },
    "enabled": true,
    "repeat": false,
@@ -548,16 +542,16 @@
    ],
    "env": {
     "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
+    "PRODUCT_ID": "41",
     "MAX_MAKE": "1",
     "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "1",
+    "DEMAND_ID": "campaign:haggis:item:41",
+    "BATCH_UNITS": "2",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
+   "goal": "campaign:haggis:item:41",
    "role": "auto"
   },
   {
