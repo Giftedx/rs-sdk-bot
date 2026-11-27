@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, guardRoute, guardWalk, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
+import { activeDanger, closedOf, escapeTiles, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
@@ -356,6 +356,10 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
     measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache.save(); } };
+    // A route landing inside the account's closed ground: the closed tiles of the squares that hold it (escapeTiles),
+    // which a walk from that landing may cross as a walk from the route start does.
+    measure.escapeAt = (acct, at) => closedOf(escapeTiles(acct, at));
+    measure.withOpened = (open, at, query) => withOpened(grid, open, `${at.level},${at.x},${at.z}`, query);
     return measure;
 }
 

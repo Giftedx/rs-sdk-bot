@@ -42,3 +42,54 @@ export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Arr
         active = outer;
     }
 }
+
+// Runs a path query with `open` (packed tiles) open again where the active scopes closed them: a walk that starts on a
+// route landing inside closed ground leaves it as a walk from the route start does (guard.ts escapeTiles). The query
+// sees a scope chain whose keys name `tag` and whose closed lists leave the opened tiles out, so leg keys
+// (world/leg-key.ts) follow the grid. The chain is built once for each active scope and tag.
+const openedChains = new WeakMap<DangerScope, Map<string, { top: DangerScope; reopened: Int32Array }>>();
+export function withOpened<T>(grid: FloorGrid, open: Int32Array, tag: string, query: () => T): T {
+    const outer = active;
+    if (!outer || !open.length) return query();
+    let byTag = openedChains.get(outer);
+    if (!byTag) openedChains.set(outer, byTag = new Map());
+    let built = byTag.get(tag);
+    if (!built) {
+        const want = new Set<number>(open), reopened: number[] = [];
+        const copy = (s: DangerScope | null): DangerScope | null => {
+            if (!s) return null;
+            const closed: number[] = [], kept = new Set(s.kept);
+            for (let i = 0; i < s.closed.length; i++) {
+                const k = s.closed[i]!;
+                if (want.has(k)) { reopened.push(k); kept.add(`${k >>> 28},${(k >>> 14) & 0x3fff},${k & 0x3fff}`); } else closed.push(k);
+            }
+            return { key: `${s.key}|open:${tag}`, kept, closed: Int32Array.from(closed), outer: copy(s.outer) };
+        };
+        const top = copy(outer)!;
+        byTag.set(tag, built = { top, reopened: Int32Array.from(reopened) });
+    }
+    const { top, reopened } = built;
+    for (let i = 0; i < reopened.length; i++) { const k = reopened[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, false); }
+    active = top;
+    try {
+        const result = query();
+        if (result && typeof (result as any).then === 'function') throw Error('Danger queries must be synchronous');
+        return result;
+    } finally {
+        for (let i = 0; i < reopened.length; i++) { const k = reopened[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, true); }
+        active = outer;
+    }
+}
+
+// The packed tiles of `squares` that the active scopes closed (empty when none, or no scope is active).
+const closedSets = new WeakMap<DangerScope, Set<number>>();
+export function closedOf(squares: readonly Tile[]): Int32Array {
+    if (!active || !squares.length) return new Int32Array(0);
+    const out: number[] = [];
+    for (let s: DangerScope | null = active; s; s = s.outer) {
+        let set = closedSets.get(s);
+        if (!set) closedSets.set(s, set = new Set(s.closed));
+        for (const t of squares) { const k = pack(t.level, t.x, t.z); if (set.has(k)) out.push(k); }
+    }
+    return Int32Array.from(out);
+}

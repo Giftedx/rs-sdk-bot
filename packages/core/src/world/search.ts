@@ -241,6 +241,19 @@ export function routeOnGraph(
     const travelZeroOk = new Map<Travel, boolean>();
     for (const t of travel) travelZeroOk.set(t, travelAllowed(t, acct));
     const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
+    // A walk from a transport or travel landing inside the account's closed ground may cross the squares that hold the
+    // landing, as a walk from the route start may (danger/guard.ts escapeTiles). Without it a route whose halves both
+    // plan (a ladder that lands in a hunter's square, then the walk out) does not plan as one route.
+    const landing = new Uint8Array(totalNodes);
+    for (let i = 0; i < transports.length; i++) if (allowedT[i]) landing[transportToIdx[i]!] = 1;
+    for (let n = 0; n < W; n++) if (travelToByIdx[n]!.length) landing[n] = 1;
+    const escapes = new Map<number, Int32Array>();
+    const escapeOf = (idx: number, tile: Tile): Int32Array | null => {
+        if (!landing[idx] || !opts.pathLength.escapeAt || !opts.pathLength.withOpened) return null;
+        let e = escapes.get(idx);
+        if (!e) escapes.set(idx, e = opts.pathLength.escapeAt(acct, tile));
+        return e.length ? e : null;
+    };
     const searchStart = performance.now();
     let areaChecked = !opts.pathLength.scopeAreas;
     // Inside the danger and door scope of the search, so the labels close what the walks cannot pass. A scope with no
@@ -259,12 +272,17 @@ export function routeOnGraph(
         const strCache = new Map<string, number | null>();
         const fastWalkKeyOk = totalNodes < 16384 && transports.length < 16384;
         const walkFn = (hasAreaOf && opts.pathLength.measurePrechecked) ? opts.pathLength.measurePrechecked : opts.pathLength;
+        const measureLeg = (aIdx: number, aTile: Tile, bTile: Tile, tol: number, interaction?: InteractionTarget) => {
+            const f = () => (tol <= 1 || interaction ? walkFn : opts.pathLength)(aTile, bTile, blocked, tol, interaction);
+            const open = escapeOf(aIdx, aTile);
+            return open ? opts.pathLength.withOpened!(open, aTile, f) : f();
+        };
         const walk = (aIdx: number, aTile: Tile, bIdx: number, bTile: Tile, tol: number, interaction?: InteractionTarget, qId = -1) => {
             if (fastWalkKeyOk && tol >= 0 && tol < 64 && qId >= -1 && qId < 16383) {
                 const k = ((aIdx * 16384 + bIdx) * 64 + tol) * 16384 + (qId + 1);
                 let v = numCache.get(k);
                 if (v === undefined) {
-                    v = (tol <= 1 || interaction ? walkFn : opts.pathLength)(aTile, bTile, blocked, tol, interaction);
+                    v = measureLeg(aIdx, aTile, bTile, tol, interaction);
                     numCache.set(k, v);
                 }
                 return v;
@@ -272,7 +290,7 @@ export function routeOnGraph(
             const k = `${aIdx}>${bIdx}:${tol}:${qId >= 0 ? qId : interaction ? JSON.stringify(interaction) : ''}`;
             let v = strCache.get(k);
             if (v === undefined) {
-                v = (tol <= 1 || interaction ? walkFn : opts.pathLength)(aTile, bTile, blocked, tol, interaction);
+                v = measureLeg(aIdx, aTile, bTile, tol, interaction);
                 strCache.set(k, v);
             }
             return v;
