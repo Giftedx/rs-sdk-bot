@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795811890853-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 213,
+  "start": 1795811890853,
+  "end": 1795812790853,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
