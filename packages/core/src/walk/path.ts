@@ -26,6 +26,12 @@ export interface PathDeps {
     hunters?(): readonly { x: number; z: number; r: number }[];
     // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
     reach?(to: { x: number; z: number; level: number }, opts?: { adjacentOk?: boolean }): boolean | null;
+    // A paid crossing at this door tile (travel.ts fareCrossings): its Open starts a dialogue that takes the fare.
+    // With `dialog` and `answer` the walk answers its choices; `coins` is the pack's coins, null when unknown.
+    fare?(level: number, loc: PathTile): { coins: number; choices: readonly string[]; label: string; waived?: boolean } | null;
+    coins?(): number | null;
+    dialog?(): { isOpen: boolean; isWaiting?: boolean; text?: string; options: { index: number; text: string }[] } | null;
+    answer?(index: number): unknown;
 }
 export interface PathOptions {
     signal?: AbortSignal;
@@ -52,6 +58,7 @@ const OPEN_OPT_RE = /^open$/i;
 const openOp = (l: PathLoc) => l.name && !DOOR_OR_GATE_RE.test(l.name)
     ? undefined : (l.optionsWithIndex ?? []).find(o => OPEN_OPT_RE.test(o.text));
 const messageKey = (m: { text: string; tick: number; observationId?: number }) => `${m.observationId ?? m.tick}:${m.text}`;
+const normText = (x: string) => x.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
 
 // Corners to single tiles. rs-sdk path segments are straight or diagonal, so a step by sign is exact for them.
 export function expandPath(from: PathTile, corners: PathTile[]): PathTile[] {
@@ -309,7 +316,11 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let target = -1;       // path index of the last walk click
     // `acked`: the client has answered the Open dispatch. A client that takes no input (seen for 42 ticks after a
     // practice login in the Clock Tower) leaves the door shut, which is not evidence that the door stays closed.
-    let door: { loc: PathLoc; sentAt: number; messages: Set<string>; acked: boolean } | null = null;
+    // A paid crossing (`fare`) also keeps the dialogue it showed (`talk`), the tile the bot stood on when the dialogue
+    // opened (`pre`) and the path index of the door tile (`i`): a bot moved off `pre` to `i` or past it has crossed.
+    type DoorTry = { loc: PathLoc; sentAt: number; messages: Set<string>; acked: boolean; i: number;
+        fare?: NonNullable<ReturnType<NonNullable<PathDeps['fare']>>>; talk: string[]; pre?: PathTile };
+    let door: DoorTry | null = null;
     const doorAttempts = new Map<string, number>();
     let last = { x: start.x, z: start.z };
     let still = 0;
@@ -376,11 +387,17 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
         const failedDoor = (loc: PathLoc, why: string, p: PathTile) => {
             const attempts = doorAttempts.get(doorKey(loc)) ?? 0;
             const detail = `no progress: door ${loc.id}@${loc.x},${loc.z},${level} stayed closed after ${attempts} Open attempts at=${p.x},${p.z} goal=${goal.x},${goal.z}: ${why}`;
+            // A paid crossing that fails is never a silent detour: the line names the fare, the coins and the dialogue,
+            // and WALK_DETOUR gives the path tiles left through the crossing and round it.
+            const fare = deps.fare?.(level, loc) ?? null, talk = door?.loc === loc ? door.talk : [];
+            const through = tiles.length - Math.max(0, idx);
+            if (fare) console.log(`WALK_FARE_FAIL ${JSON.stringify({ crossing: fare.label, loc: { x: loc.x, z: loc.z, level }, fare: fare.coins, coins: deps.coins?.() ?? null, at: { x: p.x, z: p.z }, goal: { x: goal.x, z: goal.z }, attempts, why, dialog: talk.slice(-4) })}`);
             failedDoors.add(doorKey(loc));
             const registered = deps.blockDoor?.(level, loc) === true;
             door = null;
             log(detail);
             if (!registered || !replan(p, detail)) return finish(false, detail);
+            if (fare) console.log(`WALK_DETOUR ${JSON.stringify({ crossing: fare.label, at: { x: p.x, z: p.z, level }, goal: { x: goal.x, z: goal.z }, throughTiles: through, roundTiles: tiles.length - Math.max(0, idx) })}`);
             clickAhead(look);
         };
         walkReply = (value, from, to, epoch) => {
@@ -476,20 +493,45 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 const d = door;
                 const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
                 if (!shutNow) { door = null; doorAttempts.delete(doorKey(d.loc)); log('door open'); clickAhead(look); return; }
+                if (d.fare) {
+                    const talk = deps.dialog?.();
+                    if (talk?.isOpen) {
+                        d.sentAt = ticks; d.pre ??= { x: p.x, z: p.z };
+                        const text = (talk.text || talk.options.map(o => o.text).join(' | ')).slice(0, 160);
+                        if (text && d.talk[d.talk.length - 1] !== text) d.talk.push(text);
+                        if (talk.isWaiting) return;
+                        const pick = talk.options.find(o => d.fare!.choices.some(c => normText(c) === normText(o.text)));
+                        const index = pick?.index ?? (talk.options.length === 0 ? 0
+                            : talk.options.length === 1 && /continue/i.test(talk.options[0]!.text) ? talk.options[0]!.index : undefined);
+                        if (index === undefined) return failedDoor(d.loc, `unmapped fare dialogue: ${text}`, p);
+                        send(`answer ${index}`, () => deps.answer?.(index));
+                        return;
+                    }
+                    // The gate shuts again on the tick after it moves the bot through (border_gate.rs2 p_teleport).
+                    if (d.pre && (p.x !== d.pre.x || p.z !== d.pre.z) && idx >= d.i) {
+                        door = null; doorAttempts.delete(doorKey(d.loc)); log(`fare paid: ${d.fare.label}`); clickAhead(look); return;
+                    }
+                }
                 const refusal = deps.messages?.().find(m => !d.messages.has(messageKey(m)) && /\b(?:door|gate).{0,32}\blocked\b|\b(?:cannot|can't) open\b/i.test(m.text));
                 if (refusal) return failedDoor(d.loc, refusal.text, p);
                 // Open may first walk to the door, then wait for a delayed server
                 // action. Count unchanged ticks, not distance or accepted dispatches.
+                // A paid crossing tries twice, once when the pack is short (a quest that waives the fare is the only
+                // way through then): its dialogue said why it did not open.
                 if (d.acked && still >= 6 && ticks - d.sentAt >= 6) {
-                    if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= 3) return failedDoor(d.loc, 'no open effect observed', p);
+                    const limit = d.fare ? ((deps.coins?.() ?? Infinity) < d.fare.coins ? 1 : 2) : 3;
+                    if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= limit) return failedDoor(d.loc, d.fare ? 'fare crossing did not move the bot' : 'no open effect observed', p);
                     door = null;
                 } else return;
             }
-            const shut = shutDoorAhead(idx, idx + look);
+            const ahead = shutDoorAt(idx, idx + look), shut = ahead?.l ?? null;
             if (shut) {
                 const op = openOp(shut)!.opIndex;
+                const fare = deps.fare?.(level, shut) ?? undefined, held = fare ? deps.coins?.() ?? null : null;
+                // Short of the fare, the guard only says so (border_gate.rs2 "I don't actually seem to have enough money").
+                if (fare && held !== null && held < fare.coins && !fare.waived) return failedDoor(shut, `fare ${fare.coins} coins, the pack holds ${held}`, p);
                 const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
-                const entry = { loc: shut, sentAt: ticks, messages: baseline, acked: false };
+                const entry: DoorTry = { loc: shut, sentAt: ticks, messages: baseline, acked: false, i: ahead!.i, ...(fare ? { fare } : {}), talk: [] };
                 if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
                     door = entry;
                     doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);

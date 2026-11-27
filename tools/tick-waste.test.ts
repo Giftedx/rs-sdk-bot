@@ -2,7 +2,18 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { idleReasons, tickWaste, wasteShare } from './tick-waste';
+import { fareWaste, idleReasons, tickWaste, wasteShare } from './tick-waste';
+
+test('fare detours sum the planner and walkPath extra ticks per account', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fare-waste-'));
+    writeFileSync(join(dir, 'host-Toller.log'), [
+        'WALK_DETOUR {"from":{"x":3222,"z":3218,"level":0},"cost":307,"paidCost":125,"extra":182}',
+        '  | WALK_FARE_FAIL {"crossing":"Al Kharid toll gate","fare":10,"coins":0}',
+        '  | WALK_DETOUR {"crossing":"Al Kharid toll gate","throughTiles":60,"roundTiles":250}',
+        'WALK_DETOUR {cut',
+    ].join('\n'));
+    expect(fareWaste(dir).get('Toller')).toEqual({ detours: 3, extra: 372, fareFails: 1 });
+});
 
 const ledger = 'LEDGER ticks=1000 move=100 anim=0 dialog=0 stun=0 idle=900';
 const marker = (id: string) => 'SWARM_JOB ' + id.repeat(64);

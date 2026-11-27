@@ -2,6 +2,7 @@
 import type { Outcome } from '../act';
 import { accountForSdk } from '../door-policy';
 import { waitTicks } from '../ticks';
+import type { Travel } from '../travel';
 import type { TripPlan } from '../trip';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
@@ -19,6 +20,20 @@ export const withoutJewelry = (a: Account): Account => {
     return { ...a, items, counts };
 };
 export const withoutTeleports = (a: Account): Account => withoutJewelry(withoutSpells(a));
+
+// Paid edges (travel.ts: tolls, boats, carts) inside the box of a walk that this account cannot pay now. A route that
+// goes round one of them is worth a second search with the fare: when that is much cheaper, the walk logs WALK_DETOUR
+// with both costs, and tools/tick-waste.ts counts the lost ticks.
+export const DETOUR_MARGIN = 40, DETOUR_PAD = 40;
+export function unpaidFaresNear(from: Tile, to: Tile, coins: number, travel: readonly Travel[]): Travel[] {
+    const minX = Math.min(from.x, to.x) - DETOUR_PAD, maxX = Math.max(from.x, to.x) + DETOUR_PAD;
+    const minZ = Math.min(from.z, to.z) - DETOUR_PAD, maxZ = Math.max(from.z, to.z) + DETOUR_PAD;
+    const inBox = (t: Tile | null) => !!t && t.x >= minX && t.x <= maxX && t.z >= minZ && t.z <= maxZ;
+    return travel.filter(t => t.coins > coins && inBox(t.from) && inBox(t.to));
+}
+export function fareDetour(plan: { cost: number }, paid: { cost: number } | null): boolean {
+    return !!paid && paid.cost + DETOUR_MARGIN < plan.cost;
+}
 
 async function preflightGuildEvidence(
     s: Walker,
@@ -115,6 +130,23 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         // What the failed search started from: a live "no route" names only its target otherwise.
         console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
         return { ok: false, reason: 'precondition', detail: `no route${why === 'budget' ? ` (search over ${budgetMs} ms)` : ''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    }
+    // A route that walks round a fare the pack cannot pay (the Al Kharid toll gate with no coins: 307 path tiles
+    // against 111) is logged with the cost of the paid route. The second search runs only for a route much longer
+    // than its straight line with an unpaid fare in its box.
+    const held = acct.coins ?? 0, straight = Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z));
+    if (from.level === to.level && r.cost > 1.5 * straight + DETOUR_MARGIN) {
+        const { loadTravel } = await import('../travel');
+        const unpaid = unpaidFaresNear(from, to, held, loadTravel());
+        if (unpaid.length) {
+            const fare = Math.max(...unpaid.map(t => t.coins)), rich: Account = { ...acct, coins: held + fare, counts: { ...acct.counts, coins: held + fare } };
+            const paid = routePlanMod ? await routePlanMod.planTripOffThread(from, to, rich, undefined, budgetMs)
+                : (() => { const d = world.route(from, to, rich, { deadline: performance.now() + budgetMs }); return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
+            if (fareDetour(r, paid)) {
+                const fares = paid!.legs.flatMap(l => l.kind === 'travel' && l.travel.coins > held ? [{ edge: l.travel.id, coins: l.travel.coins }] : []);
+                console.log(`WALK_DETOUR ${JSON.stringify({ from, to, cost: r.cost, paidCost: paid!.cost, extra: r.cost - paid!.cost, coins: held, bankCoins: stock?.coins ?? null, fares })}`);
+            }
+        }
     }
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.

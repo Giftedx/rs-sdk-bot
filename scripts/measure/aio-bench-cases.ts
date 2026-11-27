@@ -2406,6 +2406,15 @@ return [
   }),
   ...buildSameJobCases(),
   ...SPECIALIST_AGILITY_CASES,
+  // Lumbridge to the Al Kharid bank and back through the toll gate with the 10-coin fare (border_gate.rs2): by the
+  // route search (the Border Guard edge) and by a ground walk (walkPath, which pays at the gate's Open). The walk
+  // round the fence by Varrock takes about 180 ticks more; the pass needs the 10 coins paid and no detour line.
+  ...(['east', 'west'] as const).flatMap(way => (['', '-ground'] as const).map(mode => {
+    const [at, to] = way === 'east' ? [{x: 3222, z: 3218}, ['3269', '3167', '0']] : [{x: 3269, z: 3167}, ['3222', '3218', '0']];
+    return {key: `extra:walk-toll-gate-${way}${mode}`, script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', ...to, ...(mode ? ['--ground'] : [])], timeoutMs: 300_000,
+      pass: (s: string) => ok(s) && Number(s.match(/walk-to \{.*\} at=\S+ ticks=(\d+)/)?.[1] ?? Infinity) < 160 && !/WALK_FARE_FAIL|WALK_DETOUR/.test(s),
+      presetConfig: {position: {...at, level: 0}, inventory: [{id: 995, count: 100}]}};
+  })),
   // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
   // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
   {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
