@@ -2,8 +2,7 @@ import { expect, test } from 'bun:test';
 import { createActivityCatalog } from '../src/catalog';
 
 // A hand-written activity that makes an item needs at least the level of the game-data recipe row that makes the
-// same item in the same skill. A lower level admits accounts that the worker refuses at entry (BowBeforeMe, Smithing
-// 1, sent to smelt steel bars: "smelt entry level/state unobserved").
+// same item in the same skill. A lower level admits accounts that the worker refuses at entry.
 test('no hand-written activity needs a lower level than the game-data recipe of its output', () => {
     const all = createActivityCatalog().list();
     const levelOf = (a: (typeof all)[number]) => Number(a.config.requiredLevel ?? 1);
