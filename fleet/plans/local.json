@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795820346278,
+ "at": 1795820431014,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,6 +87,56 @@
    "role": "pvp"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "495",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "495"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "353",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "353"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
    "account": "Kiltlifter",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -100,6 +150,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "40",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "40"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -168,7 +243,6 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
@@ -182,13 +256,11 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "woodpecker",
   "yewfirst"
