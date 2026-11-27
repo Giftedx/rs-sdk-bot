@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740265567,
+ "at": 1795740277708,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,7 +72,7 @@
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
     "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "9"
    },
    "enabled": true,
    "repeat": false,
