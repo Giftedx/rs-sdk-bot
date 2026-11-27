@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739452223-1",
  "account": "YewFirst",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "8a180457-7a99-4d22-90d4-db6cecab6dea",
- "count": 0,
- "ok": false,
- "at": 1795739888637,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795739913751,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795739913007
+ },
+ "logout": {
+  "attemptId": "1795739888645-0000024108-0000000001",
+  "at": 1795739913741,
+  "sha256": "df741faaeb0cdd7a9a197169f03433c7fa6efc7df66a2c68943b9ce2ca285183"
+ },
+ "screen": true
 }
