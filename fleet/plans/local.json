@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795806239559,
+ "at": 1795806262404,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,6 +84,22 @@
    "role": "army"
   },
   {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -103,22 +119,6 @@
    "resources": [
     "chaos-druids"
    ]
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -201,7 +201,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "882"
+    "BATCH_UNITS": "862"
    },
    "enabled": true,
    "repeat": false,
