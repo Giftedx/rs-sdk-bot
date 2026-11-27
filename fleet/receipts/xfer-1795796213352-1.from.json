@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796213352-1",
  "account": "Woodpecker",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Trout",
  "requested": 10,
  "claim": "c6fba295-4609-4c6b-9ee7-e3db0f28a980",
- "count": 0,
- "ok": false,
- "at": 1795796445327,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795796481058,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795796467488
+ },
+ "logout": {
+  "attemptId": "1795796445336-0000029540-0000000001",
+  "at": 1795796481045,
+  "sha256": "8fba209059e5b872a842b99845bf94dfc15fea2f45ad520b9b6c97c7024bdf9a"
+ },
+ "screen": true
 }
