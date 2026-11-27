@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { inMineJail, leaveMineJail, MINE_JAIL_ROCKS, MINE_JAIL_WINDOW, mineJailRock, onMineJailCliff } from '../src/walk/mine-jail';
+import { inMineJail, leaveMineJail, MINE_JAIL_ROCKS, MINE_JAIL_WINDOW, mineJailRock, onMineJailCliff } from '../src/walk';
 
 // A session that plays quest_desertrescue.rs2:188-274: the window asks to bend a bar (the first roll fails), the first
 // rock asks to try the climb, and each rock moves the player one tile west of it (the last one 4 tiles west).
