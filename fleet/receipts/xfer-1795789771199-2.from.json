@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795789771199-2",
  "account": "CoinCock",
  "partner": "Fingerblastr",
@@ -10,8 +10,17 @@
  "item": "Air rune",
  "requested": 1,
  "claim": "d493a910-83e1-455e-8eb9-708c8acaa383",
- "count": 0,
+ "count": 1,
  "ok": false,
- "at": 1795790014080,
- "detail": "trade claimed"
+ "at": 1795790066150,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790025440
+ },
+ "screen": true
 }

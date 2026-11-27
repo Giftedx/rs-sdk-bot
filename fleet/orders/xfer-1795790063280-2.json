@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795790063280-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "TackleBox",
+  "item": "Coins",
+  "count": 18,
+  "itemId": 995,
+  "start": 1795790063280,
+  "end": 1795790963280,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

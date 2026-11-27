@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789771199-1",
  "account": "Abracadickra",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "4c29467d-9600-4697-a62f-cd5dd313fbcb",
- "count": 0,
- "ok": false,
- "at": 1795789959575,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790065811,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795789969498
+ },
+ "logout": {
+  "attemptId": "1795789959584-0000031412-0000000001",
+  "at": 1795790065796,
+  "sha256": "b25e7252f422a2fabefdbe1ab96f26c5ae0ceeb01aa0655c19f21ce87e1d6347"
+ },
+ "screen": true
 }

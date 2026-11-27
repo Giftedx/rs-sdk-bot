@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789287780-1",
  "account": "Woodenstaff",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "476e719a-b009-4e62-87a9-6880173ef715",
- "count": 0,
- "ok": false,
- "at": 1795790046528,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790067793,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790060714
+ },
+ "logout": {
+  "attemptId": "1795790046539-0000025256-0000000001",
+  "at": 1795790067781,
+  "sha256": "3b5d56bb3c72de6d111341741b7f69d52c1341f6477bfdb29e476aa637a6143a"
+ },
+ "screen": true
 }
