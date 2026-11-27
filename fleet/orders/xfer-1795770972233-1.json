@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795770972233-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Shaftsinker",
+  "item": "Earth talisman",
+  "count": 1,
+  "itemId": 1440,
+  "start": 1795770972233,
+  "end": 1795771872233,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
