@@ -42,6 +42,7 @@ import {
     combatWalkTargetPersist,
     type CombatPotionPolicy,
 } from './survivability';
+import { createCombatAdmissionGuard } from './admission';
 import type { CombatSession } from './types';
 
 const COW_BITE_HEAL: Readonly<Record<number, number>> = Object.fromEntries(
@@ -291,16 +292,13 @@ export function conf0Drops(target: string): RegExp {
     return CONFIGS[target]?.drops ?? /$^/;
 }
 
-export function genericCombatNpc<T extends { id: number; distance: number; reachable?: boolean; inCombat?: boolean; targetIndex?: number }>(
-    target: string,
-    npcs: readonly T[],
-    selfSlot?: number,
-): T | undefined {
+// The NPC ids of a generic combat target.
+export function genericCombatNpcIds(target: string): ReadonlySet<number> {
     const baseId=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):undefined;
-    const ids =
-        target === 'taverley_black_knight'
-            ? new Set([178, 179])
-            : new Set([
+    return target === 'taverley_black_knight'
+        ? new Set([178, 179])
+        : new Set(
+              [
                   baseId
                       ?? (target === 'taverley_druid'
                           ? npcId('chaos druid')
@@ -311,7 +309,16 @@ export function genericCombatNpc<T extends { id: number; distance: number; reach
                                   : target === 'taverley_blue_dragon'
                                       ? npcId('blue dragon')
                                       : undefined),
-              ]);
+              ].filter((id): id is number => id !== undefined),
+          );
+}
+
+export function genericCombatNpc<T extends { id: number; distance: number; reachable?: boolean; inCombat?: boolean; targetIndex?: number }>(
+    target: string,
+    npcs: readonly T[],
+    selfSlot?: number,
+): T | undefined {
+    const ids = genericCombatNpcIds(target);
     const owned = (n: T) =>
         selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 && n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs
@@ -2108,6 +2115,10 @@ export async function runGenericCombatSession(
     const lifeDied = combatLifeWatch(ownedSession, cleanupScope);
     const runEnd = () => (lifeDied() ? 'died' : undefined) ?? stopEnd();
     const foodWant = combatFoodWanted(targetConf);
+    // The survival check of each fight (admission.ts). A run that only picks up items, or takes them by Telekinetic
+    // Grab, does not fight.
+    const admissionGuard = targetConf.gatherOnly || effectiveTelegrab ? undefined : createCombatAdmissionGuard(s, TARGET_KEY, genericCombatNpcIds(TARGET_KEY));
+    let justBanked = false;
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     let kills = 0;
     let itemsLooted = 0;
@@ -2207,8 +2218,9 @@ export async function runGenericCombatSession(
             }
             // A trip that leaves no food in the pack ends the run: the run does not fight with no food. The final bank
             // return of the potion cleanup takes no food, because the run ends there.
-            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, foodWant)) > 0;
+            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, admissionGuard ? admissionGuard.foodWant(foodWant) : foodWant)) > 0;
             bankTrips++;
+            justBanked = true;
             await s.bot.closeInterface();
             await waitTicks(s, 1);
             if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
@@ -2219,6 +2231,9 @@ export async function runGenericCombatSession(
         // potion cleanup owns a bank return.
         const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
         if (noFood0) throw Error(noFood0);
+        // A target that the account cannot survive at any food: refuse before the first walk.
+        const unsafe0 = admissionGuard?.entry();
+        if (unsafe0) throw Error(`${unsafe0} ticks=0`);
         const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
         const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
         if (noPrayer0) throw Error(noPrayer0);
@@ -2318,6 +2333,14 @@ export async function runGenericCombatSession(
                 await waitTicks(s, 2);
                 continue;
             }
+            const admit = admissionGuard?.beforeAttack(justBanked, monster);
+            if (admit?.kind === 'refuse') throw Error(admit.detail);
+            if (admit?.kind === 'bank') {
+                await bankUntil();
+                continue;
+            }
+            justBanked = false;
+            let leaveFight = false;
             const a = await s.bot.attack(monster);
             if (a.success) {
                 const began = s.tick();
@@ -2344,12 +2367,21 @@ export async function runGenericCombatSession(
                     if (active) idleTicks = 0;
                     else if (engaged || (npc?.distance ?? 99) <= 2 || s.tick() - began >= 15) idleTicks++;
                     if (potions && st?.player?.combat.targetType === 'npc' && st.player.combat.targetIndex === monster.index) await potions.poll(monster);
+                    // The retreat line and the crowd rule (admission.ts): leave the fight for the bank.
+                    const danger = admissionGuard?.tick(s.tick());
+                    if (danger) {
+                        const end = admissionGuard!.left(danger);
+                        if (end) throw Error(end);
+                        leaveFight = true;
+                        break;
+                    }
                     await waitTicks(s, 1);
                 }
                 if (dead) {
                     kills++;
                     await waitTicks(s, 1);
                 }
+                if (leaveFight) await bankUntil();
             } else {
                 await waitTicks(s, 2);
             }
@@ -2583,6 +2615,10 @@ export async function runMeleeGatherCli(
     const lifeDied = combatLifeWatch(ownedSession, cleanupScope);
     const runEnd = () => (lifeDied() ? 'died' : undefined) ?? stopEnd();
     const foodWant = combatFoodWanted(targetConf);
+    // The survival check of each fight (admission.ts). A run that only picks up items, or takes them by Telekinetic
+    // Grab, does not fight.
+    const admissionGuard = targetConf.gatherOnly || effectiveTelegrab ? undefined : createCombatAdmissionGuard(s, TARGET_KEY, genericCombatNpcIds(TARGET_KEY));
+    let justBanked = false;
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     try {
         const pos = () => s.sdk.getState()?.player;
@@ -2688,9 +2724,10 @@ export async function runMeleeGatherCli(
 
             // A trip that leaves no food in the pack ends the run: the run does not fight with no food. The final bank
             // return of the potion cleanup takes no food, because the run ends there.
-            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, foodWant)) > 0;
+            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, admissionGuard ? admissionGuard.foodWant(foodWant) : foodWant)) > 0;
 
             bankTrips++;
+            justBanked = true;
             await s.bot.closeInterface();
             await waitTicks(s, 1);
             if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
@@ -2702,6 +2739,9 @@ export async function runMeleeGatherCli(
         // potion cleanup owns a bank return.
         const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
         if (noFood0) throw Error(noFood0);
+        // A target that the account cannot survive at any food: refuse before the first walk.
+        const unsafe0 = admissionGuard?.entry();
+        if (unsafe0) throw Error(`${unsafe0} ticks=0`);
         const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
         const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
         if (noPrayer0) throw Error(noPrayer0);
@@ -2806,6 +2846,14 @@ export async function runMeleeGatherCli(
                 await waitTicks(s, 2);
                 continue;
             }
+            const admit = admissionGuard?.beforeAttack(justBanked, monster);
+            if (admit?.kind === 'refuse') throw Error(admit.detail);
+            if (admit?.kind === 'bank') {
+                await bankUntil();
+                continue;
+            }
+            justBanked = false;
+            let leaveFight = false;
             const a = await s.bot.attack(monster);
             if (a.success) {
                 const began = s.tick();
@@ -2832,12 +2880,21 @@ export async function runMeleeGatherCli(
                     if (active) idleTicks = 0;
                     else if (engaged || (npc?.distance ?? 99) <= 2 || s.tick() - began >= 15) idleTicks++;
                     if (potions && st?.player?.combat.targetType === 'npc' && st.player.combat.targetIndex === monster.index) await potions.poll(monster);
+                    // The retreat line and the crowd rule (admission.ts): leave the fight for the bank.
+                    const danger = admissionGuard?.tick(s.tick());
+                    if (danger) {
+                        const end = admissionGuard!.left(danger);
+                        if (end) throw Error(end);
+                        leaveFight = true;
+                        break;
+                    }
                     await waitTicks(s, 1);
                 }
                 if (dead) {
                     kills++;
                     await waitTicks(s, 1);
                 }
+                if (leaveFight) await bankUntil();
             } else {
                 await waitTicks(s, 2);
             }

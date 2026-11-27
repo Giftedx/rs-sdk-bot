@@ -337,7 +337,7 @@ export function buildPlannerSharedIndex(params: {
     // first-failure defects are excluded in planAccountWithCandidates.
     const quarantinedIds = new Set<string>();
     for (const d of defects) {
-        if (isDefectActive(d, now) && isFleetWideDefect(d)) {
+        if (isDefectActive(d, now) && isFleetWideDefect(d, now)) {
             quarantinedIds.add(d.activityId);
         }
     }
@@ -558,18 +558,35 @@ function isDefectActive(d: DefectRecord, now: number): boolean {
     return d.quarantined && (d.expiresAt === undefined || now < d.expiresAt);
 }
 
+/** The time a death holds its activity for every account. A death defect with levels holds longer for its class. */
+export const FLEET_DEATH_HOLD_MS = 24 * 3_600_000;
+
 /**
  * A death, or a fault signature seen FLEET_QUARANTINE_MIN_COUNT times, holds the activity for every account.
  * A first worker defect holds it only for the account that failed: one account's missing food, bad position
- * or lost session must not idle the fleet for the defect lifetime.
+ * or lost session must not idle the fleet for the defect lifetime. A death with the levels of the dead account
+ * holds every account for FLEET_DEATH_HOLD_MS and then only its class (deathClassBlocks).
  */
-export function isFleetWideDefect(d: DefectRecord): boolean {
-    return d.outcomeKind === 'death' || (d.count ?? 1) >= FLEET_QUARANTINE_MIN_COUNT;
+export function isFleetWideDefect(d: DefectRecord, now?: number): boolean {
+    if (d.outcomeKind === 'death') return !d.deathLevels || now === undefined || now < d.quarantinedAt + FLEET_DEATH_HOLD_MS;
+    return (d.count ?? 1) >= FLEET_QUARANTINE_MIN_COUNT;
 }
 
-export function defectBlocksAccount(d: DefectRecord, account: string, now: number): boolean {
+/** The base levels that a death defect compares (DefectRecord.deathLevels). */
+export type AccountClassLevels = { readonly hitpoints: number; readonly defence: number };
+
+/**
+ * A death defect holds an account that is no stronger than the account that died: Hitpoints and Defence both at or
+ * below its levels. The same target kills such an account the same way.
+ */
+export function deathClassBlocks(d: DefectRecord, levels: AccountClassLevels | undefined, now: number): boolean {
+    if (!isDefectActive(d, now) || d.outcomeKind !== 'death' || !d.deathLevels || !levels) return false;
+    return levels.hitpoints <= d.deathLevels.hitpoints && levels.defence <= d.deathLevels.defence;
+}
+
+export function defectBlocksAccount(d: DefectRecord, account: string, now: number, levels?: AccountClassLevels): boolean {
     if (!isDefectActive(d, now)) return false;
-    return isFleetWideDefect(d) || d.account.toLowerCase() === account.toLowerCase();
+    return isFleetWideDefect(d, now) || d.account.toLowerCase() === account.toLowerCase() || deathClassBlocks(d, levels, now);
 }
 
 function isActivityQuarantined(
@@ -577,21 +594,35 @@ function isActivityQuarantined(
     defects: readonly DefectRecord[],
     now: number,
     account: string,
+    levels?: AccountClassLevels,
 ): boolean {
-    return defects.some((d) => d.activityId === activityId && defectBlocksAccount(d, account, now));
+    return defects.some((d) => d.activityId === activityId && defectBlocksAccount(d, account, now, levels));
 }
 
 function accountOnlyQuarantinedIds(
     defects: readonly DefectRecord[],
     account: string,
     now: number,
+    levels?: AccountClassLevels,
 ): ReadonlySet<string> {
     const ids = new Set<string>();
     const lower = account.toLowerCase();
     for (const d of defects) {
-        if (isDefectActive(d, now) && !isFleetWideDefect(d) && d.account.toLowerCase() === lower) ids.add(d.activityId);
+        if (!isDefectActive(d, now) || isFleetWideDefect(d, now)) continue;
+        if (d.account.toLowerCase() === lower || deathClassBlocks(d, levels, now)) ids.add(d.activityId);
     }
     return ids;
+}
+
+/** The base Hitpoints and Defence of an account, for the death class of a defect. */
+export function accountClassLevels(acct: { readonly skills?: Readonly<Record<string, { readonly level?: number } | number | undefined>> }): AccountClassLevels | undefined {
+    const level = (name: string): number | undefined => {
+        const v = acct.skills?.[name];
+        const n = typeof v === 'number' ? v : v?.level;
+        return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : undefined;
+    };
+    const hitpoints = level('Hitpoints'), defence = level('Defence');
+    return hitpoints === undefined ? undefined : { hitpoints, defence: defence ?? 1 };
 }
 
 function hasBlockingSystemHold(acct: AccountState, now: number): string | null {
@@ -1234,7 +1265,7 @@ function planAccountCore(
     const acctCache = reuse ? reuse.acctCache : createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
     const profile = reuse ? reuse.profile : summarizeAccountProfile(acct, acctCache);
     const isProtected = Boolean(acct.protectedClock || isProtectedAccountName(acct.name));
-    const ownQuarantinedIds = accountOnlyQuarantinedIds(defects, acct.name, now);
+    const ownQuarantinedIds = accountOnlyQuarantinedIds(defects, acct.name, now, accountClassLevels(acct));
     const excludedActivityIds: ReadonlySet<string> | undefined = ownQuarantinedIds.size === 0
         ? input.excludedActivityIds
         : new Set([...(input.excludedActivityIds ?? []), ...ownQuarantinedIds]);
@@ -1285,7 +1316,7 @@ function planAccountCore(
     } else {
         const candidateActivities = input.activities.filter((act) => {
             if (!isActAllowed(act)) return false;
-            if (isActivityQuarantined(act.id, defects, now, acct.name)) return false;
+            if (isActivityQuarantined(act.id, defects, now, acct.name, accountClassLevels(acct))) return false;
             if (!trustMeetsMinimum(act.trust, minTrust)) {
                 if (!input.allowExperimentalFallback) return false;
             }
@@ -2013,7 +2044,8 @@ function planAccountCore(
                     } else if (blocker.kind === 'combat_survivability') {
                         if (blocker.reason === 'food') {
                             const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
-                            const countNeed = Math.max(10, floor?.minFoodCount ?? 15);
+                            // An admission blocker (preflight.ts threatNpcIds) names the pieces that the fight needs.
+                            const countNeed = Math.max(10, floor?.minFoodCount ?? 15, (blocker.message ?? '').startsWith('admission:') ? blocker.required ?? 0 : 0);
                             let foodStep: PlannedStep | null = null;
                             for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
                                 const acq = resolveAcquireCached({

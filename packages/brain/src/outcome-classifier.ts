@@ -34,6 +34,7 @@ import {
     validateWorldSnapshot,
     type AccountLifecycle,
     type AccountState,
+    type DeathLevels,
     type DefectRecord,
     type InfraCircuitBreakerState,
     type NoRouteFact,
@@ -60,6 +61,9 @@ export function shopRestockCooldownMs(itemId: number, venue: string): number {
 }
 export const DEFAULT_RECOVERY_HOLD_TTL_MS = 30 * 60_000;
 export const DEFAULT_DEFECT_TTL_MS = 24 * 3_600_000;
+// A death defect with the levels of the dead account holds the activity this long for accounts of that class or
+// weaker (planner.ts deathClassBlocks). The fleet-wide hold stays DEFAULT_DEFECT_TTL_MS.
+export const DEATH_CLASS_TTL_MS = 14 * 24 * 3_600_000;
 // Repeat faults: an outcome kind that holds nothing by itself (missing_supply, location_stranded) can end the same
 // activity with the same text again and again, each a login that does no work. Live: "quest-sweep tree missing
 // 2434:2 (unsold; others in shops)" ended 17 runs of 10 accounts in 24 h, each under 25 s. A run shorter than
@@ -106,6 +110,8 @@ export interface RawWorkerExitInput {
     readonly logPath?: string;
     readonly tickRecordPath?: string;
     readonly died?: boolean;
+    // The base levels of an account that died (DefectRecord.deathLevels).
+    readonly deathLevels?: DeathLevels;
     readonly outcome?: RunOutcome;
     readonly skipRateSample?: boolean;
 }
@@ -470,6 +476,11 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
     return out;
 }
 
+// Two deaths on one activity: the defect keeps the stronger levels, so it holds every account that either death would.
+function weakerDeathLevels(next: DeathLevels, prev: DeathLevels | undefined): DeathLevels {
+    return prev ? { hitpoints: Math.max(next.hitpoints, prev.hitpoints), defence: Math.max(next.defence, prev.defence) } : next;
+}
+
 export class OutcomeClassifier {
     readonly filePath: string;
     private readonly rateStore?: RateStore;
@@ -650,6 +661,7 @@ export class OutcomeClassifier {
         readonly logPath?: string;
         readonly tickRecordPath?: string;
         readonly detail?: string;
+        readonly deathLevels?: DeathLevels;
         // A repeat fault sets its count from its distinct accounts, not from the worker-defect escalation.
         readonly count?: number;
         readonly ttlMs?: number;
@@ -676,13 +688,14 @@ export class OutcomeClassifier {
             account: params.account,
             observedAt: params.now,
             quarantinedAt: params.now,
-            expiresAt: params.now + (params.ttlMs ?? this.defaultDefectTtlMs),
+            expiresAt: params.now + (params.ttlMs ?? (params.deathLevels ? Math.max(this.defaultDefectTtlMs, DEATH_CLASS_TTL_MS) : this.defaultDefectTtlMs)),
             quarantined: true,
             ...(workerRelease ? { workerRelease } : {}),
             logPath,
             ...(tickRecordPath ? { tickRecordPath } : {}),
             detail,
             count: params.count ?? (holding ? existing?.count ?? 0 : 0) + 1,
+            ...(params.deathLevels ? { deathLevels: weakerDeathLevels(params.deathLevels, holding ? existing?.deathLevels : undefined) } : {}),
         };
 
         const errors = validateDefectRecord(next);
@@ -789,6 +802,7 @@ export class OutcomeClassifier {
             ...ctx,
             ...(input.skipRateSample || ctx?.skipRateSample ? { skipRateSample: true } : {}),
             ...(noRoute ? { noRoute } : {}),
+            ...(input.deathLevels ? { deathLevels: input.deathLevels } : {}),
         });
     }
 
@@ -802,6 +816,7 @@ export class OutcomeClassifier {
             readonly skipRateSample?: boolean;
             // The "no route" in the run's failure text and where that search started (no-route.ts parseNoRoute).
             readonly noRoute?: { readonly from: WorkerTile; readonly to: WorkerTile };
+            readonly deathLevels?: DeathLevels;
         },
     ): OutcomeClassificationResult {
         const errors = validateRunOutcome(outcome);
@@ -1084,6 +1099,7 @@ export class OutcomeClassifier {
                     logPath: outcome.logPath,
                     tickRecordPath: outcome.tickRecordPath,
                     detail: outcome.detail ?? outcome.summary ?? `${outcome.account} died in ${outcome.activityId}`,
+                    ...(ctx?.deathLevels ? { deathLevels: ctx.deathLevels } : {}),
                 });
 
                 let recordedRateSample: RateSample | undefined;

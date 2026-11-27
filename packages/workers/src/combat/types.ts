@@ -125,6 +125,10 @@ export type CombatSiteMeta = {
     readonly minCombatStats?: Readonly<Partial<Record<string, number>>>;
     readonly requiredQuests?: readonly string[];
     readonly minFood?: number;
+    // The NPCs that the site fights: the combat admission (packages/core/src/combat-admission.ts) checks them.
+    readonly threatNpcIds?: readonly number[];
+    // NPCs that attack the account at the same time at this site.
+    readonly threatAttackers?: number;
     readonly minFreeSlots?: number;
     readonly riskPerHour?: number;
     readonly defaultCapTicks: number;

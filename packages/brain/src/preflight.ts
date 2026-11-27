@@ -4,7 +4,9 @@
 import { resolve } from 'node:path';
 import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
+import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
 import {
+    questFoodDefinitions,
     totalAvailableHeal,
 } from '../../core/src/sustain';
 import { xpForLevel } from '../../core/src/xp-curve';
@@ -12,6 +14,7 @@ import type { BankObservation } from '../../core/src/session-types';
 import { routeFares, type Account as WorldAccount, type Tile, type World } from '../../core/src/world';
 import type { Gear, Skill } from '../../knowledge/src/gear';
 import { canWear } from '../../knowledge/src/gear-query';
+import { npcThreat } from '../../knowledge/src/npc-threat';
 import { readJsonStatCached } from './json-cache';
 import {
     accountOwnedItemCount,
@@ -880,6 +883,11 @@ export interface CombatSurvivabilityFloor {
     readonly requireAntiDragonShield?: boolean;
     readonly requireAntipoison?: boolean;
     readonly includeBankFood?: boolean;
+    // The NPCs of the fight. The combat admission (packages/core/src/combat-admission.ts) checks the max hit and
+    // accuracy of the worst one against the Hitpoints, Defence and food of the account.
+    readonly threatNpcIds?: readonly number[];
+    // NPCs that attack the account at the same time at this spot.
+    readonly threatAttackers?: number;
 }
 
 export type CombatSurvivabilityBlocker = Extract<PreflightBlocker, { kind: 'combat_survivability' }>;
@@ -1023,6 +1031,49 @@ export function evaluateCombatSurvivability(
                     current: countAvail,
                     message: `Food count ${countAvail}/${floor.minFoodCount} below floor`,
                 });
+            }
+        }
+    }
+
+    if (floor.threatNpcIds?.length) {
+        let threat: CombatThreat | undefined;
+        for (const id of floor.threatNpcIds) {
+            const t = npcThreat(id);
+            if (t && (!threat || t.maxHit > threat.maxHit || (t.maxHit === threat.maxHit && t.attackRoll > threat.attackRoll))) threat = t;
+        }
+        if (threat) {
+            const foodIds = floor.foodIds ?? STANDARD_FOOD_IDS;
+            const defs = questFoodDefinitions();
+            const rows: { count: number; heal: number }[] = [];
+            let bestHeal = 0;
+            for (const id of foodIds) {
+                const owned = accountOwnedItemCount(acct, id, { includeBank, requireTrustedBank: true });
+                const h = defs.get(id)?.heal ?? 0;
+                rows.push({ count: reserveAdjustedStock(owned, cachedEffectiveItemReserve(acct, world, id, _acctCache)), heal: h });
+                bestHeal = Math.max(bestHeal, h);
+            }
+            // The worker carries the load that it can withdraw (carryableFood), and no other food exists.
+            const load = carryableFood(rows);
+            const pieces = load.pieces;
+            const a = combatAdmission(
+                threat,
+                { hp, maxHp: hp, defence: def, foodPieces: pieces, healPerPiece: pieces > 0 ? load.heal : bestHeal || 12, bankFoodPieces: 0 },
+                { attackers: floor.threatAttackers ?? 1 },
+            );
+            if (a.verdict !== 'admit') {
+                const weak = a.reason.startsWith('too weak');
+                const blocker: CombatSurvivabilityBlocker = {
+                    kind: 'combat_survivability',
+                    reason: weak ? 'hitpoints' : 'food',
+                    required: weak ? a.retreatAt + MIN_HITS_ABOVE_RETREAT * threat.maxHit : a.foodNeeded,
+                    current: weak ? hp : pieces,
+                    message: `admission: ${a.reason}`,
+                };
+                // One blocker of a reason: the planner stages one food step for each food blocker. The admission
+                // takes the place of a smaller food count.
+                const same = blockers.findIndex(b => b.reason === blocker.reason);
+                if (same < 0) blockers.push(blocker);
+                else if (!weak && (blockers[same]!.message ?? '').startsWith('Food count') && (blockers[same]!.required ?? 0) < (blocker.required ?? 0)) blockers[same] = blocker;
             }
         }
     }
