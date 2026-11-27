@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795568334-1",
+ "account": "TheFullMonty",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 1,
+ "claim": "e85d0c5c-66eb-41e0-aaa6-9acca22ebcf7",
+ "count": 0,
+ "ok": false,
+ "at": 1795796187489,
+ "detail": "trade claimed"
+}
