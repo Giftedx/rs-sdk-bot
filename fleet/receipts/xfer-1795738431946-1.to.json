@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795738431946-1",
+ "account": "SporranBulge",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "2c2d3d82-749c-4fa6-a27d-eba1e196ed5e",
+ "count": 1,
+ "ok": true,
+ "at": 1795738836333,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795738835462
+ },
+ "logout": {
+  "attemptId": "1795738827207-0000015012-0000000001",
+  "at": 1795738836285,
+  "sha256": "592ab3b5465725f6aeea175c9fdb9afc312041a2d4935cc9def294d276baf2d4"
+ },
+ "screen": true
+}

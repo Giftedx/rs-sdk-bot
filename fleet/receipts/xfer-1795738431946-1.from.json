@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738431946-1",
  "account": "BoneToPick",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "a9d33504-441f-4be6-a761-a61d2fa91401",
- "count": 0,
- "ok": false,
- "at": 1795738809324,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795738834635,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795738815469
+ },
+ "logout": {
+  "attemptId": "1795738809334-0000004656-0000000001",
+  "at": 1795738834618,
+  "sha256": "7c4807403eaa2b94755580c701217e5f51fa190616f6ce1fcfc1c19d3cb051bc"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795738840049-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "WellHung",
+  "item": "Unicorn horn",
+  "count": 1,
+  "itemId": 237,
+  "start": 1795738840049,
+  "end": 1795739740049,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
