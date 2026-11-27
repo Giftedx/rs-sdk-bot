@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795814924200-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Fingerblastr",
+  "item": "Salmon",
+  "count": 10,
+  "itemId": 329,
+  "start": 1795814924200,
+  "end": 1795815824200,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

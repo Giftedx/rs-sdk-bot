@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795814519488-2",
+ "account": "BoneToPick",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 2,
+ "claim": "d9382e0c-039e-4f52-bf9e-db520faa81ad",
+ "count": 2,
+ "ok": true,
+ "at": 1795814959373,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795814958651
+ },
+ "logout": {
+  "attemptId": "1795814946601-0000030772-0000000001",
+  "at": 1795814959361,
+  "sha256": "d739d87ca5e03f38fc3a7393488cab654b20d38c03d2979d5f04659c9b101dc3"
+ },
+ "screen": true
+}
