@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795691733-1",
  "account": "Billionaire",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "ac7b6a71-4813-4b26-8fc1-a8a7aa7613e1",
- "count": 0,
- "ok": false,
- "at": 1795796157235,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795796195863,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795796164771
+ },
+ "logout": {
+  "attemptId": "1795796157246-0000012940-0000000001",
+  "at": 1795796195852,
+  "sha256": "607cd128bec0ad7f43c9dda6fbf72da8794b7314044e6323b89ddb93770c3b35"
+ },
+ "screen": true
 }

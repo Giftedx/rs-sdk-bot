@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795821586-1",
  "account": "Fatstack",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 105,
  "claim": "613c2c84-ceef-497a-8a39-b7fa88b55785",
- "count": 0,
- "ok": false,
- "at": 1795796191616,
- "detail": "trade claimed"
+ "count": 105,
+ "ok": true,
+ "at": 1795796202665,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 105
+ },
+ "bank": {
+  "count": 105,
+  "at": 1795796201949
+ },
+ "logout": {
+  "attemptId": "1795796191626-0000011352-0000000001",
+  "at": 1795796202651,
+  "sha256": "255af237c20e3ad17533ed94865903e01e0385aa7c054bb0a3c3b1516c5ec513"
+ },
+ "screen": true
 }
