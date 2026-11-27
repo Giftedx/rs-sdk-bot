@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795743649386-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Fatstack",
+  "item": "Guam leaf",
+  "count": 1,
+  "itemId": 249,
+  "extra": [
+    {
+      "item": "Vial of water",
+      "count": 1,
+      "itemId": 227
+    }
+  ],
+  "start": 1795743649386,
+  "end": 1795744549386,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
