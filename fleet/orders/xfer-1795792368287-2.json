@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795792368287-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "MeatNTwoVeg",
+  "item": "Fire rune",
+  "count": 255,
+  "itemId": 554,
+  "start": 1795792368287,
+  "end": 1795793268287,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
