@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795794302857-1",
+ "account": "Woodpecker",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "42617c09-9fd1-410d-b56f-2c3afd5b5e14",
+ "count": 0,
+ "ok": false,
+ "at": 1795794826949,
+ "detail": "trade claimed"
+}
