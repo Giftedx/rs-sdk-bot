@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795816772485-1",
+ "account": "Woodenstaff",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "69743621-89bf-43c5-bc11-1b242df19ad0",
+ "count": 0,
+ "ok": false,
+ "at": 1795817081339,
+ "detail": "trade claimed"
+}
