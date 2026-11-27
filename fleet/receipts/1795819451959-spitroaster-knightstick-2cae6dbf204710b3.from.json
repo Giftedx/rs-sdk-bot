@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819451959-spitroaster-knightstick-2cae6dbf204710b3",
+ "account": "Spitroaster",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "5f3dc8da-d679-47a1-8330-664b04a684a0",
+ "count": 0,
+ "ok": false,
+ "at": 1795821761026,
+ "detail": "trade claimed"
+}

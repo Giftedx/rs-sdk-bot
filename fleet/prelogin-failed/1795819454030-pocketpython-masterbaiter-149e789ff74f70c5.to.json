@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795819454030-pocketpython-masterbaiter-149e789ff74f70c5",
+ "role": "to",
+ "account": "Masterbaiter",
+ "partner": "Pocketpython",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795821761075,
+ "detail": "Error: account logout is not confirmed: Masterbaiter ended disconnected"
+}
