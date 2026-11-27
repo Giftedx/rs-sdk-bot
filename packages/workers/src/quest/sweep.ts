@@ -81,6 +81,7 @@ import {
     presetFor,
     questGatherPlan,
     questSkillTraining,
+    questTravelItems,
     reservedEdible,
     returnToAmik,
     withFightMeals,
@@ -579,6 +580,10 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             if (meal !== undefined && BUILD_MEALS[quest] !== undefined) food.set(meal, BUILD_MEALS[quest]!);
             console.log(`QUEST_SWEEP_BUILD_PACK ${JSON.stringify({ quest, pack: build, meals: BUILD_MEALS[quest] })}`);
         }
+        // An account outside the gate that the preset start is behind needs the gate item (QUEST_TRAVEL_ITEMS).
+        const gateItems = questTravelItems(quest, atTile(s), preset.position);
+        for (const i of gateItems) base.set(i.id, Math.max(i.count, base.get(i.id) ?? 0));
+        if (gateItems.length) console.log(`QUEST_SWEEP_TRAVEL_ITEMS ${JSON.stringify({ quest, at: atTile(s), items: gateItems })}`);
         // A quest script's own fight: meals for the live account's hitpoints, not the all-99 preset's (QUEST_FIGHT_DAMAGE).
         const fight = fightMeals(quest, baseLevel('Hitpoints'));
         if (fight) {
@@ -857,6 +862,8 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 if (unlit) return fail(unlit);
             }
             if (quest === 'scorpion') base = scorpionAntipoisonNeeds(base, pack(), rows());
+            // The bank can be outside the gate when the account started inside it.
+            for (const i of questTravelItems(quest, here(), preset.position)) base.set(i.id, Math.max(i.count, base.get(i.id) ?? 0));
             wornKit = wornKitPlan(quest, base, pack(), rows(), s.sdk.getEquipment());
             need = wornKit.need;
             const p = plan(need, pack(), rows());

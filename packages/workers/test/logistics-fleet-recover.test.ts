@@ -36,8 +36,10 @@ import {
     assertTradeAdmission,
     canEnterHeroesBasement,
     chooseAntipoison,
+    classifyLocation,
     clearPreloginFailure,
     dosesOf,
+    exitLumberYard,
     fleetTradeOutcome,
     fleetTradeRecord,
     giverReadyFile,
@@ -1324,7 +1326,7 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
                 },
             });
             expect(res.ok).toBe(true);
-            expect(res.kind).toBe('off_hub_area');
+            expect(res.kind).toBe('lumber_yard');
             expect(res.from).toBe('3298,3513,0');
             expect(res.to).toBe('3185,3436,0');
             expect(walkStartZ).toBe(FLUFFS_FENCE.z - 1);
@@ -1335,6 +1337,63 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
         } finally {
             s.dispose();
         }
+    });
+
+    test('a Lumber Yard tile in a hub area is stranded and recovery climbs the fence before the hub walk', async () => {
+        const hubAreas = new Set([21]);
+        const labels = mockLabelsForOffHub(() => 21);
+        const pos = { worldX: 3312, worldZ: 3511, level: 0 };
+        const cls = classifyLocation(pos, { labels, hubAreas });
+        expect(cls.kind).toBe('lumber_yard');
+        expect(cls.autoFixable).toBe(true);
+        expect(cls.targetHub).toEqual({ x: 3185, z: 3436, level: 0 });
+        expect(classifyLocation({ worldX: FLUFFS_FENCE.x, worldZ: FLUFFS_FENCE.z - 1, level: 0 }, { labels, hubAreas }).kind).toBe('ok');
+        const { s, actions } = makeRecoverySession(pos);
+        try {
+            let walkStartZ = -1;
+            const res = await recoverSessionToHub(s, {
+                capTicks: 200,
+                labels,
+                hubAreas,
+                walkToHub: async (_sess, target) => {
+                    walkStartZ = s.sdk.getState().player.worldZ;
+                    s.setPos(target.x, target.z, target.level);
+                    return { ok: true };
+                },
+            });
+            expect(res.ok).toBe(true);
+            expect(res.kind).toBe('lumber_yard');
+            expect(walkStartZ).toBe(FLUFFS_FENCE.z - 1);
+            expect(actions).toContain(`interactLoc:${FLUFFS_FENCE.id}@${FLUFFS_FENCE.x},${FLUFFS_FENCE.z}`);
+        } finally {
+            s.dispose();
+        }
+    });
+
+    test('exitLumberYard climbs out of the yard and does nothing outside it', async () => {
+        const inside = makeRecoverySession({ worldX: 3312, worldZ: 3511, level: 0 });
+        try {
+            await exitLumberYard(inside.s);
+            expect(inside.s.sdk.getState().player.worldZ).toBe(FLUFFS_FENCE.z - 1);
+            expect(inside.actions.at(-1)).toBe(`interactLoc:${FLUFFS_FENCE.id}@${FLUFFS_FENCE.x},${FLUFFS_FENCE.z}`);
+        } finally {
+            inside.s.dispose();
+        }
+        const outside = makeRecoverySession({ worldX: 3185, worldZ: 3436, level: 0 });
+        try {
+            await exitLumberYard(outside.s);
+            expect(outside.actions).toEqual([]);
+        } finally {
+            outside.s.dispose();
+        }
+    });
+
+    test('the fleet trade worker leaves the Lumber Yard before it walks to the meet tile', () => {
+        const src = readFileSync(join(import.meta.dir, '../src/logistics/trade.ts'), 'utf8');
+        const work = src.slice(src.indexOf('await leaveElementalWorkshop(s)'));
+        const exit = work.indexOf('await exitLumberYard(s)');
+        expect(exit).toBeGreaterThan(0);
+        expect(exit).toBeLessThan(work.indexOf('await walkTarget(s, tile'));
     });
 
     test('leaves walled West Ardougne by the quest exit before any walk, and reports a failed exit as location stranded', async () => {

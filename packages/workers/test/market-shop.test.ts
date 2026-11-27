@@ -211,6 +211,14 @@ test('magic guild refuses below Magic 66 and when the level is unobserved; other
     for (const key of ['catherby', 'sarim', 'ardy', 'zaff', 'khazard_paste', 'aubury', 'betty']) expect(profileRefusal(key, PROFILES[key]!, 1)).toBeNull();
 });
 
+test('a derived shop behind a skill door carries the door level, so the buyer refuses at entry', () => {
+    const guild = resolveShopProfile('data:fishingguild');
+    expect(guild?.need).toEqual({ skill: 'Fishing', level: 68 });
+    expect(profileRefusal('data:fishingguild', guild!, 1)).toBe('data:fishingguild needs Fishing 68');
+    expect(profileRefusal('data:fishingguild', guild!, 68)).toBeNull();
+    expect(resolveShopProfile('data:fishingshop')?.need).toBeUndefined();
+});
+
 test('magic guild far trip goes by the Port Sarim and Ardougne docks only from far away', () => {
     const guild = PROFILES.magic_guild!;
     expect(guild.fare).toBe(60);

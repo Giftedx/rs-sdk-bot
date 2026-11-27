@@ -215,6 +215,36 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(repricedGe.env.LIMIT_PRICE).toBe('575');
     expect(repricedGe.env.ORDER_KEY).toBe('brain-383-100-p575');
     expect(repricedGe.env.ORDER_KEY).not.toBe(resolved.steps[0]?.env.ORDER_KEY);
+    expect(repricedGe.env.EXPECTED_OWNED).toBeUndefined();
+
+    // A top-up of a partly held input names the owned count that the plan saw.
+    const topUpGe = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire',
+        source: 'ge',
+        itemId: 561,
+        quantity: 1,
+        stockTarget: 2,
+        ownedBefore: 1,
+        estimatedTicks: 40,
+        estimatedCoinCost: 0,
+        coinFloatPreserved: 0,
+    });
+    expect(topUpGe.env.EXPECTED_OWNED).toBe('1');
+    expect(topUpGe.config.expectedOwned).toBe(1);
+    expect(topUpGe.env.ORDER_KEY).toBe('brain-561-1-o1');
+    const fromZeroGe = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire',
+        source: 'ge',
+        itemId: 561,
+        quantity: 2,
+        stockTarget: 2,
+        ownedBefore: 0,
+        estimatedTicks: 40,
+        estimatedCoinCost: 400,
+        coinFloatPreserved: 0,
+    });
+    expect(fromZeroGe.env.EXPECTED_OWNED).toBe('0');
+    expect(fromZeroGe.env.ORDER_KEY).toBe('brain-561-2-o0-p230');
 
     const blueDragonRoute = resolveActivityWorkerRoute({
         id: 'combat:boss-blue-dragon',
@@ -754,4 +784,19 @@ test('a location recovery inside a walled place runs the quest exit, not the wal
         stepKind: 'recover', recoveryKind: 'location', targetHub: 'varrock_west', estimatedTicks: 60, reason: 'stranded off-hub or non-ground plane',
     });
     expect(walk.routeKey).toBe('walk-to');
+});
+
+test('a GE buy names the owned count the plan saw, not the stock target less the buy, when a reserve exceeds it', () => {
+    // Owned 0, reserve 10, need 50: the plan buys 50 toward a stock target of 60.
+    const route = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire', source: 'ge', itemId: 561, quantity: 50, stockTarget: 60, ownedBefore: 0,
+        estimatedTicks: 40, estimatedCoinCost: 0, coinFloatPreserved: 0,
+    });
+    expect(route.env.EXPECTED_OWNED).toBe('0');
+    // A step with no owned count sends none.
+    const noCount = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire', source: 'ge', itemId: 561, quantity: 50, stockTarget: 60,
+        estimatedTicks: 40, estimatedCoinCost: 0, coinFloatPreserved: 0,
+    });
+    expect(noCount.env.EXPECTED_OWNED).toBeUndefined();
 });

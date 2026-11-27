@@ -22,9 +22,10 @@ export const REFUSAL_PATTERNS: Readonly<Record<RefusalCause, RegExp>> = {
     present: /^owned item already present;/,
 };
 // The causes that a second login would meet again: the coins and the pack do not change between two logins unless a job changes
-// them. A passed deadline and a baseline that differs are settled by a fresh status or a new request, so the planner does not hold
-// the pair back for them.
-export const STABLE_CAUSES: readonly RefusalCause[] = ['coins', 'pack'];
+// them, and a request with no EXPECTED_OWNED meets its held stock again. The swarm holds the market pair back for them
+// (packages/fleet/src/swarm.ts stockOutEnd). A passed deadline and a baseline that differs are settled by a fresh status or a new
+// request, so the planner does not hold the pair back for them.
+export const STABLE_CAUSES: readonly RefusalCause[] = ['coins', 'pack', 'present'];
 
 // Why a round may not start, or null: each cause names its numbers. The escrow of a round is its quantity at the limit price; the
 // coins held (pack, bank and worn) must cover it and the reserve; two collection slots need a pack of at most 26 items.

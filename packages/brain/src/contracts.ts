@@ -266,6 +266,9 @@ export interface ActivityIO {
     readonly countPerUnit: number;
     // Inputs only: units the worker leaves in the bank and never uses. Preflight needs this many on top of the batch.
     readonly reserve?: number;
+    // Inputs only: items that replace this input, such as a fire staff for fire runes. An account that owns one
+    // needs none of this input.
+    readonly unlessOwned?: readonly number[];
 }
 
 export interface ActivityDefinition<Cfg = Record<string, unknown>> {
@@ -370,6 +373,8 @@ export interface AcquireStep {
     // The pack and bank total of the item that meets the consumer's need. A rerun of the
     // chain that finds this total owned buys nothing.
     readonly stockTarget?: number;
+    // The pack and bank count of the item when the plan was made.
+    readonly ownedBefore?: number;
     readonly estimatedTicks: number;
     readonly estimatedCoinCost: number;
     readonly coinFloatPreserved: number;
@@ -1482,6 +1487,7 @@ function pushAcquireStepErrors(v: unknown, errors: string[], prefix = ''): void 
     if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push(`${prefix}AcquireStep.itemName must be non-empty`);
     if (!isPosInt(v.quantity)) errors.push(`${prefix}AcquireStep.quantity must be positive integer`);
     if (v.stockTarget !== undefined && !isPosInt(v.stockTarget)) errors.push(`${prefix}AcquireStep.stockTarget must be positive integer`);
+    if (v.ownedBefore !== undefined && !isNonNegInt(v.ownedBefore)) errors.push(`${prefix}AcquireStep.ownedBefore must be non-negative integer`);
     if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}AcquireStep.estimatedTicks must be finite non-negative`);
     if (!isFiniteNonNeg(v.estimatedCoinCost)) errors.push(`${prefix}AcquireStep.estimatedCoinCost must be finite non-negative`);
     if (!isNonNegInt(v.coinFloatPreserved)) errors.push(`${prefix}AcquireStep.coinFloatPreserved must be non-negative integer`);

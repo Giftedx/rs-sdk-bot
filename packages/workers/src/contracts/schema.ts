@@ -151,6 +151,8 @@ export type PreflightBlocker =
           readonly required: number;
           readonly available: number;
           readonly reserved: number;
+          // The pack and bank count before the reserve.
+          readonly owned?: number;
           readonly message?: string;
       }
     | {

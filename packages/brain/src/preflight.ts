@@ -103,6 +103,7 @@ export const SHOP_GATES: Readonly<Record<string, ShopGateRule>> = {
     ranging_guild_armourshop: { requiresSkill: { skill: 'ranged', level: 40 } },
     ranging_guild_tribalshop: { requiresSkill: { skill: 'ranged', level: 40 } },
     magicguildshop: { requiresSkill: { skill: 'magic', level: 66 } },
+    fishingguild: { requiresSkill: { skill: 'fishing', level: 68 } },
     magearena_staffshop: { requiresSkill: { skill: 'magic', level: 60 } },
     magearena_runeshop: { requiresSkill: { skill: 'magic', level: 60 } },
     championshop: { requiresQuestPoints: 32 },
@@ -1289,6 +1290,7 @@ export function evaluatePreflight(
                     required: req.count,
                     available,
                     reserved,
+                    owned,
                     message: `Need ${req.count}x item ${req.itemId} (available after reserve: ${available})`,
                 });
                 missingItems.push({
@@ -1494,6 +1496,15 @@ function extractStaticActivityPreflight(activity: {
             }
         }
     }
+    if (Array.isArray(cfg.requiredItems)) {
+        for (const r of cfg.requiredItems as unknown[]) {
+            if (!r || typeof r !== 'object') continue;
+            const { itemId, count } = r as { itemId?: unknown; count?: unknown };
+            if (Number.isSafeInteger(itemId) && (itemId as number) >= 0 && Number.isSafeInteger(count) && (count as number) >= 1) {
+                staticRequiredItems.push({ itemId: itemId as number, count: count as number });
+            }
+        }
+    }
     let maxSkillXp: Record<string, number> | undefined;
     if (cfg.maxSkillXp && typeof cfg.maxSkillXp === 'object') {
         for (const [k, v] of Object.entries(cfg.maxSkillXp as Record<string, unknown>)) {
@@ -1546,7 +1557,7 @@ export function activityPreflightFromConfig(
         readonly maxConcurrentAccounts?: number;
         readonly location?: WorkerTile;
         readonly protectedAllowed?: boolean;
-        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number; readonly reserve?: number }[];
+        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number; readonly reserve?: number; readonly unlessOwned?: readonly number[] }[];
         readonly config?: Readonly<Record<string, unknown>>;
     },
     world: WorkerWorldView,
@@ -1559,6 +1570,7 @@ export function activityPreflightFromConfig(
         const clampedBatch = Math.max(1, batchUnits);
         const mutableItems: RequiredItemSpec[] = [...base.staticRequiredItems];
         for (const io of activity.inputs) {
+            if (io.unlessOwned?.some(id => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }) > 0)) continue;
             const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch)) + Math.max(0, io.reserve ?? 0);
             mutableItems.push({ itemId: io.itemId, count });
         }

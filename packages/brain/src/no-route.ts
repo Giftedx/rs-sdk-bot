@@ -28,6 +28,9 @@ export const NO_ROUTE_FROM_TILES = 8;
 // A target this near the tile with no route, and nearer to it than to the account, is in the same place. Ardougne
 // market (2654,3283) and the Ardougne knights (2662,3305) are 49 and 43 tiles from the Ardougne north bank (2619,3332).
 export const NO_ROUTE_TARGET_TILES = 64;
+// A search that started this many tiles or fewer from its target, on the same floor, found the obstacle near the
+// target (atTarget). The quest sweep fails at the Shantay Pass gate from 5 and from 11 tiles north of its start tile.
+export const NO_ROUTE_AT_TARGET_TILES = 16;
 export const NO_ROUTE_FACTS_PER_ACCOUNT = 16;
 
 // The walker's failure text (core/src/walk/goto.ts). A search that used all of its budget without the bank stop
@@ -119,9 +122,16 @@ export function enclosedAt(facts: readonly NoRouteFact[] | undefined, pos: Worke
     return undefined;
 }
 
+// A search that started this near its target found the obstacle at the target, not at the start, so a walk away
+// does not open the route: the fact keeps its activity refused wherever the account stands, until it expires or the
+// account's state changes. noRouteTo and enclosedAt still use the start rule, so other targets stay open.
+export function atTarget(f: NoRouteFact): boolean {
+    return f.from.level === f.to.level && cheb(f.from, f.to) <= NO_ROUTE_AT_TARGET_TILES;
+}
+
 // The fact that refuses `activityId` for an account at `pos`, if one does.
 export function noRouteForActivity(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, activityId: string, now: number): NoRouteFact | undefined {
-    return facts?.find(f => f.activityId === activityId && noRouteHolds(f, pos, now));
+    return facts?.find(f => f.activityId === activityId && (noRouteHolds(f, pos, now) || (atTarget(f) && now < f.expiresAt)));
 }
 
 export function noRouteMessage(account: string, f: NoRouteFact): string {

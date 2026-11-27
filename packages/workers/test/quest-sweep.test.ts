@@ -1771,6 +1771,29 @@ test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not 
  expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
 });
 
+test('bound for Irena past the Shantay Pass, waterskins come from Shantay, not the Bedabin Nomads behind the gate',async()=>{
+ const {sellersByTravel,inKharidDesert}=await import('../src/quest/sweep');
+ const irena={x:3303,z:3112,level:0},shantay={x:3304,z:3123,level:0},nomad={x:3159,z:3042,level:0};
+ expect(inKharidDesert(irena)).toBe(true);expect(inKharidDesert(nomad)).toBe(true);expect(inKharidDesert(shantay)).toBe(false);
+ const sellers=[{npc:'Bedabin Nomad',tile:nomad},{npc:'Bedabin Nomad',tile:{x:3176,z:3043,level:0}},{npc:'Shantay',tile:shantay}];
+ for(const at of [{x:2618,z:3332,level:0},{x:3271,z:3167,level:0}]){
+  expect(sellersByTravel(sellers,at,irena)[0]!.npc).toBe('Shantay');
+  expect(sellersByTravel(sellers,at)[0]!.npc).toBe('Shantay');
+ }
+ // Inside the desert, a desert seller costs no pass.
+ expect(sellersByTravel(sellers,{x:3170,z:3040,level:0})[0]!.npc).toBe('Bedabin Nomad');
+});
+
+test('desertrescue stages a Shantay pass for an account north of the gate, and none for one already in the desert',async()=>{
+ const {questTravelItems,presetFor,SHANTAY_PASS}=await import('../src/quest/sweep');
+ const start=presetFor('desertrescue').position;
+ expect(SHANTAY_PASS).toBe(1854);
+ expect(questTravelItems('desertrescue',{x:3185,z:3436,level:0},start)).toEqual([{id:1854,count:1}]);
+ expect(questTravelItems('desertrescue',{x:3302,z:3123,level:0},start)).toEqual([{id:1854,count:1}]);
+ expect(questTravelItems('desertrescue',{x:3300,z:3110,level:0},start)).toEqual([]);
+ expect(questTravelItems('cook',{x:3185,z:3436,level:0},start)).toEqual([]);
+});
+
 test('bound for Doric, a Big Wolf account buys its pickaxe from Bob on foot, not Arhein past the refused 2855,3430 step',async()=>{
  const {sellersByTravel,eastOfArdougne}=await import('../src/quest/sweep');
  const bank={x:2946,z:3368,level:0},doric={x:2951,z:3450,level:0},weak={skills:{attack:1,strength:1,defence:1,hitpoints:10}};

@@ -668,6 +668,21 @@ test('a pestle and mortar buy from Ardougne goes to a mainland seller', () => {
     expect(r.step?.shopId).not.toBe('herbloreshop2');
 });
 
+test('a feather buy below Fishing 68 skips the Fishing Guild shop, whose seller stands behind the guild door', () => {
+    const guild = (loadShopCatalogByItem().get(314) ?? []).find((e) => e.shop === 'fishingguild');
+    expect(guild?.requiresSkill).toEqual({ skill: 'fishing', level: 68 });
+    const acct = makeAcct({
+        name: 'Featherless',
+        skills: { Fishing: { level: 1, xp: 0 }, Magic: { level: 39, xp: 15_000 } },
+        pos: { x: 2618, z: 3332, level: 0 },
+        inventory: { 995: 1516 },
+        bank: { items: { 995: 5000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Featherless: acct } };
+    const r = resolveAcquireItem(acct, { itemId: 314, quantity: 250, allowedSources: ['npc_shop'] }, { world });
+    expect(r.step?.shopId).not.toBe('fishingguild');
+});
+
 test('a shop with no seller tile is no source', () => {
     const acct = makeAcct();
     const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };

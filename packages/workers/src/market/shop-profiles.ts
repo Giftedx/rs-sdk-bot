@@ -9,6 +9,14 @@ export type { ShopProfile };
 export const DATA_PROFILE = 'data:';
 export const DATA_BANK_RANGE = 120;
 export const HAND_ONLY_SHOPS: readonly string[] = ['dragonswordshop'];
+// Shops whose seller stands behind a skill door (knowledge/doors.json kind "skill"). The derived profile carries the
+// door's level as `need`, so shop-buy refuses at entry instead of walking to a door it cannot open.
+export const SKILL_DOOR_SHOPS: Readonly<Record<string, { skill: string; level: number }>> = {
+    fishingguild: { skill: 'Fishing', level: 68 },
+    ranging_guild_bowshop: { skill: 'Ranged', level: 40 },
+    ranging_guild_armourshop: { skill: 'Ranged', level: 40 },
+    ranging_guild_tribalshop: { skill: 'Ranged', level: 40 },
+};
 
 const KNOWLEDGE_ROOT = resolve(import.meta.dir, '../../../../knowledge');
 const read = <T>(f: string) => JSON.parse(readFileSync(resolve(KNOWLEDGE_ROOT, f), 'utf8')) as T;
@@ -99,6 +107,7 @@ export function derivedProfile(shop: string): ShopProfile | undefined {
         npcSpot: { x: at.x, z: at.z },
         bankSpot: { x: bestBank.x, z: bestBank.z },
         items,
+        ...(SKILL_DOOR_SHOPS[shop] ? { need: { ...SKILL_DOOR_SHOPS[shop] } } : {}),
     };
     derivedProfileCache.set(shop, profile);
     return { ...profile, npcSpot: { ...profile.npcSpot }, bankSpot: { ...profile.bankSpot }, items: profile.items.slice() };

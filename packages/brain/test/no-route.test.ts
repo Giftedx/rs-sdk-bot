@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defaultActivityCatalog } from '../src/catalog';
 import type { AccountState, NoRouteFact, WorldSnapshot } from '../src/contracts';
-import { enclosedAt, NO_ROUTE_TTL_MS, noRouteState, parseNoRoute } from '../src/no-route';
+import { enclosedAt, NO_ROUTE_TTL_MS, noRouteState, noRouteTo, parseNoRoute } from '../src/no-route';
 import { OutcomeClassifier } from '../src/outcome-classifier';
 import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability } from '../src/preflight';
 
@@ -259,4 +259,37 @@ test('an account at a hub bank with no route to two far-apart places stays idle,
     const atHub = classifier.applyToAccount(meat(VARROCK_WEST), NOW + 1_000);
     expect(enclosedAt(atHub.noRoutes, VARROCK_WEST, NOW + 1_000)).toBeDefined();
     expect(atHub.lifecycle).toBe('idle');
+});
+
+// A search that started 5 tiles from its target: the obstacle (the Shantay Pass gate) is at the target.
+const SHANTAY_NORTH = { x: 3303, z: 3117, level: 0 };
+const SHANTAY_GATE = { x: 3303, z: 3112, level: 0 };
+const DESERT = 'RESULT fail quest-sweep desertrescue Error: start walk failed to {"x":3303,"z":3112,"level":0}: precondition no route to 3303,3112,0';
+
+test('a no-route fact found at its target keeps its activity refused after the account walks away', () => {
+    const classifier = new OutcomeClassifier({ root, persist: false });
+    const res = classifier.classifyAndApplyRaw(
+        { activityId: 'quest:desertrescue', account: 'MeatNTwoVeg', exitCode: 1, status: 'fail', reason: 'blocked after 1 runs', detail: DESERT, pos: SHANTAY_NORTH },
+        { now: NOW },
+    );
+    expect(res.noRoute).toMatchObject({ from: SHANTAY_NORTH, to: SHANTAY_GATE, activityId: 'quest:desertrescue' });
+    const quest = { id: 'quest:desertrescue', config: {} };
+    const refused = (acct: AccountState) => activityPreflightFromConfig(acct, quest, world(acct)).blockers
+        .some(b => b.kind === 'unreachable_tile' && b.reason === 'no_route');
+    expect(refused(classifier.applyToAccount(meat(SHANTAY_NORTH), NOW + 1_000))).toBe(true);
+    // The walk home to Varrock West does not open the gate.
+    const home = classifier.applyToAccount(meat(VARROCK_WEST), NOW + 2_000);
+    expect(home.noRoutes?.map(f => f.activityId)).toEqual(['quest:desertrescue']);
+    expect(refused(home)).toBe(true);
+    // Other targets near the gate stay open: the fact refuses its activity only.
+    expect(noRouteTo(home.noRoutes, VARROCK_WEST, { x: 3280, z: 3157, level: 0 }, NOW + 2_000)).toBeUndefined();
+    // A pass in the bank changes the state, and the fact ends.
+    const paid: AccountState = { ...meat(VARROCK_WEST), bank: { ...meat().bank, items: { 1854: 1 } } };
+    expect(classifier.applyToAccount(paid, NOW + 3_000).noRoutes).toBeUndefined();
+    expect(refused(meat(VARROCK_WEST, [{ ...res.noRoute!, expiresAt: NOW }]))).toBe(false);
+    // The sweep also fails 11 tiles north of the gate, and that fact holds after the walk away too.
+    const far = { x: 3302, z: 3123, level: 0 };
+    expect(refused(meat(VARROCK_WEST, [{ ...res.noRoute!, from: far }]))).toBe(true);
+    // A start far from the target is a fact about the start: the walk away ends it.
+    expect(refused(meat(VARROCK_WEST, [{ ...res.noRoute!, from: MEAT }]))).toBe(false);
 });

@@ -103,6 +103,18 @@ export function walledInAt(pos: WorkerTile | null, quests: Readonly<Record<strin
         && !questComplete(quests, r.openedByQuest));
 }
 
+// Fenced places inside a safe hub box that no walk leaves, but whose exit the location recovery knows. The
+// lumber-yard box is the one of packages/workers/src/logistics/location.ts inLumberYard; recoverSessionToHub climbs
+// its fence (FLUFFS_FENCE) before the hub walk.
+export const FENCED_REGIONS: readonly SafeHubRegion[] = [
+    { id: 'lumber-yard', name: 'Lumber Yard (fenced)', xMin: 3293, xMax: 3313, zMin: 3493, zMax: 3517, level: 0 },
+];
+
+export function fencedInAt(pos: WorkerTile | null): SafeHubRegion | undefined {
+    if (!pos) return undefined;
+    return FENCED_REGIONS.find((r) => pos.level === r.level && pos.x >= r.xMin && pos.x <= r.xMax && pos.z >= r.zMin && pos.z <= r.zMax);
+}
+
 const STALE_AUTO_STOP_TEXT =
     /^(?:fleet-health auto-paused:|swarm stopped\b|swarm plan removed or stopped\b|swarm recovery stopped\b|inherited recovery stopped\b|fleet controller lease unavailable\b|swarm:\s)/i;
 const ACCOUNT_NAME_RE = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -321,7 +333,8 @@ export function classifyAccountLifecycle(input: AccountLifecycleInput): AccountL
     ) {
         return 'needs_logout_recovery';
     }
-    if (input.strandedHold || isStrandedPosition(input.pos ?? null) || walledInAt(input.pos ?? null, input.quests)) {
+    if (input.strandedHold || isStrandedPosition(input.pos ?? null) || walledInAt(input.pos ?? null, input.quests)
+        || fencedInAt(input.pos ?? null)) {
         return 'needs_location_recovery';
     }
     return 'idle';

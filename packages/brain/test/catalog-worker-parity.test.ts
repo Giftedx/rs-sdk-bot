@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { resolveAcquireItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
 import { activityPreflightFromConfig } from '../src/preflight';
+import { FIRE_STAVES } from '../../workers/src/bank-artisan';
 import { resolveActivityWorkerRoute, resolvePlannedStepWorkerRoute } from '../src/worker-routing';
 import { validateActivityDefinition, type AccountState, type WorldSnapshot } from '../src/contracts';
 
@@ -37,16 +38,28 @@ describe('catalog-worker parity', () => {
         }
     });
 
-    test('bank-artisan:magic-alch-train needs a nature rune and the default alch item (feather) for each cast', () => {
+    test('bank-artisan:magic-alch-train needs a nature rune, the default alch item (feather) and the fire runes for each cast', () => {
         // The worker refuses with "the bank holds no supplies for one cast" (workers/src/bank-artisan/preflight.ts alch-train).
+        // Without a fire staff a cast takes FIRE_PER fire runes (3 low, 5 high: workers/src/bank-artisan/catalog.ts).
         const act = createActivityCatalog().require('bank-artisan:magic-alch-train');
+        expect(act.inputs?.find(i => i.itemId === 554)?.countPerUnit).toBe(5);
         const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
         const noRunes = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500 }, observedAt: NOW - 5_000, trusted: true } });
         const blocked = activityPreflightFromConfig(noRunes, act, world, 50);
         expect(blocked.ok).toBe(false);
         expect(blocked.missingItems?.map(m => m.itemId)).toContain(561);
-        const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500 }, observedAt: NOW - 5_000, trusted: true } });
+        const noFire = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, 554: 2 }, observedAt: NOW - 5_000, trusted: true } });
+        const fireBlocked = activityPreflightFromConfig(noFire, act, world, 50);
+        expect(fireBlocked.ok).toBe(false);
+        expect(fireBlocked.missingItems?.map(m => m.itemId)).toContain(554);
+        const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, 554: 2500 }, observedAt: NOW - 5_000, trusted: true } });
         expect(activityPreflightFromConfig(ready, act, world, 50).ok).toBe(true);
+        // alchStagePlan takes a fire staff from the pack or bank and then needs no fire runes.
+        for (const staff of FIRE_STAVES) {
+            const withStaff = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, [staff]: 1 }, observedAt: NOW - 5_000, trusted: true } });
+            expect(activityPreflightFromConfig(withStaff, act, world, 50).ok).toBe(true);
+        }
+        expect(act.inputs?.find(i => i.itemId === 554)?.unlessOwned).toEqual(FIRE_STAVES);
     });
 
     test('bank-artisan:prayer-bury needs the worker bone reserve on top of the batch, for the bone the worker buries', () => {
@@ -332,4 +345,23 @@ describe('catalog-worker parity', () => {
         );
         expect(shortRes.ok).toBe(false);
     });
+});
+
+test('a boss trip row names the combatTrip kit, Hitpoints 70 and Magic 25 the worker checks first', async () => {
+    // combatTrip (workers/src/combat/trip-kit.ts) throws "combat OWN stock missing" without the whole kit.
+    const { BLACK_KIT, KBD_KIT, combatKitTotals } = await import('../../workers/src/combat/trip-kit');
+    const catalog = createActivityCatalog();
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
+    for (const [id, kit] of [['combat:boss-black-dragon', BLACK_KIT], ['combat:boss-kbd', KBD_KIT]] as const) {
+        const act = catalog.require(id);
+        const named = Object.fromEntries(((act.config as { requiredItems?: { itemId: number; count: number }[] }).requiredItems ?? []).map(r => [r.itemId, r.count]));
+        expect(named).toEqual(Object.fromEntries(Object.entries(combatKitTotals(kit)).map(([k, v]) => [Number(k), v])));
+        expect((act.config as { requiredSkills?: Record<string, number> }).requiredSkills).toMatchObject({ Hitpoints: 70, Magic: 25 });
+    }
+    // An account with no law rune is refused before the trip.
+    const act = catalog.require('combat:boss-black-dragon');
+    const items = { ...combatKitTotals(BLACK_KIT), 995: 5000 } as Record<number, number>;
+    delete items[563];
+    const noLaw = makeTestAccount({ skills: { Ranged: { level: 80, xp: 2_000_000 }, Hitpoints: { level: 80, xp: 2_000_000 }, Magic: { level: 40, xp: 40_000 } }, bank: { items, observedAt: NOW - 5_000, trusted: true } });
+    expect(activityPreflightFromConfig(noLaw, act, world, 1).missingItems?.map(m => m.itemId)).toContain(563);
 });

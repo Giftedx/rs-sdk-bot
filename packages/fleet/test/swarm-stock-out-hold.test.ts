@@ -66,6 +66,23 @@ test('a market plan at the venue whose stock ended the last run waits for the ve
     expect(brainPlanHold(next, plain, offline, undefined, NOW + 60_000)).toBeUndefined();
 });
 
+test('an unplaced buy refusal that the next login meets again holds the venue; a baseline or a stop does not', () => {
+    const run = { marketItemId: 892, marketVenue: 'ge' };
+    const unplaced = (failure: string) => `RESULT fail {"ok":false,"phase":"unplaced","quantity":1,"acquired":0,"escrow":0,"failure":"Error: ${failure}"}`;
+    const present = unplaced('owned item already present;allocate it instead of buying duplicate stock');
+    expect(stockOutEnd(run, 'blocked after 1 runs', present)).toEqual({ marketItemId: 892, marketVenue: 'ge', marketRefusal: 'present' });
+    expect(stockOutEnd(run, 'blocked after 1 runs', unplaced('owned item baseline 2 differs from EXPECTED_OWNED 1'))).toBeUndefined();
+    expect(stockOutEnd(run, 'blocked after 1 runs', unplaced('order stopped: the session ended'))).toBeUndefined();
+    expect(stockOutEnd(run, 'died after 1 runs', present)).toBeUndefined();
+
+    const first = geBuy(10);
+    const ended = new Map<string, EndRecord>([['OreElse', {
+        at: NOW, reason: 'blocked after 1 runs', revision: missionSignature(first.job!), ...stockOutEnd(run, 'blocked after 1 runs', present),
+    }]]);
+    expect(brainPlanHold(geBuy(9), ended, offline, undefined, NOW + 60_000)).toMatch(/^ended: ge refused item 892 \(present\) until /);
+    expect(brainPlanHold(geBuy(9), ended, offline, undefined, NOW + stockOutHoldMs(892, 'ge'))).toBeUndefined();
+});
+
 test('the hold lasts the venue cooldown, or the shop restock when longer', () => {
     expect(stockOutHoldMs(892, 'ge')).toBe(10 * 60_000);
     // The Ardougne gem stall restocks its sapphires each 15000 ticks (knowledge/shops.json).

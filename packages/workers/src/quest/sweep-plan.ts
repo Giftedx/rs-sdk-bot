@@ -567,6 +567,20 @@ export function travelDistance(from: Tile, to: Tile): number {
     return cheb(from, to) + (crossesSea(from, to) ? SEA : 0);
 }
 
+// The Kharidian Desert south of the Shantay Pass. Each southbound crossing of the gate consumes a Shantay pass
+// (knowledge/npc-travel.json shantay_guard_still); the northbound way is free.
+export const SHANTAY_PASS = 1854;
+export const inKharidDesert = (t: Tile) => t.level === 0 && t.x >= 3130 && t.x <= 3520 && t.z >= 2880 && t.z <= 3115;
+
+// Items a quest start behind an item gate needs when the account is outside the gate. The preset starts inside, so its
+// inventory does not hold them.
+export const QUEST_TRAVEL_ITEMS: Record<string, readonly { id: number; inside: (t: Tile) => boolean }[]> = {
+    desertrescue: [{ id: SHANTAY_PASS, inside: inKharidDesert }],
+};
+export function questTravelItems(quest: string, at: Tile, start: Tile): Item[] {
+    return (QUEST_TRAVEL_ITEMS[quest] ?? []).filter((g) => g.inside(start) && !g.inside(at)).map((g) => ({ id: g.id, count: 1 }));
+}
+
 export function sellersByTravel<S extends { tile: Tile }>(
     sellers: readonly S[],
     at: Tile,
@@ -574,10 +588,13 @@ export function sellersByTravel<S extends { tile: Tile }>(
     acct?: Pick<Account, 'skills'>,
 ): S[] {
     const boats = (a: Tile, b: Tile) => (eastOfArdougne(a, b, acct) ? 1 : 0);
+    // A seller across the Shantay Pass costs a pass that the quest start needs.
+    const gate = (t: Tile) => (inKharidDesert(t) !== inKharidDesert(at) ? SEA : 0);
     const cost = (t: Tile) =>
-        dest
+        gate(t) +
+        (dest
             ? detour([at, dest], t) + SEA * Math.max(0, boats(at, t) + boats(t, dest) - boats(at, dest))
-            : travelDistance(at, t) + SEA * boats(at, t);
+            : travelDistance(at, t) + SEA * boats(at, t));
     return [...sellers].sort((a, b) => cost(a.tile) - cost(b.tile));
 }
 

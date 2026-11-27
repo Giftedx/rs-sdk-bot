@@ -16,6 +16,7 @@ export type LocationKind =
     | 'dwarven_mine'
     | 'entrana_dungeon'
     | 'zanaris'
+    | 'lumber_yard'
     | 'off_hub_area';
 
 export interface LocationClassification {
@@ -123,6 +124,10 @@ export function classifyLocation(
     }
     if (inBox(pos, 3136, 3263, 9536, 9599)) {
         return { kind: 'zanaris', stranded: true, autoFixable: true, targetHub: HUB_BANKS.varrockWest, summary: `Zanaris at ${pos.worldX},${pos.worldZ}` };
+    }
+    // The fenced yard sits inside a hub area, but no walk leaves it: recovery climbs FLUFFS_FENCE.
+    if (pos.level === 0 && inLumberYard(pos)) {
+        return { kind: 'lumber_yard', stranded: true, autoFixable: true, targetHub: HUB_BANKS.varrockWest, summary: `Lumber Yard fenced in at ${pos.worldX},${pos.worldZ}` };
     }
     if (offHub) {
         return { kind: 'off_hub_area', stranded: true, autoFixable: true, targetHub, summary: `off-hub area=${area} at ${pos.worldX},${pos.worldZ}` };
