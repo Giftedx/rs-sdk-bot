@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804153498-1",
  "account": "SporranDip",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 8,
  "claim": "bc227d5a-7522-4027-9713-9d17dab0a438",
- "count": 0,
- "ok": false,
- "at": 1795804354874,
- "detail": "trade claimed"
+ "count": 8,
+ "ok": true,
+ "at": 1795804445484,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8,
+  "after": 0
+ },
+ "bank": {
+  "count": 8,
+  "at": 1795804361943
+ },
+ "logout": {
+  "attemptId": "1795804354886-0000035000-0000000001",
+  "at": 1795804445470,
+  "sha256": "4d6610032f1412a32e5c4dfc762d84077b9c0b71a9d3626cb14de11eaf6098e0"
+ },
+ "screen": true
 }

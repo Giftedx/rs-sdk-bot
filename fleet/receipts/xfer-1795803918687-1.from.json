@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803918687-1",
  "account": "Woodpecker",
  "partner": "TossTheCaber",
@@ -10,15 +10,33 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "4add4180-a057-41f2-8240-db785eb696e6",
- "count": 0,
- "ok": false,
- "at": 1795804410959,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795804437865,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Unicorn horn",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795804418333
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795804410968-0000033240-0000000001",
+  "at": 1795804437851,
+  "sha256": "6289a29f54025cba5c8ed7e68097a042fd97e82b511dea9d6033258080493c7d"
+ },
+ "screen": true
 }
