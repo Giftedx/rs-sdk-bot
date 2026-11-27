@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795793811185-1",
  "account": "YewFirst",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 15,
  "claim": "e7872c70-d9da-4d27-98ac-6f426fd0a545",
- "count": 0,
- "ok": false,
- "at": 1795794323572,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795794337567,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795794336887
+ },
+ "logout": {
+  "attemptId": "1795794323584-0000003544-0000000001",
+  "at": 1795794337554,
+  "sha256": "392c4045228409333052f2c238301d8118b788db44a748874a99ba75b7435dfe"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795794336449-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Bigpackage",
+  "item": "Arrow shaft",
+  "count": 1075,
+  "itemId": 52,
+  "start": 1795794336449,
+  "end": 1795795236449,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
