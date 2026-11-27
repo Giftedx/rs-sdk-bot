@@ -135,7 +135,7 @@ test('the logins line names each status row that refuses live logins, says none,
         { name: 'Old', dir: '/repo/.practice/status', ageMs: null, attemptId: null, ownerPid: null, ownerAlive: null },
     ];
     expect(nowLines(state(), local({ logins: blockers }), NOW)).toContain('logins  REFUSED "release peer state unknown" by '
-        + 'Swordinhand (row 8 min old in .practice/live/status, owner pid 27940 alive, closes by silence in 2 min); '
+        + 'Swordinhand (row 8 min old in .practice/live/status, owner pid 27940 alive, closes by silence in 7 min); '
         + 'Old (row time unknown in .practice/status, no lifecycle owner, no valid time, so it holds until its row changes)');
     expect(nowLines(state(), local({ logins: [] }), NOW)).toContain('logins  no unfinished status row holds live logins');
     expect(nowLines(state(), local({ logins: null }), NOW).some(l => l.startsWith('logins  not known'))).toBe(true);

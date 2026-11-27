@@ -37,11 +37,11 @@ export const PEER_STALE_MS = 30_000;
 // The server forces the logout of a client that sent no bytes for 1000 ticks, 400 s at its 400 ms tick (engine World.ts
 // TIMEOUT_NO_RESPONSE), whatever the state of its socket. A session's status row beats on the same event loop that
 // sends the client's packets, so a row silent for that long names no session on the server: its process is dead, its
-// session is closed or its event loop is blocked. The margin covers a server whose ticks run up to half slow. Such a row
-// is closed whatever its producer lifecycle or owner PID show, so a hung or killed worker, or a legacy row with no
-// lifecycle, cannot refuse every login on the server. A peer that comes back from a blocked loop checks its own release
+// session is closed or its event loop is blocked. The limit covers 1000 ticks of up to 800 ms (twice the nominal tick)
+// and 100 s for the logout itself. Such a row is closed whatever its producer lifecycle or owner PID show, so a hung or
+// killed worker, or a legacy row with no lifecycle, cannot refuse every login on the server. A peer that comes back from a blocked loop checks its own release
 // again before it logs in (assertLiveWorkerRelease).
-export const SILENT_SESSION_DROP_MS = 600_000;
+export const SILENT_SESSION_DROP_MS = 900_000;
 export const silentSessionRow = (row: any, now = Date.now()): boolean =>
     Number.isFinite(row?.at) && row.at > 0 && row.at <= now && now - row.at >= SILENT_SESSION_DROP_MS;
 const unknownPeerRow = (s: any, now: number) => !Number.isFinite(s.at) || s.at <= 0 || s.at > now || now - s.at >= PEER_STALE_MS;
