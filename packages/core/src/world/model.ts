@@ -32,11 +32,16 @@ export interface Transport extends TransportMeta {
 export type RouteOptions = { deadline?: number };
 export const ROUTE_BUDGET_MS = 45_000;
 
+export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null };
 export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget) => number | null) & {
     withPolicy?<T>(blocked: DoorBlock[], query: () => T): T;
     withDanger?<T>(acct: Account, from: Tile, to: Tile, query: () => T): T;
     walkable?(t: Tile): boolean;
     areaOf?(t: Tile): number;
+    // The area labels of the active scope (shut doors and closed danger ground), built when missing. `area`: >= 0 an
+    // area, -1 not walkable, -2 outside the loaded map. `reach`: the areas of the tiles that reach loc `q` at `to`, null
+    // when one is outside the map. Called inside withPolicy and withDanger.
+    scopeAreas?(blocked: DoorBlock[]): ScopeAreas;
     measurePrechecked?(from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null;
 };
 

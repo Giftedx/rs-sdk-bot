@@ -5,6 +5,7 @@ export type {
     Leg,
     PathLength,
     RouteOptions,
+    ScopeAreas,
     Tile,
     Transport,
     World,

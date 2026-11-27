@@ -2,7 +2,7 @@ import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { travelAllowed, type Travel } from '../travel';
 import { doorBlock, doorBlocks, transportAllowed } from './filters';
 import { areasDisjoint, buildWorldGraph, lowerBoundX, solveLowerBounds, upperBoundX, type ApproachTransport, type WorldGraph } from './graph';
-import { GOAL_TOL, loadKnowledgeJson, MAX_LEG, PORTAL_TOL, routeFares, tileKey, TRANSPORT_COST, type Account, type Door, type Leg, type RouteOptions, type Tile, type Transport, type World, type WorldOptions } from './model';
+import { GOAL_TOL, loadKnowledgeJson, MAX_LEG, PORTAL_TOL, routeFares, tileKey, TRANSPORT_COST, type Account, type Door, type Leg, type RouteOptions, type ScopeAreas, type Tile, type Transport, type World, type WorldOptions } from './model';
 
 class MinHeap<T extends { f: number }> {
     private a: T[] = [];
@@ -68,6 +68,134 @@ type SearchEntry = {
     approachIdx?: number;
 };
 
+// A search still running after this long checks whether any chain of walks, transports and travel can join its start
+// to its goal (goalReachable). Without one it ends with no_route at once: the lazy search proves no route only after
+// it has measured every walk on the start's side of the map. For a 10 HP account from Lumbridge to Catherby (White Wolf
+// Mountain closed) that took 48 s with a cold leg cache, past the 45 s route budget.
+export const AREA_CHECK_AFTER_MS = 1000;
+
+/**
+ * Whether a chain of the search's own legs can join `from` to `to`, on the area labels of the active scope: a walk
+ * joins two ends in one area at most MAX_LEG apart (plus the reach of their boxes), and each allowed transport or
+ * travel joins its start to its landings. Each join is the same or wider than a leg the search can make, so a false
+ * result proves that the search has no route.
+ */
+export function goalReachable(
+    scope: ScopeAreas,
+    from: Tile, to: Tile, goalTol: number,
+    transports: readonly Transport[], allowedT: Uint8Array, travel: readonly Travel[], travelOk: (t: Travel) => boolean,
+): boolean {
+    const area = scope.area;
+    // A box past the loaded map gets the map square node (< 0), which joins every area of that square.
+    const squares = new Map<number, number[]>();
+    const square = (t: Tile): number => {
+        const id = -1 - ((t.level << 16) | ((t.x >> 6) << 8) | (t.z >> 6));
+        if (!squares.has(id)) {
+            const x0 = t.x & ~63, z0 = t.z & ~63, seen: number[] = [];
+            for (let x = x0; x < x0 + 64; x++) for (let z = z0; z < z0 + 64; z++) { const v = area(t.level, x, z); if (v >= 0 && !seen.includes(v)) seen.push(v); }
+            squares.set(id, seen);
+        }
+        return id;
+    };
+    // The areas within r of a tile. A tile in the loaded map with no walkable tile in reach gets a node of its own
+    // (< 0): no walk reaches it, and a transport that lands on it joins the transports that leave from it.
+    const lone = new Map<string, number>();
+    const near = (t: Tile, r: number, w = 1, h = 1): number[] => {
+        const found: number[] = [];
+        for (let x = t.x - r; x <= t.x + w - 1 + r; x++) for (let z = t.z - r; z <= t.z + h - 1 + r; z++) {
+            const v = area(t.level, x, z);
+            if (v === -2) return [square(t)];
+            if (v >= 0 && !found.includes(v)) found.push(v);
+        }
+        if (found.length) return found;
+        const k = `${t.level},${t.x},${t.z}`;
+        let id = lone.get(k);
+        if (id === undefined) lone.set(k, id = -(1 << 30) - lone.size);
+        return [id];
+    };
+    // A walk with no tolerance ends on its tile, so a walkable tile is in its own area only, and a walk from a tile that
+    // is not walkable starts with one step (ScopeAreas.step). A box would reach over a wall: the open air of an upper
+    // floor is one walkable area across the whole map, and a box round the Lumbridge windmill top joined it.
+    const own = (t: Tile): number[] => {
+        const v = area(t.level, t.x, t.z);
+        if (v >= 0) return [v];
+        const s = v === -2 ? null : scope.step(t);
+        return s === null ? [square(t)] : s.length ? s : near(t, 0);
+    };
+
+    // Ends: the tiles where a walk starts or stops, with their areas and box reach.
+    type End = { t: Tile; areas: number[]; r: number };
+    const ends: End[] = [], out: number[][] = [];
+    const end = (t: Tile, areas: number[], r = 1): number => { ends.push({ t, areas, r }); out.push([]); return ends.length - 1; };
+    // A goal is reached by a walk that ends within goalTol of it, or by a landing on it.
+    const startEnd = end(from, own(from)), goalEnd = end(to, goalTol > 0 ? [...new Set([...near(to, goalTol), ...own(to)])] : own(to), goalTol);
+    const first = [startEnd];
+    for (let i = 0; i < transports.length; i++) {
+        if (!allowedT[i]) continue;
+        // A transport with an interaction and no entry tile is used from any tile that reaches its loc (approach legs).
+        const t = transports[i]!, q = t.interaction, at = t.entry ?? t.from;
+        const r = q && !t.entry ? Math.max(PORTAL_TOL, q.width, q.height) : 1;
+        const reach = q && !t.entry ? scope.reach(at, r, q) : null;
+        const src = end(at, q && !t.entry ? reach === null ? [square(at)] : reach.length ? reach : near(at, 0) : own(at), r + Math.max(q?.width ?? 1, q?.height ?? 1));
+        out[src]!.push(end(t.to, own(t.to)));
+    }
+    for (const t of travel) {
+        if (!travelOk(t)) continue;
+        const lands = [t.to, ...(t.lands ?? [])].map(l => end(l, own(l)));
+        // A teleport leaves from the route start.
+        if (t.from) out[end(t.from, own(t.from))]!.push(...lands); else first.push(...lands);
+    }
+
+    // Walks: union the ends that share an area (a map square node stands for each area of its square) and lie within
+    // MAX_LEG of each other, by buckets of MAX_LEG tiles.
+    const parent = Int32Array.from(ends.keys());
+    const findRoot = (i: number): number => { while (parent[i] !== i) { parent[i] = parent[parent[i]!]!; i = parent[i]!; } return i; };
+    const unite = (a: number, b: number) => { const x = findRoot(a), y = findRoot(b); if (x !== y) parent[x] = y; };
+    const byArea = new Map<number, number[]>();
+    for (let i = 0; i < ends.length; i++) {
+        const seen = new Set<number>();
+        for (const a of ends[i]!.areas) for (const v of [a, ...squares.get(a) ?? []]) {
+            if (seen.has(v)) continue;
+            seen.add(v);
+            const list = byArea.get(v); if (list) list.push(i); else byArea.set(v, [i]);
+        }
+    }
+    for (const list of byArea.values()) {
+        const buckets = new Map<string, number[]>();
+        for (const i of list) {
+            const { t } = ends[i]!, k = `${t.level},${Math.floor(t.x / MAX_LEG)},${Math.floor(t.z / MAX_LEG)}`;
+            const b = buckets.get(k); if (b) b.push(i); else buckets.set(k, [i]);
+        }
+        // Two ends of one bucket are under MAX_LEG apart; one close pair joins two neighbouring buckets.
+        for (const b of buckets.values()) for (let n = 1; n < b.length; n++) unite(b[0]!, b[n]!);
+        for (const [k, b] of buckets) {
+            const [lvl, bx, bz] = k.split(',').map(Number) as [number, number, number];
+            for (const [dx, dz] of [[1, -1], [1, 0], [1, 1], [0, 1]] as const) {
+                const other = buckets.get(`${lvl},${bx + dx},${bz + dz}`);
+                if (!other || findRoot(b[0]!) === findRoot(other[0]!)) continue;
+                pair: for (const i of b) {
+                    const ti = ends[i]!;
+                    for (const j of other) {
+                        const tj = ends[j]!;
+                        if (Math.max(Math.abs(ti.t.x - tj.t.x), Math.abs(ti.t.z - tj.t.z)) <= MAX_LEG + ti.r + tj.r) { unite(i, j); break pair; }
+                    }
+                }
+            }
+        }
+    }
+    const members = new Map<number, number[]>();
+    for (let i = 0; i < ends.length; i++) { const root = findRoot(i), m = members.get(root); if (m) m.push(i); else members.set(root, [i]); }
+    const goalRoot = findRoot(goalEnd), done = new Set<number>(), queue: number[] = [];
+    const visit = (i: number) => { const root = findRoot(i); if (!done.has(root)) { done.add(root); queue.push(root); } };
+    for (const i of first) visit(i);
+    while (queue.length) {
+        const root = queue.pop()!;
+        if (root === goalRoot) return true;
+        for (const i of members.get(root)!) for (const j of out[i]!) visit(j);
+    }
+    return false;
+}
+
 /** Executes bidirectional lazy A* over a built world graph under an account's door, danger, and coin budgets. */
 export function routeOnGraph(
     graph: WorldGraph,
@@ -113,6 +241,14 @@ export function routeOnGraph(
     const travelZeroOk = new Map<Travel, boolean>();
     for (const t of travel) travelZeroOk.set(t, travelAllowed(t, acct));
     const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
+    const searchStart = performance.now();
+    let areaChecked = !opts.pathLength.scopeAreas;
+    // Inside the danger and door scope of the search, so the labels close what the walks cannot pass.
+    const unreachable = (): boolean => {
+        areaChecked = true;
+        const goalTol = strictTo ? 0 : opts.goalTolerance ?? GOAL_TOL;
+        return !goalReachable(opts.pathLength.scopeAreas!(blocked), from, to, goalTol, transports, allowedT, travel, t => travelZeroOk.get(t)!);
+    };
 
     const search = (trackFares: boolean): ReturnType<World['route']> => {
         const numCache = new Map<number, number | null>();
@@ -406,7 +542,11 @@ export function routeOnGraph(
         let steps = 0;
         try {
             for (;;) {
-                if (deadline !== Infinity && (steps++ & 31) === 0 && performance.now() > deadline) return { ok: false, reason: 'budget' };
+                if ((steps++ & 31) === 0) {
+                    const now = performance.now();
+                    if (now > deadline) return { ok: false, reason: 'budget' };
+                    if (!areaChecked && now - searchStart >= AREA_CHECK_AFTER_MS && unreachable()) return { ok: false, reason: 'no_route' };
+                }
                 const a = forward.next();
                 if (a.done) return a.value;
                 const b = backward.next();

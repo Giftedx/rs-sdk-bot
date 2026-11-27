@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { legCache, type LegCache } from '../src/leg-cache';
 import { loadPathfinding } from '../src/pathcache';
-import { createWorld, rsPathLength, type Account, type PathLength, type Tile, type World } from '../src/world';
+import { createWorld, ROUTE_BUDGET_MS, rsPathLength, type Account, type PathLength, type Tile, type World } from '../src/world';
 
 // A 10 HP account: the danger rule closes White Wolf Mountain, so Burthorpe and Ardougne share one map area
 // (components.ts) but no walk joins them.
@@ -47,3 +47,30 @@ test('after 64 measured nulls a scope is labelled, and legs between its areas ar
         expect(pl(BURTHORPE, { x: 2816, z: 3552, level: 0 }, blocked, 1)).toBe(home);
     }));
 }, 120_000);
+
+// With 3 coins the boats are shut too, so no route exists. The lazy search proves that only after it has measured every
+// walk on the Lumbridge side: 48 s with this empty store, past the 45 s route budget (Abracadickra's shop walk logged
+// WALK_NO_ROUTE after 45866 ms). The area check (search.ts goalReachable) ends it after its first second.
+test('a 10 HP account with 3 coins has no route from Lumbridge to Catherby, and the search says so well inside its budget', () => {
+    const poor: Account = { ...weak, coins: 3, counts: { coins: 3 }, items: ['coins'] };
+    const t0 = performance.now();
+    const r = w.route({ x: 3221, z: 3220, level: 0 }, { x: 2809, z: 3441, level: 0 }, poor, { deadline: performance.now() + ROUTE_BUDGET_MS });
+    const ms = performance.now() - t0;
+    console.log(`lumbridge->catherby, 10 HP, 3 coins: ${Math.round(ms)} ms`, r.ok ? `cost ${r.cost}` : r.reason);
+    expect(r).toEqual({ ok: false, reason: 'no_route' });
+    expect(ms).toBeLessThan(15_000);
+}, 120_000);
+
+// The danger rule closes the ground of the account's deadly hunters over the whole map (danger/guard.ts guardRoute), not
+// over a box round the route, so a route between two points plans as one route whenever its halves are safe routes.
+// The essence mine exit portal lands the account by Cromperty in East Ardougne, west of White Wolf Mountain.
+test('a 10 HP account\'s route out of the essence mine plans as one route when its two halves are safe routes', () => {
+    const mine: Tile = { x: 2924, z: 4848, level: 0 }, cromperty: Tile = { x: 2684, z: 3322, level: 0 }, catherby: Tile = { x: 2809, z: 3441, level: 0 };
+    const deadline = () => ({ deadline: performance.now() + ROUTE_BUDGET_MS });
+    const first = w.route(mine, cromperty, weak, deadline()), second = w.route(cromperty, catherby, weak, deadline());
+    const whole = w.route(mine, catherby, weak, deadline());
+    console.log('mine->cromperty', first.ok ? first.cost : first.reason, 'cromperty->catherby', second.ok ? second.cost : second.reason, 'mine->catherby', whole.ok ? whole.cost : whole.reason);
+    expect(first.ok && second.ok).toBe(true);
+    expect(whole.ok).toBe(true);
+    if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
+}, 180_000);
