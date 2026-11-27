@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795810651498-1",
  "account": "Spitroaster",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 2,
  "claim": "38cca35d-7057-4ccd-b701-cf8a71bfd522",
- "count": 0,
- "ok": false,
- "at": 1795811250992,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795811453176,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795811442415
+ },
+ "logout": {
+  "attemptId": "1795811251005-0000033376-0000000001",
+  "at": 1795811453123,
+  "sha256": "755250832e5efa73d32069634c37ee2423c05b52b67c587f5a6b5dc392706d08"
+ },
+ "screen": true
 }
