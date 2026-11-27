@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795806295449-1",
+ "account": "DropMyLoad",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "07d40530-f0a4-4032-8205-5320d54c3d81",
+ "count": 0,
+ "ok": false,
+ "at": 1795806469343,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 4,
+   "count": 0
+  }
+ ]
+}
