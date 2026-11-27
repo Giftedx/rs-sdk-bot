@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799778051,
+ "at": 1795799793603,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -144,7 +144,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1133"
+    "BATCH_UNITS": "1128"
    },
    "enabled": true,
    "repeat": false,
@@ -156,17 +156,17 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=81400 TARGET_COUNT=8140 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
+    "loot-trip"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
