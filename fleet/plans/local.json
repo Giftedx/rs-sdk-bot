@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751987996,
+ "at": 1795752049347,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,6 +71,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1307 MAX_MAKE=3 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=3 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
    "role": "army"
   },
   {
@@ -174,21 +189,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
    "role": "army"
   }
  ],
