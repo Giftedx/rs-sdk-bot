@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790350544-2",
+ "account": "mmtha0205",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 10,
+ "claim": "f0ce05d0-82a8-431b-aa74-f7fe5db69918",
+ "count": 0,
+ "ok": false,
+ "at": 1795791125224,
+ "detail": "trade claimed"
+}

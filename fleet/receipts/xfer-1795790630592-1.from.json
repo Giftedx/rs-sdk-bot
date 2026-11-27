@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795790630592-1",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "e19f63c1-e189-4ca3-a980-06efccfdb1ab",
  "count": 0,
  "ok": false,
- "at": 1795791098607,
- "detail": "trade claimed"
+ "at": 1795791138100,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795791106997
+ },
+ "logout": {
+  "attemptId": "1795791098617-0000030740-0000000001",
+  "at": 1795791138088,
+  "sha256": "db28768da2474d305be8f616cf6e31e2bc856d280694606481ae6f2f6ee13277"
+ },
+ "screen": false
 }
