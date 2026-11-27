@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795810236914-1",
  "account": "Pocketpython",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "3169613d-72a1-4f16-9862-173154381737",
  "count": 0,
  "ok": false,
- "at": 1795810538910,
- "detail": "trade claimed"
+ "at": 1795810671187,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795810538938-0000022032-0000000001",
+  "at": 1795810671158,
+  "sha256": "8aa3a5676d1ef166895953748f89fdd53543c3368106b9623ba809d239d7fb57"
+ },
+ "screen": false
 }
