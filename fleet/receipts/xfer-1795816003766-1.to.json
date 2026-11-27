@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795816003766-1",
+ "account": "Fingerblastr",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "b78a2525-d3da-401e-b973-0d3d171587ff",
+ "count": 0,
+ "ok": false,
+ "at": 1795816101571,
+ "detail": "trade claimed"
+}
