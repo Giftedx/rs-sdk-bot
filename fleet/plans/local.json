@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795744876747,
+ "at": 1795744973610,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,8 +79,8 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=8 STOCK_TARGET=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=8 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=8 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -255,6 +255,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:magearena",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 TARGET_COUNT=2 PRODUCT_TARGET=3 -- crafting inventory brew:unf_marrentill_potion",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:shaftshooter:item:175 BATCH_UNITS=3 ORDER_MODE=best-effort -- crafting inventory brew:3doseantipoison"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:shaftshooter:item:175",
    "role": "army"
   }
  ],
