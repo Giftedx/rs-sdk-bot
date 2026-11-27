@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744332003-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Unsheathed",
+  "item": "Marrentill",
+  "count": 1,
+  "itemId": 251,
+  "start": 1795744332003,
+  "end": 1795745232003,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

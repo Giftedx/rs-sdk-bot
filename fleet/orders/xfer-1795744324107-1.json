@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744324107-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "TheFullMonty",
+  "item": "Vial of water",
+  "count": 3,
+  "itemId": 227,
+  "start": 1795744324107,
+  "end": 1795745224107,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

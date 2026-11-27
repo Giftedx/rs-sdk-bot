@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795743964723-1",
+ "account": "BowBeforeMe",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 73,
+ "claim": "54c5f3d7-5fb8-4013-9bed-1b1b64eb8d41",
+ "count": 0,
+ "ok": false,
+ "at": 1795744336976,
+ "detail": "trade claimed"
+}

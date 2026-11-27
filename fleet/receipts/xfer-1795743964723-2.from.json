@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795743964723-2",
+ "account": "Fatstack",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "52d2bace-c121-47fa-bfb8-16c67c4fa392",
+ "count": 0,
+ "ok": false,
+ "at": 1795744346311,
+ "detail": "trade claimed"
+}
