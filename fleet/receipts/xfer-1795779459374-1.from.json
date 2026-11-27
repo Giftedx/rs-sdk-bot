@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779459374-1",
  "account": "Pocketpython",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Rune pickaxe",
  "requested": 1,
  "claim": "f124ef5a-c56b-41e5-b65d-ddfe0627cbed",
- "count": 0,
- "ok": false,
- "at": 1795779602362,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795779727558,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779627116
+ },
+ "logout": {
+  "attemptId": "1795779602370-0000026936-0000000001",
+  "at": 1795779727472,
+  "sha256": "b09dda5c275b8c1e67459b3492635ce0b260575e3b4104b176aa396c14ca2ebf"
+ },
+ "screen": true
 }

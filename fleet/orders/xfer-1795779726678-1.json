@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779726678-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "mmsmk1232",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 207,
+  "start": 1795779726678,
+  "end": 1795780626678,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

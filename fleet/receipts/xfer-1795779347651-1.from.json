@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779347651-1",
  "account": "Bigpackage",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "29e10f23-d237-4659-a7ce-e020b1ba5c9a",
- "count": 0,
- "ok": false,
- "at": 1795779700600,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795779739132,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779723180
+ },
+ "logout": {
+  "attemptId": "1795779700609-0000025944-0000000001",
+  "at": 1795779739123,
+  "sha256": "caca9570287ecfd8a4d000d2e2b02de9d6bba10dff31c7fa315f3bf592731938"
+ },
+ "screen": true
 }
