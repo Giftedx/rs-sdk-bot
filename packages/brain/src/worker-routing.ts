@@ -772,6 +772,23 @@ export function resolvePlannedStepWorkerRoute(
                     warnings: [],
                 };
             }
+            if (planned.recoveryKind === 'stage' && planned.targetTile) {
+                // The walk withdraws STAGE_KIT into the pack at the nearest bank first (logistics module walk-to).
+                const tile = planned.targetTile;
+                const kit = (planned.kit ?? []).map((k) => `${k.itemId}:${k.count}`).join(',');
+                return {
+                    account,
+                    stepKind: 'recover',
+                    executionMode: 'worker',
+                    family: 'logistics',
+                    workerId: 'logistics',
+                    routeKey: 'walk-to',
+                    args: ['walk-to', String(tile.x), String(tile.z), String(tile.level)],
+                    env: { RECOVERY_REASON: planned.reason, ...(kit ? { STAGE_KIT: kit } : {}) },
+                    config: { role: 'walk-to', tile, ...(planned.kit ? { kit: planned.kit } : {}) },
+                    warnings: [],
+                };
+            }
             const walledQuest = walledRecoveryQuest(planned.reason);
             if (walledQuest) {
                 // No walk crosses the wall of a walled place, so the walk to a hub has no route. The quest that opens
