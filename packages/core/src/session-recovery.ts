@@ -12,10 +12,12 @@ import {leaveCombat} from './combat-end';
 
 // The logout of a recovery. The server takes no logout while a monster attacks the account, so an account under attack
 // leaves the fight first: leaveCombat walks it off the monsters' ground with auto-retaliate off, eats if it must, and
-// waits for the logout window. It runs after the recovery's last state snapshot. An account not under attack logs out
-// where it stands.
+// waits for the logout window. It runs after the recovery's last state snapshot. Only the server's own in-combat flag
+// starts it: the last damage tick of a fresh session is no proof of an attacker, and a recovery of an account that no
+// monster attacks never moves it.
 export async function recoveryLogout(session:Session,leave:typeof leaveCombat=leaveCombat,logout:typeof logoutSession=logoutSession,log:(line:string)=>void=console.log):Promise<string>{
  try{
+  if(session.sdk.getState()?.player?.combat?.inCombat!==true)return logout(session);
   const end=await leave(session,{log:()=>{}});
   if(end.underAttack)log('RECOVERY_LEAVE '+JSON.stringify({left:end.left,quiet:end.quiet,ticks:end.ticks,tiles:end.tiles,eats:end.eats}));
  }catch{log('RECOVERY_LEAVE failed');}
