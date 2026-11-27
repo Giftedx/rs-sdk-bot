@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751925727,
+ "at": 1795751976429,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
    "account": "YewFirst",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -73,24 +88,6 @@
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
    "role": "army"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "green-dragon"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:536",
-    "BATCH_UNITS": "430"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:536",
-   "role": "army",
-   "resources": [
-    "wild-green-dragons"
-   ]
   },
   {
    "account": "mmsmk1232",
@@ -121,6 +118,24 @@
    "role": "army"
   },
   {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -137,21 +152,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -187,12 +187,12 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pickpockdick",
