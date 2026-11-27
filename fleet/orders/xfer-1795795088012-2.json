@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795795088012-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "YewFirst",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 205,
+  "start": 1795795088012,
+  "end": 1795795988012,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
