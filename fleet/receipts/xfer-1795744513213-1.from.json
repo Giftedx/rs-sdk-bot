@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744513213-1",
+ "account": "Swordinhand",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "019ced0d-1b16-4e03-8eca-ceab9a92d384",
+ "count": 0,
+ "ok": false,
+ "at": 1795744654121,
+ "detail": "trade claimed"
+}

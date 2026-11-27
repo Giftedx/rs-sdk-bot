@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795744324107-1",
+ "account": "TheFullMonty",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 3,
+ "claim": "4f347d3a-75c1-43de-ba02-e35988151c7c",
+ "count": 3,
+ "ok": true,
+ "at": 1795744645534,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795744644780
+ },
+ "logout": {
+  "attemptId": "1795744635019-0000007328-0000000001",
+  "at": 1795744645525,
+  "sha256": "68f58af78d1a2fb8564a969bff115a4d7bd58b9115f5d7cb6ff48e8db7d7e0e5"
+ },
+ "screen": true
+}

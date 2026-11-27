@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744427112-1",
+ "account": "Wandwaver",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "740773d2-f23c-4551-bf77-16c246746357",
+ "count": 0,
+ "ok": false,
+ "at": 1795744638182,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

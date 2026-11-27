@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744531265-1",
+ "account": "BowBeforeMe",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "2b151b8e-8722-4f07-922b-e38ee65122fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795744596651,
+ "detail": "trade claimed"
+}
