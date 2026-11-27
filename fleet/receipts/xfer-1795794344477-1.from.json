@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795794344477-1",
  "account": "YewFirst",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "bc9b75dc-003e-4d1e-aa64-fb666700d2fb",
- "count": 0,
- "ok": false,
- "at": 1795794836170,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795795017543,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795794995989
+ },
+ "logout": {
+  "attemptId": "1795794836180-0000018448-0000000001",
+  "at": 1795795017494,
+  "sha256": "1e19bdc2f1d6b5116a2202fdc7c01bf2fc11c1ae9a574458c03b82f7738d272b"
+ },
+ "screen": true
 }
