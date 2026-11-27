@@ -129,6 +129,22 @@ test('with no food left a fight that hits half the Hitpoints escapes even at ful
     expect(floor.escaping()).toBe(true);
 });
 
+test('aggressive NPCs that target the player without a hit never start an escape at full Hitpoints', () => {
+    const { w, s, advance, hit, attacker } = world({ hp: 68, max: 68 });
+    const { floor, lines, stops } = start(s);
+    // Four attackers of combat level 57-73: the estimate floor reaches the full 68 Hitpoints.
+    w.npcs = [attacker({ index: 3, combatLevel: 57 }), attacker({ index: 4, combatLevel: 57 }), attacker({ index: 5, combatLevel: 73 }), attacker({ index: 6, combatLevel: 25 })];
+    advance(20);
+    expect(floor.line().floor).toBeGreaterThanOrEqual(68);
+    expect(floor.escaping()).toBe(false);
+    expect(lines.some(l => l.startsWith('HP_FLOOR escape '))).toBe(false);
+    expect(stops).toEqual([]);
+    // A hit that lands at the floor with no food still escapes.
+    hit(3);
+    advance(1);
+    expect(floor.escaping()).toBe(true);
+});
+
 test('an attacker the bot does not see (npc@-1) still sets the floor from the Hitpoints it lost', () => {
     const { w, s, advance, hit } = world({ hp: 10, max: 10 });
     const { floor, lines } = start(s);

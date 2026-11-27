@@ -351,7 +351,10 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
             }
         }
 
-        if (!escape && h.hp <= curFloor && attacked && !(holdsFood(st) && refusedStreak < REFUSED_EATS)) {
+        // An escape needs a hit that landed: aggressive NPCs that target the player without damage give a floor from
+        // estimates alone, which can reach full Hitpoints while the player walks past them.
+        const hitLanded = now - lastDropTick <= ATTACK_TICKS;
+        if (!escape && h.hp <= curFloor && hitLanded && !(holdsFood(st) && refusedStreak < REFUSED_EATS)) {
             stats.escapes++;
             escape = {
                 at: now, from: me, dest: null, sentAt: -Infinity, sentFrom: '', refused: new Set(), teleport: 'none', teleportAt: -Infinity,
