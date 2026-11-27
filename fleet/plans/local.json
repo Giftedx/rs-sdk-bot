@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791762437,
+ "at": 1795791937797,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,26 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
@@ -104,14 +84,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "107",
+    "MAX_ITEMS": "84",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "107"
+    "BATCH_UNITS": "84"
    },
    "enabled": true,
    "repeat": false,
@@ -141,28 +121,6 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:irit_leaf"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:259",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:259",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -185,6 +143,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:irit_leaf"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:259",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
    "role": "army"
   },
   {
@@ -270,14 +250,14 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "638",
+    "MAX_ITEMS": "633",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "638"
+    "BATCH_UNITS": "633"
    },
    "enabled": true,
    "repeat": false,
@@ -340,6 +320,26 @@
    "repeat": false,
    "goal": "campaign:haggis:item:221",
    "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Bigpackage",
