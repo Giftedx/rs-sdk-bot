@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778671411-3",
+ "account": "MeatNTwoVeg",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "ad7a893f-a8c5-4ea4-994e-335a764888de",
+ "count": 1,
+ "ok": true,
+ "at": 1795779025899,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779008736
+ },
+ "logout": {
+  "attemptId": "1795778999632-0000021632-0000000001",
+  "at": 1795779025888,
+  "sha256": "0321ff8752a9614e8d3743adb5cb5a1a90dae05cacbbdf9fa9a1fb4e6e38f4c4"
+ },
+ "screen": true
+}

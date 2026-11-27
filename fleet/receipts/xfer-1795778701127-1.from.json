@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795778701127-1",
  "account": "Woodenstaff",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "ce596402-eedd-47cc-85ec-276486958152",
- "count": 0,
- "ok": false,
- "at": 1795778975994,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795779003104,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795778985962
+ },
+ "logout": {
+  "attemptId": "1795778976003-0000002628-0000000001",
+  "at": 1795779003095,
+  "sha256": "4a3c4d9adbc5522bf56663114d788580b6f6433c6cc9e596a1dc80ff8e03e56b"
+ },
+ "screen": true
 }

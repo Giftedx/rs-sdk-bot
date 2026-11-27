@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779027141-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordswallow",
+  "to": "BackdoorMan",
+  "item": "Rune essence",
+  "count": 33,
+  "itemId": 1436,
+  "start": 1795779027141,
+  "end": 1795779927141,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779008989-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "Swordinhand",
+  "item": "Arrow shaft",
+  "count": 518,
+  "itemId": 52,
+  "start": 1795779008989,
+  "end": 1795779908989,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
