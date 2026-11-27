@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795795023188-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "PickpockDick",
+  "item": "Marrentill",
+  "count": 1,
+  "itemId": 251,
+  "start": 1795795023188,
+  "end": 1795795923188,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
