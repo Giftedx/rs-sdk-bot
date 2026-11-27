@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795785442548-2",
+ "account": "Fingerblastr",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "0a7f990c-2c83-4d4d-bef8-78713cfa0146",
+ "count": 0,
+ "ok": false,
+ "at": 1795785605266,
+ "detail": "trade claimed"
+}

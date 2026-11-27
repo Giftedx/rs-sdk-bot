@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795785442548-1",
+ "account": "PickpockDick",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "986290bb-459e-490a-8c90-9ec156922a9d",
+ "count": 1,
+ "ok": true,
+ "at": 1795785621611,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795785620834
+ },
+ "logout": {
+  "attemptId": "1795785608979-0000026464-0000000001",
+  "at": 1795785621598,
+  "sha256": "c272ea4f6d90cc66fb774e6f2f12f6b5f1de37c1f91fe58670d7adffc39262c5"
+ },
+ "screen": true
+}
