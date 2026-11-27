@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795787041951-1",
+ "account": "BoneToPick",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 3,
+ "claim": "aadb50d2-d0fd-44d9-ba8b-d93a2696071b",
+ "count": 0,
+ "ok": false,
+ "at": 1795787629490,
+ "detail": "Error: route to 2617, 3333: precondition walk danger from 2613,3091,0: route danger to 2617,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "logout": {
+  "attemptId": "1795787620080-0000026528-0000000001",
+  "at": 1795787629474,
+  "sha256": "9d0e601c7fbf2219aaf07993359c8d87f17f3f8cb7d69f43cdac9db5c0d08e96"
+ },
+ "screen": false
+}

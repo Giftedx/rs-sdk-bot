@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795787610089,
+ "at": 1795787634057,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -84,89 +84,76 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
+   "account": "KnightRider",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "thieving",
+    "knights"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "6",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "6"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1185"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "ranged-camp"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
+   "account": "FishAndChips",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "chompy"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=27 PRODUCT_TARGET=27 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:556 BATCH_UNITS=27 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:fullblooded:item:556",
+   "goal": "goal:pk_army:FishAndChips",
    "role": "auto"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "Moneyshot",
@@ -207,6 +194,44 @@
    ]
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "auto",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -229,23 +254,42 @@
    "role": "army"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-fighter.ts",
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "giant"
+    "mining",
+    "essence"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1174",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "campaign:pouchstuffed:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
+   "goal": "campaign:pouchstuffed:item:1436",
+   "role": "helper",
    "resources": [
-    "hill-giants"
+    "essence-mine"
    ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "shafts"
+   ],
+   "env": {
+    "MODE": "shafts",
+    "CAP": "19950",
+    "TARGET_COUNT": "1995",
+    "PRODUCT_TARGET": "2100",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "auto"
   }
  ],
  "army": [
@@ -269,6 +313,7 @@
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
