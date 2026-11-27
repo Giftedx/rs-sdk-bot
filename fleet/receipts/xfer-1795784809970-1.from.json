@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784809970-1",
  "account": "Bigpackage",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "be7210c2-5fed-4a8d-b2a3-f56791341160",
- "count": 0,
- "ok": false,
- "at": 1795785020191,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795785099988,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795785087271
+ },
+ "logout": {
+  "attemptId": "1795785020200-0000024084-0000000001",
+  "at": 1795785099977,
+  "sha256": "3ebb97b955b78d2a6c80a362bbabc238e6f6c0199f3fc47035a97c13ea5dae9a"
+ },
+ "screen": true
 }
