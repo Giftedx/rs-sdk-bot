@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791232585,
+ "at": 1795791245245,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,31 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "111",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "111"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "army"
   },
   {
    "account": "Swordswallow",
@@ -220,6 +195,31 @@
    "repeat": false,
    "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "111",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "111"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
   },
   {
    "account": "Unsheathed",
