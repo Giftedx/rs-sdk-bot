@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795799248933-1",
+ "account": "Quickhandjob",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 3,
+ "claim": "b6fea75f-3f5d-4b11-ad67-cde4515a800f",
+ "count": 0,
+ "ok": false,
+ "at": 1795799580509,
+ "detail": "trade claimed"
+}

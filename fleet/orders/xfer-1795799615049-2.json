@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799615049-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "ChaosInPants",
+  "item": "Mind rune",
+  "count": 15,
+  "itemId": 558,
+  "start": 1795799615049,
+  "end": 1795800515049,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

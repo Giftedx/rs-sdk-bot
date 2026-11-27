@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795799165483-1",
+ "account": "Fatstack",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 15,
+ "claim": "503adbb9-6d47-4cd0-995e-7a8a0e000d54",
+ "count": 0,
+ "ok": false,
+ "at": 1795799593779,
+ "detail": "trade claimed"
+}

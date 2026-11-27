@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799358763-1",
+ "account": "Pocketrocket",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 4,
+ "claim": "2a8457ae-e24b-40a9-8c42-e663f5387045",
+ "count": 4,
+ "ok": true,
+ "at": 1795799614226,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795799564578
+ },
+ "logout": {
+  "attemptId": "1795799554619-0000027876-0000000001",
+  "at": 1795799614146,
+  "sha256": "86ceceb64f447f19efe1515aea6c8db43e9de9594a3450db41f5cf8614cea89a"
+ },
+ "screen": true
+}
