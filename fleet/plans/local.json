@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798398397,
+ "at": 1795798416982,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -158,31 +158,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:93",
    "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
   },
   {
    "account": "Shaftmaker",
@@ -393,6 +368,31 @@
    "resources": [
     "chaos-druids"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "fishingshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "309",
+    "ITEMS": "Fly fishing rod",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:309",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:309",
+   "role": "army"
   }
  ],
  "army": [
@@ -418,7 +418,6 @@
   "pocketpool",
   "pocketrocket",
   "quickhandjob",
-  "sausagefest",
   "swordinhand",
   "woodpecker",
   "yewfirst"

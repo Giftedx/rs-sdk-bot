@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795798163060-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 58,
+ "claim": "bd7ade21-30a2-43f6-bfda-8596419f1d20",
+ "count": 0,
+ "ok": false,
+ "at": 1795798398675,
+ "detail": "trade claimed"
+}
