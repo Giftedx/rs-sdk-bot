@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744517792-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "CoinCock",
+  "item": "Bones",
+  "count": 3,
+  "itemId": 526,
+  "start": 1795744517792,
+  "end": 1795745417792,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744531265-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "OreElse",
+  "item": "Coal",
+  "count": 40,
+  "itemId": 453,
+  "start": 1795744531265,
+  "end": 1795745431265,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
