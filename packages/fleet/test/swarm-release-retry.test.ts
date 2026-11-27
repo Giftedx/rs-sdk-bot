@@ -23,3 +23,8 @@ test('a death, an end with no release, or a stop file stays held on a new releas
     // No current release (entries unresolved): held.
     expect(startable(['Rod'], true, blocked, never, undefined, 'sig', () => false, () => true, undefined).start).toEqual([]);
 });
+
+test('a completed job that does not repeat stays ended on a new release', () => {
+    const done = new Map([['Rod', { at: 1, reason: 'done after 1 runs', revision: 'sig', release: 'rel-a' }]]);
+    expect(startable(['Rod'], false, done, never, undefined, 'sig', () => false, () => true, 'rel-b').start).toEqual([]);
+});

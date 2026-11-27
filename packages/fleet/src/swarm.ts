@@ -1486,8 +1486,9 @@ export function startable(
         const newMission = !!end?.revision && !!revision && end.revision !== revision && /^done(?: after \d+ runs)?$/.test(end.reason);
         const brainSwitched = !!brainManaged?.(a) && !!end?.revision && !!revision && end.revision !== revision && !/^died\b/.test(end.reason);
         // A run that a release since then may fix (a refused, blocked or stopped end) runs once more on the new
-        // release. Its new end records that release, so a second failure holds again. A death stays held.
-        const releaseChanged = !!end?.release && !!release && end.release !== release && !/^died\b/.test(end.reason);
+        // release. Its new end records that release, so a second failure holds again. A death stays held, and a
+        // completed job needs a new mission, not a new release.
+        const releaseChanged = !!end?.release && !!release && end.release !== release && !/^died\b/.test(end.reason) && !successfulEnd(end.reason);
         const resumable = !!end && (
             (/^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision)
             || /^release-paused\b/.test(end.reason) || /^released\b/.test(end.reason)
