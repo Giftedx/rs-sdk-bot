@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795790705063,
+ "at": 1795790720705,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,44 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "sapphire_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1637",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1720 TARGET_COUNT=172 PRODUCT_TARGET=177 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=177 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -115,6 +77,21 @@
    "resources": [
     "chickens"
    ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2260 TARGET_COUNT=226 PRODUCT_TARGET=235 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=235 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
   },
   {
    "account": "Sausagefest",
@@ -143,95 +120,79 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=25 PRODUCT_TARGET=25 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=25 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "57",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "57"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
+    "mining",
+    "ore"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "5",
-    "STALL_TICKS": "280"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=5 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=5 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Pocketpython",
@@ -247,6 +208,25 @@
    "repeat": false,
    "goal": "goal:pk_army:Pocketpython",
    "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1164",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
    "account": "SporranDip",
@@ -269,6 +249,28 @@
    "repeat": false,
    "goal": "campaign:haggis:item:317",
    "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "2",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "auto"
   }
  ],
  "army": [
