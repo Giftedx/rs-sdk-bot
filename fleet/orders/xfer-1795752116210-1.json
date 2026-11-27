@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795752116210-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Quickhandjob",
+  "item": "Lobster",
+  "count": 1,
+  "itemId": 379,
+  "start": 1795752116210,
+  "end": 1795753016210,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
