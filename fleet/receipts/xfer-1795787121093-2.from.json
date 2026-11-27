@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795787121093-2",
  "account": "CoinCock",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Tin ore",
  "requested": 3,
  "claim": "4e62ec79-4c60-4c71-94ab-6579ef7d8fad",
- "count": 0,
- "ok": false,
- "at": 1795787909188,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795787927863,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795787919539
+ },
+ "logout": {
+  "attemptId": "1795787909198-0000027048-0000000001",
+  "at": 1795787927847,
+  "sha256": "955572edcd277cdf478a45eafb4ce4d788a68d62b95b5a2b9aa5ac8b3b4e54e5"
+ },
+ "screen": true
 }

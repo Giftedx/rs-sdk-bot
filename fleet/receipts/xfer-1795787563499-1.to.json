@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787563499-1",
+ "account": "TossTheCaber",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 5,
+ "claim": "83aad1e9-2ebf-4bf6-b2db-188e6f92d9f4",
+ "count": 0,
+ "ok": false,
+ "at": 1795787918928,
+ "detail": "trade claimed"
+}
