@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798750346,
+ "at": 1795798784986,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,6 +84,27 @@
    "role": "army"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
@@ -122,7 +143,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1395"
+    "BATCH_UNITS": "1387"
    },
    "enabled": true,
    "repeat": false,
@@ -133,29 +154,19 @@
    ]
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "shantayshop",
-    "3000"
+    "loot-trip"
    ],
    "env": {
-    "ITEM_ID": "1937",
-    "ITEMS": "Jug of water",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1937",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1937",
-   "role": "auto"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -351,43 +362,28 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=54810 TARGET_COUNT=5481 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 -- sweep viking"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:viking",
-   "role": "army"
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "shantayshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "2",
+    "ITEM_ID": "1937",
+    "ITEMS": "Jug of water",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:1937",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "campaign:haggis:item:1937",
    "role": "army"
   }
  ],
@@ -402,8 +398,8 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "mineyourbiz",
   "mmthv2350",
