@@ -244,6 +244,8 @@ const EDGE_BANK_NOSPARE_ARROWS = EDGE_BANK_TRIBRID.filter(r => r.id !== 886 && r
 const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
 export const GANKER_POST = {x: 3078, z: 3640};
+// The single-way tile where the gang's stack of 49 accounts in the dagger kit stands (world feed, Wilderness level 11).
+export const GANG_STACK = {x: 3135, z: 3602};
 // `at` moves the spot: side A at x, side B two tiles east.
 const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = [], at: {x: number; z: number} = {x: 3094, z: 3555}): BenchCase => {
   // One character for each account after the first: up to 18 pairs.
@@ -1283,6 +1285,9 @@ return [
   teamCase('extra:team-5v3-gang-rune-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, {x: 3066, z: 3640}, 5, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-6v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 6, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   teamCase('extra:team-9v3-gang-rune-west-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, {x: 3066, z: 3640}, 9, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
+  // The gang's stack of 49 accounts in the same kit on the single-way tiles at (3135, 3602), Wilderness level 11: a squad
+  // against 12 of them, each side's accounts against their own (SPAR_*_PICK=pair), the rest wait for a free target.
+  ...([6, 10] as const).map(n => teamCase(`extra:team-${n}v12-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 12)),
   // The four against the skulled gang (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
   teamCase('extra:team-4v3-gang-skull-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   // A squad against one runner (kit runner, SPAR_B_OPTS {"escapeAt":60}: its food gone at 60 HP or less it runs south
