@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795744427112-1",
+ "account": "SporranDip",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "952ef3ca-7bf9-41b8-973d-6386d0cac101",
+ "count": 1,
+ "ok": true,
+ "at": 1795744716767,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795744715987
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795744715594
+ },
+ "logout": {
+  "attemptId": "1795744703474-0000003152-0000000001",
+  "at": 1795744716732,
+  "sha256": "dd758bd8ece19a0a3975f88ea7aed666aac447e57ba28cdff3f5291dc6898438"
+ },
+ "screen": true
+}

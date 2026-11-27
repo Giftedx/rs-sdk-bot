@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795744427112-1",
  "account": "Wandwaver",
  "partner": "SporranDip",
@@ -10,15 +10,37 @@
  "item": "Guam leaf",
  "requested": 1,
  "claim": "740773d2-f23c-4551-bf77-16c246746357",
- "count": 0,
- "ok": false,
- "at": 1795744638182,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795744714739,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Vial of water",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795744698401
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795744697993
+ },
+ "logout": {
+  "attemptId": "1795744638190-0000025340-0000000001",
+  "at": 1795744714728,
+  "sha256": "6aba6062b9a9b2aca7d93afe8b699a5012ad7d8d4eedbd3c37bb29e792876502"
+ },
+ "screen": true
 }
