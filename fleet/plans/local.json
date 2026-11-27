@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791988587,
+ "at": 1795792002874,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,6 +71,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-10-o0-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "10",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "10"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -168,7 +190,7 @@
    "role": "army"
   },
   {
-   "account": "UnderMyKilt",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -178,43 +200,18 @@
    "env": {
     "ITEM_ID": "554",
     "ITEMS": "Fire rune",
-    "MAX_ITEMS": "342",
+    "MAX_ITEMS": "235",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "342"
+    "BATCH_UNITS": "235"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:554",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -296,25 +293,27 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
+    "shop-buy",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "72",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "72"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
+   "goal": "campaign:haggis:item:554",
    "role": "auto"
   },
   {
