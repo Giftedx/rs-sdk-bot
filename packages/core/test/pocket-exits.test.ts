@@ -59,6 +59,12 @@ test('a portal that lands on another of its landings stops the route for a new p
         expect(!r.ok && r.detail).toContain('landed at 3253,3401,0');
         expect(off.walks).toEqual([]);
     } finally { off.stop(); }
+    // As the last leg too: the goal is at the plan's landing, not at the one the server picked.
+    const last = portalSession({ x: 2933, z: 4854, level: 0 }, { x: 3253, z: 3401, level: 0 });
+    try {
+        const r = await walkRoute(last.s, legs(edge).slice(0, 1), { maxRetriesPerLeg: 1 });
+        expect(!r.ok && r.offPlan).toBe(true);
+    } finally { last.stop(); }
     const on = portalSession({ x: 2933, z: 4854, level: 0 }, { x: 3106, z: 9572, level: 0 });
     try {
         const r = await walkRoute(on.s, legs(edge), { maxRetriesPerLeg: 1 });
