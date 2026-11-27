@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772431483-1",
+ "account": "DropMyLoad",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 135,
+ "claim": "dccd914c-65d6-41ff-9e42-8f02605213d0",
+ "count": 0,
+ "ok": false,
+ "at": 1795772652462,
+ "detail": "trade claimed"
+}
