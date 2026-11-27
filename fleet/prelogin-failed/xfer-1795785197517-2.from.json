@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795785197517-2",
+ "role": "from",
+ "account": "TossTheCaber",
+ "partner": "Abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795785792578,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
