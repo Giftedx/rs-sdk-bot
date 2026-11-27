@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796999342-1",
  "account": "PickpockDick",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "4a19ee0d-1da8-43bf-b1c0-737af1d052ef",
- "count": 0,
- "ok": false,
- "at": 1795797332532,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795797346637,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797345899
+ },
+ "logout": {
+  "attemptId": "1795797332567-0000026824-0000000001",
+  "at": 1795797346622,
+  "sha256": "e6bc15c1039d3d284439a79899584b46e49e506ca8de5d8cb4c4edc2c860f316"
+ },
+ "screen": true
 }
