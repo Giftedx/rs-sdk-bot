@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795800956766-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "UnderMyKilt",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 211,
+  "start": 1795800956766,
+  "end": 1795801856766,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
