@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804537697,
+ "at": 1795804553790,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,7 +97,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "131"
+    "BATCH_UNITS": "127"
    },
    "enabled": true,
    "repeat": false,
@@ -106,31 +106,6 @@
    "resources": [
     "lumbridge-coop"
    ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "gemshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1623",
-   "role": "auto"
   },
   {
    "account": "Bigpackage",
@@ -168,20 +143,28 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:562",
+   "role": "auto"
   },
   {
    "account": "Spitroaster",
@@ -332,6 +315,25 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1151"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   }
  ],
  "army": [
@@ -341,7 +343,6 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "ballspinner",
   "billionaire",
   "bowbeforeme",
   "dipstick",

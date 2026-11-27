@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803935469-1",
+ "account": "Pocketpython",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 10,
+ "claim": "8f31ef1b-9552-4bf6-be0d-90dbe9ff5cd4",
+ "count": 0,
+ "ok": false,
+ "at": 1795804541413,
+ "detail": "trade claimed"
+}
