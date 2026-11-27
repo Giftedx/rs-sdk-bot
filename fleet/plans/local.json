@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795816507289,
+ "at": 1795816521722,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,21 +84,6 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "army"
-  },
-  {
    "account": "PocketPool",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -121,6 +106,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
    "role": "army"
   },
   {
@@ -149,7 +149,23 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -174,48 +190,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "52",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "22800",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "52"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -237,6 +212,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "53",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "23200",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "53"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
