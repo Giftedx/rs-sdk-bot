@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788445270-2",
  "account": "YewFirst",
  "partner": "Wandwaver",
@@ -10,8 +10,18 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "829493d9-2258-4c29-9432-e4706e931006",
- "count": 0,
- "ok": false,
- "at": 1795789023345,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795789052218,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 5
+ },
+ "logout": {
+  "attemptId": "1795789023357-0000023308-0000000001",
+  "at": 1795789052206,
+  "sha256": "995debaa5cae557fa756698868838ad74bda05100ca2321923b216b50bc8d000"
+ },
+ "screen": true
 }
