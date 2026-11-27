@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795771996447-1",
  "account": "Bigpackage",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Necklace mould",
  "requested": 1,
  "claim": "48a10130-984e-4888-8fa4-4d221a2b970b",
- "count": 0,
- "ok": false,
- "at": 1795772220166,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772248624,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772225466
+ },
+ "logout": {
+  "attemptId": "1795772220176-0000006252-0000000001",
+  "at": 1795772248612,
+  "sha256": "ef2d72f46196d80bf0072687d82b5b445206136f482463462d3e138aeadeb768"
+ },
+ "screen": true
 }

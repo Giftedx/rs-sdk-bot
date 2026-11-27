@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772003135-1",
+ "account": "UnderMyKilt",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "fd480979-4fc9-41e3-bf14-bcd46d8f62b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795772256417,
+ "detail": "trade claimed"
+}
