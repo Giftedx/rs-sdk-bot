@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795784337404-1",
+ "account": "Fatstack",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 3,
+ "claim": "7bd6baa1-e876-4a39-8a96-ab33b5b99393",
+ "count": 3,
+ "ok": true,
+ "at": 1795784985685,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795784984863
+ },
+ "logout": {
+  "attemptId": "1795784943463-0000020748-0000000001",
+  "at": 1795784985671,
+  "sha256": "933b1fbebe2895e0fa813350148a241fa00dc1d2f19e047c8406a47cd2d1f4ac"
+ },
+ "screen": true
+}

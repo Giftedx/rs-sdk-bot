@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784175368-2",
+ "account": "Wandwaver",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "4f278e26-a596-42be-93f2-8ef7ae8e91ad",
+ "count": 0,
+ "ok": false,
+ "at": 1795785008371,
+ "detail": "trade claimed"
+}

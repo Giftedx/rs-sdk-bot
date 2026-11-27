@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784365170-1",
  "account": "Billionaire",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "df8c1fd6-465b-4e4b-abca-564bde89c0b6",
- "count": 0,
- "ok": false,
- "at": 1795784835428,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795784995201,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795784986872
+ },
+ "logout": {
+  "attemptId": "1795784835437-0000031452-0000000001",
+  "at": 1795784995187,
+  "sha256": "b17ad9cfd07269fa3f798f4a905d2e8b663f56db4e580229ddcc9abf9ea17fd6"
+ },
+ "screen": true
 }
