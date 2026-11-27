@@ -69,18 +69,6 @@ export type Gains = {
 
 export type Work = { at: number | null; withWork: number; idle: [string, number][] };
 
-// More accounts than this at one idle reason is a fleet-wide block: one planner blocker or one held activity empties
-// the plan of many accounts. An owner pause, a death, a slot cap, a clock reserve or another side's account is no block.
-export const SHARED_IDLE_MAX = 10;
-const EXPECTED_IDLE_RE = /^(?:dead|paused_owner|side_paused_owner|max_bots_limit|in_trade|reserved_for_transfer|owned_by_other_side:|protected_clock)/;
-
-export function sharedIdleBlocks(work: Pick<Work, 'idle'>, max = SHARED_IDLE_MAX): [string, number][] {
-    return work.idle.filter(([reason, n]) => n > max && !EXPECTED_IDLE_RE.test(reason));
-}
-
-const sharedIdleText = (blocks: [string, number][], max: number) =>
-    `${blocks.map(([reason, n]) => `${n} accounts at ${reason}`).join(', ')} (more than ${max} at one reason)`;
-
 // The `staging` campaigns and the launch gates that hold them (packages/brain/src/campaigns.ts: `ready` needs a verified
 // rehearsal, a met margin and a hiscore margin under MAX_CAMPAIGN_HISCORE_AGE_MS old). `onlyStale` names the campaigns
 // that only an old hiscore snapshot holds: a hiscore refresh moves them to `ready`.
@@ -382,11 +370,8 @@ export function progressLine(r: ProgressReport): string {
         const span = g.fromAt != null && g.toAt != null && Math.abs(g.toAt - g.fromAt - r.hours * HOUR_MS) > HOUR_MS ? ` (snapshots ${h1(g.toAt - g.fromAt)} h apart)` : '';
         parts.push(`XP +${int(g.xp)}, levels +${int(g.levels)}, quests +${int(g.questCompletions)}, coins ${signed(g.coins)}${span}`);
     } else parts.push('gains not known');
-    if (r.work) {
-        parts.push(`${int(r.work.withWork)} accounts with work${r.work.idle.length ? ` (idle: ${top(r.work.idle, 2)})` : ''}`);
-        const blocks = sharedIdleBlocks(r.work);
-        if (blocks.length) parts.push(`IDLE BLOCK ${sharedIdleText(blocks, SHARED_IDLE_MAX)}`);
-    } else parts.push('work not known');
+    if (r.work) parts.push(`${int(r.work.withWork)} accounts with work${r.work.idle.length ? ` (idle: ${top(r.work.idle, 2)})` : ''}`);
+    else parts.push('work not known');
     if (r.campaigns?.onlyStale.length) parts.push(`${r.campaigns.onlyStale.length} campaigns held only by an old hiscore snapshot`);
     return `progress ${r.hours} h: ${parts.join('; ')} (bun tools/progress.ts)`;
 }
@@ -418,8 +403,6 @@ export function progressLines(r: ProgressReport): string[] {
     }
     const k = r.work;
     if (k) out.push(`work    ${k.withWork} accounts with work${k.idle.length ? `; idle: ${top(k.idle, 6)}` : ''}${k.at != null ? `; fleet state ${Math.round((r.now - k.at) / 1000)} s old` : ''}`);
-    const blocks = k ? sharedIdleBlocks(k) : [];
-    if (blocks.length) out.push(`block   ${sharedIdleText(blocks, SHARED_IDLE_MAX)}`);
     const c = r.campaigns;
     if (c?.staging) {
         const age = c.oldestHiscoreMs != null ? `, oldest ${h1(c.oldestHiscoreMs)} h` : '';
