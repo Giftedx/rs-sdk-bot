@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795816772485-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Woodenstaff",
+  "item": "Prayer potion(4)",
+  "count": 1,
+  "itemId": 2434,
+  "start": 1795816772485,
+  "end": 1795817672485,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
