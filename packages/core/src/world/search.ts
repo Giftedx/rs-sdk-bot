@@ -199,6 +199,9 @@ export function goalReachable(
     return false;
 }
 
+// Graphs whose tiles the path measure keeps flood distances to (PathLength.addTargets).
+const targetedGraphs = new WeakSet<WorldGraph>();
+
 /** Executes bidirectional lazy A* over a built world graph under an account's door, danger, and coin budgets. */
 export function routeOnGraph(
     graph: WorldGraph,
@@ -238,6 +241,10 @@ export function routeOnGraph(
     for (let d = 0; d < dynTiles.length; d++) dynWalkable[d] = !walkableFn || walkableFn(dynTiles[d]!) ? 1 : 0;
     const isWalkable = (idx: number): boolean => idx < W ? walkableMask[idx] === 1 : dynWalkable[idx - W] === 1;
     const { startAreasOf, endAreasOf } = graph.routeAreas(dynTiles);
+    if (opts.pathLength.addTargets) {
+        if (!targetedGraphs.has(graph)) { targetedGraphs.add(graph); opts.pathLength.addTargets(waypoints); }
+        opts.pathLength.addTargets(dynTiles);
+    }
 
     const allowedT = new Uint8Array(transports.length);
     for (let i = 0; i < transports.length; i++) allowedT[i] = transportAllowed(transports[i]!, acct) ? 1 : 0;
