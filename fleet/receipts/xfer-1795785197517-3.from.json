@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795785197517-3",
+ "account": "Wandwaver",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "a62f04c3-27d5-429a-ad84-ae2a20ea330d",
+ "count": 0,
+ "ok": false,
+ "at": 1795785425037,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795785197517-1",
  "account": "BowBeforeMe",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "73c8b9ef-a940-4e58-90aa-f913450afc5d",
- "count": 0,
- "ok": false,
- "at": 1795785385727,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795785422393,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795785391244
+ },
+ "logout": {
+  "attemptId": "1795785385738-0000015072-0000000001",
+  "at": 1795785422382,
+  "sha256": "2f1199f3351b17dbf878eb026123af6c74b989e9ba00654d93bf39fbd5b1e6ad"
+ },
+ "screen": true
 }
