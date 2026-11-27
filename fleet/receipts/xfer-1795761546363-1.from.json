@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795761546363-1",
+ "account": "Quickhandjob",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "53ba6aa1-9faa-4286-b195-63534cb753a8",
+ "count": 0,
+ "ok": false,
+ "at": 1795761900597,
+ "detail": "trade claimed"
+}
