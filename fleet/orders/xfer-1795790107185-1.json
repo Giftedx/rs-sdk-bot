@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795790107185-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "SporranDip",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 207,
+  "start": 1795790107185,
+  "end": 1795791007185,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
