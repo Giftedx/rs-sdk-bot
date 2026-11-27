@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795754190272-2",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 3,
+ "claim": "9c236389-82d2-48a9-8100-f1a6757f8176",
+ "count": 3,
+ "ok": true,
+ "at": 1795754284684,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795754260419-0000009244-0000000001",
+  "at": 1795754284670,
+  "sha256": "263fd006218c4e35451f20f90a422a2e9bb89f84bc8a2e4eac4315d11f145155"
+ },
+ "screen": true
+}
