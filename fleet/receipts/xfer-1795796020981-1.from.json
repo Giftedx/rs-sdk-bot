@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795796020981-1",
  "account": "Woodenstaff",
  "partner": "Fingerblastr",
@@ -12,6 +12,16 @@
  "claim": "a28cc019-9c34-45af-8ee6-a2e42330292d",
  "count": 0,
  "ok": false,
- "at": 1795796409908,
- "detail": "trade claimed"
+ "at": 1795796451065,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795796419934
+ },
+ "logout": {
+  "attemptId": "1795796410131-0000013212-0000000001",
+  "at": 1795796451051,
+  "sha256": "553e5650da818944f5d19cebb8523d13395ab5d74c66eeabc98821d871966762"
+ },
+ "screen": false
 }

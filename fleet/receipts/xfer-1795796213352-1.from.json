@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796213352-1",
+ "account": "Woodpecker",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 10,
+ "claim": "c6fba295-4609-4c6b-9ee7-e3db0f28a980",
+ "count": 0,
+ "ok": false,
+ "at": 1795796445327,
+ "detail": "trade claimed"
+}
