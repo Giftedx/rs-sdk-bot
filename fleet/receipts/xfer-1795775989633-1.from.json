@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775989633-1",
  "account": "TheFullMonty",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 460,
  "claim": "30416178-ef12-46b6-ae06-4b71af47c7f5",
- "count": 0,
- "ok": false,
- "at": 1795776157707,
- "detail": "trade claimed"
+ "count": 460,
+ "ok": true,
+ "at": 1795776214057,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 460,
+  "after": 0
+ },
+ "bank": {
+  "count": 460,
+  "at": 1795776167682
+ },
+ "logout": {
+  "attemptId": "1795776157737-0000023168-0000000001",
+  "at": 1795776214044,
+  "sha256": "5870d6c2964f0beffa857012dfc3a7c7f89144e027d0002fa7daf4c401788a46"
+ },
+ "screen": true
 }
