@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795753935359-1",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon longsword",
+ "requested": 1,
+ "claim": "8852a74c-2c88-4b2f-b020-1119abcc51ae",
+ "count": 1,
+ "ok": true,
+ "at": 1795754087913,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795754074713
+ },
+ "logout": {
+  "attemptId": "1795754069092-0000023712-0000000001",
+  "at": 1795754087872,
+  "sha256": "d40460217177aa6776ebb80ded5031e89a3a1bb26c5af7ee806c3216b745502d"
+ },
+ "screen": true
+}
