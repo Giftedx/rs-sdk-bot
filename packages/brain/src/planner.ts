@@ -1897,7 +1897,7 @@ function planAccountCore(
             let batchUnits = resolveBatchUnits(acct, effectiveDemand, activity, rate, xpRate, acctCache);
             // A route that runs only in place gets a stage step before its work, and its preflight is the one of
             // the account as that step leaves it (stage.ts).
-            const stage = stageForStart(acct, activity);
+            const stage = stageForStart(acct, activity, world);
             const preflightFor = (units: number): PreflightResult => stage
                 ? activityPreflightFromConfig(stage.staged, activity, world, units, {
                     protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock),

@@ -640,8 +640,8 @@ export async function runLogisticsRole(
             case 'walk-to': {
                 const { runWalkTo } = await import('./walk');
                 // A stage walk takes its pack kit from the nearest bank before it walks.
-                const { parseStageKit, withdrawStageKit } = await import('./stage-kit');
-                await withdrawStageKit(s, parseStageKit(mergedEnv.STAGE_KIT));
+                const { parseStageKeep, parseStageKit, withdrawStageKit } = await import('./stage-kit');
+                await withdrawStageKit(s, parseStageKit(mergedEnv.STAGE_KIT), parseStageKeep(mergedEnv.STAGE_KEEP));
                 const r = await runWalkTo(s, args);
                 ok = r.ok;
                 detail = r.summary;

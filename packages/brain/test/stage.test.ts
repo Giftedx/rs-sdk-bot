@@ -61,13 +61,33 @@ describe('stageForStart', () => {
         expect(stageForStart(account({ bank: { 333: 10 } }), byId('combat:cow'))).toBeUndefined();
     });
 
-    test('a pack without free slots for the kit gives no step', () => {
+    test('a full pack deposits what the route does not keep, then takes the kit', () => {
         // Coins, 16 bronze daggers, a stack of swamp paste and 10 ropes (one slot each) fill 28 slots; the bucket
-        // needs one more.
+        // needs one more, so the stage deposits the daggers.
         const full = account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } });
-        expect(stageForStart(full, byId('combat:boss-trawler'))).toBeUndefined();
+        const r = stageForStart(full, byId('combat:boss-trawler'))!;
+        expect(r.step.keep).toEqual([583, 954, 995, 1941]);
+        expect(r.staged.inventory).toEqual({ 995: 5_000, 1941: 100, 954: 10, 583: 1 });
+        expect(r.staged.bank.items[1205]).toBe(16);
+        expect(resolvePlannedStepWorkerRoute('StageProbe', r.step).env.STAGE_KEEP).toBe('583,954,995,1941');
         const room = account({ inventory: { 1205: 15, 1941: 100, 954: 10 }, bank: { 583: 1 } });
-        expect(stageForStart(room, byId('combat:boss-trawler'))?.step.kit).toHaveLength(3);
+        const fits = stageForStart(room, byId('combat:boss-trawler'))!;
+        expect(fits.step.keep).toBeUndefined();
+        expect(fits.staged.inventory[1205]).toBe(15);
+    });
+
+    test('a reserve keeps only its count: the surplus copies go to the bank', () => {
+        const reserved = { ...account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } }), reserves: { 1205: 1 } };
+        const r = stageForStart(reserved, byId('combat:boss-trawler'))!;
+        expect(r.step.keepCounts).toEqual([{ itemId: 1205, count: 1 }]);
+        expect(r.staged.inventory[1205]).toBe(1);
+        expect(r.staged.bank.items[1205]).toBe(15);
+        expect(resolvePlannedStepWorkerRoute('StageProbe', r.step).env.STAGE_KEEP).toBe('583,954,995,1941,1205:1');
+    });
+
+    test('a pack whose kept items leave no room for the kit gives no step', () => {
+        const reserved = { ...account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } }), reserves: { 1205: 16 } };
+        expect(stageForStart(reserved, byId('combat:boss-trawler'))).toBeUndefined();
     });
 });
 

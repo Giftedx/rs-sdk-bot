@@ -399,6 +399,10 @@ export interface RecoverPlannedStep {
     readonly targetHub?: HubBankId;
     readonly targetTile?: { readonly x: number; readonly z: number; readonly level: number };
     readonly kit?: readonly { readonly itemId: number; readonly count: number }[];
+    // The pack items that the stage keeps when it deposits the rest to make room for `kit` (stage.ts stageKeep).
+    readonly keep?: readonly number[];
+    // The pack items that the stage keeps only in part (a reserved count), with that count.
+    readonly keepCounts?: readonly { readonly itemId: number; readonly count: number }[];
     readonly estimatedTicks: number;
     readonly reason: string;
 }
@@ -1542,6 +1546,10 @@ function pushPlannedStepErrors(v: unknown, errors: string[], prefix = ''): void 
                 if (!isPlainRecord(t) || ![t.x, t.z, t.level].every(isNonNegInt)) errors.push(`${prefix}recover.targetTile invalid`);
                 if (v.kit !== undefined && (!Array.isArray(v.kit) || v.kit.some((k) => !isPlainRecord(k) || !isNonNegInt(k.itemId) || !isNonNegInt(k.count) || (k.count as number) < 1))) {
                     errors.push(`${prefix}recover.kit invalid`);
+                }
+                if (v.keep !== undefined && (!Array.isArray(v.keep) || !v.keep.every(isNonNegInt))) errors.push(`${prefix}recover.keep invalid`);
+                if (v.keepCounts !== undefined && (!Array.isArray(v.keepCounts) || v.keepCounts.some((k) => !isPlainRecord(k) || !isNonNegInt(k.itemId) || !isNonNegInt(k.count) || (k.count as number) < 1))) {
+                    errors.push(`${prefix}recover.keepCounts invalid`);
                 }
             }
             if (v.targetHub !== undefined && !isHubBankId(v.targetHub)) errors.push(`${prefix}recover.targetHub invalid`);
