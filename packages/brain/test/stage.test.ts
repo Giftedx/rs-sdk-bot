@@ -60,6 +60,15 @@ describe('stageForStart', () => {
         expect(stageForStart(account({ bank: { 333: 1 } }), byId('combat:imp'))).toBeUndefined();
         expect(stageForStart(account({ bank: { 333: 10 } }), byId('combat:cow'))).toBeUndefined();
     });
+
+    test('a pack without free slots for the kit gives no step', () => {
+        // Coins, 16 bronze daggers, a stack of swamp paste and 10 ropes (one slot each) fill 28 slots; the bucket
+        // needs one more.
+        const full = account({ inventory: { 1205: 16, 1941: 100, 954: 10 }, bank: { 583: 1 } });
+        expect(stageForStart(full, byId('combat:boss-trawler'))).toBeUndefined();
+        const room = account({ inventory: { 1205: 15, 1941: 100, 954: 10 }, bank: { 583: 1 } });
+        expect(stageForStart(room, byId('combat:boss-trawler'))?.step.kit).toHaveLength(3);
+    });
 });
 
 describe('the planner chains the stage step in front of the work', () => {
