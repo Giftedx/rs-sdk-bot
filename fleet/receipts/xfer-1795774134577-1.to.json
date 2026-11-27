@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795774134577-1",
+ "account": "Pocketrocket",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "a876a7c0-83da-4cac-8bba-270926a11ee1",
+ "count": 0,
+ "ok": false,
+ "at": 1795774782689,
+ "detail": "trade claimed"
+}

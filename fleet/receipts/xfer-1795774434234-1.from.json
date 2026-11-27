@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774434234-1",
  "account": "Fatstack",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 5,
  "claim": "34e07654-1c64-4651-b706-4ab08a01cf13",
- "count": 0,
- "ok": false,
- "at": 1795774605731,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795774780572,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795774760612
+ },
+ "logout": {
+  "attemptId": "1795774605942-0000028100-0000000001",
+  "at": 1795774780551,
+  "sha256": "f69e44093f39bda96f9c51e8921368a6f707d7f2656c629a5533477f6fc69bfe"
+ },
+ "screen": true
 }
