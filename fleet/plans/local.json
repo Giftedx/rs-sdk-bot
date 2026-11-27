@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739275952,
+ "at": 1795739298081,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,99 +75,151 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
+   "account": "Bigpackage",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:fluffs",
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=561 \"ITEMS=Nature rune\" MAX_ITEMS=250 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic alch-train 90 3000"
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
+   "goal": "campaign:haggis:item:1975",
    "role": "auto"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=5 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=5 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
-  },
-  {
    "account": "mmtha0205",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:fluffs",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
+   "account": "SporranDip",
+   "script": "scripts/aio-boss.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "trawler"
    ],
    "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1500"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "4"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -261,39 +313,18 @@
    "role": "auto"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_harralander_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:97",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:97",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
+   "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory brew:unf_guam_potion"
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=2 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=3 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {
@@ -317,25 +348,20 @@
    "role": "auto"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "account": "FishAndChips",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "sweep",
+    "fluffs"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
+    "DEMAND_ID": "goal:quest_board:fluffs",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
-   "role": "army"
+   "goal": "goal:quest_board:fluffs",
+   "role": "auto"
   }
  ],
  "army": [
@@ -359,10 +385,8 @@
   "pocketpython",
   "pocketrocket",
   "sausagefest",
-  "swordinhand",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
