@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795794915294-2",
  "account": "Fingerblastr",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "c25e82cc-1ea8-4c23-af5a-4aeb150f82ea",
- "count": 0,
- "ok": false,
- "at": 1795795256959,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795795270318,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795795269574
+ },
+ "logout": {
+  "attemptId": "1795795256971-0000004736-0000000001",
+  "at": 1795795270305,
+  "sha256": "7e50b2ab0cc6f063cf295a2d8f2995b6637f6bffe9d5192ba887d4a918c61696"
+ },
+ "screen": true
 }

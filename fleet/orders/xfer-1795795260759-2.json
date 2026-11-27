@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795795260759-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "Fingersmith",
+  "item": "Limpwurt root",
+  "count": 16,
+  "itemId": 225,
+  "start": 1795795260759,
+  "end": 1795796160759,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
