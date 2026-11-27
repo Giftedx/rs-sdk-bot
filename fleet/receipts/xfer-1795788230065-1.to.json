@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795788230065-1",
+ "account": "Fatstack",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire",
+ "requested": 1,
+ "claim": "01c61942-c479-42d0-9ddc-16efbbae347d",
+ "count": 1,
+ "ok": true,
+ "at": 1795788760237,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795788759475
+ },
+ "logout": {
+  "attemptId": "1795788747561-0000014864-0000000001",
+  "at": 1795788760226,
+  "sha256": "dfec7c0171b688b6c72739fd4a2ecead6d860e5b514a7179e9b2ec219d7bd714"
+ },
+ "screen": true
+}

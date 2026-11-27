@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795788445270-1",
+ "account": "Wandwaver",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Avantoe",
+ "requested": 2,
+ "claim": "997f4194-e648-4a6b-a4fc-6c609069a462",
+ "count": 0,
+ "ok": false,
+ "at": 1795788801220,
+ "detail": "trade claimed"
+}

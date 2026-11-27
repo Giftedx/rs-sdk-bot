@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795788088553-2",
+ "account": "SporranDip",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "d145af3d-8e14-4c5e-b37a-1b81bd71d64b",
+ "count": 0,
+ "ok": false,
+ "at": 1795788787322,
+ "detail": "trade claimed"
+}

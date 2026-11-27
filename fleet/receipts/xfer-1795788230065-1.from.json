@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788230065-1",
  "account": "BowBeforeMe",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Sapphire",
  "requested": 1,
  "claim": "a1926e76-a89b-4fff-a251-35300f7aa1a4",
- "count": 0,
- "ok": false,
- "at": 1795788566567,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795788758663,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795788742672
+ },
+ "logout": {
+  "attemptId": "1795788566585-0000014584-0000000001",
+  "at": 1795788758644,
+  "sha256": "ffb788dec7ae7e2b9039099730aca7682998960e36a33cfa88e6c70c8fc447d8"
+ },
+ "screen": true
 }
