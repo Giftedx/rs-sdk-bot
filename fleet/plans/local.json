@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751770327,
+ "at": 1795751831797,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "OreElse",
+   "account": "YewFirst",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -89,6 +89,24 @@
    "role": "army"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -97,78 +115,6 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -212,24 +158,6 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
    "role": "army"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "green-dragon"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:536",
-    "BATCH_UNITS": "418"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:536",
-   "role": "army",
-   "resources": [
-    "wild-green-dragons"
-   ]
   }
  ],
  "army": [
@@ -244,21 +172,25 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
+  "mmthv2350",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
