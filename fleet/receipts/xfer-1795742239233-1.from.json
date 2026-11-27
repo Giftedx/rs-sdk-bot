@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795742239233-1",
  "account": "Pullmybow",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Cosmic rune",
  "requested": 1,
  "claim": "964e1399-19d1-476f-8e53-e4cc0723aa83",
- "count": 0,
- "ok": false,
- "at": 1795742408331,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795742435766,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795742422512
+ },
+ "logout": {
+  "attemptId": "1795742408340-0000029276-0000000001",
+  "at": 1795742435678,
+  "sha256": "977282e6d96f0a773899e041aeab7b8ebbb728b0d467d06d88df3cc34a4cd537"
+ },
+ "screen": true
 }
