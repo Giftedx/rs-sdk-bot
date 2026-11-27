@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753748202,
+ "at": 1795753806778,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -81,24 +81,6 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -206,7 +188,8 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt"
+  "undermykilt",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

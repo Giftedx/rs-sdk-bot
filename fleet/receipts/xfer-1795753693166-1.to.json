@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795753693166-1",
+ "account": "Woodenstaff",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "77796224-65c2-4725-a6bf-edddcc0beafe",
+ "count": 2,
+ "ok": true,
+ "at": 1795753804318,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795753803537
+ },
+ "logout": {
+  "attemptId": "1795753791274-0000028512-0000000001",
+  "at": 1795753804307,
+  "sha256": "2c721cacb9c90d9fca88318f3044636c102862c2fbe00ab01f18a972d6934a64"
+ },
+ "screen": true
+}
