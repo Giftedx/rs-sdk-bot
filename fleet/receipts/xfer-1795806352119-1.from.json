@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795806352119-1",
+ "account": "mmsmk1232",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "a36eec41-f086-40f5-bfce-b968fa584a13",
+ "count": 0,
+ "ok": false,
+ "at": 1795806758339,
+ "detail": "trade claimed"
+}

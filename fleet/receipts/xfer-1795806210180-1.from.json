@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795806210180-1",
+ "account": "Unsheathed",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 18,
+ "claim": "02b59681-0ade-4340-b94e-13505a136840",
+ "count": 18,
+ "ok": true,
+ "at": 1795806754213,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 18,
+  "after": 0
+ },
+ "bank": {
+  "count": 18,
+  "at": 1795806725420
+ },
+ "logout": {
+  "attemptId": "1795806715837-0000022656-0000000001",
+  "at": 1795806754171,
+  "sha256": "dca26639d95ca5412f0f3b14e9d949bd238980aa98cab3bbfa6458ca4c525de3"
+ },
+ "screen": true
+}
