@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795750040186,
+ "at": 1795750064704,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -73,91 +73,6 @@
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
    "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:3doseantipoison"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:shaftshooter:item:175",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:shaftshooter:item:175",
-   "role": "army"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "black-dragon"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:536",
-    "BATCH_UNITS": "418"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:536",
-   "role": "army",
-   "resources": [
-    "taverley-black-dragons"
-   ]
   }
  ],
  "army": [
@@ -172,12 +87,15 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
   "oreelse",
   "pickpockdick",
   "pocketpool",
