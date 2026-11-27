@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795802522053-2",
+ "account": "YewGotWood",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "ea2257ef-9546-41d9-b371-e27ebc5efe12",
+ "count": 0,
+ "ok": false,
+ "at": 1795803017609,
+ "detail": "trade claimed"
+}

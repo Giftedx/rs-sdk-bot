@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795802522053-1",
  "account": "Bigpackage",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 6,
  "claim": "f652c128-c498-454b-9ad3-8d5123202b90",
- "count": 0,
- "ok": false,
- "at": 1795802973262,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795802998004,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795802979246
+ },
+ "logout": {
+  "attemptId": "1795802973271-0000012168-0000000001",
+  "at": 1795802997993,
+  "sha256": "ce240c65882ef3cf4f5dc2f2c9eb906326ee035adeb248df86cbcd105f830cd0"
+ },
+ "screen": true
 }

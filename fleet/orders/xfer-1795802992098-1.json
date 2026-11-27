@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795802992098-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "Pocketrocket",
+  "item": "Rune essence",
+  "count": 23,
+  "itemId": 1436,
+  "start": 1795802992098,
+  "end": 1795803892098,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

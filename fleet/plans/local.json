@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795802988706,
+ "at": 1795803022486,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -81,71 +81,53 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "8",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "8"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "khazardshop",
-    "3000"
-   ],
+   "account": "Quickhandjob",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "1933",
-    "ITEMS": "Pot of flour",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1933",
-    "BATCH_UNITS": "1"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1933",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Pullmybow",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1454"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:haggis:item:1519",
    "role": "auto",
    "resources": [
-    "ardougne-knights"
+    "draynor-willows"
    ]
   },
   {
@@ -162,21 +144,6 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "auto"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "loot-trip"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -215,66 +182,29 @@
    "role": "army"
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "brew:unf_avantoe_potion"
+    "identify:cadantine"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:103",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 TARGET_COUNT=3 PRODUCT_TARGET=3 STALL_TICKS=150 -- crafting inventory identify:harralander",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:97 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_harralander_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:97",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
-   ],
-   "env": {
-    "MAX_MAKE": "3",
+    "MAX_MAKE": "6",
     "CAP": "1000",
     "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "3",
+    "DEMAND_ID": "goal:supply_chain:265",
+    "BATCH_UNITS": "6",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "auto"
+   "goal": "goal:supply_chain:265",
+   "role": "army"
   },
   {
-   "account": "MeatNTwoVeg",
+   "account": "UnderMyKilt",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -282,21 +212,59 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "13",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_irit_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:101",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
   },
   {
    "account": "Sausagefest",
@@ -309,14 +277,14 @@
    "env": {
     "ITEM_ID": "39",
     "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "45",
+    "MAX_ITEMS": "60",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "45"
+    "BATCH_UNITS": "60"
    },
    "enabled": true,
    "repeat": false,
@@ -345,7 +313,6 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
