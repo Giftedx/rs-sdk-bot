@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795778014038,
+ "at": 1795778105148,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -78,6 +78,25 @@
    ]
   },
   {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "681"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "auto",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
    "account": "YewFirst",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -115,24 +134,6 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "TossTheCaber",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
