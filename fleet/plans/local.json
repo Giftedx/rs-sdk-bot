@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795781354141,
+ "at": 1795781381481,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -78,6 +78,21 @@
    ]
   },
   {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -103,48 +118,14 @@
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "thieving",
-    "knights"
+    "loot-trip"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1039"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
-   ],
-   "env": {
-    "ROUNDS": "1"
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
@@ -281,23 +262,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Pocketpython",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Woodenstaff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto"
   }
  ],
  "army": [

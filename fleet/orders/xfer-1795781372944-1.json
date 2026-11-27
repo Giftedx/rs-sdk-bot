@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795781372944-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "Wandwaver",
+  "item": "Arrow shaft",
+  "count": 105,
+  "itemId": 52,
+  "start": 1795781372944,
+  "end": 1795782272944,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
