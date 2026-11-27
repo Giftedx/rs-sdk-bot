@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795813616999-1",
  "account": "Hocuspokeus",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Limpwurt root",
  "requested": 6,
  "claim": "9634c3f6-c50e-4447-aac3-8d468c098290",
- "count": 0,
- "ok": false,
- "at": 1795813934768,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795814013909,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795813995053
+ },
+ "logout": {
+  "attemptId": "1795813934778-0000013196-0000000001",
+  "at": 1795814013899,
+  "sha256": "50c337b47ed9397adadd9d534fec4462501484d7a9c31e27081577c2fc4a3183"
+ },
+ "screen": true
 }
