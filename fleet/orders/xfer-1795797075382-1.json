@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795797075382-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "Pullmybow",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795797075382,
+  "end": 1795797975382,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
