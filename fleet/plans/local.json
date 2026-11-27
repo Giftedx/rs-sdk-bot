@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795795018152,
+ "at": 1795795043769,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,28 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:kwuarm"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:263",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -103,6 +81,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
    "role": "army"
   },
   {
@@ -136,6 +136,21 @@
    "role": "auto"
   },
   {
+   "account": "UnderMyKilt",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 PRODUCT_TARGET=231 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=231 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -157,24 +172,17 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:tarromin"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:253",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:253",
+   "goal": "campaign:haggis:item:91",
    "role": "army"
   },
   {
@@ -226,7 +234,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1441"
+    "BATCH_UNITS": "1439"
    },
    "enabled": true,
    "repeat": false,
@@ -271,50 +279,49 @@
    "role": "army"
   },
   {
+   "account": "YewFirst",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:marentill"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "TARGET_COUNT": "1",
+    "PRODUCT_TARGET": "1",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
+  },
+  {
    "account": "Sausagefest",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "120",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "118",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "120"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "118"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "41",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:41",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -367,8 +374,7 @@
   "pocketrocket",
   "sporrandip",
   "swordinhand",
-  "undermykilt",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
