@@ -1,4 +1,5 @@
 import { PLAIN_FOOD } from '../eat-guard';
+import { npcMaxHitEstimate } from '../hp-floor';
 import {
     FLEE_RANGE, cheb, invOf, meOf, outOfReach, targetsMe, tileOf,
     type JobSpec, type PathFinder, type Tile, type TileLevel, type WatcherContext,
@@ -68,14 +69,8 @@ function pickFleeTile(ctx: WatcherContext, p: TileLevel, spawn: Tile, range: num
 /** The hits of margin the flee guard keeps: it flees while it can still take this many hits of the attacker. */
 export const FLEE_HITS = 2;
 
-/**
- * An estimate of an NPC's max hit from its combat level, for the flee line of small Hitpoints pools: level 9
- * (Wizard) 3, level 15 (Unicorn) 3, level 25 (Wolf) 5, level 33 (Black Knight) 6. An unknown level gives 4.
- */
-export function npcMaxHitEstimate(combatLevel: number | null | undefined): number {
-    if (typeof combatLevel !== 'number' || !(combatLevel > 0)) return 4;
-    return Math.max(2, Math.ceil(combatLevel / 8) + 1);
-}
+// The flee line and the session HP floor share one NPC max-hit estimate (hp-floor.ts npcMaxHitEstimate).
+export { npcMaxHitEstimate };
 
 /** The Hitpoints at or below which the flee guard runs: the larger of the `frac` share of `max` and FLEE_HITS hits. */
 export function fleeHpLine(max: number, frac: number, attackerCombat: number | null | undefined): number {

@@ -27,11 +27,27 @@
 // Only a local practice server runs a session with no floor (hpFloorOff): with SESSION_HP_FLOOR=0
 // (scripts/measure/death-probe.ts dies on purpose), and for a PvP worker, whose spar benches fight to a death.
 
+// The floor imports no session module (inprocess, bot, randomevents): inprocess/connect.ts imports it, and those
+// modules import inprocess.
 import { PLAIN_FOOD } from './eat-guard';
-import { wildernessLevel } from './prayer-guard/threats';
-import { npcMaxHitEstimate } from './randomevents/combat';
-import { targetsMe, tileOf } from './randomevents/model';
+import { logout } from './logout';
+import { wildernessLevel } from './prayer-guard';
 import { allFoodIds, selectQuestFood } from './sustain';
+
+/**
+ * An estimate of an NPC's max hit from its combat level, for the flee line (randomevents/combat.ts) and the floor:
+ * level 9 (Wizard) 3, level 15 (Unicorn) 3, level 25 (Wolf) 5, level 33 (Black Knight) 6. An unknown level gives 4.
+ */
+export function npcMaxHitEstimate(combatLevel: number | null | undefined): number {
+    if (typeof combatLevel !== 'number' || !(combatLevel > 0)) return 4;
+    return Math.max(2, Math.ceil(combatLevel / 8) + 1);
+}
+
+// The same rules as randomevents/model.ts targetsMe and tileOf: an NPC whose target is a player slot that no other
+// nearby player holds targets this player.
+const targetsMe = (st: any, n: any) =>
+    n.targetIndex >= 32768 && !(st?.nearbyPlayers ?? []).some((p: any) => p.index === n.targetIndex - 32768);
+const tileOf = (n: any): { x: number; z: number } => ({ x: n.tileX ?? n.x, z: n.tileZ ?? n.z });
 
 export interface HpFloorSession {
     name?: string;
@@ -46,7 +62,8 @@ export interface HpFloorSession {
 export interface HpFloorConfig {
     // Receives each HP_FLOOR line. Default console.log.
     log?: (line: string) => void;
-    // Ends the run with this reason (openBot: RESULT fail <reason>, then the logout). Default: bot/settle.ts finish.
+    // Ends the run with this reason (openBot: RESULT fail <reason>, then the logout). Default: the floor prints
+    // `RESULT fail <reason>` and logs the account out itself.
     // false: the run already ends for another reason (a flee stop), and its RESULT keeps that reason.
     stop?: (reason: string) => boolean | void;
     // For each item id, the count the floor never eats (quest-sweep questReserved).
@@ -182,7 +199,10 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
     const original = client?.executeBotAction;
     const blocker = typeof original === 'function' ? function (this: unknown, action: unknown) {
         const a = action as Action | null;
-        if (escape && !stopped && a && typeof a === 'object' && !own.has(a) && MOVES.has(a.type)) {
+        // Until the floor takes over, the watcher's flee walks (gate.ts send, reason 'random-event') pass: the floor
+        // lets that job walk while it moves the player.
+        const delegated = escape && !escape.took && a?.reason === 'random-event';
+        if (escape && !stopped && a && typeof a === 'object' && !own.has(a) && MOVES.has(a.type) && !delegated) {
             stats.blocked++;
             return { success: false, phase: 'validation', reason: 'hp_floor', message: 'hp floor: the session escapes at low Hitpoints' };
         }
@@ -273,7 +293,9 @@ export function startHpFloor(s: HpFloorSession, initial: HpFloorConfig = {}): Hp
         const bot = s.name ? ` bot=${s.name}` : '';
         if (cfg.stop) { const took = cfg.stop(reason); log(`HP_FLOOR stop ${reason}${took === false ? ' run=already-ending' : ''}${bot}`); return; }
         log(`HP_FLOOR stop ${reason}${bot}`);
-        void import('./bot/settle').then(m => m.finish([s as any], false, reason)).catch(() => {});
+        // A session opened without openBot: print the result and log out (the logout retries through the combat window).
+        console.log(`RESULT fail ${reason}`);
+        if (s.ended) void logout({ sdk: { sendClickComponent: id => ownSend({ type: 'clickComponent', componentId: id, reason: 'hp-floor' }) }, ended: s.ended as Promise<{ reason: string }> }, 15_000).catch(() => {});
     };
 
     const off = s.onTick(() => {

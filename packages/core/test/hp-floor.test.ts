@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { classifyRawWorkerExit } from '../../brain/src/outcome-classifier';
-import { classify as classifyHost } from '../../practice/src/supervise-host';
+import { classify as classifyHost, keptHostLine, superviseHost } from '../../practice/src/supervise-host';
 import { isHpFloorLine, isHpFloorStop, supervise } from '../../practice/src/supervise';
 import { startEatGuard } from '../src/eat-guard';
 import { CALM_TICKS, ESCAPE_BUDGET, floorLine, hpFloorOf, hpFloorOff, playerMaxHitEstimate, startHpFloor, type HpFloorConfig } from '../src/hp-floor';
@@ -75,7 +75,7 @@ function world(init: { hp?: number; max?: number; inventory?: any[]; at?: { x: n
 
 const start = (s: any, cfg: HpFloorConfig = {}) => {
     const lines: string[] = [], stops: string[] = [];
-    const floor = startHpFloor(s, { log: l => lines.push(l), stop: r => stops.push(r), ...cfg });
+    const floor = startHpFloor(s, { log: l => lines.push(l), stop: r => { stops.push(r); }, ...cfg });
     return { floor, lines, stops };
 };
 
@@ -215,6 +215,22 @@ test('while the flee guard moves the player the floor sends no walk; when it sta
     expect(w.sent.some(a => a.type === 'walkTo' && a.reason === 'hp-floor')).toBe(true);
 });
 
+test("the flee job's own walk passes the floor while the floor delegates; after the take-over it does not", () => {
+    const { w, s, advance, hit, attacker } = world({ hp: 10, max: 10 });
+    let busy = true;
+    start(s, { fleeActive: () => busy, takeOver: () => { busy = false; } });
+    w.npcs = [attacker()];
+    advance(1);
+    hit(5);
+    advance(1);
+    // gate.ts send adds reason 'random-event' to the flee job's walk.
+    expect((s.client.executeBotAction({ type: 'walkTo', x: 3190, z: 3200, reason: 'random-event' }) as any).success).toBe(true);
+    expect((s.client.executeBotAction({ type: 'walkTo', x: 3190, z: 3200 }) as any).success).toBe(false);
+    busy = false;
+    advance(1);
+    expect((s.client.executeBotAction({ type: 'walkTo', x: 3190, z: 3200, reason: 'random-event' }) as any).success).toBe(false);
+});
+
 test('a death ends the escape and lets death recovery move the player', () => {
     const { w, s, client, advance, hit, attacker } = world({ hp: 10, max: 10 });
     const { floor, lines } = start(s);
@@ -293,6 +309,15 @@ test('a hp-floor end is a defect: the supervisor blocks the job and the brain qu
     const own = await supervise({ run: async () => ({ stdout: 'HP_FLOOR escape hp=2/10 floor=6\nRESULT fail Error: combat travel original owner/life/stop', exitCode: 1 }), stopped: () => false, pause: async () => {}, maxRestarts: 20 });
     expect(own.reason).toBe('blocked');
     expect(classifyHost(result, false)).toBe('blocked');
+    // A hosted account whose script printed another failure after the floor's escape ends as blocked; its peer retries.
+    expect(keptHostLine('[Ana]   | HP_FLOOR escape hp=2/10 floor=6')).toBe('HAna');
+    let hostRuns = 0;
+    const host = await superviseHost(['Ana', 'Bob'], {
+        run: async () => { hostRuns++; return { stdout: '[Ana] HP_FLOOR escape hp=2/10 floor=6\n[Ana] RESULT fail Error: combat travel original owner/life/stop\n[Bob] RESULT ok', exitCode: 1 }; },
+        stopped: () => false, pause: async () => {}, maxRestarts: 5,
+    });
+    expect(host.ends).toEqual({ Ana: 'blocked', Bob: 'done' });
+    expect(hostRuns).toBe(1);
     const out = classifyRawWorkerExit({ activityId: 'gather-combat:giant', account: 'Bot1', exitCode: 1, status: result, ticksElapsed: 300 });
     expect(out.kind).toBe('worker_defect');
     expect((out as { faultSignature?: string }).faultSignature).toBe('hp-floor');
