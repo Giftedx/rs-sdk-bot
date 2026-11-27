@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790533487-1",
+ "account": "TheFullMonty",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "7e1738a4-6fe8-403a-92c1-3add589fd42e",
+ "count": 0,
+ "ok": false,
+ "at": 1795790818647,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790479061-1",
+ "account": "Fingersmith",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "89be320f-1a8f-48e0-8659-71c1a1ae1474",
+ "count": 0,
+ "ok": false,
+ "at": 1795790841651,
+ "detail": "trade claimed"
+}
