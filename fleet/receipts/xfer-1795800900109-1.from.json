@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800900109-1",
+ "account": "Fatstack",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "641c5626-43ed-47aa-a643-e036c5604655",
+ "count": 10,
+ "ok": true,
+ "at": 1795801125682,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795801110878
+ },
+ "logout": {
+  "attemptId": "1795801105087-0000027592-0000000001",
+  "at": 1795801125625,
+  "sha256": "e2eeeb0d4634d3dee0377426359253273e188d91ebf68b729720cc93c81fc71d"
+ },
+ "screen": true
+}

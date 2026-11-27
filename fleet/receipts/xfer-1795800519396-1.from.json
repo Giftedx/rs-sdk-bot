@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795800519396-1",
+ "account": "Sausagefest",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "8dff2fa7-bfbf-434c-8977-c2d3dd7db0ce",
+ "count": 0,
+ "ok": false,
+ "at": 1795801197092,
+ "detail": "trade claimed"
+}

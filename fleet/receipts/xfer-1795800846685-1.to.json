@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800846685-1",
+ "account": "Unsheathed",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "f6ad5401-b9f2-436f-895a-df808864431e",
+ "count": 1,
+ "ok": true,
+ "at": 1795801183363,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801182497
+ },
+ "logout": {
+  "attemptId": "1795801169567-0000030116-0000000001",
+  "at": 1795801183231,
+  "sha256": "6317a76c1a3c4b5666775ff5888abe2866bc26cc5bebe59a1ec3deb41726bc6f"
+ },
+ "screen": true
+}

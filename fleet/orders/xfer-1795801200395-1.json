@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795801200395-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "YewFirst",
+  "item": "Unicorn horn",
+  "count": 1,
+  "itemId": 237,
+  "start": 1795801200395,
+  "end": 1795802100395,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
