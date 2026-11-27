@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795745292010-2",
  "account": "TheFullMonty",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "8ffec029-a973-40a5-abde-8617ac40cbe1",
- "count": 0,
- "ok": false,
- "at": 1795745639973,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795745733086,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795745716800
+ },
+ "logout": {
+  "attemptId": "1795745640129-0000021896-0000000001",
+  "at": 1795745733077,
+  "sha256": "68e9e232fdeb246b5487c0dea38b627055a82d4db138a5c0494b2f37906ff5cc"
+ },
+ "screen": true
 }

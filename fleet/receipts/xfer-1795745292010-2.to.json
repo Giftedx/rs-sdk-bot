@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795745292010-2",
+ "account": "YewFirst",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "4aae1885-9611-4cb5-85a9-3b211ee7a8a6",
+ "count": 1,
+ "ok": true,
+ "at": 1795745734750,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795745733932
+ },
+ "logout": {
+  "attemptId": "1795745723255-0000011544-0000000001",
+  "at": 1795745734741,
+  "sha256": "28046b9e2dc4209b5c3b5179987fa6b3e2f680685eff13fe40e2d5f81a69dd3a"
+ },
+ "screen": true
+}
