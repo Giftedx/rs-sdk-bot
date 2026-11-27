@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795780826681-1",
  "account": "BowBeforeMe",
  "partner": "Bigpackage",
@@ -12,6 +12,12 @@
  "claim": "1660f1d4-5370-47f5-b9b4-61a4432956b0",
  "count": 0,
  "ok": false,
- "at": 1795781473531,
- "detail": "trade claimed"
+ "at": 1795781540993,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795781473546-0000009512-0000000001",
+  "at": 1795781540978,
+  "sha256": "9019f0850ed70682fa3942997b64cfd49fb046e3cb1f4e174985c99d14689ca3"
+ },
+ "screen": false
 }

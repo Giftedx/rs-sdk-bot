@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795781536227,
+ "at": 1795781557565,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -119,17 +119,39 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "loot-trip"
+    "thieving",
+    "knights"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "1080"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
    "role": "army"
   },
   {
@@ -280,23 +302,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:44",
    "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
   }
  ],
  "army": [
@@ -311,7 +316,6 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fingerblastr",
   "kiltlifter",
   "knightrider",
   "mmtha0205",
@@ -319,6 +323,7 @@
   "moneyshot",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
