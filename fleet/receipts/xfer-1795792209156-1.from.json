@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795792209156-1",
+ "account": "Woodenstaff",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "37d2caa4-1cb3-448c-abed-9cc837b37493",
+ "count": 0,
+ "ok": false,
+ "at": 1795792512075,
+ "detail": "trade claimed"
+}
