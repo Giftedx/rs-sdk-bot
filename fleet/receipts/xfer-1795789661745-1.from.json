@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795789661745-1",
+ "account": "Woodpecker",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 875,
+ "claim": "d82717fe-d769-4cdf-a587-be7289716c58",
+ "count": 0,
+ "ok": false,
+ "at": 1795789809995,
+ "detail": "trade claimed"
+}

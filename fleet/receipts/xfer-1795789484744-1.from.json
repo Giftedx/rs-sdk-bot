@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795789484744-1",
+ "account": "mmsmk1232",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "e101bbf6-c4f5-4fab-a8b1-a271a1ea788f",
+ "count": 0,
+ "ok": false,
+ "at": 1795789799919,
+ "detail": "trade claimed"
+}

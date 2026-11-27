@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795789598621-1",
+ "account": "TossTheCaber",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "e233e0f9-7d39-4dc5-a40d-1662930c5618",
+ "count": 10,
+ "ok": true,
+ "at": 1795789784189,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795789768248
+ },
+ "logout": {
+  "attemptId": "1795789761835-0000026356-0000000001",
+  "at": 1795789784179,
+  "sha256": "d046ecd3d7e732d2cf587bc229eeb151c64fc2924219579accd5812fff64fc1c"
+ },
+ "screen": true
+}
