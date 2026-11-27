@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795806634264-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Quickhandjob",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795806634264,
+  "end": 1795807534264,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
