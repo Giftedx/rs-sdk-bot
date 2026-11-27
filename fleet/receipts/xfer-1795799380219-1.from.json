@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795799380219-1",
  "account": "Bigpackage",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "d52f9f9c-74cd-476a-a80c-1248d806fded",
- "count": 0,
- "ok": false,
- "at": 1795799903704,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795799980911,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795799965762
+ },
+ "logout": {
+  "attemptId": "1795799903715-0000010312-0000000001",
+  "at": 1795799980898,
+  "sha256": "495cdc6d4b5fc07d25e0c9750bcaba81b84e24512a13a66b0b4cd2eb896a448e"
+ },
+ "screen": true
 }
