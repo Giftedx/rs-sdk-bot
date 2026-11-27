@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795788164996-1",
+ "account": "Abracadickra",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "737c1add-8e44-4fec-a98d-14c6065ce674",
+ "count": 1,
+ "ok": true,
+ "at": 1795788369899,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Diamond",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795788348723
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795788347522
+ },
+ "logout": {
+  "attemptId": "1795788277527-0000024048-0000000001",
+  "at": 1795788369883,
+  "sha256": "3f713bf272899be1394a277532a156660b389cac597ba726f736487122efd206"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787967575-1",
+ "account": "YewFirst",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "494a68ec-8bb5-45af-896d-43d78b64c4d0",
+ "count": 0,
+ "ok": false,
+ "at": 1795788397903,
+ "detail": "trade claimed"
+}

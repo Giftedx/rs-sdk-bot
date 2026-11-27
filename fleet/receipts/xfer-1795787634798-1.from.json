@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795787634798-1",
+ "account": "Woodpecker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "c2b65cd7-9655-4e23-9cc9-b30ce4f8a2e8",
+ "count": 1,
+ "ok": true,
+ "at": 1795788397867,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795788389902
+ },
+ "logout": {
+  "attemptId": "1795788383021-0000030840-0000000001",
+  "at": 1795788397834,
+  "sha256": "d8ae4978fd362173d6ce469a5d02aa0dc9653a3ab9b53c6992107aafdf7f385c"
+ },
+ "screen": true
+}

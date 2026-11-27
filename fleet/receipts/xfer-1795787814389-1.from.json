@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795787814389-1",
+ "account": "Billionaire",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "97d21b20-1795-4d44-b437-6581fa68dd51",
+ "count": 1,
+ "ok": true,
+ "at": 1795788395834,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795788378703
+ },
+ "logout": {
+  "attemptId": "1795788370453-0000012820-0000000001",
+  "at": 1795788395822,
+  "sha256": "580179e58705453f695bcce0eadb7741f75dd85dbd4f85e4a84c75c8a169fbc4"
+ },
+ "screen": true
+}

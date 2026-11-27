@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795788088553-1",
+ "account": "NabTheKnob",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "4544190a-2d28-43d0-b8bb-6c6a90fe0be2",
+ "count": 0,
+ "ok": false,
+ "at": 1795788366059,
+ "detail": "trade claimed"
+}

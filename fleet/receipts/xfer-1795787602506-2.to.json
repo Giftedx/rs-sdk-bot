@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787602506-2",
+ "account": "Fingerblastr",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 2,
+ "claim": "6d707476-5d69-4395-8c42-187250681af0",
+ "count": 0,
+ "ok": false,
+ "at": 1795788313552,
+ "detail": "trade claimed"
+}
