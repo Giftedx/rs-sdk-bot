@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795742037345-1",
  "account": "Spitroaster",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 238,
  "claim": "a86841a5-c0ff-487d-a4d0-c558f705ac71",
- "count": 0,
- "ok": false,
- "at": 1795742402324,
- "detail": "trade claimed"
+ "count": 238,
+ "ok": true,
+ "at": 1795742416455,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 238
+ },
+ "bank": {
+  "count": 238,
+  "at": 1795742415702
+ },
+ "logout": {
+  "attemptId": "1795742402333-0000015700-0000000001",
+  "at": 1795742416444,
+  "sha256": "1b17686945ae856c44b44004d8ce48acaff33037c1c9d65dffb72077601a89ed"
+ },
+ "screen": true
 }
