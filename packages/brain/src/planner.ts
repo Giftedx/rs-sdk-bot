@@ -2045,7 +2045,7 @@ function planAccountCore(
                         if (blocker.reason === 'food') {
                             const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
                             // An admission blocker (preflight.ts threatNpcIds) names the pieces that the fight needs.
-                            const countNeed = Math.max(10, floor?.minFoodCount ?? 15, blocker.message.startsWith('admission:') ? blocker.required : 0);
+                            const countNeed = Math.max(10, floor?.minFoodCount ?? 15, (blocker.message ?? '').startsWith('admission:') ? blocker.required ?? 0 : 0);
                             let foodStep: PlannedStep | null = null;
                             for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
                                 const acq = resolveAcquireCached({

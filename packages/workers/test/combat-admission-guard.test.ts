@@ -79,8 +79,8 @@ describe('combat admission guard', () => {
 describe('worker preflight admission', () => {
     const acct = (hp: number) => ({ skills: { Hitpoints: { level: hp, xp: 0 }, Defence: { level: 1, xp: 0 } } }) as never;
     test('blocks the weak account and the account with no food', () => {
-        expect(combatAdmissionBlocker(acct(11), { threatNpcIds: [13] }, [{ id: LOBSTER, count: 20 }])?.reason).toBe('hitpoints');
-        expect(combatAdmissionBlocker(acct(60), { threatNpcIds: [13] }, [])?.reason).toBe('food');
+        expect(combatAdmissionBlocker(acct(11), { threatNpcIds: [13] }, [{ id: LOBSTER, count: 20 }])).toMatchObject({ reason: 'hitpoints' });
+        expect(combatAdmissionBlocker(acct(60), { threatNpcIds: [13] }, [])).toMatchObject({ reason: 'food' });
         expect(combatAdmissionBlocker(acct(60), { threatNpcIds: [13] }, [{ id: LOBSTER, count: 20 }])).toBeUndefined();
     });
 });

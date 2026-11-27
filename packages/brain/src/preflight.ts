@@ -1072,7 +1072,7 @@ export function evaluateCombatSurvivability(
                 // takes the place of a smaller food count.
                 const same = blockers.findIndex(b => b.reason === blocker.reason);
                 if (same < 0) blockers.push(blocker);
-                else if (!weak && blockers[same]!.message.startsWith('Food count') && blockers[same]!.required < blocker.required) blockers[same] = blocker;
+                else if (!weak && (blockers[same]!.message ?? '').startsWith('Food count') && (blockers[same]!.required ?? 0) < (blocker.required ?? 0)) blockers[same] = blocker;
             }
         }
     }
