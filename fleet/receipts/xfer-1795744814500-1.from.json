@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744814500-1",
+ "account": "Swordinhand",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 3,
+ "claim": "7f00cd80-22fa-46ce-95d1-ac331724bee7",
+ "count": 0,
+ "ok": false,
+ "at": 1795744953239,
+ "detail": "trade claimed"
+}
