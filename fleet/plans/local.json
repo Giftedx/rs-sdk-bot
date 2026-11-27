@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748189678,
+ "at": 1795748206613,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,6 +90,22 @@
    "role": "army"
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
+   "role": "army"
+  },
+  {
    "account": "mmsmk1232",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -118,42 +134,6 @@
    "role": "army"
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
    "account": "YewGotWood",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -172,24 +152,6 @@
    "role": "auto"
   },
   {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
-  },
-  {
    "account": "TheFullMonty",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -206,19 +168,20 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
+   "account": "MeatNTwoVeg",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:grindmyherb:item:3853 BATCH_UNITS=1 -- magic items enchant:sapphire_necklace - 1 1200"
+    "scripts/aio-market.ts ITEM_ID=557 \"ITEMS=Earth rune\" MAX_ITEMS=2 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=70 CAP=1000 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:MeatNTwoVeg BATCH_UNITS=250 -- magic orbs water 27 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:3853",
-   "role": "army"
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
   }
  ],
  "army": [
@@ -240,6 +203,7 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pickpockdick",
