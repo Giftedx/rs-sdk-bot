@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784039722-1",
  "account": "Hocuspokeus",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 5,
  "claim": "fa5b5c07-c39c-4a44-ae4d-ccefd72b0cec",
- "count": 0,
- "ok": false,
- "at": 1795784312005,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795784528454,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795784512078
+ },
+ "logout": {
+  "attemptId": "1795784312020-0000024872-0000000001",
+  "at": 1795784528432,
+  "sha256": "df6c61b6b802faef646ec66909eb2257a71adcd88f1c04e93ebc0a1cda28acce"
+ },
+ "screen": true
 }

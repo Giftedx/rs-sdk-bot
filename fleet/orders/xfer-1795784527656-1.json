@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795784527656-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "TackleBox",
+  "item": "Rune essence",
+  "count": 249,
+  "itemId": 1436,
+  "extra": [
+    {
+      "item": "Coins",
+      "count": 27,
+      "itemId": 995
+    }
+  ],
+  "start": 1795784527656,
+  "end": 1795785427656,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
