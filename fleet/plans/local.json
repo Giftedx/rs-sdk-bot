@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795738858750,
+ "at": 1795738876042,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -249,26 +249,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
    "role": "auto"
   }
  ],
