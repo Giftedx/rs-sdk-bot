@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774681085-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "MeatNTwoVeg",
+  "item": "Fire rune",
+  "count": 497,
+  "itemId": 554,
+  "start": 1795774681085,
+  "end": 1795775581085,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
