@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796507771-1",
  "account": "Hocuspokeus",
  "partner": "mmtha0205",
@@ -10,8 +10,18 @@
  "item": "Cosmic rune",
  "requested": 1,
  "claim": "9bf52fee-b365-4760-bd42-339150abf418",
- "count": 0,
- "ok": false,
- "at": 1795796691230,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795796759048,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795796691239-0000027264-0000000001",
+  "at": 1795796759036,
+  "sha256": "038a9cdf8c3a43e45eababb455017cd7fa9636efad560a65739d7fcf93627153"
+ },
+ "screen": true
 }

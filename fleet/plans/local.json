@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795796758599,
+ "at": 1795796775230,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,48 @@
    "role": "pvp"
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Nockitoff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -82,26 +124,6 @@
    "repeat": false,
    "goal": "goal:gear_collection:892",
    "role": "army"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
   },
   {
    "account": "YewGotWood",
@@ -166,7 +188,7 @@
    ]
   },
   {
-   "account": "Quickhandjob",
+   "account": "Shaftmaker",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -177,13 +199,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "army",
+   "role": "auto",
    "resources": [
     "draynor-willows"
    ]
   },
   {
-   "account": "Shaftmaker",
+   "account": "Shaftsinker",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -242,7 +264,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1776"
+    "BATCH_UNITS": "1783"
    },
    "enabled": true,
    "repeat": false,
@@ -298,6 +320,48 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1313",
    "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   }
  ],
  "army": [
@@ -309,7 +373,6 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
