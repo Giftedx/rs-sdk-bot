@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753353911,
+ "at": 1795753378267,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,6 +139,24 @@
    "role": "army"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -155,6 +173,42 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-59-o59-p61 ITEM_ID=1436 QUANTITY=59 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 EXPECTED_OWNED=59 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=118 -- magic earth-production craft 2000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "auto"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "grind:chocolate_bar"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:grindmyherb:item:1975",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
+   "role": "army"
   }
  ],
  "army": [
@@ -167,12 +221,10 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",

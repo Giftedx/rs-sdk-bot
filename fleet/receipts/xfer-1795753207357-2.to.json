@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795753207357-2",
  "account": "TheFullMonty",
  "partner": "Fatstack",
@@ -10,15 +10,37 @@
  "item": "Unicorn horn dust",
  "requested": 1,
  "claim": "11f66c10-16a6-40d1-ae6d-08130f37f884",
- "count": 0,
- "ok": false,
- "at": 1795753349931,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795753361942,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Unfinished potion",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795753361188
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795753360784
+ },
+ "logout": {
+  "attemptId": "1795753349939-0000008964-0000000001",
+  "at": 1795753361929,
+  "sha256": "cb374befcd8f089b28a6ce5ffcaadeb217cd379b5e84ee6eb89420a23dfb4ce4"
+ },
+ "screen": true
 }
