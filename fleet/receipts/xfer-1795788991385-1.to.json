@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788991385-1",
  "account": "SporranDip",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "79d4e480-31ae-4025-9127-19f484507c04",
- "count": 0,
- "ok": false,
- "at": 1795789342487,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795789357019,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795789356256
+ },
+ "logout": {
+  "attemptId": "1795789342496-0000019028-0000000001",
+  "at": 1795789357007,
+  "sha256": "bf5ca9710661286fdb1c6dabacb814bc2bc05250678bbd1dfa293431fe00e609"
+ },
+ "screen": true
 }
