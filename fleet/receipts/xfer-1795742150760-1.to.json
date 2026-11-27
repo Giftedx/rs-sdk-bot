@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795742150760-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 30,
+ "claim": "db46a1f8-e490-4893-af40-3230acb90cbc",
+ "count": 0,
+ "ok": false,
+ "at": 1795742530136,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795742522921-0000029360-0000000001",
+  "at": 1795742530049,
+  "sha256": "c3affaa29b403776f009fa07c64d63b40df79b208d94620116dd2d14f243ab60"
+ },
+ "screen": false
+}

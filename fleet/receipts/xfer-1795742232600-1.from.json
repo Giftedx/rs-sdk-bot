@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742232600-1",
+ "account": "Wandwaver",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze bar",
+ "requested": 19,
+ "claim": "6021c01b-098a-415c-aee8-b17034de048b",
+ "count": 0,
+ "ok": false,
+ "at": 1795742551615,
+ "detail": "trade claimed"
+}

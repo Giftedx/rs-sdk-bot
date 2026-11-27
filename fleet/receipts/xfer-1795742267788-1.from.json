@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742267788-1",
+ "account": "TheFullMonty",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 4,
+ "claim": "a3a07ef6-9a59-449d-8409-e935ad3a337c",
+ "count": 0,
+ "ok": false,
+ "at": 1795742530983,
+ "detail": "trade claimed"
+}

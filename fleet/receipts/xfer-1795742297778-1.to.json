@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742297778-1",
+ "account": "Woodenstaff",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 5,
+ "claim": "9df9a636-b66e-48d1-aa9e-a4ea7484d728",
+ "count": 0,
+ "ok": false,
+ "at": 1795742589946,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742150760-1",
  "account": "Shaftsinker",
  "partner": "Quickhandjob",
@@ -12,6 +12,16 @@
  "claim": "6b5fc1c1-5954-40e3-a17e-7104397f6473",
  "count": 0,
  "ok": false,
- "at": 1795742368287,
- "detail": "trade claimed"
+ "at": 1795742532836,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 27,
+  "at": 1795742516949
+ },
+ "logout": {
+  "attemptId": "1795742368296-0000018544-0000000001",
+  "at": 1795742532828,
+  "sha256": "c6349651e555dce49fb6780b9171bf5ae5c4ddc0af1d6e4dee965168ab56780a"
+ },
+ "screen": false
 }

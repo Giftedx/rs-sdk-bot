@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741825883-2",
+ "account": "Swordinhand",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 250,
+ "claim": "0a39e2a2-b519-4168-a95e-88d3501f4857",
+ "count": 0,
+ "ok": false,
+ "at": 1795742565200,
+ "detail": "trade claimed"
+}
