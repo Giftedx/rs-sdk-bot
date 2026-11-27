@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772357519-2",
  "account": "Woodpecker",
  "partner": "Wandwaver",
@@ -10,8 +10,18 @@
  "item": "Bronze bar",
  "requested": 2,
  "claim": "382d1b0a-bf1e-4331-85c0-374d4cb3433b",
- "count": 0,
- "ok": false,
- "at": 1795773191771,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795773207377,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 3
+ },
+ "logout": {
+  "attemptId": "1795773191781-0000005952-0000000001",
+  "at": 1795773207364,
+  "sha256": "09f5f222e7392a3ddb60591db16448104c31ede2fb2bd942978b2285f3120ac5"
+ },
+ "screen": true
 }
