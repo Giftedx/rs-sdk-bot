@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741825883-1",
  "account": "BowBeforeMe",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "e14a5c37-67cd-4170-8e9f-699f3342abf7",
- "count": 0,
- "ok": false,
- "at": 1795742169795,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795742222102,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795742208918
+ },
+ "logout": {
+  "attemptId": "1795742169805-0000007260-0000000001",
+  "at": 1795742222090,
+  "sha256": "8e07dfa33b8deb6b4be91fc848f5ad473c51a6b1b80f0ae86e42454748bed658"
+ },
+ "screen": true
 }
