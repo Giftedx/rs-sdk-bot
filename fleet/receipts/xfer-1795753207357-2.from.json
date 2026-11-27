@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795753207357-2",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "c39f2c10-6ee7-4391-b088-1c676f858450",
+ "count": 0,
+ "ok": false,
+ "at": 1795753335333,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Unfinished potion",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
