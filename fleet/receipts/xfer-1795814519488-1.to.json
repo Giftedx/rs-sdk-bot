@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795814519488-1",
  "account": "BoneToPick",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 31,
  "claim": "aa62e01d-0be8-4762-8474-9683e9778383",
- "count": 0,
- "ok": false,
- "at": 1795814678114,
- "detail": "trade claimed"
+ "count": 31,
+ "ok": true,
+ "at": 1795814755398,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 31
+ },
+ "bank": {
+  "count": 31,
+  "at": 1795814754697
+ },
+ "logout": {
+  "attemptId": "1795814678123-0000013820-0000000001",
+  "at": 1795814755387,
+  "sha256": "66ddeb811b28a628a65078cda02bde44cfdd2179763b35cf227697710d64f18c"
+ },
+ "screen": true
 }
