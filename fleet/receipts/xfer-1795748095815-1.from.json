@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795748095815-1",
+ "account": "DropMyLoad",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 4,
+ "claim": "a490f724-db61-4318-b162-df8d63542487",
+ "count": 0,
+ "ok": false,
+ "at": 1795748157066,
+ "detail": "fled at low hitpoints: flee_guard id=917 at=3092,3242 ticks=5",
+ "logout": {
+  "attemptId": "1795748148369-0000002356-0000000001",
+  "at": 1795748156962,
+  "sha256": "f70ba956203fc18efeffdbe8bf117a520d77b00e485b6269d7f3ed8b7f189b3e"
+ },
+ "screen": false
+}
