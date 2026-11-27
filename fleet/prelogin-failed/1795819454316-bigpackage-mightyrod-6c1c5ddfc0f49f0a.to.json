@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795819454316-bigpackage-mightyrod-6c1c5ddfc0f49f0a",
+ "role": "to",
+ "account": "Mightyrod",
+ "partner": "Bigpackage",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795819900871,
+ "detail": "Error: fleet trade: reserved account"
+}
