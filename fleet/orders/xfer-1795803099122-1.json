@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795803099122-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "PickpockDick",
+  "item": "Chocolate bar",
+  "count": 1,
+  "itemId": 1973,
+  "start": 1795803099122,
+  "end": 1795803999122,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
