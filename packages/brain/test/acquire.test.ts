@@ -738,6 +738,11 @@ test('a shop whose restock wait exceeds one shop-buy run is no source for a full
     const shelf = resolveAcquireItem(acct, { itemId: 383, quantity: 2, allowedSources: ['npc_shop'] }, { world, customShops: [stall] });
     expect(shelf.step?.shopId).toBe('slow_test_stall');
     expect(shelf.step?.quantity).toBe(2);
+    // A fresh shelf count of 1: a partial order takes the 1 on the shelf, since the restock falls outside the cap.
+    const seenOne: WorldSnapshot = { ...world, shopShelves: { '383:shop:slow_test_stall': { count: 1, at: NOW - 60_000 } } };
+    const one = resolveAcquireItem(acct, { itemId: 383, quantity: 2, allowPartial: true, allowedSources: ['npc_shop'] }, { world: seenOne, customShops: [stall] });
+    expect(one.step?.quantity).toBe(1);
+    expect(one.step!.estimatedTicks).toBeLessThan(3000);
 });
 
 test('an empty seller shelf sends the order to the GE unless the next seller is cheaper in ticks and coins', () => {

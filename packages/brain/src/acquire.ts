@@ -555,7 +555,8 @@ export function resolveAcquireItem(
                 let shopQty = req.quantity;
                 if (runTicksFor(shopQty) > SHOP_BUY_CAP_TICKS) {
                     const cycles = Math.floor((SHOP_BUY_CAP_TICKS - travelTicks - 15 - Math.ceil(shopQty / 10)) / restockTicks) + 1;
-                    const fits = Math.max(0, Math.min(shopQty, cycles * stockPerCycle));
+                    // The first shelf, then one full shelf for each restock inside the cap.
+                    const fits = cycles < 1 ? 0 : Math.max(0, Math.min(shopQty, firstShelf + (cycles - 1) * stockPerCycle));
                     if (req.allowPartial !== true || fits < 1) {
                         if (!skipDiag) shopRejectReason = `shop ${shop.shop} restock wait ${restockWaitFor(shopQty)} + travel ${travelTicks} > cap ${SHOP_BUY_CAP_TICKS} ticks`;
                         continue;
