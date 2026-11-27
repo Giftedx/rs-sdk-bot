@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, dragonFrom, dragonHeld, dragonJournalStage, dragonSpent, grailFrom, grailJournalStage, ikovJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, dragonFrom, druidJournalStage, dragonHeld, dragonJournalStage, dragonSpent, grailFrom, grailJournalStage, ikovJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
 
 const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
@@ -84,6 +84,45 @@ describe('squire journal stage', () => {
         expect(spent(2)).toEqual([]);
         expect(spent(3)).toEqual([2325]);
         expect(spent(6)).toEqual([2325]);
+    });
+});
+
+describe('druid journal stage', () => {
+    // The branches of druid_journal.rs2 in order: each `%druidquest = ^name` test, and the final else (complete).
+    function druidBranches(): { label: string; text: string }[] {
+        const src = readFileSync(join(REPO_ROOT, `${QUESTS}/quest_druid/scripts/druid_journal.rs2`), 'utf8');
+        return src.split(/\n\s*(?:\}\s*else\s*)?if\s*\(|\n\s*\}\s*else\s*\{/).slice(1).map((part) => ({
+            label: part.match(/^%druidquest = \^(\w+)\)/)?.[1] ?? 'druid_complete',
+            text: [...part.matchAll(/(?:\$text = |append\(\$text, )"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]!).join(''),
+        }));
+    }
+
+    test('the journal of each %druidquest branch names its stage', () => {
+        const k = constants(`${QUESTS}/quest_druid/configs/quest_druid.constant`, 'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant');
+        const branches = druidBranches();
+        expect(branches.map((b) => b.label)).toEqual(['druid_not_started', 'druid_started', 'druid_spoken_sanfew', 'druid_given_ingredients', 'druid_complete']);
+        for (const b of branches) {
+            expect(k[b.label]).toBeNumber();
+            expect([b.label, druidJournalStage(b.text)]).toEqual([b.label, k[b.label]]);
+        }
+        expect(druidJournalStage('Druidic Ritual')).toBeUndefined();
+    });
+
+    // Live: Moneyshot and Shaftsinker failed "step dip 2132" in the cauldron room at stage 2, and each later login
+    // failed "talk kaqemeex 1": Kaqemeex at 1-2 says only "speak to my fellow druid Sanfew" (kaqemeex.rs2:6-8).
+    test('a started journal resumes at its stage; the meats are spent at 3', () => {
+        expect(questEntry('druid', 'Druidic Ritual', 'started')).toEqual({ kind: 'resume', resume: QUEST_RESUME.druid! });
+        const druid = QUEST_RESUME.druid!;
+        expect(resumeStart(druid, 'Druidic Ritual', 2)).toEqual({ kind: 'resume', from: 2, spent: [], held: [522, 523, 524, 525], extra: [] });
+        expect(resumeStart(druid, 'Druidic Ritual', 3)).toEqual({ kind: 'resume', from: 3, spent: [2132, 2134, 2136, 2138], held: [], extra: [] });
+        expect(resumeStart(druid, 'Druidic Ritual', 4)).toEqual({ kind: 'refuse', reason: 'refused: Druidic Ritual journal stage 4 is complete' });
+    });
+
+    test('quest-druid.ts starts at the stage and reads its own journal on a direct run', () => {
+        const src = readFileSync(join(REPO_ROOT, 'scripts/generated/quest-druid.ts'), 'utf8');
+        expect(src).toContain("q.stageFrom('DRUID_FROM')");
+        expect(src).toContain("readQuestJournalStage(q, 'druid', /Druidic Ritual/i, druidJournalStage)");
+        for (const stage of [1, 2, 3]) expect(src).toContain(`FROM < ${stage}`);
     });
 });
 
