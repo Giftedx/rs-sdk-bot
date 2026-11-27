@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795783887779,
+ "at": 1795783901229,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,19 +100,51 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:gear_collection:892",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:gear_collection:892",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
   },
   {
    "account": "UnderMyKilt",
@@ -158,7 +190,7 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=29 PRODUCT_TARGET=35 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
@@ -168,28 +200,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1511-1-o4-p55",
-    "ITEM_ID": "1511",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "55",
-    "EXPECTED_OWNED": "4",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
    "role": "army"
   },
   {
@@ -203,14 +213,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "5",
+    "MAX_ITEMS": "4",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "5"
+    "BATCH_UNITS": "4"
    },
    "enabled": true,
    "repeat": false,
@@ -221,8 +231,8 @@
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=3550 TARGET_COUNT=355 PRODUCT_TARGET=355 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=355 -- runecraft air"
+    "scripts/aio-skiller.ts CAP=3520 TARGET_COUNT=352 PRODUCT_TARGET=352 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=352 -- runecraft air"
    ],
    "env": {
     "ROUNDS": "1"
@@ -234,13 +244,14 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=3550 TARGET_COUNT=355 PRODUCT_TARGET=355 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=355 -- runecraft air"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "352"
    },
    "enabled": true,
    "repeat": false,
@@ -273,29 +284,26 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
+   "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "235",
+    "ORDER_KEY": "brain-1511-1-o0-p55",
+    "ITEM_ID": "1511",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "235"
+    "LIMIT_PRICE": "55",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1511",
+   "role": "army"
   }
  ],
  "army": [
@@ -318,7 +326,6 @@
   "mmthv2350",
   "moneyshot",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
