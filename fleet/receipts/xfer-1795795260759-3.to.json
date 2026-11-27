@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795795260759-3",
+ "account": "Fingersmith",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "0c732201-8e93-495d-99a3-3d01a75c2fec",
+ "count": 1,
+ "ok": true,
+ "at": 1795796149717,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795796148732
+ },
+ "logout": {
+  "attemptId": "1795796138824-0000031440-0000000001",
+  "at": 1795796149458,
+  "sha256": "ce9a5f314353445b10a719de481281dbc6d414e573593cef480a097774fc990a"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795821586-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 105,
+ "claim": "0dbef04f-324e-40be-9c3c-9b42966a3997",
+ "count": 0,
+ "ok": false,
+ "at": 1795796114572,
+ "detail": "trade claimed"
+}
