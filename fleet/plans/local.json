@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795792822870,
+ "at": 1795792888645,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,97 +59,25 @@
    "role": "pvp"
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "604",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "604"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "essence"
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "584"
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "238",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "auto",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   },
   {
    "account": "KnightRider",
@@ -190,7 +118,7 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Quickhandjob",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -209,7 +137,7 @@
    ]
   },
   {
-   "account": "Wandwaver",
+   "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -247,29 +175,69 @@
    ]
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:kwuarm"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=584 -- mining essence"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:263",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "campaign:haggis:item:1436",
    "role": "army"
   },
   {
-   "account": "Pocketpython",
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-1-o12-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "12",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "army"
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "254",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "254"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -277,20 +245,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -334,13 +302,28 @@
    "role": "auto"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-camp"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Swordswallow",
     "BATCH_UNITS": "250"
@@ -348,73 +331,62 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Nockitoff",
+   "account": "Fatstack",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-camp"
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
+    "CAP": "3000",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "army"
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto",
+   "resources": [
+    "chaos-druids"
+   ]
   },
   {
    "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-camp"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:YewGotWood",
     "BATCH_UNITS": "250"
@@ -422,41 +394,30 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:YewGotWood",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
-   "account": "Pullmybow",
+   "account": "Nockitoff",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-camp"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "DEMAND_ID": "goal:pk_army:Nockitoff",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
@@ -471,18 +432,19 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
   "pocketrocket",
   "sporrandip",
-  "swordinhand"
+  "swordinhand",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
