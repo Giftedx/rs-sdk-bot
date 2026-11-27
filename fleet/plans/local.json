@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795781381481,
+ "at": 1795781396915,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,28 @@
    "role": "pvp"
   },
   {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-562-113-o0-p150",
+    "ITEM_ID": "562",
+    "QUANTITY": "113",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "150",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "113"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -94,27 +116,17 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "24",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "24"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:225",
    "role": "army"
   },
   {
@@ -169,21 +181,6 @@
    "role": "auto"
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "army"
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -223,27 +220,24 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "goal:supply_chain:257",
    "role": "army"
   },
   {
