@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795806760399-1",
+ "account": "UnderMyKilt",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "f67907cd-0942-454f-94ed-3de95f3e2c9c",
+ "count": 0,
+ "ok": false,
+ "at": 1795807025387,
+ "detail": "trade claimed"
+}
