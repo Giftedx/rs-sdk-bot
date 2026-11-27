@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795819454030-pocketpython-masterbaiter-149e789ff74f70c5",
  "account": "Pocketpython",
  "partner": "Masterbaiter",
@@ -12,6 +12,16 @@
  "claim": "7288d7c4-297b-4082-a5f2-4aba402cecc2",
  "count": 0,
  "ok": false,
- "at": 1795821644370,
- "detail": "trade claimed"
+ "at": 1795821775443,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795821759494
+ },
+ "logout": {
+  "attemptId": "1795821644378-0000030428-0000000001",
+  "at": 1795821775435,
+  "sha256": "694b15b2b1eec30275326a554ca24bf7bbf35bdfc20aaa4771ca4c6693e09821"
+ },
+ "screen": false
 }
