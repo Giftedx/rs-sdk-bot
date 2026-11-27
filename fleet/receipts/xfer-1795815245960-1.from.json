@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795815245960-1",
  "account": "Hocuspokeus",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 3,
  "claim": "4a2082dd-1d6e-4620-832a-b76462dc8e43",
- "count": 0,
- "ok": false,
- "at": 1795815368819,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795815451744,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795815432228
+ },
+ "logout": {
+  "attemptId": "1795815368862-0000014528-0000000001",
+  "at": 1795815451734,
+  "sha256": "940e494978f7970b31d2ac65028f19b95a3b9b585abdae5e5cd540c1f2ed2796"
+ },
+ "screen": true
 }

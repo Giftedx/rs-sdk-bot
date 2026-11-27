@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795815346664-1",
+ "account": "Pocketpython",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 10,
+ "claim": "23fc92a7-f207-4d48-9a79-2eaf8a07293e",
+ "count": 0,
+ "ok": false,
+ "at": 1795815482054,
+ "detail": "trade claimed"
+}
