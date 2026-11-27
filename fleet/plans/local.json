@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795819969784,
+ "at": 1795820244362,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -56,6 +56,34 @@
    "script": "",
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
    "role": "pvp"
   },
   {
