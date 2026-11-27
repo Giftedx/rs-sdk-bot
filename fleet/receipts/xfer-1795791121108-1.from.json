@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795791121108-1",
+ "account": "Hocuspokeus",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 495,
+ "claim": "fa3971aa-7adc-4a95-8fd6-aa60d574872d",
+ "count": 0,
+ "ok": false,
+ "at": 1795791465265,
+ "detail": "trade claimed"
+}

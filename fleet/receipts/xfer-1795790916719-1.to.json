@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795790916719-1",
+ "account": "TheFullMonty",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "e4139630-b735-4ad9-b213-adfeb7924f6d",
+ "count": 1,
+ "ok": true,
+ "at": 1795791501712,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795791500971
+ },
+ "logout": {
+  "attemptId": "1795791492472-0000008024-0000000001",
+  "at": 1795791501699,
+  "sha256": "103d38e646c429d637a697dc25fbbe3383fdda9b081d976313df94ad643c2906"
+ },
+ "screen": true
+}

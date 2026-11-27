@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790895407-1",
+ "account": "TossTheCaber",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze bar",
+ "requested": 28,
+ "claim": "269cf2bb-ed26-468f-a38a-dc8505b118c2",
+ "count": 0,
+ "ok": false,
+ "at": 1795791500671,
+ "detail": "trade claimed"
+}
