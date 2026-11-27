@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772632935-1",
  "account": "TossTheCaber",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Cosmic rune",
  "requested": 2,
  "claim": "fee19f03-9c0b-40b8-8345-a77424a52ed5",
- "count": 0,
- "ok": false,
- "at": 1795772777123,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795772884184,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795772785849
+ },
+ "logout": {
+  "attemptId": "1795772777132-0000031700-0000000001",
+  "at": 1795772884173,
+  "sha256": "ce5cf47016b6e00b2f8db865843dbf8983465bc27e054473d39e021cb06386a0"
+ },
+ "screen": true
 }
