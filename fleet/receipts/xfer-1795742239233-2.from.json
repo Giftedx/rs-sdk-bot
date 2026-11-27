@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742239233-2",
  "account": "Fatstack",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,12 @@
  "claim": "169e44c5-6fb1-4393-9e83-93136d18345e",
  "count": 0,
  "ok": false,
- "at": 1795742751320,
- "detail": "trade claimed"
+ "at": 1795742896117,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795742751376-0000027616-0000000001",
+  "at": 1795742896008,
+  "sha256": "e6312fd5f712a3cd840028841625942bf33a6e8c2af2d6aeecdfd4b2ec8c939a"
+ },
+ "screen": false
 }
