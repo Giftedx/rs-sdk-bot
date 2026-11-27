@@ -278,12 +278,13 @@ export function brainPlanHold(
     statusAge: (a: string) => number,
     statusStarted?: (a: string) => number | undefined,
     now = Date.now(),
+    releaseOf?: (job: Job) => string | undefined,
 ): string | undefined {
     if (built.selected.mode === 'session_recovery') return BRAIN_RECOVERY_WAIT;
     if (!built.job) return undefined;
     const p = parseJob(built.job);
     if ('error' in p || p.accounts.length !== 1) return undefined;
-    const why = startable(p.accounts, p.job.repeat, ended, statusAge, statusStarted, missionSignature(p.job), undefined, () => true).blocked[p.accounts[0]!];
+    const why = startable(p.accounts, p.job.repeat, ended, statusAge, statusStarted, missionSignature(p.job), undefined, () => true, releaseOf?.(p.job)).blocked[p.accounts[0]!];
     if (why?.startsWith('ended: ')) return why;
     const { selected } = built;
     if (selected.mode !== 'worker' || selected.marketItemId === undefined || !selected.marketVenue) return undefined;
@@ -650,7 +651,9 @@ export function overlappingRun<T extends { accounts: readonly string[] }>(runs: 
 
 // marketItemId and marketVenue name the shop or GE item of a run that ended because the venue had no stock, or because
 // the buy refused to start for a cause that the next login meets again (marketRefusal).
-export type EndRecord = { at: number; reason: string; revision?: string; marketItemId?: number; marketVenue?: string; marketRefusal?: RefusalCause };
+// `release`: the worker release of the run that ended (cachedReleaseFor of its entries). startable() retries a held
+// end once after the job's release changes.
+export type EndRecord = { at: number; reason: string; revision?: string; release?: string; marketItemId?: number; marketVenue?: string; marketRefusal?: RefusalCause };
 
 // The same out-of-stock text that sets a venue cooldown (brain/src/outcome-classifier.ts MARKET_UNAVAILABLE_RE and
 // SHOP_STOCK_WAIT_RE, brain-runtime.ts extractWorkerOutcomeInput).
@@ -1460,16 +1463,17 @@ export function endsOfRun(accounts: readonly string[], reason: string, died: rea
 export function startable(
     accounts: string[],
     repeat: boolean | undefined,
-    ended: Map<string, { reason: string; at?: number; revision?: string }>,
+    ended: Map<string, { reason: string; at?: number; revision?: string; release?: string }>,
     statusAge: (a: string) => number,
     statusStarted?: (a: string) => number | undefined,
     revision?: string,
     stopped?: (a: string) => boolean,
     brainManaged?: (a: string) => boolean,
+    release?: string,
 ): { start: string[]; blocked: Record<string, string> } {
     const start: string[] = [];
     const blocked: Record<string, string> = {};
-    let lowerMap: Map<string, { reason: string; at?: number; revision?: string }> | null = null;
+    let lowerMap: Map<string, { reason: string; at?: number; revision?: string; release?: string }> | null = null;
     for (const a of accounts) {
         let end = ended.get(a);
         if (end === undefined && ended.size > 0) {
@@ -1481,10 +1485,13 @@ export function startable(
         }
         const newMission = !!end?.revision && !!revision && end.revision !== revision && /^done(?: after \d+ runs)?$/.test(end.reason);
         const brainSwitched = !!brainManaged?.(a) && !!end?.revision && !!revision && end.revision !== revision && !/^died\b/.test(end.reason);
+        // A run that a release since then may fix (a refused, blocked or stopped end) runs once more on the new
+        // release. Its new end records that release, so a second failure holds again. A death stays held.
+        const releaseChanged = !!end?.release && !!release && end.release !== release && !/^died\b/.test(end.reason);
         const resumable = !!end && (
             (/^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision)
             || /^release-paused\b/.test(end.reason) || /^released\b/.test(end.reason)
-            || brainSwitched
+            || brainSwitched || releaseChanged
         );
         if (stopped?.(a)) blocked[a] = 'paused: stop file';
         else if (endedForGood(end, repeat) && !newMission && !resumable) {
@@ -1739,7 +1746,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     }
                     if (keepEnded) {
                         const endReason = run.brain ? brainStopEnd(own, lastResultLine, readStopFile(account, root)) : own;
-                        ended.set(account, { at: Date.now(), reason: endReason, revision: run.revision, ...stockOutEnd(run, own, lastResultLine) });
+                        ended.set(account, { at: Date.now(), reason: endReason, revision: run.revision, ...(run.workerRelease ? { release: run.workerRelease } : {}), ...stockOutEnd(run, own, lastResultLine) });
                         console.log(`SWARM end ${account} ${endReason}`);
                     } else {
                         const existingKey = [...ended.keys()].find(n => n.toLowerCase() === account.toLowerCase());
@@ -1753,7 +1760,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             } else {
                 for (const a of run.accounts) {
                     if ((ended.get(a)?.at ?? 0) >= run.started) continue;
-                    ended.set(a, { at: Date.now(), reason: `exit ${code}`, revision: run.revision });
+                    ended.set(a, { at: Date.now(), reason: `exit ${code}`, revision: run.revision, ...(run.workerRelease ? { release: run.workerRelease } : {}) });
                     console.log(`SWARM end ${a} exit ${code} (host)`);
                 }
             }
@@ -1831,6 +1838,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         follow(p.key, run, child);
     });
 
+    // The release a start of the job would pin (the run start's workRelease); undefined when its entries do not resolve.
+    const jobReleaseOf = (job: Job): string | undefined => {
+        try { return cachedReleaseFor(workerEntries(job.script, job.args ?? [], root), root); } catch { return undefined; }
+    };
     const readPendingUpdateMark = pendingUpdateReader(root);
     const updateDrainOf = (pending: PendingUpdate | null, job: Job): string[] => {
         if (!pending) return [];
@@ -1942,7 +1953,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const endedLower = endedMapByLower(ended);
                     const heldPlan = (account: string, accountPlan: AccountPlan): string | undefined =>
                         endedLower.has(account.toLowerCase()) || accountPlan.steps[0]?.stepKind === 'recover'
-                            ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted)
+                            ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted, Date.now(), jobReleaseOf)
                             : undefined;
                     // A cycle that throws keeps the last result: without brain jobs in the plan, the stop pass
                     // below would write SWARM_STOP.removed for every brain-dispatched worker.
@@ -2320,6 +2331,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         jobSig,
                         a => stopFlagsPresent.has(a.toLowerCase()),
                         a => brainDispatchedAccounts.has(a.toLowerCase()),
+                        jobReleaseOf(job),
                     ),
                     job.script, holds,
                 ), () =>
