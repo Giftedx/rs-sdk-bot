@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742726953-1",
  "account": "OreElse",
  "partner": "Hocuspokeus",
@@ -12,6 +12,16 @@
  "claim": "d86dbb76-3b57-40f6-81cd-f4db8fb69074",
  "count": 0,
  "ok": false,
- "at": 1795743064114,
- "detail": "trade claimed"
+ "at": 1795743273998,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795743258058
+ },
+ "logout": {
+  "attemptId": "1795743064123-0000029748-0000000001",
+  "at": 1795743273987,
+  "sha256": "66bd717de8352a9705c8afce4d656706cead6c57496df929fc1821a106825863"
+ },
+ "screen": false
 }
