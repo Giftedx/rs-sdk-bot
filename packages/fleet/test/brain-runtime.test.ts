@@ -105,6 +105,25 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(ok.detail).toBeUndefined();
     });
 
+    test('a brain cycle lifts a repeat-fault hold whose worker release changed', () => {
+        const root = makeTempRoot();
+        const now = 1_700_000_100_000;
+        const catalog = createActivityCatalog();
+        const classifier = new OutcomeClassifier({ rateStore: createRateStore({ catalog, root }), root });
+        const detail = 'RESULT fail quest-sweep tree missing 2434:2 (unsold; others in shops)';
+        for (const [i, account] of ['AlphaBot', 'BetaBot', 'GammaBot'].entries()) {
+            classifier.classifyAndApplyRaw(
+                { activityId: 'quest:tree', account, exitCode: 1, status: 'fail', reason: 'gave-up after 1 runs', detail, durationMs: 20_000 },
+                { now: now - 1_000 + i, workerRelease: 'rel-a', workerEntries: ['scripts/aio-quester.ts'] },
+            );
+        }
+        const cycle = (release: string) => runBrainCycle({ root, fleetDir: join(root, 'fleet'), now, side: 'local', maxBots: 4, marketQuotes: {}, classifier, releaseOf: () => release });
+        cycle('rel-a');
+        expect(classifier.quarantinedDefects(now).map((d) => d.activityId)).toEqual(['quest:tree']);
+        cycle('rel-b');
+        expect(classifier.quarantinedDefects(now)).toEqual([]);
+    });
+
     test('runs an offline Brain cycle and publishes a valid FleetState file', () => {
         const root = makeTempRoot();
         const now = 1_700_000_100_000;
