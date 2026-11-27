@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795811974331-1",
+ "account": "KnightRider",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "602fde52-56f4-4974-a3c6-765f006f072f",
+ "count": 0,
+ "ok": false,
+ "at": 1795812184063,
+ "detail": "trade claimed"
+}
