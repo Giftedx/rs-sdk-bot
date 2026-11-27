@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795793785962-1",
  "account": "Bigpackage",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Necklace mould",
  "requested": 1,
  "claim": "07ad541b-fa77-4040-a6db-ef6cbf2efbb1",
- "count": 0,
- "ok": false,
- "at": 1795794150556,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795794162022,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795794158863
+ },
+ "logout": {
+  "attemptId": "1795794150565-0000004340-0000000001",
+  "at": 1795794162010,
+  "sha256": "81238593b5acf22a60bef6c10d2b9f6a0532aaeb5fb79ed3d711df6768e5e82f"
+ },
+ "screen": true
 }
