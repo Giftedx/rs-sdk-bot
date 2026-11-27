@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795759764172-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "OreElse",
+  "item": "Rune essence",
+  "count": 2000,
+  "itemId": 1436,
+  "start": 1795759764172,
+  "end": 1795760664172,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
