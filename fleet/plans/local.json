@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795742651386,
+ "at": 1795742701894,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,33 +62,55 @@
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop2 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2351-3-p224 ITEM_ID=2351 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=224 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1309 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1309 BATCH_UNITS=1 -- smithing anvil 1500"
+    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1309",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1500"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "mmsmk1232",
@@ -226,6 +248,25 @@
    "role": "auto"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:mineshafted:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -241,20 +282,24 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "grind:chocolate_bar"
+    "shop-buy",
+    "taverley",
+    "3000"
    ],
    "env": {
-    "MAX_MAKE": "3",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:grindmyherb:item:1975",
-    "BATCH_UNITS": "3",
-    "ORDER_MODE": "best-effort"
+    "ITEM_ID": "233",
+    "ITEMS": "Pestle and mortar",
+    "MAX_ITEMS": "1",
+    "STOCK_TARGET": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "100",
+    "STOP_AT_TARGET": "1",
+    "FILL_ORDER": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -270,12 +315,10 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -288,6 +331,7 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker"

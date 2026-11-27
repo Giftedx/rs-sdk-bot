@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742694506-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Bigpackage",
+  "item": "Chocolate bar",
+  "count": 3,
+  "itemId": 1973,
+  "start": 1795742694506,
+  "end": 1795743594506,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
