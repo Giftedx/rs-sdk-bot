@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804258219-1",
  "account": "UnderMyKilt",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 3,
  "claim": "0b1ab923-1716-4a9f-a690-542768d1b910",
- "count": 0,
- "ok": false,
- "at": 1795804865071,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795804885443,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795804884711
+ },
+ "logout": {
+  "attemptId": "1795804865080-0000019516-0000000001",
+  "at": 1795804885432,
+  "sha256": "90c6f345431576e9c5705c967c4a9c79029483b0310dea837d03347f218a26b2"
+ },
+ "screen": true
 }

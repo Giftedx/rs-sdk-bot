@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795804626075-1",
+ "account": "Kiltlifter",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "c0a9073e-efaa-44bb-b870-8573f0b5763d",
+ "count": 0,
+ "ok": false,
+ "at": 1795804949351,
+ "detail": "trade claimed"
+}
