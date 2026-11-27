@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795812679791-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "NabTheKnob",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795812679791,
+  "end": 1795813579791,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
