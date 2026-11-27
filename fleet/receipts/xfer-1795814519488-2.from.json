@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795814519488-2",
+ "account": "Woodenstaff",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 2,
+ "claim": "0eb847a0-4117-4ffb-a3e1-2fb458b77f65",
+ "count": 0,
+ "ok": false,
+ "at": 1795814864989,
+ "detail": "trade claimed"
+}
