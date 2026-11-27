@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795754368661-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Shaftsinker",
+  "item": "Antipoison(3)",
+  "count": 2,
+  "itemId": 175,
+  "start": 1795754368661,
+  "end": 1795755268661,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
