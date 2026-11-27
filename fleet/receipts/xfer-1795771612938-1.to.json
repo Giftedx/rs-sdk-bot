@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795771612938-1",
  "account": "PickpockDick",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "9e81b605-0db8-49ba-a5df-f119f16aa9e8",
- "count": 0,
- "ok": false,
- "at": 1795771776024,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795771802239,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795771801491
+ },
+ "logout": {
+  "attemptId": "1795771776033-0000021028-0000000001",
+  "at": 1795771802224,
+  "sha256": "24af09501034e79eca52011583b1556da55b6f10bc0723ac83a70ec03e149158"
+ },
+ "screen": true
 }
