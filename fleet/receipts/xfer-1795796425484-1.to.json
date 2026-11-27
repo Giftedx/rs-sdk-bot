@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796425484-1",
+ "account": "Unsheathed",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "428f5260-444f-49c6-b750-b44440a30cbf",
+ "count": 0,
+ "ok": false,
+ "at": 1795796914667,
+ "detail": "trade claimed"
+}
