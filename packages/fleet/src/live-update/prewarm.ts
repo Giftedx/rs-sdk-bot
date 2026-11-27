@@ -2,16 +2,35 @@
 // in the background (tools/route-prewarm.ts), so a live walk reads their legs from the shared leg store and does not
 // pay a cold plan. ROUTE_PREWARM=0 turns it off.
 import { spawn } from 'node:child_process';
-import { mkdirSync, openSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, openSync, readFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import { importClosure } from './inspect';
 
-const ROUTE_CODE = [
-    /^packages\/core\/src\/(?:world|danger|walk)\//,
-    /^packages\/core\/src\/(?:trip|travel|route-plan|route-worker|leg-cache|pathcache|components|door-policy)\.ts$/,
-    /^knowledge\/(?:transports|doors|npcs|shortcuts|teleports|npc-travel|crossings)\.json$/,
-    /^vendor\/rs-sdk$/,
-];
-export const routeCodeChanged = (files: readonly string[]): boolean => files.some(f => ROUTE_CODE.some(r => r.test(f.replaceAll('\\', '/'))));
+// The route planner a live walk runs (route-plan.ts starts it): its import closure is the route code.
+export const ROUTE_ENTRY = 'packages/core/src/route-worker.ts';
+type RouteInputs = { code: Set<string>; data: Set<string> };
+const inputsByRoot = new Map<string, RouteInputs>();
+// The route code and the names of the JSON files it reads (each '<name>.json' literal in it: knowledge/*.json through
+// loadKnowledgeJson or join, packages/planner/src/haggis-travel.json).
+export function routeInputs(root: string): RouteInputs {
+    let inputs = inputsByRoot.get(root);
+    if (inputs) return inputs;
+    const code = new Set(importClosure([ROUTE_ENTRY], root)), data = new Set<string>();
+    for (const file of code) {
+        let text = '';
+        try { text = readFileSync(join(root, file), 'utf8'); } catch { continue; }
+        for (const m of text.matchAll(/['"`/]([\w-]+\.json)['"`]/g)) data.add(m[1]!);
+    }
+    inputsByRoot.set(root, inputs = { code, data });
+    return inputs;
+}
+export function routeCodeChanged(files: readonly string[], root: string): boolean {
+    const { code, data } = routeInputs(root);
+    return files.some(f => {
+        const p = f.replaceAll('\\', '/');
+        return p === 'vendor/rs-sdk' || code.has(p) || (p.endsWith('.json') && data.has(basename(p)));
+    });
+}
 
 // Starts tools/route-prewarm.ts as a detached process at the lowest priority it sets itself; its output goes to
 // .practice/route-prewarm/run.log. The tool skips the run when free memory is low or the head was warmed before.

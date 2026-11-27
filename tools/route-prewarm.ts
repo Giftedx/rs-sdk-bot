@@ -31,13 +31,16 @@ export function slowWalks(text: string, bot: string, minMs: number): SlowWalk[] 
 }
 
 // An account for the route search from a bot's status row: its levels and pack (door-policy.ts accountFromState).
-async function statusAccount(bot: string, dirs: readonly string[]) {
+export async function statusAccount(bot: string, dirs: readonly string[]) {
     const { accountFromState } = await import('../packages/core/src/door-policy');
     for (const dir of dirs) {
         try {
             const st = JSON.parse(readFileSync(join(dir, `${bot}.json`), 'utf8'));
             const skills = (st.skills ?? []).map((s: { name: string; level: number; currentLevel?: number }) => ({ name: s.name, level: s.currentLevel ?? s.level, baseLevel: s.level }));
-            return accountFromState({ skills, inventory: st.inventory ?? [], equipment: Array.isArray(st.equipment) ? st.equipment : undefined });
+            const acct = accountFromState({ skills, inventory: st.inventory ?? [], equipment: Array.isArray(st.equipment) ? st.equipment : undefined });
+            // The quest stages, varps and unlocks the session observed (status.ts guildFacts, as accountForSdk adds them).
+            const facts = st.guildFacts && typeof st.guildFacts === 'object' ? st.guildFacts : {};
+            return { ...acct, ...facts, unlocks: Array.isArray(facts.unlocks) ? facts.unlocks : [] };
         } catch { /* the next status directory */ }
     }
     return null;

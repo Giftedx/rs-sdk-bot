@@ -143,7 +143,7 @@ export async function runLiveUpdateCli(
         const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };
         writeLiveUpdate(root, mark);
         // New route code or data: the slow walks of the last day are planned again in the background (prewarm.ts).
-        if (routeCodeChanged(checkout.incoming) && startRoutePrewarm(root, env)) log('LIVE_UPDATE route prewarm started (.practice/route-prewarm/run.log)');
+        if (routeCodeChanged(checkout.incoming, root) && startRoutePrewarm(root, env)) log('LIVE_UPDATE route prewarm started (.practice/route-prewarm/run.log)');
         const vendor = !patchMoves || sdk === null ? null : resets ? resetVendor(root, oldPatch)
             : { ok: true, detail: inTheWay.length ? `kept: ${few(inTheWay)} in ${SDK} is in the way of the new SDK patch` : `kept: ${SDK} has edits that are not the SDK patch` };
         const note = !vendor ? '' : !vendor.ok ? ` vendor=FAILED ${vendor.detail}` : ` vendor=${vendor.detail || 'patched'}`;

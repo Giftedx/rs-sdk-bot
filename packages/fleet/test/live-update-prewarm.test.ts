@@ -1,16 +1,32 @@
 import { afterAll, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { routeCodeChanged, startRoutePrewarm } from '../src/live-update/prewarm';
+import { join, resolve } from 'node:path';
+import { routeCodeChanged, routeInputs, startRoutePrewarm } from '../src/live-update/prewarm';
 
 const dir = mkdtempSync(join(tmpdir(), 'live-update-prewarm-'));
+const repo = resolve(import.meta.dir, '../../..');
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-test('route code and route data start a prewarm; other files do not', () => {
-    for (const f of ['packages/core/src/world/search.ts', 'packages/core/src/danger/tiles.ts', 'packages/core/src/walk/goto.ts', 'packages/core/src/trip.ts',
-        'packages/core/src/leg-cache.ts', 'knowledge/npcs.json', 'knowledge/transports.json', 'vendor/rs-sdk', 'packages\\core\\src\\world\\graph.ts']) expect(routeCodeChanged([f])).toBe(true);
-    for (const f of ['packages/core/src/status.ts', 'packages/dashboard/server.ts', 'knowledge/items.json', 'docs/plans/joined-plan.md']) expect(routeCodeChanged([f])).toBe(false);
+test('the route inputs are the route planner import closure and the JSON files it reads', () => {
+    const { code, data } = routeInputs(repo);
+    for (const f of ['packages/core/src/route-worker.ts', 'packages/core/src/trip.ts', 'packages/core/src/travel.ts', 'packages/core/src/world/search.ts',
+        'packages/core/src/world/pathfinding.ts', 'packages/core/src/danger/guard.ts', 'packages/core/src/leg-cache.ts']) expect(code.has(f)).toBe(true);
+    // Each knowledge file that travel.ts, trip.ts, world/* and danger/* read.
+    for (const name of ['transports.json', 'doors.json', 'npcs.json', 'shortcuts.json', 'teleports.json', 'npc-travel.json', 'special-crossings.json', 'quests.json',
+        'items.json', 'haggis-travel.json']) expect(data.has(name)).toBe(true);
+});
+
+test('a change to each route input starts a prewarm; other files do not', () => {
+    const { code, data } = routeInputs(repo);
+    for (const f of code) expect(routeCodeChanged([f], repo)).toBe(true);
+    for (const name of data) {
+        const f = existsSync(join(repo, 'knowledge', name)) ? `knowledge/${name}` : name;
+        expect(routeCodeChanged([f], repo)).toBe(true);
+    }
+    expect(routeCodeChanged(['vendor/rs-sdk'], repo)).toBe(true);
+    expect(routeCodeChanged(['packages\\core\\src\\world\\graph.ts'], repo)).toBe(true);
+    for (const f of ['packages/dashboard/server.ts', 'docs/plans/joined-plan.md', 'scripts/swarm.ts', 'knowledge/gear.json']) expect(routeCodeChanged([f], repo)).toBe(false);
 });
 
 test('the prewarm starts detached and hidden with its log in .practice, and ROUTE_PREWARM=0 starts none', () => {

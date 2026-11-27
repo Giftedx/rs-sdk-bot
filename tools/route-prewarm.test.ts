@@ -1,5 +1,22 @@
 import { expect, test } from 'bun:test';
-import { slowWalks } from './route-prewarm';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { slowWalks, statusAccount } from './route-prewarm';
+
+test('the account of a status row keeps its levels, pack, quest stages, varps and unlocks', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'route-prewarm-'));
+    try {
+        writeFileSync(join(dir, 'Fixture.json'), JSON.stringify({
+            skills: [{ name: 'Attack', level: 70, currentLevel: 68, xp: 1 }, { name: 'Hitpoints', level: 54, currentLevel: 54, xp: 1 }],
+            inventory: [{ id: 995, name: 'Coins', count: 3 }],
+            guildFacts: { questStages: { legendsquest: 2 }, varps: { 101: 5 }, unlocks: ['fairy_rings'] },
+        }));
+        const acct = await statusAccount('Fixture', [join(dir, 'missing'), dir]);
+        expect(acct).toMatchObject({ skills: { attack: 68, hitpoints: 54 }, coins: 3, questStages: { legendsquest: 2 }, varps: { 101: 5 }, unlocks: ['fairy_rings'] });
+        expect(await statusAccount('Nobody', [dir])).toBeNull();
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 
 test('slow walks are the planned and unplanned walks over the bound, one row for each start and goal, slowest first', () => {
     const log = [
