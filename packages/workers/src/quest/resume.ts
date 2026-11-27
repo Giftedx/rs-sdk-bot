@@ -51,6 +51,19 @@ export function squireJournalStage(body: string): number | undefined {
     return undefined;
 }
 
+// Druidic Ritual: %druidquest (varp 80), quests/quest_druid/configs/quest_druid.constant and quest.constant:19
+// (complete 4). Each branch of druid_journal.rs2, from the highest stage down: the struck lines of earlier stages come
+// back at later stages, so each test names the line that only its own stage shows.
+export function druidJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return 4;
+    if (/speak to Kaqemeex again and claim my reward/i.test(text)) return 3;
+    if (/the Cauldron of Thunder in the dungeon South of Taverley/i.test(text)) return 2;
+    if (/I should speak to Sanfew in the village to the South/i.test(text)) return 1;
+    if (/I can start this quest by speaking to Kaqemeex/i.test(text)) return 0;
+    return undefined;
+}
+
 // Fight Arena: %arenaquest (varp 17), quests/quest_arena/configs/quest_arena.constant and quest.constant:3 (complete 14
 // and 15). Each stage's own line of arena_journal.rs2, from the highest stage down: a stage's line comes back struck at
 // later stages, and journalText drops the colour tags that tell them apart.
@@ -353,10 +366,20 @@ export function dragonSpent(stage: number): readonly number[] {
 }
 
 const SQUIRE_PIE = 2325;
+// Raw beef, rat, bear and chicken (quest_druid preset), and the enchanted meats of the Cauldron of Thunder.
+const DRUID_RAW_MEATS = [2132, 2134, 2136, 2138];
+const DRUID_ENCHANTED_MEATS = [522, 523, 524, 525];
 
 export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
     // Thurgo eats the redberry pie at stage 2 -> 3 (quest_squire.rs2:125-151).
     squire: { key: 'squire', title: /Knight's Sword/i, stage: squireJournalStage, complete: 7, spent: (stage) => (stage >= 3 ? [SQUIRE_PIE] : []) },
+    // Sanfew takes the four enchanted meats at 2 -> 3 (sanfew.rs2:55-64). At 2 an earlier run can have dipped some
+    // meats in the cauldron: the sweep withdraws a banked enchanted meat, and quest-druid.ts dips only the others.
+    druid: {
+        key: 'druid', title: /Druidic Ritual/i, stage: druidJournalStage, complete: 4,
+        spent: (stage) => (stage >= 3 ? DRUID_RAW_MEATS : []),
+        held: (stage) => (stage === 2 ? DRUID_ENCHANTED_MEATS : []),
+    },
     // The pack has no item that the quest takes: the barman's 5 coins come from the staged 20.
     arena: { key: 'arena', title: /Fight Arena/i, stage: arenaJournalStage, complete: 14, from: arenaFrom },
     // quest-crest.ts goes on from the start tile beside Dimintheis at every stage 1-10: each later block starts with a

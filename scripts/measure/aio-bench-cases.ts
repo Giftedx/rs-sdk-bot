@@ -1877,6 +1877,19 @@ return [
       bank: [...(PRESETS.quest_crest!.inventory ?? [])]},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^CREST_FROM 2$/m.test(s) && /^MILESTONE gauntlets /m.test(s)
       && /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s) && !/^MILESTONE [12] /m.test(s)},
+  // Druidic Ritual at %druidquest (varp 80) = 2, after Sanfew, the state that live runs left at "fail step dip 2132"
+  // and then "fail talk kaqemeex 1" on each login (Moneyshot, Shaftsinker). `sweep-druid-resume-s2`: from the Falador
+  // west bank with the four raw meats banked, the sweep reads the stage from the journal and the script starts at the
+  // dungeon. `druid-direct-s2-cauldron`: quest-druid.ts alone in the cauldron room with the meats in the pack, where
+  // the live retries started: the script reads its own journal and dips the meats there. No Kaqemeex 1 and no Sanfew 1.
+  {key: 'extra:sweep-druid-resume-s2', script: 'scripts/aio-quester.ts', preset: 'quest_druid', scriptArgs: ['sweep', 'druid'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_druid!, position: {x: 2946, z: 3368, level: 0}, inventory: [], varps: {...PRESETS.quest_druid!.varps, 80: 2},
+      bank: [...(PRESETS.quest_druid!.inventory ?? [])]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^DRUID_FROM 2$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":2/m.test(s)
+      && /^MILESTONE meats /m.test(s) && /^MILESTONE 4 /m.test(s) && !/^MILESTONE [12] /m.test(s)},
+  {key: 'extra:druid-direct-s2-cauldron', script: 'scripts/aio-quester.ts', preset: 'quest_druid', scriptArgs: ['druid'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_druid!, position: {x: 2889, z: 9830, level: 0}, varps: {...PRESETS.quest_druid!.varps, 80: 2}},
+    pass: (s: string) => ok(s) && /^DRUID_FROM 2$/m.test(s) && /^MILESTONE meats /m.test(s) && /^MILESTONE 4 /m.test(s) && !/^MILESTONE [12] /m.test(s)},
   // Imp Catcher on a started journal (varp 160 = 1, quest_imp.constant:2): quest-imp.ts has no resume stage, so the
   // sweep refuses at entry, before a bank walk, with the text the supervisor ends the job on. The sweep ends RESULT
   // fail by design, so the case runs it through scripts/measure/quest-refusal-probe.ts, which passes on that refusal.
