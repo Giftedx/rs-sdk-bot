@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795743631191-1",
  "account": "Hocuspokeus",
  "partner": "mmtha0205",
@@ -12,6 +12,16 @@
  "claim": "90dd13b1-0445-4089-93e9-9a56add5120f",
  "count": 0,
  "ok": false,
- "at": 1795743782376,
- "detail": "trade claimed"
+ "at": 1795743821186,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795743805210
+ },
+ "logout": {
+  "attemptId": "1795743782385-0000014828-0000000001",
+  "at": 1795743821175,
+  "sha256": "37662d963e9e04cd7b3c7c4c0347e33b1b7ddd93561e8f6c948a9da41236df9a"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795743631191-1",
  "account": "mmtha0205",
  "partner": "Hocuspokeus",
@@ -12,6 +12,12 @@
  "claim": "1b5cfcf7-1fb6-42a3-9369-bbec16a1dd8f",
  "count": 0,
  "ok": false,
- "at": 1795743809560,
- "detail": "trade claimed"
+ "at": 1795743817181,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795743809568-0000000420-0000000001",
+  "at": 1795743817170,
+  "sha256": "a44e5e3ec18caf6465786f4f5c0a5b7cfd6a9b9713641cdd3f340ec63072e9fc"
+ },
+ "screen": false
 }
