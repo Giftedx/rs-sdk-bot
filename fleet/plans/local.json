@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795752683113,
+ "at": 1795752790795,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -141,19 +141,25 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-59-o0-p61 ITEM_ID=1436 QUANTITY=59 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=59 -- magic earth-production craft 2000"
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "goal": "campaign:shaftshooter:item:175",
+   "role": "army"
   },
   {
    "account": "BowBeforeMe",
@@ -183,7 +189,6 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",

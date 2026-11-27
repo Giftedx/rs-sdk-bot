@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795752771345-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Quickhandjob",
+  "item": "Chaos rune",
+  "count": 4,
+  "itemId": 562,
+  "start": 1795752771345,
+  "end": 1795753671345,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
