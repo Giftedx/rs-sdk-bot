@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819451717-tossthecaber-knightstick-7d7a46f273affc31",
+ "account": "TossTheCaber",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "450aa5b6-102a-4286-b4db-91f6aad49b8c",
+ "count": 0,
+ "ok": false,
+ "at": 1795820067880,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819454582-unsheathed-mightyrod-5abf084fbde5283c",
+ "account": "Unsheathed",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 300,
+ "claim": "16f998b5-88e2-40f8-9f5e-10c147bc1d49",
+ "count": 0,
+ "ok": false,
+ "at": 1795820073329,
+ "detail": "trade claimed"
+}
