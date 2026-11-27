@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795777859605-1",
+ "account": "Fatstack",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "75fb8ece-ee0f-406e-bf19-9b748a9a8682",
+ "count": 3,
+ "ok": true,
+ "at": 1795778699202,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795778698360
+ },
+ "logout": {
+  "attemptId": "1795778685152-0000002064-0000000001",
+  "at": 1795778699110,
+  "sha256": "3a867aaef78d45c0b04e799afde4190b62d184a91588d6449fa5eb8e665b3180"
+ },
+ "screen": true
+}

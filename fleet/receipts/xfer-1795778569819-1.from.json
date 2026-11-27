@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778569819-1",
+ "account": "Shaftmaker",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 28,
+ "claim": "9c5d8ef3-5e7a-4ca8-9e82-9984095cf38c",
+ "count": 28,
+ "ok": true,
+ "at": 1795778669112,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28,
+  "after": 0
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795778647160
+ },
+ "logout": {
+  "attemptId": "1795778640321-0000014108-0000000001",
+  "at": 1795778669099,
+  "sha256": "e3e1969fda45ac1784fc7a0723fa537e2b4857a9d74477aab0da1b84fa179332"
+ },
+ "screen": true
+}
