@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751976429,
+ "at": 1795751987996,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,22 +74,6 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -112,6 +96,24 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -173,6 +175,21 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
    "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
   }
  ],
  "army": [
@@ -185,7 +202,6 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fingersmith",
   "hocuspokeus",
