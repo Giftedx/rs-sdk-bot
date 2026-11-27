@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772928239-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Bigpackage",
+  "item": "Diamond",
+  "count": 1,
+  "itemId": 1601,
+  "start": 1795772928239,
+  "end": 1795773828239,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
