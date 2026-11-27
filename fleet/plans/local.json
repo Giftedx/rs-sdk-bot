@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821004665,
+ "at": 1795821087273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,29 +87,6 @@
    "role": "pvp"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "ruby_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1641",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1641",
-   "role": "army"
-  },
-  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -120,14 +97,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "211",
+    "MAX_ITEMS": "277",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "211"
+    "BATCH_UNITS": "277"
    },
    "enabled": true,
    "repeat": false,
@@ -135,7 +112,48 @@
    "role": "army"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "40",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "40"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
    "account": "Ballspinner",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -160,32 +178,7 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:gear_collection:892",
-   "role": "army"
-  },
-  {
-   "account": "TheFullMonty",
+   "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -203,7 +196,7 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
+   "account": "TheFullMonty",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
