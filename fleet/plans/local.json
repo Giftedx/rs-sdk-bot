@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795813209478,
+ "at": 1795813272935,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,28 +59,28 @@
    "role": "pvp"
   },
   {
-   "account": "NabTheKnob",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "31",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "118",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "25600",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "31"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "118"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -103,31 +103,6 @@
    "resources": [
     "chaos-druids"
    ]
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "107",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "23400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "107"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -181,14 +156,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "29",
+    "MAX_ITEMS": "35",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "29"
+    "BATCH_UNITS": "35"
    },
    "enabled": true,
    "repeat": false,
@@ -196,7 +171,7 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -206,14 +181,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "13",
+    "MAX_ITEMS": "24",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "24"
    },
    "enabled": true,
    "repeat": false,
@@ -221,7 +196,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -246,28 +221,53 @@
    "role": "army"
   },
   {
+   "account": "YewFirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1313",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "runeshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "17",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "31",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "17"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "31"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -283,31 +283,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:lightmylog:item:1519",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "17",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "17"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -340,7 +315,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "759"
+    "BATCH_UNITS": "544"
    },
    "enabled": true,
    "repeat": false,
@@ -395,7 +370,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "709"
+    "BATCH_UNITS": "508"
    },
    "enabled": true,
    "repeat": false,
@@ -420,6 +395,40 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "auto"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "feathers"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -456,24 +465,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
   },
   {
    "account": "Unsheathed",
