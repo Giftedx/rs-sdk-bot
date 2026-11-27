@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795774681085-1",
+ "account": "MeatNTwoVeg",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 497,
+ "claim": "4036b1df-e8b7-4e09-a172-c29caf58e14c",
+ "count": 497,
+ "ok": true,
+ "at": 1795775024490,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 500
+ },
+ "bank": {
+  "count": 497,
+  "at": 1795775023748
+ },
+ "logout": {
+  "attemptId": "1795775011254-0000013412-0000000001",
+  "at": 1795775024478,
+  "sha256": "dc8cf6ac1b6960932fba0c95ac221966c2e04b3b2c497c00d5a099c85530f363"
+ },
+ "screen": true
+}
