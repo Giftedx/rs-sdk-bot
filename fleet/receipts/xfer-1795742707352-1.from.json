@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795742707352-1",
  "account": "Wandwaver",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "1df72b87-75f8-4e74-8b4e-e3664c6f61b9",
  "count": 0,
  "ok": false,
- "at": 1795743075011,
- "detail": "trade claimed"
+ "at": 1795743241617,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795743225665
+ },
+ "logout": {
+  "attemptId": "1795743075019-0000007020-0000000001",
+  "at": 1795743241605,
+  "sha256": "da2f2942fb51154e162ae7081706bfbafd6a20b0ce4929761a5dfaac7b2a2dd8"
+ },
+ "screen": false
 }
