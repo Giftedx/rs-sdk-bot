@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749593467,
+ "at": 1795749723289,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -156,6 +156,24 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:175",
    "role": "army"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "black-dragon"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:536",
+    "BATCH_UNITS": "418"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:536",
+   "role": "army",
+   "resources": [
+    "taverley-black-dragons"
+   ]
   }
  ],
  "army": [
@@ -176,7 +194,6 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
-  "mmthv2350",
   "oreelse",
   "pickpockdick",
   "pocketpool",
