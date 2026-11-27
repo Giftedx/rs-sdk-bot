@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779434352,
+ "at": 1795779446699,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,18 +60,25 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "earth-altar"
+   ]
   },
   {
    "account": "Swordswallow",
