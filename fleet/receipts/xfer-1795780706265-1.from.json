@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795780706265-1",
+ "account": "Swordswallow",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "6daa8c2e-d9dd-43fb-af47-f5cefb4bc1d4",
+ "count": 10,
+ "ok": true,
+ "at": 1795781154201,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795781123842
+ },
+ "logout": {
+  "attemptId": "1795781061663-0000020572-0000000001",
+  "at": 1795781154187,
+  "sha256": "f9ad0bcc200679a4fe9122233bde82756a45924c34cbcb0bbed3aecb8088d816"
+ },
+ "screen": true
+}

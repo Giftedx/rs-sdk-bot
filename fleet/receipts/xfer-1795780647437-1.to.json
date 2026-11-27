@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780647437-1",
+ "account": "Woodenstaff",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "cbf396ad-aa13-4a17-b0ef-af27cca83cd5",
+ "count": 0,
+ "ok": false,
+ "at": 1795781201203,
+ "detail": "trade claimed"
+}

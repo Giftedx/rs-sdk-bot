@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780598145-1",
+ "account": "OreElse",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "d591a2cb-a260-4c63-9fc1-670ce28cb5f9",
+ "count": 0,
+ "ok": false,
+ "at": 1795781143196,
+ "detail": "trade claimed"
+}

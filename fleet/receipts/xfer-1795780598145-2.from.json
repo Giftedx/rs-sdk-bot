@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780598145-2",
+ "account": "Moneyshot",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant pickaxe",
+ "requested": 1,
+ "claim": "efd0a408-ecbe-4515-8b36-c6ae7d4b0897",
+ "count": 0,
+ "ok": false,
+ "at": 1795781166759,
+ "detail": "trade claimed"
+}

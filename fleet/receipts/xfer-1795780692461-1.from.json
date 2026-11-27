@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780692461-1",
+ "account": "Wandwaver",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(3)",
+ "requested": 2,
+ "claim": "fdd04dca-a6d7-4adf-a452-17daea5b141d",
+ "count": 0,
+ "ok": false,
+ "at": 1795781181617,
+ "detail": "trade claimed"
+}
