@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795772431483-1",
  "account": "DropMyLoad",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "dccd914c-65d6-41ff-9e42-8f02605213d0",
  "count": 0,
  "ok": false,
- "at": 1795772652462,
- "detail": "trade claimed"
+ "at": 1795772669546,
+ "detail": "stop=hp-floor hp=10/10 floor=0 maxHit=0 food=0 by=Overgrown_cat#775,Overgrown_cat#775 escape=walk at=2779,3435,0 ticks=1",
+ "logout": {
+  "attemptId": "1795772652471-0000023292-0000000001",
+  "at": 1795772669409,
+  "sha256": "6389a72996523a8136394e966eaa38d2db232c3379f8a14c142d9fa94fad30ab"
+ },
+ "screen": false
 }
