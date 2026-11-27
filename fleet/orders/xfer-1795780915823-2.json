@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780915823-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Ballbag",
+  "item": "Tin ore",
+  "count": 10,
+  "itemId": 438,
+  "start": 1795780915823,
+  "end": 1795781815823,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

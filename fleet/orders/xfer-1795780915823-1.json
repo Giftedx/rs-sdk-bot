@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780915823-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "Ballbag",
+  "item": "Copper ore",
+  "count": 10,
+  "itemId": 436,
+  "start": 1795780915823,
+  "end": 1795781815823,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
