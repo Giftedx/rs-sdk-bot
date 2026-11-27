@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751731057,
+ "at": 1795751770327,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -103,6 +103,78 @@
    "role": "army"
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -145,7 +217,7 @@
    "account": "mmthv2350",
    "script": "scripts/aio-boss.ts",
    "args": [
-    "black-dragon"
+    "green-dragon"
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:536",
@@ -156,7 +228,7 @@
    "goal": "campaign:haggis:item:536",
    "role": "army",
    "resources": [
-    "taverley-black-dragons"
+    "wild-green-dragons"
    ]
   }
  ],
@@ -172,24 +244,20 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
-  "mmtha0205",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
