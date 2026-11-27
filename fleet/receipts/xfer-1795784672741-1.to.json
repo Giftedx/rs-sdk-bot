@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795784672741-1",
  "account": "BoneToPick",
  "partner": "Swordswallow",
@@ -12,6 +12,12 @@
  "claim": "b78f0f1c-00af-47f2-a83a-5b91e4d5a0b0",
  "count": 0,
  "ok": false,
- "at": 1795784853681,
- "detail": "trade claimed"
+ "at": 1795784867600,
+ "detail": "Error: route to 2617, 3333: precondition walk danger from 2613,3091,0: route danger to 2617,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "logout": {
+  "attemptId": "1795784853691-0000027708-0000000001",
+  "at": 1795784867590,
+  "sha256": "1786c500dfc4c427f85cf557a61862046543da213865a1d98a4d3851e7bfe73c"
+ },
+ "screen": false
 }
