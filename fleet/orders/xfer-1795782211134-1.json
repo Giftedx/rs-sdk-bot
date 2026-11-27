@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795782211134-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "YewFirst",
+  "item": "Tarromin",
+  "count": 1,
+  "itemId": 253,
+  "start": 1795782211134,
+  "end": 1795783111134,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
