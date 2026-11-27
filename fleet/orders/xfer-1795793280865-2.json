@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795793280865-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "SporranDip",
+  "item": "Arrow shaft",
+  "count": 300,
+  "itemId": 52,
+  "extra": [
+    {
+      "item": "Feather",
+      "count": 273,
+      "itemId": 314
+    }
+  ],
+  "start": 1795793280865,
+  "end": 1795794180865,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795792368287-2",
  "account": "Bigpackage",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,16 @@
  "claim": "2b0a475a-7f5d-477f-b7a7-9977117c0cdb",
  "count": 0,
  "ok": false,
- "at": 1795793100047,
- "detail": "trade claimed"
+ "at": 1795793278106,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 255,
+  "at": 1795793260044
+ },
+ "logout": {
+  "attemptId": "1795793100056-0000003112-0000000001",
+  "at": 1795793278089,
+  "sha256": "e71bf9a23877d1e374cf5ea3f8796e7004bd0a8c891f58c647cd728a0aba171f"
+ },
+ "screen": true
 }

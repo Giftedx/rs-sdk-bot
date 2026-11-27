@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795793280865-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingersmith",
+  "to": "MeatNTwoVeg",
+  "item": "Steel pickaxe",
+  "count": 1,
+  "itemId": 1269,
+  "start": 1795793280865,
+  "end": 1795794180865,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
