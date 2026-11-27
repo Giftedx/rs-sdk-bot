@@ -1496,6 +1496,15 @@ function extractStaticActivityPreflight(activity: {
             }
         }
     }
+    if (Array.isArray(cfg.requiredItems)) {
+        for (const r of cfg.requiredItems as unknown[]) {
+            if (!r || typeof r !== 'object') continue;
+            const { itemId, count } = r as { itemId?: unknown; count?: unknown };
+            if (Number.isSafeInteger(itemId) && (itemId as number) >= 0 && Number.isSafeInteger(count) && (count as number) >= 1) {
+                staticRequiredItems.push({ itemId: itemId as number, count: count as number });
+            }
+        }
+    }
     let maxSkillXp: Record<string, number> | undefined;
     if (cfg.maxSkillXp && typeof cfg.maxSkillXp === 'object') {
         for (const [k, v] of Object.entries(cfg.maxSkillXp as Record<string, unknown>)) {
