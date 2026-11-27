@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795791728804-1",
+ "account": "Wandwaver",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "fffb354e-9529-44cd-8287-17d2398afce7",
+ "count": 0,
+ "ok": false,
+ "at": 1795792194249,
+ "detail": "trade claimed"
+}
