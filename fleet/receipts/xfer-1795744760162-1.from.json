@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795744760162-1",
  "account": "Hocuspokeus",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 6,
  "claim": "9c6de73d-7186-4d50-b683-f88df9c4d454",
- "count": 0,
- "ok": false,
- "at": 1795744964171,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795744991529,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795744973562
+ },
+ "logout": {
+  "attemptId": "1795744964180-0000006924-0000000001",
+  "at": 1795744991517,
+  "sha256": "26e075460add25cf71dbf50b29015d5fecb2b79e33ca0dd9d7551abce1a8a7a6"
+ },
+ "screen": true
 }

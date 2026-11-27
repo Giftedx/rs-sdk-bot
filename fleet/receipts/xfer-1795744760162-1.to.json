@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795744760162-1",
+ "account": "Unsheathed",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 6,
+ "claim": "b3f6a313-5d2a-4f54-bba7-325a9dbcd6ed",
+ "count": 6,
+ "ok": true,
+ "at": 1795744993128,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795744992367
+ },
+ "logout": {
+  "attemptId": "1795744984134-0000026752-0000000001",
+  "at": 1795744993116,
+  "sha256": "07089c0c77d5fa1032ef62bf009ddc53f02de914584a684413f41da5af2620f8"
+ },
+ "screen": true
+}
