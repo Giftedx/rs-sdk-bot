@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772425410-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "OreElse",
+  "item": "Emerald",
+  "count": 1,
+  "itemId": 1605,
+  "start": 1795772425410,
+  "end": 1795773325410,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

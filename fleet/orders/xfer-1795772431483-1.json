@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772431483-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "DropMyLoad",
+  "to": "Shaftsinker",
+  "item": "Rune essence",
+  "count": 135,
+  "itemId": 1436,
+  "start": 1795772431483,
+  "end": 1795773331483,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

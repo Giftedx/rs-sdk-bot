@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772357519-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Wandwaver",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "start": 1795772357519,
+  "end": 1795773257519,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

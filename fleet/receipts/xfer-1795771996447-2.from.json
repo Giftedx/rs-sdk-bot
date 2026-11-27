@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795771996447-2",
+ "account": "Unsheathed",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire",
+ "requested": 1,
+ "claim": "6d34f0d8-4d6f-4aeb-901d-1f6da6122ed2",
+ "count": 1,
+ "ok": true,
+ "at": 1795772433028,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772417465
+ },
+ "logout": {
+  "attemptId": "1795772409071-0000024976-0000000001",
+  "at": 1795772433012,
+  "sha256": "a6f8e1739278a7aee64764c563c2a969c70f72c45bf16d16dd1e1649d724ecb8"
+ },
+ "screen": true
+}
