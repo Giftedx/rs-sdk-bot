@@ -535,6 +535,14 @@ export interface DefectRecord {
     readonly tickRecordPath?: string;
     readonly detail: string;
     readonly count: number;
+    // The base Hitpoints and Defence of the account that died (a death defect). After the fleet-wide hold the defect
+    // still holds the activity for every account that is no stronger in both (planner.ts deathClassBlocks).
+    readonly deathLevels?: DeathLevels;
+}
+
+export interface DeathLevels {
+    readonly hitpoints: number;
+    readonly defence: number;
 }
 
 export interface InfraCircuitBreakerState {
@@ -1801,6 +1809,9 @@ function pushDefectRecordErrors(v: unknown, errors: string[], prefix = ''): void
     if (v.tickRecordPath !== undefined && !isNonEmptyStr(v.tickRecordPath)) errors.push(`${prefix}DefectRecord.tickRecordPath must be non-empty`);
     if (!isNonEmptyStr(v.detail)) errors.push(`${prefix}DefectRecord.detail must be non-empty`);
     if (!isPosInt(v.count)) errors.push(`${prefix}DefectRecord.count must be a positive integer`);
+    if (v.deathLevels !== undefined && (!isPlainRecord(v.deathLevels) || !isPosInt(v.deathLevels.hitpoints) || !isPosInt(v.deathLevels.defence))) {
+        errors.push(`${prefix}DefectRecord.deathLevels must hold positive integer hitpoints and defence`);
+    }
 }
 
 export function validateDefectRecord(v: unknown): string[] {

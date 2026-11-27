@@ -19,6 +19,9 @@ import {
     type CombatMode,
     type CombatSiteMeta,
 } from './types';
+import { combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../../core/src/combat-admission';
+import { questFoodDefinitions } from '../../../core/src/sustain';
+import { npcThreat } from '../../../knowledge/src/npc-threat';
 
 let cachedCannonMod: typeof import('./cannon') | undefined;
 let cachedSpecialMobsMod: typeof import('./special-mobs') | undefined;
@@ -58,6 +61,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: true,
         minCombatStats: { Attack: 20, Hitpoints: 20 },
         minFood: 4,
+        threatNpcIds: [181],
         defaultCapTicks: 6000,
     },
     unicorn: {
@@ -69,6 +73,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
         minFood: 5,
+        threatNpcIds: [89],
         defaultCapTicks: 1500,
     },
     wizard: {
@@ -80,6 +85,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
         minFood: 5,
+        threatNpcIds: [13],
         defaultCapTicks: 10000,
     },
     giant: {
@@ -91,6 +97,9 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: false,
         minCombatStats: { Hitpoints: 25 },
         minFood: 4,
+        threatNpcIds: [117],
+        // The Edgeville dungeon giants stand close together: two attack at once.
+        threatAttackers: 2,
         defaultCapTicks: 6000,
     },
     trooper: {
@@ -113,6 +122,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: true,
         minCombatStats: { Attack: 20, Hitpoints: 25 },
         minFood: 6,
+        threatNpcIds: [181],
         defaultCapTicks: 6000,
     },
     taverley_black_knight: {
@@ -124,6 +134,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         membersOnly: true,
         minCombatStats: { Attack: 40, Defence: 30, Hitpoints: 45 },
         minFood: 10,
+        threatNpcIds: [178, 179],
         defaultCapTicks: 6000,
     },
     taverley_scales: {
@@ -551,6 +562,44 @@ export function foodIdsForMode(mode: CombatMode): readonly number[] {
     return ALL_FOOD_IDS;
 }
 
+// The combat admission of a site (packages/core/src/combat-admission.ts) from the base levels of the account and the
+// food it owns. The worker withdraws the food it needs, so the pack and the bank count as held.
+export function combatAdmissionBlocker(
+    acct: WorkerAccountView,
+    site: Pick<CombatSiteMeta, 'threatNpcIds' | 'threatAttackers'>,
+    food: readonly { id: number; count: number }[],
+): PreflightBlocker | undefined {
+    let threat: CombatThreat | undefined;
+    for (const id of site.threatNpcIds ?? []) {
+        const t = npcThreat(id);
+        if (t && (!threat || t.maxHit > threat.maxHit || (t.maxHit === threat.maxHit && t.attackRoll > threat.attackRoll))) threat = t;
+    }
+    if (!threat) return undefined;
+    const defs = questFoodDefinitions();
+    let pieces = 0, heal = 0, bestHeal = 0;
+    for (const f of food) {
+        const h = defs.get(f.id)?.heal ?? 0;
+        pieces += Math.max(0, f.count);
+        heal += Math.max(0, f.count) * h;
+        bestHeal = Math.max(bestHeal, h);
+    }
+    const hp = skillLevel(acct, 'Hitpoints');
+    const a = combatAdmission(
+        threat,
+        { hp, maxHp: hp, defence: skillLevel(acct, 'Defence'), foodPieces: pieces, healPerPiece: pieces > 0 ? heal / pieces : bestHeal || 12, bankFoodPieces: 0 },
+        { attackers: site.threatAttackers ?? 1 },
+    );
+    if (a.verdict === 'admit') return undefined;
+    const weak = a.reason.startsWith('too weak');
+    return {
+        kind: 'combat_survivability',
+        reason: weak ? 'hitpoints' : 'food',
+        required: weak ? a.retreatAt + MIN_HITS_ABOVE_RETREAT * threat.maxHit : a.foodNeeded,
+        current: weak ? hp : pieces,
+        message: `admission: ${a.reason}`,
+    };
+}
+
 export function estimateSetupTicks(acct: WorkerAccountView, site: CombatSiteMeta): number {
     if (!acct.pos) return 45;
     const dist = Math.max(Math.abs(acct.pos.x - site.anchor.x), Math.abs(acct.pos.z - site.anchor.z));
@@ -726,6 +775,11 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
             });
             missingItems.push({ itemId: foodIds.includes(385) ? 385 : foodIds[0]!, count: site.minFood - availableFood });
         }
+    }
+
+    if (site.threatNpcIds?.length) {
+        const blocker = combatAdmissionBlocker(acct, site, foodIdsForMode(cfg.mode).map(id => ({ id, count: availableItemStock(acct, id, world) })));
+        if (blocker) blockers.push(blocker);
     }
 
     const travelCoins = cfg.mode === 'chompy' || cfg.mode === 'trawler' || cfg.mode === 'green-dragon' ? 500 : 0;

@@ -1061,6 +1061,18 @@ function readStatusSkillsXp(raw: unknown): Record<string, number> {
     return out;
 }
 
+// The base Hitpoints and Defence in a status file's skills (DefectRecord.deathLevels).
+export function statusDeathLevels(raw: unknown): { hitpoints: number; defence: number } | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const level = (name: string): number | undefined => {
+        const row = raw.find(sk => isPlainRecord(sk) && sk.name === name) as Record<string, unknown> | undefined;
+        const n = row?.level;
+        return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 ? n : undefined;
+    };
+    const hitpoints = level('Hitpoints');
+    return hitpoints === undefined ? undefined : { hitpoints, defence: level('Defence') ?? 1 };
+}
+
 export function captureRunBaseline(
     root: string,
     account: string,
@@ -1172,6 +1184,8 @@ export function extractWorkerOutcomeInput(params: {
     ].filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
     const stdout = stdoutParts.length > 0 ? stdoutParts.join('\n') : undefined;
     const died = params.died === true || /^died\b/i.test(params.endReason);
+    // The base levels of the account that died: a death does not change them, so the status of any run serves.
+    const deathLevels = died ? statusDeathLevels(status?.skills) : undefined;
     const signalText = [params.endReason, stdout].filter(Boolean).join('\n');
     const isMarketUnavailable =
         !params.successful
@@ -1194,6 +1208,7 @@ export function extractWorkerOutcomeInput(params: {
         ...(pos ? { pos } : {}),
         ...(stdout ? { stdout } : {}),
         ...(died ? { died: true } : {}),
+        ...(died && deathLevels ? { deathLevels } : {}),
         ...(isMarketUnavailable && params.marketItemId !== undefined ? { marketItemId: params.marketItemId } : {}),
         ...(isMarketUnavailable && params.marketVenue ? { marketVenue: params.marketVenue } : {}),
         ...(params.skipRateSample ? { skipRateSample: true } : {}),

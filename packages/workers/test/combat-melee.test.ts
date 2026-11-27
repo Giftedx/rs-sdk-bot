@@ -773,7 +773,8 @@ test('a fight job withdraws any PLAIN_FOOD from the bank before its first fight,
  try{
   const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{},walk:g.walk,stop:()=>false});
   expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no food');
-  expect(g.inventory.map(i=>i.name)).toEqual(Array(5).fill('Salmon'));expect(g.bank[1]).toEqual({id:329,name:'Salmon',count:59});
+  // The combat admission of a 1 Defence account at the wizards asks 10 pieces, more than the 5 of COMBAT_FOOD.
+  expect(g.inventory.map(i=>i.name)).toEqual(Array(10).fill('Salmon'));expect(g.bank[1]).toEqual({id:329,name:'Salmon',count:54});
  }finally{g.stop();}
  // The giant row asks for 8 food, the Black Knight site 10.
  expect(combatFoodWanted(CONFIGS.giant!)).toBe(8);expect(combatFoodWanted(CONFIGS.taverley_black_knight!)).toBe(10);
