@@ -165,7 +165,11 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
                     root: base,
                     log: msg => log(`session recovery: ${msg.slice(0, 400)}`),
                 });
-            if (pass && pass.skipped.some(s => s.reason.startsWith(QUALIFICATION_MISSING))) ensureHostedQualification(base, deps.now ?? Date.now, log, deps.qualify);
+            const waiting = pass?.skipped.filter(s => s.reason.startsWith(QUALIFICATION_MISSING)) ?? [];
+            if (waiting.length) {
+                const newestEnd = Math.max(0, ...waiting.map(s => s.endedAt ?? 0));
+                ensureHostedQualification(base, deps.now ?? Date.now, log, deps.qualify, newestEnd);
+            }
         } catch (e) {
             log(`session recovery failed: ${String(e).slice(0, 200)}`);
         }

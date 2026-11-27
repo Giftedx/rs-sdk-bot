@@ -293,7 +293,8 @@ export type StandaloneRecoveryPassResult = {
     targets: { account: string; endedAt: number }[];
     recovered: string[];
     failed: string[];
-    skipped: { account: string; reason: string }[];
+    // endedAt: the end the deferred recovery waits on (a qualification must be newer than it).
+    skipped: { account: string; reason: string; endedAt?: number }[];
 };
 
 // One pass at a time. A pass with several recoveries (about 70 s each) outlives the watchdog's five-minute interval, and
@@ -379,7 +380,7 @@ async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<
     const readClaim = opts.readClaim ?? ((account: string) => readFleetAccountClaim(root, { account, server }) as ClaimView);
 
     const targets: { account: string; endedAt: number }[] = [];
-    const skipped: { account: string; reason: string }[] = [];
+    const skipped: { account: string; reason: string; endedAt?: number }[] = [];
 
     const accountFilter = opts.account?.trim().toLowerCase();
     const serverLower = server.toLowerCase();
@@ -488,7 +489,7 @@ async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<
         try {
             const res = await runner({ account: target.account, endedAt: target.endedAt, server });
             if (res.deferred) {
-                skipped.push({ account: target.account, reason: res.detail });
+                skipped.push({ account: target.account, reason: res.detail, endedAt: target.endedAt });
                 log(`${target.account}: deferred without burning budget (${res.detail})`);
                 continue;
             }
