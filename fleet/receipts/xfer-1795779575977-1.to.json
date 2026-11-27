@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779575977-1",
+ "account": "YewFirst",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "8def1fd0-7b4d-411c-8a01-6c87ade4a903",
+ "count": 10,
+ "ok": true,
+ "at": 1795780135047,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 13
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795780134301
+ },
+ "logout": {
+  "attemptId": "1795780118182-0000016580-0000000001",
+  "at": 1795780135025,
+  "sha256": "0936f6429d505e97455db4685396845ccdf6678721b8be9fdff0748369326d35"
+ },
+ "screen": true
+}
