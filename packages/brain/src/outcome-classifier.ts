@@ -257,7 +257,7 @@ export const isClaimHeldResult = (result: string) => CLAIM_HELD_RE.test(result);
 // A worker that a stop ends in the middle of its work names the stop in its own words: "stop file", "cargo stopped",
 // "production session stopped", "stop=stopped", "magic-order stop requested", "far walk to ...: stopped", and the
 // smelt send guard "owner/life/stop unavailable". A route that the stop cancels prints the abort of its signal:
-// "AbortError: The operation was aborted." (a magic earth production run that crafted 1053 runes).
+// "AbortError: The operation was aborted.".
 const STOP_RESULT_RE = /\bstop file\b|\bstopped\b|\bstop requested\b|\/stop unavailable\b|\bAbortError\b|\boperation was aborted\b/;
 export const isStopResult = (result: string) => STOP_RESULT_RE.test(result);
 // A saved defect has no end reason of its supervisor, so only a text that a stop request alone writes counts there.

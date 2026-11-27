@@ -725,8 +725,8 @@ export function brainSoftIdle(reason: string | undefined): boolean {
     return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || brainPlannerBlocker(reason);
 }
 // A repeating run whose re-plan ends at a planner blocker keeps running while its own demand is open and its activity
-// holds no defect for the account (ownJobOpen): a stop gives the slot to no work. Live: the swarm stopped a magic earth
-// production run for the open Earth rune demand after 602 s at unresolvable_supply:1289, a supply of another goal.
+// holds no defect for the account (ownJobOpen): a stop gives the slot to no work. The blocker is often a supply of
+// another goal.
 export function brainDropKeep(o: {
     run: Pick<Run, 'accounts' | 'started' | 'brain' | 'finite'>;
     ownJobOpen?: (account: string) => boolean;

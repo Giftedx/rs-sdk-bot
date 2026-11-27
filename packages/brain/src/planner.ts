@@ -576,9 +576,7 @@ export function isFleetWideDefect(d: DefectRecord, now?: number): boolean {
 
 /**
  * The idle reason of an account that no candidate plans: the blocker that stopped the most candidates, the first such
- * blocker on a tie. The last blocker names only the candidate tried last. Live: 32 idle accounts showed
- * unresolvable_supply:1289 (the Rune sword of the King Black Dragon kit), while Druidic Ritual stopped 22 candidates
- * of each account and the Rune sword 2.
+ * blocker on a tie. The last blocker names only the candidate tried last, which can be a goal of little weight.
  */
 export function dominantBlocker(counts: ReadonlyMap<string, number>): string | undefined {
     let best: string | undefined;
