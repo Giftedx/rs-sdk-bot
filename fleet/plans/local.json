@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795801334527,
+ "at": 1795801346983,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,28 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-317-2-o2-p13",
+    "ITEM_ID": "317",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "13",
+    "EXPECTED_OWNED": "2",
+    "DEMAND_ID": "campaign:haggis:item:317",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:317",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -125,29 +147,7 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1511-1-o3-p50",
-    "ITEM_ID": "1511",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "50",
-    "EXPECTED_OWNED": "3",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "army"
-  },
-  {
-   "account": "YewGotWood",
+   "account": "Swordswallow",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -157,42 +157,47 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "16",
+    "MAX_ITEMS": "10",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "16"
+    "BATCH_UNITS": "10"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "auto"
+   "role": "army"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-fighter.ts",
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "cow"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "351",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "351"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "auto"
   },
   {
-   "account": "Swordswallow",
+   "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "druid"
@@ -200,36 +205,16 @@
    "env": {
     "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
     "BATCH_UNITS": "250",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:FishAndChips",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
+   "goal": "goal:pk_army:YewGotWood",
    "role": "auto",
    "resources": [
-    "ardougne-cows"
+    "chaos-druids"
    ]
   },
   {
@@ -241,11 +226,11 @@
     "grind:unicorn_horn"
    ],
    "env": {
-    "MAX_MAKE": "1",
+    "MAX_MAKE": "3",
     "CAP": "1000",
     "MEMBERS": "1",
     "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "1",
+    "BATCH_UNITS": "3",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
@@ -326,20 +311,24 @@
    ]
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
+    "cow"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:93",
-   "role": "army"
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "BoneToPick",
@@ -357,18 +346,44 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=54810 TARGET_COUNT=5481 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 -- sweep viking"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:viking",
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:554",
    "role": "army"
   }
  ],
@@ -383,9 +398,9 @@
   "bigpackage",
   "billionaire",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "hocuspokeus",
-  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
