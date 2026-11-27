@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795807220253-1",
  "account": "KnightRider",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Tarromin",
  "requested": 1,
  "claim": "2d0be9be-b0f1-497e-8944-b967b5f8bafe",
- "count": 0,
- "ok": false,
- "at": 1795807471371,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795807681774,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795807666173
+ },
+ "logout": {
+  "attemptId": "1795807471403-0000034724-0000000001",
+  "at": 1795807681761,
+  "sha256": "176191a3ce97e567da191ed3a5a82f4f9acbe51b398ad82861b34f3fee5b74e1"
+ },
+ "screen": true
 }
