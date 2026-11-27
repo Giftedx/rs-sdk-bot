@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795752668582-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Quickhandjob",
+  "item": "Dragon bones",
+  "count": 5,
+  "itemId": 536,
+  "start": 1795752668582,
+  "end": 1795753568582,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

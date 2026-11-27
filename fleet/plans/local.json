@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795752666301,
+ "at": 1795752683113,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,21 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:385 BATCH_UNITS=26 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:fullblooded:item:385",
-   "role": "auto"
   },
   {
    "account": "mmsmk1232",
