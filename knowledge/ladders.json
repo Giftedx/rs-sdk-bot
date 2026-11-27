@@ -54802,7 +54802,7 @@
     "workers": [
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore-recipes.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-energy-potion",
@@ -55117,7 +55117,7 @@
     "workers": [
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore-recipes.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-prayer-restore-potion",
@@ -55277,7 +55277,7 @@
     "workers": [
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore-recipes.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-attack-potion",
@@ -55745,7 +55745,7 @@
     "workers": [
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore-recipes.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-strength-potion",
@@ -56133,7 +56133,7 @@
     "workers": [
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore-recipes.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-defence-potion",

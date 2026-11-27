@@ -16,6 +16,7 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import { levelForXp, xpForLevel } from './catalog';
+import { BREW_STOCK_IDS, brewShortfall } from './herblore-recipes';
 import type { JewelleryOrder, ProgressiveProduction } from './crafting';
 import type { ArrowMetal } from './fletching';
 import type { OrbKind } from './magic';
@@ -482,6 +483,13 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     } else if (key !== 'auto' && key !== 'unf') {
                         const rec = RECIPES[key]!;
                         checkSkill(acct, 'Herblore', rec.level, blockers);
+                    }
+                    // The brew run refuses at its first bank visit without herbs and a secondary for one recipe at
+                    // the account's level (herblore-recipes.ts selectRecipe), so the job needs them before login.
+                    if (key === 'auto' || key === 'unf' || Object.hasOwn(RECIPES, key)) {
+                        const stock = Object.fromEntries(BREW_STOCK_IDS.map(id => [id, usableStock(acct, world, id).usable]));
+                        const short = brewShortfall(skillLevel(acct, 'Herblore'), stock, key);
+                        if (short) checkSupply(acct, world, short.itemId, 1, `Herblore input #${short.itemId} (${short.reason})`, blockers, missingItems);
                     }
                 } else {
                     const hp = skillLevel(acct, 'Hitpoints');

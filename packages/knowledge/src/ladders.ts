@@ -123,7 +123,7 @@ const RULES: Rule[] = [
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'raw chicken', methods: /^cooking\/cooking_generic_chicken$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: "targetOp = isCage ? 'Cage' : 'Harpoon'", methods: /^fishing\/catch-(lobster|swordfish|tuna)$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export function sharkSpot', methods: /^fishing\/catch-shark$/ },
-    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/herblore.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/herblore-recipes.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/aio-fighter.ts', evidence: 'chickenTrainingProfile', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
     { worker: 'scripts/aio-fighter.ts', evidence: 'genericCombatNpc', methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },

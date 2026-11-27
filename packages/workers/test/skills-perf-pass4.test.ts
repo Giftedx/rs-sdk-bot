@@ -325,7 +325,8 @@ describe('skills perf pass 4 parity and lazy-loading', () => {
     });
 
     test('bank-artisan herblore, foraging-qol, and runtime preserve parity and floorExit WeakMap caching', () => {
-        expect(selectRecipe(70, { 199: 5, 207: 10, 213: 5 }).key).toBe('super_str');
+        expect(selectRecipe(70, { 199: 5, 207: 10, 213: 5, 225: 5 }).key).toBe('super_str');
+        expect(selectRecipe(70, { 199: 5, 207: 10, 213: 5 }).key).toBe('attack');
         expect(selectRecipe(70, { 199: 5, 207: 10 }, 'prayer').key).toBe('prayer');
         expect(reconcile({ 199: 10, 227: 10 }, { 199: 9, 227: 9, 91: 1 }, { 199: -1, 227: -1, 91: 1 })).toBe(true);
         expect(reconcile({ 199: 10 }, { 199: 8 }, { 199: -1 })).toBe(false);

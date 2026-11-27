@@ -11,6 +11,7 @@ import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execu
 import { KNOWLEDGE_DIR } from './catalog';
 import { nearestBank, productionStopRequested } from './runtime';
 import type { Session } from './types';
+import { RECIPES, selectRecipe, type BrewRecipe, type Stock } from './herblore-recipes';
 
 const OPEN_OP_RE = /^open$/i;
 const CLIMB_DOWN_RE = /^climb-down$/i;
@@ -112,43 +113,8 @@ export async function reachSeller(
     throw Error(`no reachable seller for ${item} (${sellers.length} tried): ${detail}`);
 }
 
-type Stock = Record<number, number>;
-export type BrewRecipe = { key: string; level: number; dirty: number; clean: number; unf: number; sec: number; pot: number };
-
-export const RECIPES: Record<string, BrewRecipe> = Object.fromEntries(
-    [
-        ['attack', 3, 199, 249, 91, 221, 121],
-        ['antipoison', 5, 201, 251, 93, 235, 175],
-        ['strength', 12, 203, 253, 95, 225, 115],
-        ['fishing', 50, 211, 261, 103, 231, 151],
-        ['magic', 76, 2485, 2481, 2483, 3138, 3042],
-        ['ranging', 72, 217, 267, 109, 245, 169],
-        ['energy', 26, 205, 255, 97, 1975, 3010],
-        ['prayer', 38, 207, 257, 99, 231, 139],
-        ['super_attack', 45, 209, 259, 101, 221, 145],
-        ['super_str', 55, 213, 263, 105, 225, 157],
-        ['super_def', 66, 215, 265, 107, 239, 163],
-    ].map(([key, level, dirty, clean, unf, sec, pot]) => [key, { key, level, dirty, clean, unf, sec, pot }]),
-) as Record<string, BrewRecipe>;
-
-const RECIPES_BY_LEVEL_DESC: readonly BrewRecipe[] = Object.values(RECIPES).sort((a, b) => b.level - a.level);
-
-export function selectRecipe(level: number, stock: Stock, key = 'auto'): BrewRecipe {
-    if (key !== 'auto' && key !== 'unf') {
-        const r = RECIPES[key];
-        if (r && r.level <= level && ((stock[r.dirty] ?? 0) > 0 || (stock[r.clean] ?? 0) > 0 || (stock[r.unf] ?? 0) > 0)) {
-            return r;
-        }
-        throw Error(`herbs missing: no usable owned herbs or unfinished potions for ${key} at level ${level}`);
-    }
-    for (let i = 0; i < RECIPES_BY_LEVEL_DESC.length; i++) {
-        const r = RECIPES_BY_LEVEL_DESC[i]!;
-        if (r.level <= level && ((stock[r.dirty] ?? 0) > 0 || (stock[r.clean] ?? 0) > 0 || (stock[r.unf] ?? 0) > 0)) {
-            return r;
-        }
-    }
-    throw Error(`herbs missing: no usable owned herbs or unfinished potions for ${key} at level ${level}`);
-}
+export { BOUGHT_SECONDARY, BREW_STOCK_IDS, RECIPES, brewShortfall, selectRecipe } from './herblore-recipes';
+export type { BrewRecipe } from './herblore-recipes';
 
 export function supplyPlan(herbs: number, vials: number, eyes: number, coins: number, vialBudget: number, eyeBudget: number) {
     const v = Math.max(0, herbs - vials);

@@ -12,6 +12,7 @@ import {
 } from './contracts';
 import { GE_LIMIT_BUFFER, SHOP_BUY_CAP_TICKS, shopRestockTicks } from './acquire';
 import { loadItemsMap } from './preflight';
+import { stallTicksForRate } from '../../core/src/ledger';
 
 export interface WorkerRoutingContext {
     readonly activities?: readonly ActivityDefinition[];
@@ -144,7 +145,7 @@ function explicitStandaloneScript(cfg: Record<string, unknown>): string | undefi
 }
 
 export function resolveActivityWorkerRoute(
-    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'> & Partial<Pick<ActivityDefinition, 'outputs'>>,
+    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'> & Partial<Pick<ActivityDefinition, 'outputs' | 'baselineRate'>>,
     extraEnv: Readonly<Record<string, string>> = {},
 ): Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'> {
     const cfg = (activity.config ?? {}) as Record<string, unknown>;
@@ -246,6 +247,13 @@ export function resolveActivityWorkerRoute(
                             if (env.ORDER_MODE === undefined) env.ORDER_MODE = 'best-effort';
                         }
                     }
+                } else if (skill === 'fletching' && rawMethod === 'arrows' && env.MODE === 'headless') {
+                    // The headless run makes MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless): the planned
+                    // count rounded up to a whole set, not the worker default.
+                    const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
+                    if (extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.MAX_MAKE = String(Math.ceil(units / 15) * 15);
+                    }
                 } else if (skill === 'crafting' && rawMethod === 'jewellery-trip') {
                     if (extraEnv.TARGET_COUNT) {
                         env.TARGET = extraEnv.TARGET ?? extraEnv.TARGET_COUNT;
@@ -261,6 +269,12 @@ export function resolveActivityWorkerRoute(
                 }
             }
 
+            // A bank production run stops once it changes nothing for the window of its expected rate
+            // (ledger.ts stallTicksForRate), not after the 900-tick session default.
+            if (activity.family === 'bank-artisan' && env.STALL_TICKS === undefined) {
+                const stall = stallTicksForRate(activity.baselineRate?.unitsPerTick);
+                if (stall !== undefined) env.STALL_TICKS = String(stall);
+            }
             const routeKey = rawMethod ? `${skill}:${rawMethod}` : skill;
             return {
                 family: activity.family,

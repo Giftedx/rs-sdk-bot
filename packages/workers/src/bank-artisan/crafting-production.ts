@@ -1,16 +1,16 @@
 // Crafting production helpers: inventory production, progressive production, tanning, clay softening, and black d'hide sets.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { finish, openBot, settle } from '../../../core/src/bot';
+import { accountOf, finish, getWorld, openBot, settle } from '../../../core/src/bot';
 import { depositObserved } from '../../../core/src/deposit';
 import { componentId } from '../../../core/src/logout';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
-import { sessionWalker, walkPath } from '../../../core/src/walk';
+import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import type { NearbyLoc } from '../../../../vendor/rs-sdk/sdk/types';
 import { CONTENT_DIR, packMap } from './catalog';
 import { cookingRecipes, registerDefaultInventoryBankRunner, type CookRecipe } from './cooking';
-import { productionStopRequested, watchProductionLife } from './runtime';
+import { nearestBank, productionStopRequested, watchProductionLife } from './runtime';
 import type { ArtisanExternalDeps, Session } from './types';
 
 // ---- Inventory Production (microbot-production.ts) ----
@@ -510,7 +510,21 @@ export async function runInventoryBank(
             }
         }
         const generation = s.bankObservation?.()?.generation ?? -1;
-        if (stopped() || !(await s.bot.openBank()).success) throw Error('production bank unavailable');
+        if (stopped()) throw Error('production bank unavailable');
+        // A run can start away from a bank (a chain step after a fight ends where the fight left the account), so a
+        // bank that does not open sends the account to the nearest bank once before the run refuses.
+        if (!(await s.bot.openBank()).success) {
+            const p = state()?.player;
+            const bank = p ? nearestBank({ x: p.worldX, z: p.worldZ, level: p.level }) : undefined;
+            const ac = new AbortController();
+            const off = s.onTick(() => { if (stopped()) ac.abort('production stop'); });
+            try {
+                const moved = bank ? await goTo(s, await getWorld(), bank, accountOf(s), { legTimeoutTicks: 100, signal: ac.signal }) : { ok: false };
+                if (!moved.ok || stopped() || !(await s.bot.openBank()).success) throw Error('production bank unavailable');
+            } finally {
+                off();
+            }
+        }
         if (!await waitUntil(s, () => ready() && (s.bankObservation?.()?.generation ?? -1) > generation, { timeoutTicks: 10 })) {
             throw Error('production fresh bank unknown');
         }

@@ -1481,6 +1481,9 @@ async function runLegacyFletchArrowsOrBows(
             await waitTicks(s, 1);
         };
 
+        // A bank visit that leaves the pack without both inputs ends the run at once: waiting cannot refill the bank,
+        // and the session stall cutoff would otherwise spend its whole window on repeated bank visits.
+        let exhausted = '';
         console.log(`START fletch assembler ${botName} mode=${mode} tip=${tipType}`);
         while (!over()) {
             if (mode === 'arrows') {
@@ -1489,8 +1492,8 @@ async function runLegacyFletchArrowsOrBows(
                 if (!headless || !tips) {
                     await bank();
                     if (!findItem(/headless arrow/i) || !findItem(new RegExp(`${tipType} arrowtip`, 'i'))) {
-                        await waitTicks(s, 5);
-                        continue;
+                        exhausted = `bank holds no headless arrows or ${tipType} arrowtips`;
+                        break;
                     }
                 }
                 const finishedRe = new RegExp(`^${tipType} arrow$`, 'i');
@@ -1507,8 +1510,8 @@ async function runLegacyFletchArrowsOrBows(
                 if (!strings || !unstrung) {
                     await bank();
                     if (!findId([BOWS.string]) || !findId(BOWS.unstrung)) {
-                        await waitTicks(s, 5);
-                        continue;
+                        exhausted = 'bank holds no bow strings or unstrung bows';
+                        break;
                     }
                 }
                 const st = findId([BOWS.string])!;
@@ -1521,7 +1524,8 @@ async function runLegacyFletchArrowsOrBows(
             }
         }
         const perK = ((fletched * 1000) / Math.max(1, used())).toFixed(2);
-        await finish([s], fletched > 0, `ticks=${used()} fletched=${fletched} mode=${mode} bankTrips=${bankTrips} fletchPer1kTicks=${perK}`);
+        const detail = `ticks=${used()} fletched=${fletched} mode=${mode} bankTrips=${bankTrips} fletchPer1kTicks=${perK}${exhausted ? ` stop=input-exhausted` : ''}`;
+        await finish([s], fletched > 0, fletched > 0 || !exhausted ? detail : `no progress: ${exhausted}; ${detail}`);
     } catch (e) {
         await finish([s], false, String(e));
     }
