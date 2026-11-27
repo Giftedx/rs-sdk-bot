@@ -2333,7 +2333,7 @@ export async function runGenericCombatSession(
                 await waitTicks(s, 2);
                 continue;
             }
-            const admit = admissionGuard?.beforeAttack(justBanked);
+            const admit = admissionGuard?.beforeAttack(justBanked, monster);
             if (admit?.kind === 'refuse') throw Error(admit.detail);
             if (admit?.kind === 'bank') {
                 await bankUntil();
@@ -2846,7 +2846,7 @@ export async function runMeleeGatherCli(
                 await waitTicks(s, 2);
                 continue;
             }
-            const admit = admissionGuard?.beforeAttack(justBanked);
+            const admit = admissionGuard?.beforeAttack(justBanked, monster);
             if (admit?.kind === 'refuse') throw Error(admit.detail);
             if (admit?.kind === 'bank') {
                 await bankUntil();

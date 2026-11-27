@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    carryableFood,
     combatAdmission,
     crowdDanger,
     MIN_HITS_ABOVE_RETREAT,
@@ -98,6 +99,18 @@ describe('combat admission', () => {
     test('more food than the worker carries refuses', () => {
         const big: CombatThreat = { maxHit: 20, attackRoll: 20_000, attackRate: 4 };
         const a = combatAdmission(big, acct(99, { foodPieces: 5 }), { carryMax: 20 });
+        expect(a.verdict).toBe('refuse');
+    });
+});
+
+describe('carryable food', () => {
+    test('takes the highest heal first up to the carry limit', () => {
+        expect(carryableFood([{ count: 200, heal: 3 }, { count: 5, heal: 20 }], 20)).toEqual({ pieces: 20, heal: (5 * 20 + 15 * 3) / 20 });
+        expect(carryableFood([], 20)).toEqual({ pieces: 0, heal: 0 });
+    });
+
+    test('held food above the carry limit covers nothing', () => {
+        const a = combatAdmission(WIZARD, { hp: 30, maxHp: 30, defence: 1, foodPieces: 200, healPerPiece: 3 }, { carryMax: 20 });
         expect(a.verdict).toBe('refuse');
     });
 });

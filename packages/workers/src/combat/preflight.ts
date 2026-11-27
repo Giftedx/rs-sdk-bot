@@ -19,7 +19,7 @@ import {
     type CombatMode,
     type CombatSiteMeta,
 } from './types';
-import { combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../../core/src/combat-admission';
+import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../../core/src/combat-admission';
 import { questFoodDefinitions } from '../../../core/src/sustain';
 import { npcThreat } from '../../../knowledge/src/npc-threat';
 
@@ -576,17 +576,15 @@ export function combatAdmissionBlocker(
     }
     if (!threat) return undefined;
     const defs = questFoodDefinitions();
-    let pieces = 0, heal = 0, bestHeal = 0;
-    for (const f of food) {
-        const h = defs.get(f.id)?.heal ?? 0;
-        pieces += Math.max(0, f.count);
-        heal += Math.max(0, f.count) * h;
-        bestHeal = Math.max(bestHeal, h);
-    }
+    const rows = food.map(f => ({ count: f.count, heal: defs.get(f.id)?.heal ?? 0 }));
+    const bestHeal = rows.reduce((m, r) => Math.max(m, r.heal), 0);
+    // The worker carries the load that it can withdraw (carryableFood), not the whole bank.
+    const load = carryableFood(rows);
+    const pieces = load.pieces;
     const hp = skillLevel(acct, 'Hitpoints');
     const a = combatAdmission(
         threat,
-        { hp, maxHp: hp, defence: skillLevel(acct, 'Defence'), foodPieces: pieces, healPerPiece: pieces > 0 ? heal / pieces : bestHeal || 12, bankFoodPieces: 0 },
+        { hp, maxHp: hp, defence: skillLevel(acct, 'Defence'), foodPieces: pieces, healPerPiece: pieces > 0 ? load.heal : bestHeal || 12, bankFoodPieces: 0 },
         { attackers: site.threatAttackers ?? 1 },
     );
     if (a.verdict === 'admit') return undefined;

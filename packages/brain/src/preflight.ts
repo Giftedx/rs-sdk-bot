@@ -4,7 +4,7 @@
 import { resolve } from 'node:path';
 import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
-import { combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
+import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
 import {
     questFoodDefinitions,
     totalAvailableHeal,
@@ -1044,19 +1044,20 @@ export function evaluateCombatSurvivability(
         if (threat) {
             const foodIds = floor.foodIds ?? STANDARD_FOOD_IDS;
             const defs = questFoodDefinitions();
-            let pieces = 0, heal = 0, bestHeal = 0;
+            const rows: { count: number; heal: number }[] = [];
+            let bestHeal = 0;
             for (const id of foodIds) {
                 const owned = accountOwnedItemCount(acct, id, { includeBank, requireTrustedBank: true });
-                const avail = reserveAdjustedStock(owned, cachedEffectiveItemReserve(acct, world, id, _acctCache));
                 const h = defs.get(id)?.heal ?? 0;
-                pieces += avail;
-                heal += avail * h;
+                rows.push({ count: reserveAdjustedStock(owned, cachedEffectiveItemReserve(acct, world, id, _acctCache)), heal: h });
                 bestHeal = Math.max(bestHeal, h);
             }
-            // The worker withdraws the food it needs, so the pack and the bank count as held, and no other food exists.
+            // The worker carries the load that it can withdraw (carryableFood), and no other food exists.
+            const load = carryableFood(rows);
+            const pieces = load.pieces;
             const a = combatAdmission(
                 threat,
-                { hp, maxHp: hp, defence: def, foodPieces: pieces, healPerPiece: pieces > 0 ? heal / pieces : bestHeal || 12, bankFoodPieces: 0 },
+                { hp, maxHp: hp, defence: def, foodPieces: pieces, healPerPiece: pieces > 0 ? load.heal : bestHeal || 12, bankFoodPieces: 0 },
                 { attackers: floor.threatAttackers ?? 1 },
             );
             if (a.verdict !== 'admit') {

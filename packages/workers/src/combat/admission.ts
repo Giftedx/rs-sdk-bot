@@ -113,9 +113,10 @@ export function createCombatAdmissionGuard(s: CombatSession, target: string, ids
             log(`COMBAT_ADMISSION ${JSON.stringify({ target, verdict: a.verdict, reason: a.reason, retreatAt: a.retreatAt, foodNeeded: a.foodNeeded, maxHit: threat!.maxHit })}`);
             return a.verdict === 'refuse' && a.reason.startsWith('too weak') ? admissionRefusal(target, a) : undefined;
         },
-        // Before an attack: `fight`, `bank` (take food first) or a refusal.
-        beforeAttack(justBanked: boolean): { kind: 'fight' } | { kind: 'bank' } | { kind: 'refuse'; detail: string } {
-            const a = check(1);
+        // Before an attack on `npc`: `fight`, `bank` (take food first) or a refusal. A target that already attacks
+        // the account is in onMe(), so it is not counted again.
+        beforeAttack(justBanked: boolean, npc?: { inCombat?: boolean; targetIndex?: number }): { kind: 'fight' } | { kind: 'bank' } | { kind: 'refuse'; detail: string } {
+            const a = check(npc && attackersOn([npc], selfSlot()) > 0 ? 0 : 1);
             if (!a || a.verdict === 'admit') return { kind: 'fight' };
             if (a.reason.startsWith('too weak') || justBanked) return { kind: 'refuse', detail: admissionRefusal(target, a) };
             log(`COMBAT_ADMISSION bank ${JSON.stringify({ target, verdict: a.verdict, reason: a.reason, hp: hp() })}`);

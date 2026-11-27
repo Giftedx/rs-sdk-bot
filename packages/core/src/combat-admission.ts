@@ -88,12 +88,14 @@ export function combatAdmission(threat: CombatThreat, acct: CombatAccount, opts:
     const expected = damagePerTick * ADMISSION_WINDOW_TICKS * ADMISSION_SAFETY;
     const spare = Math.max(0, acct.hp - retreatAt);
     const heal = Math.max(1, acct.healPerPiece);
-    const cover = spare + acct.foodPieces * heal;
+    // The pack holds at most carryMax pieces: food above that heals nothing in this fight.
+    const carried = Math.min(Math.max(0, acct.foodPieces), carryMax);
+    const cover = spare + carried * heal;
     if (cover >= expected) {
         return { verdict: 'admit', reason: `covers ${Math.round(expected)} expected damage with ${Math.round(cover)}`, foodNeeded: 0, ...base };
     }
     const foodNeeded = Math.ceil((expected - spare) / heal);
-    const owned = acct.foodPieces + (acct.bankFoodPieces ?? Number.POSITIVE_INFINITY);
+    const owned = carried + (acct.bankFoodPieces ?? Number.POSITIVE_INFINITY);
     if (foodNeeded > carryMax || owned < foodNeeded) {
         return {
             verdict: 'refuse',
@@ -103,11 +105,24 @@ export function combatAdmission(threat: CombatThreat, acct: CombatAccount, opts:
         };
     }
     return {
-        verdict: acct.foodPieces >= foodNeeded ? 'admit' : 'resupply',
+        verdict: carried >= foodNeeded ? 'admit' : 'resupply',
         reason: `needs ${foodNeeded} food of ${heal} heal for ${Math.round(expected)} expected damage`,
         foodNeeded,
         ...base,
     };
+}
+
+// The food load that a worker carries from its stock: the highest heal first (withdrawCombatFood), at most
+// `carryMax` pieces. A preflight passes this load, not the whole bank, to combatAdmission.
+export function carryableFood(rows: readonly { readonly count: number; readonly heal: number }[], carryMax = DEFAULT_CARRY_MAX): { pieces: number; heal: number } {
+    let pieces = 0, total = 0;
+    for (const r of [...rows].sort((a, b) => b.heal - a.heal)) {
+        const take = Math.min(Math.max(0, r.count), carryMax - pieces);
+        if (take <= 0) continue;
+        pieces += take;
+        total += take * r.heal;
+    }
+    return { pieces, heal: pieces > 0 ? total / pieces : 0 };
 }
 
 // The first candidate target that the account may fight, with the refusal of each target before it.

@@ -83,4 +83,21 @@ describe('worker preflight admission', () => {
         expect(combatAdmissionBlocker(acct(60), { threatNpcIds: [13] }, [])).toMatchObject({ reason: 'food' });
         expect(combatAdmissionBlocker(acct(60), { threatNpcIds: [13] }, [{ id: LOBSTER, count: 20 }])).toBeUndefined();
     });
+
+    test('a bank of low-heal food that the worker cannot carry does not admit the fight', () => {
+        // 200 shrimps (heal 3): 20 fit in the pack, 60 heal, short of the expected wizard damage for 30 Hitpoints.
+        expect(combatAdmissionBlocker(acct(30), { threatNpcIds: [13] }, [{ id: 315, count: 200 }])).toMatchObject({ reason: 'food', current: 20 });
+    });
+});
+
+describe('attacker count', () => {
+    test('a selected NPC that already attacks the account counts once', () => {
+        // 30 of 59 Hitpoints and 4 lobsters: one giant is covered, two are not.
+        const { s } = fakeSession({ hp: 30, maxHp: 59, defence: 40, food: 4, attackers: 1 });
+        const g = createCombatAdmissionGuard(s, 'giant', genericCombatNpcIds('giant'), quiet);
+        expect(g.check(0)!.verdict).toBe('admit');
+        expect(g.check(1)!.verdict).not.toBe('admit');
+        expect(g.beforeAttack(true, { inCombat: true, targetIndex: 32768 + 5 })).toEqual({ kind: 'fight' });
+        expect(g.beforeAttack(true, { inCombat: false, targetIndex: -1 }).kind).toBe('refuse');
+    });
 });
