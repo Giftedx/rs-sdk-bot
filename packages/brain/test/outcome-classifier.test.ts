@@ -516,3 +516,33 @@ test('an empty shop shelf cools the shop until it restocks, never for less than 
         rmSync(root, { recursive: true, force: true });
     }
 });
+
+test('infra breaker: faults in one wait do not grow it, and a non-infra run end after the wait resets the count', () => {
+    const c = new OutcomeClassifier({ persist: false, infraBaseBackoffMs: 30_000, infraBackoffFactor: 2, infraMaxBackoffMs: 900_000 });
+    const fault = (now: number) => c.applyOutcome(
+        { kind: 'infra_fault', activityId: 'quest:x', account: 'HelperA', ticksElapsed: 0, source: 'claim_authority', detail: 'Could not resolve host: github.com' },
+        { now },
+    );
+    // Six runs fail in one network drop, all inside the first 30 s wait.
+    for (let i = 0; i < 6; i++) fault(NOW + i * 1000);
+    expect(c.canProceedInfra(NOW).state.consecutiveFaults).toBe(1);
+    expect(c.canProceedInfra(NOW + 29_000).allowed).toBe(false);
+    expect(c.canProceedInfra(NOW + 30_000).allowed).toBe(true);
+    // A failed retry after the wait doubles it.
+    expect(fault(NOW + 31_000).infraBreaker?.consecutiveFaults).toBe(2);
+    expect(c.canProceedInfra(NOW + 90_000).allowed).toBe(false);
+    // A run that ends before the retry time does not close the breaker.
+    c.applyOutcome({ kind: 'target_met', activityId: 'quest:x', account: 'HelperB', ticksElapsed: 10, durationMs: 1000 }, { now: NOW + 40_000 });
+    expect(c.canProceedInfra(NOW + 40_000).allowed).toBe(false);
+    // A run that started before the fault and ends after the retry time made no new claim: the count stays.
+    c.applyOutcome({ kind: 'target_met', activityId: 'quest:x', account: 'HelperB', ticksElapsed: 10, durationMs: 90_000 }, { now: NOW + 100_000 });
+    expect(c.canProceedInfra(NOW + 100_000).state.consecutiveFaults).toBe(2);
+    // An outcome without its duration does not reset either.
+    c.applyOutcome({ kind: 'target_met', activityId: 'quest:x', account: 'HelperB', ticksElapsed: 10 }, { now: NOW + 100_000 });
+    expect(c.canProceedInfra(NOW + 100_000).state.consecutiveFaults).toBe(2);
+    // A run that started after the fault and ends after the retry time closes it and resets the count, so the
+    // next drop waits 30 s again.
+    c.applyOutcome({ kind: 'target_met', activityId: 'quest:x', account: 'HelperB', ticksElapsed: 10, durationMs: 10_000 }, { now: NOW + 100_000 });
+    expect(c.canProceedInfra(NOW + 100_000).state).toEqual({ open: false, consecutiveFaults: 0 });
+    expect(fault(NOW + 200_000).infraBreaker?.retryAt).toBe(NOW + 230_000);
+});

@@ -727,6 +727,18 @@ export class OutcomeClassifier {
         const now = ctx?.now ?? Date.now();
         const domain = ctx?.domain ?? 'live';
         this.marketCooldowns = pruneExpiredCooldowns(this.marketCooldowns, now);
+        // A run that started after the breaker opened and ended for a reason other than infrastructure got past the
+        // claim and the server again, so the fault run is over. A run that started before the fault proves nothing:
+        // it can end after the retry time without a new claim. An outcome without its duration does not reset.
+        const runStart = outcome.durationMs !== undefined ? now - outcome.durationMs : undefined;
+        if (
+            outcome.kind !== 'infra_fault'
+            && this.infraBreaker.consecutiveFaults > 0
+            && (!this.infraBreaker.open || now >= (this.infraBreaker.retryAt ?? now))
+            && runStart !== undefined && runStart >= (this.infraBreaker.trippedAt ?? 0)
+        ) {
+            this.recordInfraSuccess(now);
+        }
 
         switch (outcome.kind) {
             case 'target_met': {
@@ -882,7 +894,11 @@ export class OutcomeClassifier {
             }
 
             case 'infra_fault': {
-                const nextFaults = this.infraBreaker.consecutiveFaults + 1;
+                // Runs that fail while the breaker waits are the same fault, not a failed retry: they keep the
+                // wait and do not make it longer.
+                const prior = this.infraBreaker;
+                const sameFault = prior.open && prior.retryAt !== undefined && now < prior.retryAt;
+                const nextFaults = sameFault ? Math.max(1, prior.consecutiveFaults) : prior.consecutiveFaults + 1;
                 const expMs = Math.min(
                     this.infraMaxBackoffMs,
                     Math.round(this.infraBaseBackoffMs * Math.pow(this.infraBackoffFactor, nextFaults - 1)),
@@ -891,8 +907,8 @@ export class OutcomeClassifier {
                 const reason = nonEmpty(outcome.detail) ?? nonEmpty(outcome.summary) ?? `infra fault (${outcome.source})`;
                 this.infraBreaker = {
                     open: true,
-                    trippedAt: now,
-                    retryAt: now + waitMs,
+                    trippedAt: sameFault && prior.trippedAt !== undefined ? prior.trippedAt : now,
+                    retryAt: sameFault ? Math.max(prior.retryAt!, now + (outcome.retryAfterMs ?? 0)) : now + waitMs,
                     consecutiveFaults: nextFaults,
                     reason: `${outcome.source}: ${reason}`,
                 };
