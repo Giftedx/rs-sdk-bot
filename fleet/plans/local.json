@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798256029,
+ "at": 1795798272373,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -189,7 +189,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1157"
+    "BATCH_UNITS": "1153"
    },
    "enabled": true,
    "repeat": false,
@@ -198,6 +198,21 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "loot-trip"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -215,28 +230,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_irit_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:101",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:101",
    "role": "army"
   },
   {
@@ -315,14 +308,14 @@
    "env": {
     "ITEM_ID": "556",
     "ITEMS": "Air rune",
-    "MAX_ITEMS": "486",
+    "MAX_ITEMS": "504",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "486"
+    "BATCH_UNITS": "504"
    },
    "enabled": true,
    "repeat": false,
@@ -392,6 +385,28 @@
    "role": "army"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "army"
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -412,61 +427,45 @@
    ]
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_necklace",
-    "-",
-    "1",
-    "1200"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:grindmyherb:item:3853",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "224"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:3853",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=54810 TARGET_COUNT=5481 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 -- sweep viking"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:viking",
-   "role": "army"
-  },
-  {
-   "account": "Pullmybow",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "druid"
+    "giant"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
-    "BATCH_UNITS": "250",
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1610",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto",
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
    "resources": [
-    "chaos-druids"
+    "hill-giants"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:tipmyshaft:item:40",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:tipmyshaft:item:40",
+   "role": "army"
   }
  ],
  "army": [
@@ -478,16 +477,15 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
-  "fingerblastr",
+  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pocketpool",
   "pocketrocket",
   "quickhandjob",
