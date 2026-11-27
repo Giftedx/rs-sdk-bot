@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795816978756-2",
  "account": "KnightRider",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 4,
  "claim": "a8478703-6a81-45ef-a40b-19b354f0798e",
- "count": 0,
- "ok": false,
- "at": 1795817579072,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795817658454,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795817647329
+ },
+ "logout": {
+  "attemptId": "1795817579115-0000035684-0000000001",
+  "at": 1795817658440,
+  "sha256": "b1d275e3ff4f67dbd4aeedac4e9eb09658afa4881f2f38610ea2584e029fbf59"
+ },
+ "screen": true
 }
