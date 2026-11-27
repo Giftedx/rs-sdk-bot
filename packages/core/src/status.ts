@@ -10,6 +10,7 @@ import {equipmentObserved} from './container-observation';
 import {readLogoutProof, resolveLifecycleRoot} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
 import {statusDirForServer} from './practice-paths';
+import { noteLoopPhase, startLoopWatchdog, watchStatusFile } from './loop-watchdog';
 
 // Live status for the dashboard (packages/dashboard): live bots write .practice/live/status/<name>.json
 // and practice bots write .practice/sim/status/<name>.json every few ticks.
@@ -101,6 +102,8 @@ function updateLines(e: StatusLines, line: string): void {
 export function noteStatusLine(name: string, line: string): void {
     const key = name.toLowerCase(), e = perBot.get(key) ?? emptyLines(true);
     e.attributed = true;
+    // Hosted sessions (host.ts botSink) log here, not through console.log: the stall report names this line too.
+    noteLoopPhase(`[${name}] ${line}`);
     updateLines(e, line);
     perBot.set(key, e);
 }
@@ -110,6 +113,7 @@ function captureMilestones() {
     const orig = console.log.bind(console);
     console.log = (...args: unknown[]) => {
         const line = args.map(String).join(' ');
+        noteLoopPhase(line);
         for (const e of activeLines) if (!e.attributed) updateLines(e, line);
         orig(...args);
     };
@@ -350,8 +354,12 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other
     // login on the side. The row's `tick` still shows the stall.
     const beat = setInterval(write, statusHeartbeatMs());
+    // A main loop that blocks stops this heartbeat as well: the watchdog thread (loop-watchdog.ts) marks the row as
+    // stalled and ends the process after LOOP_STALL_MS.
+    startLoopWatchdog();
+    const unwatch = watchStatusFile(file);
     activeLines.add(lines);
-    return { stop: () => { clearInterval(beat); write(); off(); inputs.stop(); for (const restore of restoredBotMethods) restore(); activeLines.delete(lines); } };
+    return { stop: () => { clearInterval(beat); unwatch(); write(); off(); inputs.stop(); for (const restore of restoredBotMethods) restore(); activeLines.delete(lines); } };
 }
 export const GROUND_STATUS_MAX = 50;
 // The SDK lists the ground items of the player's own level, nearest first.
