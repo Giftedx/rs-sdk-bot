@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805609810-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "Pocketrocket",
+  "item": "Unicorn horn",
+  "count": 3,
+  "itemId": 237,
+  "start": 1795805609810,
+  "end": 1795806509810,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
