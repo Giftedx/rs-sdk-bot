@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741335496,
+ "at": 1795741347691,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2080 TARGET_COUNT=208 PRODUCT_TARGET=219 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=219 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=226 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -74,55 +74,82 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "account": "BowBeforeMe",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
+   "account": "Moneyshot",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -151,24 +178,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
   },
   {
    "account": "mmthv2350",
@@ -279,6 +288,22 @@
    "role": "army"
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/chain.ts",
    "args": [
@@ -310,7 +335,6 @@
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
-  "mmtha0205",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
