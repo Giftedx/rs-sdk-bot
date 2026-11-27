@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795816772485-1",
  "account": "Woodenstaff",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 1,
  "claim": "69743621-89bf-43c5-bc11-1b242df19ad0",
- "count": 0,
- "ok": false,
- "at": 1795817081339,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795817124224,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795817123313
+ },
+ "logout": {
+  "attemptId": "1795817081348-0000015320-0000000001",
+  "at": 1795817124069,
+  "sha256": "aa668e3af662b1137cf6851f4e1a938b5820d283ac2a19c5d78d42c3e1ed6a71"
+ },
+ "screen": true
 }
