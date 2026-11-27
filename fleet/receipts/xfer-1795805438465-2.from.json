@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805438465-2",
  "account": "Fingerblastr",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "1856c879-21a5-4a20-a450-7bacadec67eb",
- "count": 0,
- "ok": false,
- "at": 1795806193285,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795806208626,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795806201048
+ },
+ "logout": {
+  "attemptId": "1795806193298-0000030704-0000000001",
+  "at": 1795806208591,
+  "sha256": "47744b680daabd3d8c379efcdd8b08d7896f8568461e5059a5a09627d72612e8"
+ },
+ "screen": true
 }
