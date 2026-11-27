@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744760162-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Unsheathed",
+  "item": "Vial of water",
+  "count": 6,
+  "itemId": 227,
+  "start": 1795744760162,
+  "end": 1795745660162,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

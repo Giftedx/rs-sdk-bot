@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795744531265-1",
  "account": "BowBeforeMe",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Coal",
  "requested": 40,
  "claim": "2b151b8e-8722-4f07-922b-e38ee65122fb",
- "count": 0,
- "ok": false,
- "at": 1795744596651,
- "detail": "trade claimed"
+ "count": 40,
+ "ok": true,
+ "at": 1795744770438,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 40,
+  "after": 0
+ },
+ "bank": {
+  "count": 40,
+  "at": 1795744748372
+ },
+ "logout": {
+  "attemptId": "1795744596659-0000023360-0000000001",
+  "at": 1795744770424,
+  "sha256": "0df91c19128bafbb2290f74da49fdefaaed6888649e2fb20830b09ae6aeadf78"
+ },
+ "screen": true
 }

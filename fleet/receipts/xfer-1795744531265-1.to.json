@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795744531265-1",
+ "account": "OreElse",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "fbe3dfa1-9d0a-41ad-a1dc-0c7e0e25c91e",
+ "count": 40,
+ "ok": true,
+ "at": 1795744771949,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 40
+ },
+ "bank": {
+  "count": 40,
+  "at": 1795744771185
+ },
+ "logout": {
+  "attemptId": "1795744761065-0000014528-0000000001",
+  "at": 1795744771936,
+  "sha256": "5cf6bda66a69bfb4131a73ef9a208955d1208fe9889b92320d8a3d5d729742d5"
+ },
+ "screen": true
+}
