@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795773689732-1",
  "account": "Unsheathed",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "f05819fd-5b5c-4b9f-a22d-0c9dcd081120",
- "count": 0,
- "ok": false,
- "at": 1795773985662,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774077029,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795773994982
+ },
+ "logout": {
+  "attemptId": "1795773985674-0000007340-0000000001",
+  "at": 1795774077010,
+  "sha256": "ea9d36626a71bd3428e5f5cc97a5b48eaad38eb7f938a0fe8e1d8bbd8ff75fdb"
+ },
+ "screen": true
 }

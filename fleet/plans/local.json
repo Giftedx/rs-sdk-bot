@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795774063453,
+ "at": 1795774077921,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -99,29 +99,49 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 PRODUCT_TARGET=220 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=220 -- cooking food"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "120",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "120"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:379",
    "role": "auto"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 PRODUCT_TARGET=220 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=220 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 PRODUCT_TARGET=220 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=220 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
   },
   {
    "account": "SporranDip",
@@ -242,60 +262,7 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- magic alch-train 90 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "FishAndChips",
+   "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -303,20 +270,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "2000",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "23",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "23"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:562",
    "role": "auto"
   }
  ],
