@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741825883-2",
  "account": "BoneToPick",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 250,
  "claim": "bfd8908a-f3a0-469d-b23b-2903cf88e8b8",
- "count": 0,
- "ok": false,
- "at": 1795742586406,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795742604928,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795742604083
+ },
+ "logout": {
+  "attemptId": "1795742586415-0000002052-0000000001",
+  "at": 1795742604839,
+  "sha256": "1f0d62632136eef27e65b296c23c08e652dd89e85d60619599e66b0d2d3c8305"
+ },
+ "screen": true
 }
