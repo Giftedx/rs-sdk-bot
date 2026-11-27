@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741571343,
+ "at": 1795741582242,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,7 +79,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +92,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -105,7 +105,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -118,7 +118,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +131,20 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -144,7 +157,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -157,7 +170,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -170,7 +183,22 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "trawler"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "43"
    },
    "enabled": true,
    "repeat": false,
@@ -293,32 +321,7 @@
    "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "taverley",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "233",
-    "ITEMS": "Pestle and mortar",
-    "MAX_ITEMS": "1",
-    "STOCK_TARGET": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "100",
-    "STOP_AT_TARGET": "1",
-    "FILL_ORDER": "1",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "MeatNTwoVeg",
+   "account": "Shaftsinker",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -348,6 +351,7 @@
   "fingersmith",
   "hocuspokeus",
   "mineyourbiz",
+  "mmtha0205",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -355,7 +359,6 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "undermykilt",
   "woodpecker",
   "yewfirst"
