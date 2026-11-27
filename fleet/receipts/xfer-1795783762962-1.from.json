@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795783762962-1",
  "account": "Wandwaver",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 14,
  "claim": "eaa779a0-7779-416c-ac71-d12eab913634",
- "count": 0,
- "ok": false,
- "at": 1795784041229,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795784154440,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 0
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795784048529
+ },
+ "logout": {
+  "attemptId": "1795784041239-0000031184-0000000001",
+  "at": 1795784154429,
+  "sha256": "431ca6b7b4dd413788effd2c60f1e4b87298b8cc9b557f5bdce8ed6247a077ce"
+ },
+ "screen": true
 }
