@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741534930,
+ "at": 1795741571343,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2180 TARGET_COUNT=218 PRODUCT_TARGET=226 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2160 TARGET_COUNT=216 PRODUCT_TARGET=226 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
    ],
    "env": {
@@ -74,12 +74,25 @@
    "role": "army"
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "21"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +105,20 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
+    "BATCH_UNITS": "21"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -105,20 +131,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +144,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -144,7 +157,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -157,22 +170,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "trawler"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "43"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -295,28 +293,32 @@
    "role": "army"
   },
   {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "grind:chocolate_bar"
+    "shop-buy",
+    "taverley",
+    "3000"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:1975",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
+    "ITEM_ID": "233",
+    "ITEMS": "Pestle and mortar",
+    "MAX_ITEMS": "1",
+    "STOCK_TARGET": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "100",
+    "STOP_AT_TARGET": "1",
+    "FILL_ORDER": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
-   "role": "helper"
+   "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "MeatNTwoVeg",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -329,7 +331,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "role": "auto"
   }
  ],
  "army": [
@@ -345,7 +347,6 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "mineyourbiz",
   "pickpockdick",
   "pocketpool",

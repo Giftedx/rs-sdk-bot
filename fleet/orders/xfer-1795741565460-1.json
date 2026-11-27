@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795741565460-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "DropMyLoad",
+  "to": "mmtha0205",
+  "item": "Chocolate bar",
+  "count": 1,
+  "itemId": 1973,
+  "start": 1795741565460,
+  "end": 1795742465460,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
