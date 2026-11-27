@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753640162,
+ "at": 1795753663574,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -156,6 +156,21 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-59-o59-p61 ITEM_ID=1436 QUANTITY=59 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 EXPECTED_OWNED=59 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=118 -- magic earth-production craft 2000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
    "role": "auto"
   }
  ],
