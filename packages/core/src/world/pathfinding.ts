@@ -5,6 +5,7 @@ import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../comp
 import { activeDanger, guardRoute, guardWalk, pack, type DangerScope } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
+import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
 import { NO_CHANGES, WAYPOINT_LIMIT, changeBuilder, hintLengths, legKey, tileTable, windowKey, withHint, type ChangeTable } from './leg-key';
 import { cheb, tileKey, worldRepoRoot, type DoorBlock, type PathLength, type Tile } from './model';
 import { unwrapGuarded } from '../worker-execution';
@@ -37,7 +38,8 @@ export async function installDoorPolicy(sdk: any, client?: unknown): Promise<voi
         const from = { x: p.worldX, z: p.worldZ, level: p.level };
         const blocks = blockedDoorsNear(from, { x, z, level: p.level }, accountForSdk(raw))
             .map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
-        return guardWalk(grid, accountForSdk(raw), from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => original.call(raw, x, z, ...args)));
+        const npcTiles = npcBlockTiles(Array.isArray(state.nearbyNpcs) ? state.nearbyNpcs : [], from, { x, z, level: p.level });
+        return guardWalk(grid, accountForSdk(raw), from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => withNpcBlocks(grid, npcTiles, () => original.call(raw, x, z, ...args))));
     };
     policySdks.add(raw);
 }
