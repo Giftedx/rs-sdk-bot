@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795782383928-1",
+ "account": "Fingersmith",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 150,
+ "claim": "27464ce8-5b1a-4a84-ac60-aaf53ae14eaa",
+ "count": 0,
+ "ok": false,
+ "at": 1795782567396,
+ "detail": "trade claimed"
+}

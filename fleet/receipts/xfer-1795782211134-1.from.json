@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795782211134-1",
  "account": "Unsheathed",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Tarromin",
  "requested": 1,
  "claim": "e3714bdf-9245-490d-bcd0-de2ee27f53af",
- "count": 0,
- "ok": false,
- "at": 1795782356740,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795782520946,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795782505807
+ },
+ "logout": {
+  "attemptId": "1795782356748-0000008540-0000000001",
+  "at": 1795782520934,
+  "sha256": "ed37ee67073b2b742ea8ae90355d19c9fb57abd648491f6e2f4c9c3adda1a799"
+ },
+ "screen": true
 }

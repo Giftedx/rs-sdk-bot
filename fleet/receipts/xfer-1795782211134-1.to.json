@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795782211134-1",
+ "account": "YewFirst",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "09d11333-36ee-454d-8f55-0263df9f4560",
+ "count": 1,
+ "ok": true,
+ "at": 1795782522551,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795782521783
+ },
+ "logout": {
+  "attemptId": "1795782512062-0000031528-0000000001",
+  "at": 1795782522515,
+  "sha256": "ba33956d4b6f6d748244549a65a81dcccd8118dbb27efba902979451ea944dd3"
+ },
+ "screen": true
+}
