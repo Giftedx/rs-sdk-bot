@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795743429329,
+ "at": 1795743537029,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -240,10 +240,9 @@
    "role": "auto"
   },
   {
-   "account": "FishAndChips",
+   "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
@@ -253,7 +252,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "CoinCock",
@@ -288,7 +287,6 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "oreelse",
