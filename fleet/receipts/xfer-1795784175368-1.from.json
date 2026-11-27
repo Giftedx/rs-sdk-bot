@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784175368-1",
+ "account": "mmtha0205",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "ca746b3e-832b-4aca-b39f-2150ddf56637",
+ "count": 0,
+ "ok": false,
+ "at": 1795784623220,
+ "detail": "trade claimed"
+}

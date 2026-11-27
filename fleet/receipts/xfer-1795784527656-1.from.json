@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784527656-1",
+ "account": "TheFullMonty",
+ "partner": "TackleBox",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 249,
+ "claim": "7f691b04-ed3e-4321-b50d-438cc84b7055",
+ "count": 0,
+ "ok": false,
+ "at": 1795784599674,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Coins",
+   "requested": 27,
+   "count": 0
+  }
+ ]
+}
