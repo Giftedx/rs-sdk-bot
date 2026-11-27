@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741850049,
+ "at": 1795741864808,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -74,6 +74,19 @@
    "role": "army"
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "18"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/pk.ts",
    "args": [],
@@ -85,6 +98,19 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "18"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
   },
   {
    "account": "Bigpackage",
@@ -130,24 +156,6 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "mmthv2350",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -185,24 +193,6 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
