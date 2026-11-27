@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795292437-1",
  "account": "Fingerblastr",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 5,
  "claim": "55abb781-9ac6-4c0a-9923-bd5e078712b6",
- "count": 0,
- "ok": false,
- "at": 1795795795427,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795795820310,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795795802788
+ },
+ "logout": {
+  "attemptId": "1795795795438-0000008504-0000000001",
+  "at": 1795795820296,
+  "sha256": "4dc81811d0c95cc77d5244c24fe0dd58ccf73f324df01977a8bf63c5072613c2"
+ },
+ "screen": true
 }
