@@ -155,8 +155,7 @@ test('AcquireItem preserves operating coin float (~1,000 gp) and falls through w
 });
 
 test('hub_banker skips a party whose walk to the hub failed in a recent trade, whatever the item', () => {
-    // Live: Quickhandjob failed four Varrock orders in a row, each for another item, with "route to 3182, 3440:
-    // precondition no route to 3182,3440,0"; each new order came 4 s after the last one failed.
+    // The worker fails with "route to 3182, 3440: precondition no route to 3182,3440,0" for any item it carries.
     const recip = makeAcct({ inventory: { 995: 1050 }, bank: { items: { 311: 1 }, observedAt: NOW - 10_000, trusted: true } });
     const donor = makeAcct({ name: 'Bigpackage', pos: { x: 3185, z: 3436, level: 0 }, bank: { items: { 383: 300, 995: 5000 }, observedAt: NOW - 10_000, trusted: true } });
     const ask = (r: AccountState, d: AccountState) => resolveAcquireItem(r, { itemId: 383, quantity: 50, operatingCoinFloat: 1000 }, {

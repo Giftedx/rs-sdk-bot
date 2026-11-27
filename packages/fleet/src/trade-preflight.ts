@@ -1,10 +1,10 @@
 // Checks before the fleet agent starts a party of an order: would its login be admitted, and can it reach the meet?
 // A party that fails one of them is not started, and through planTradePass its partner on this side waits with it.
-// Each check reads files only. The causes are the first failed steps of the trade failures in .practice/fleet-agent.log:
-// - "no worker progress: release peer state unknown" and the other release holds refused the login of one party;
-//   the other party then stopped with "partner failed before login", or stood at the meet for "partner failed: no trade".
-// - a login refused in the last PRELOGIN_RETRY_MS (prelogin-failed/<order>.<role>.json): the agent started both
-//   parties again each pass, and the same refusal came back.
+// Each check reads files only, and each one stops a first failed step of a trade before the login:
+// - "no worker progress: release peer state unknown" and the other release holds refuse the login of a party; its
+//   partner then stops with "partner failed before login", or waits at the meet for "partner failed: no trade".
+// - a login refused in the last PRELOGIN_RETRY_MS (prelogin-failed/<order>.<role>.json) is refused again for the
+//   same cause, so the pair waits.
 // - "precondition no route to <meet>": the account's own route search found no route from where it stands, and the
 //   brain keeps that fact (packages/brain/src/no-route.ts) while the account stays there.
 // - "precondition ferry needs 60 coins and the bank holds 0": the walk to the meet takes boats that the account cannot

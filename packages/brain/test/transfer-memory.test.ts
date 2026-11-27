@@ -115,7 +115,7 @@ describe('transferEvent', () => {
 });
 
 describe('transferMemory: a failed walk to the meet', () => {
-    // Live: orders xfer-1795742541760-2 and xfer-1795742816386-1 (Shaftsinker to Quickhandjob, other items each time).
+    // A Varrock meet, with a different item in each order.
     const varrock = (id: string, itemId: number, item: string) => order({ id, itemId, item, meet: [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }] });
     const route = 'Error: route to 3182, 3440: precondition no route to 3182,3440,0';
 

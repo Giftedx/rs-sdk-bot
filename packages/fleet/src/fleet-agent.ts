@@ -161,8 +161,8 @@ const drainText = (drained: readonly string[], target: string) =>
 // partner cannot join, or null. A partner on another side starts there, and this side cannot see its process. Its
 // trade claim is the sign that it started: a giver ('from') starts at once, and with `crossSideClaims` (the held
 // claims, as readTradeClaims gives them) a taker waits until its giver holds a claim for this order or wrote its side.
-// Without that wait a taker whose giver never started stood at the meet for the whole order window ("order window
-// ended during work", the partner with no receipt). The giver never waits, so two sides that both apply it start.
+// A taker started without that sign stands at the meet until the order window ends if its giver never starts. The
+// giver never waits, so two sides that both apply the rule both start.
 export function tradePartnerWait(
     trade: { account: string; order: Pick<Order, 'id' | 'from' | 'to'> },
     side: string,
@@ -269,8 +269,8 @@ export function planTradePass(o: {
     const drained = o.drain?.drained ?? [];
     const wrote = (id: string, role: TradeRole) => o.receipts.some(r => r?.id === id && r.role === role) || (o.wrote?.(id, role) ?? false);
     // A partner that wrote its receipt of this order is done with it: its claim for a later order holds nothing here.
-    // A swarm claim that the login refuses holds both parties: "fleet account claim held by swarm" at the login of one
-    // party left the other party to stop with "partner failed before login" each pass.
+    // A swarm claim that the login refuses holds both parties: the login of that party fails with "fleet account claim
+    // held by swarm", and its partner then stops with "partner failed before login".
     const claimWait = (order: Order, account: string) => {
         const me = account.toLowerCase(), mine = order.from.toLowerCase() === me, partner = mine ? order.to : order.from;
         const parties: [string, string][] = [[me, account]];

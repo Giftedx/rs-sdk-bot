@@ -28,9 +28,9 @@ const PARTNER_FAULT_RE = /partner failed|order window ended|no matching trade|pa
 // An owner pause ends the trade; it is not a fault of either party.
 const OWNER_PAUSE_RE = /stop file/i;
 // A party whose own walk to the meet failed ("route to 3182, 3440: precondition no route to 3182,3440,0", "ferry
-// needs 60 coins and the bank holds 0") fails the same way with any item. Its backoff covers the hub, not one item:
-// Quickhandjob failed four orders in a row to the Varrock meet, each for another item, and each order came 4 s after
-// the last one failed, before the worker's no-route fact reached the outcome record.
+// needs 60 coins and the bank holds 0") fails the same way with any item, so its backoff covers the hub, not one
+// item. The receipt is the first evidence: the worker's no-route fact reaches the outcome record only after its
+// process ends, and the next cycle can plan before that.
 const ROUTE_FAULT_RE = /\broute to -?\d+, -?\d+: |\bprecondition (?:no route to|(?:(?:westbound|eastbound) )?ferry needs)/;
 
 // The cooldown key that holds a party out of every hub trade at `hub` (acct.cooldowns, acquire.ts hub_banker).

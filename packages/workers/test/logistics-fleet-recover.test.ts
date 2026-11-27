@@ -1744,8 +1744,7 @@ test('partnerFailed and pickOrder treat partner reconcile receipts as terminal f
 });
 
 test('a giver at the meet ends when its taker on another side shows no claim or receipt after the grace', () => {
-    // Live: the giver stood at the meet for the whole window ("order window ended during work") while the taker on
-    // another side never started.
+    // A giver that does not end waits at the meet until "order window ended during work" when the taker never starts.
     const receipts = makeTempDir('fleet-trade-absent-');
     let t = 1000, reads = 0, claims: { orderId: string }[] = [];
     const watch = (readClaims: () => readonly { orderId: string }[] = () => { reads++; return claims; }) =>
