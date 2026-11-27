@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795753453564-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "Shaftsinker",
+  "item": "Shortbow",
+  "count": 1,
+  "itemId": 841,
+  "start": 1795753453564,
+  "end": 1795754353564,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

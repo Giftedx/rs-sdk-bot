@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795753213391-2",
+ "account": "Swordinhand",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "817a8ebd-5b4f-4e7d-a495-48ad515498aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795753487928,
+ "detail": "trade claimed"
+}
