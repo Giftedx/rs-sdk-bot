@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786564449-3",
+ "account": "BowBeforeMe",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 9,
+ "claim": "12d33c16-ca4f-48e3-8eac-76741f382ad2",
+ "count": 9,
+ "ok": true,
+ "at": 1795786769126,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9,
+  "after": 0
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795786701637
+ },
+ "logout": {
+  "attemptId": "1795786693044-0000019428-0000000001",
+  "at": 1795786769112,
+  "sha256": "e4dd3d3e5f630f8001d2f05cb9fde1be53d57449133141ebb9a1516a26b5501a"
+ },
+ "screen": true
+}

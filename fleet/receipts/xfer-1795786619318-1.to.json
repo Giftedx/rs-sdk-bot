@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795786619318-1",
+ "account": "Kiltlifter",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 2,
+ "claim": "46bf787b-b7ba-480e-8b95-e794133c76a0",
+ "count": 0,
+ "ok": false,
+ "at": 1795786769664,
+ "detail": "trade claimed"
+}

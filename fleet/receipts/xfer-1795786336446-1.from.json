@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795786336446-1",
+ "account": "Woodenstaff",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "d7a63b13-a999-4c48-a305-e31d5e2b0f68",
+ "count": 0,
+ "ok": false,
+ "at": 1795786783656,
+ "detail": "trade claimed"
+}
