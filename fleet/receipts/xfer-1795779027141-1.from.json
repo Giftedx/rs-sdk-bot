@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779027141-1",
  "account": "Swordswallow",
  "partner": "BackdoorMan",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 33,
  "claim": "ee9270ea-152d-4d3a-8b5a-d3ff576a99f8",
- "count": 0,
- "ok": false,
- "at": 1795779190815,
- "detail": "trade claimed"
+ "count": 33,
+ "ok": true,
+ "at": 1795779331933,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 33,
+  "after": 0
+ },
+ "bank": {
+  "count": 33,
+  "at": 1795779314350
+ },
+ "logout": {
+  "attemptId": "1795779190824-0000020116-0000000001",
+  "at": 1795779331921,
+  "sha256": "dce05a3ba714167e9246dc00a82dc689832d0bc41d9f6374089a05e5075d9b29"
+ },
+ "screen": true
 }

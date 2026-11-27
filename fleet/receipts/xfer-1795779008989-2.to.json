@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779008989-2",
  "account": "Swordinhand",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 518,
  "claim": "222bc54d-9412-42b4-b33b-958126e9a648",
- "count": 0,
- "ok": false,
- "at": 1795779316071,
- "detail": "trade claimed"
+ "count": 518,
+ "ok": true,
+ "at": 1795779329108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 518
+ },
+ "bank": {
+  "count": 518,
+  "at": 1795779328321
+ },
+ "logout": {
+  "attemptId": "1795779316079-0000006280-0000000001",
+  "at": 1795779329093,
+  "sha256": "cd11bfb34f76e070c5e22527f702000ea2aee51c2183e6d1e02c843be6432665"
+ },
+ "screen": true
 }
