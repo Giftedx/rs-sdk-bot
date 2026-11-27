@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805016969-2",
  "account": "Nockitoff",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 14,
  "claim": "7a78be25-0fe6-4c71-b855-4551876e93a0",
- "count": 0,
- "ok": false,
- "at": 1795805479732,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795805570225,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 71,
+  "after": 85
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795805569499
+ },
+ "logout": {
+  "attemptId": "1795805479742-0000019140-0000000001",
+  "at": 1795805570212,
+  "sha256": "3a0dab3a58279a304f9265e8dcfb42dcb9e0926640e69196203d8bf7672c8c5c"
+ },
+ "screen": true
 }
