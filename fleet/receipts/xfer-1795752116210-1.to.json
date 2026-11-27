@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795752116210-1",
  "account": "Quickhandjob",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 1,
  "claim": "f9848118-5b70-4a66-83c6-fea4d1726850",
- "count": 0,
- "ok": false,
- "at": 1795752206891,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795752217739,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 2
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795752216818
+ },
+ "logout": {
+  "attemptId": "1795752206907-0000003168-0000000001",
+  "at": 1795752217565,
+  "sha256": "851d7c909623a4c3c69d2655a51f60590dbecf56f3f8d10e503d7e917b778f47"
+ },
+ "screen": true
 }
