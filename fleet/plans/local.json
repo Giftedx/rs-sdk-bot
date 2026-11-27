@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798288485,
+ "at": 1795798303355,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,28 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_irit_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:101",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
   },
   {
    "account": "TossTheCaber",
@@ -189,7 +211,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1148"
+    "BATCH_UNITS": "1143"
    },
    "enabled": true,
    "repeat": false,
@@ -198,21 +220,6 @@
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "loot-trip"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -308,14 +315,14 @@
    "env": {
     "ITEM_ID": "556",
     "ITEMS": "Air rune",
-    "MAX_ITEMS": "504",
+    "MAX_ITEMS": "415",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "504"
+    "BATCH_UNITS": "415"
    },
    "enabled": true,
    "repeat": false,
