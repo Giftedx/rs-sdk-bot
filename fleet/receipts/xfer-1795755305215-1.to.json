@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795755305215-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "37d30b59-a3ab-4fbc-bc30-3ebae94f6555",
+ "count": 10,
+ "ok": true,
+ "at": 1795755376242,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 44650,
+  "after": 44660
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795755375455
+ },
+ "logout": {
+  "attemptId": "1795755356203-0000008452-0000000001",
+  "at": 1795755376233,
+  "sha256": "2e1bbe356046486f35290dc94128bf0809c2d75fefc3237fb47d93b4bf00d749"
+ },
+ "screen": true
+}
