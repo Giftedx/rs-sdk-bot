@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740013087-3",
  "account": "CoinCock",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 6,
  "claim": "e4691255-f456-4168-a837-7b956dff63ac",
- "count": 0,
- "ok": false,
- "at": 1795740623599,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795740687343,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795740686622
+ },
+ "logout": {
+  "attemptId": "1795740623951-0000024196-0000000001",
+  "at": 1795740687332,
+  "sha256": "03e1e3e2a2b271066310ff31a760984619a7a62ce8f132b9ca4d83ec88772338"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740673754,
+ "at": 1795740701487,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -120,18 +120,31 @@
   },
   {
    "account": "SporranDip",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
    "script": "scripts/aio-boss.ts",
    "args": [
     "trawler"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "26"
+    "BATCH_UNITS": "25"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "role": "helper"
   },
   {
    "account": "mmsmk1232",
