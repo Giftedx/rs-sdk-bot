@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795744738709-1",
+ "account": "Shaftsinker",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 3,
+ "claim": "5e6e12ee-2893-4792-82ba-aefa1600c55f",
+ "count": 0,
+ "ok": false,
+ "at": 1795744777429,
+ "detail": "trade claimed"
+}
