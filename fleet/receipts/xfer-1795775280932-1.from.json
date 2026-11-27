@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775280932-1",
  "account": "Swordinhand",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "aab1a911-316f-4716-ad0a-768ad2b5eb98",
- "count": 0,
- "ok": false,
- "at": 1795775409415,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795775572056,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795775550553
+ },
+ "logout": {
+  "attemptId": "1795775409424-0000003224-0000000001",
+  "at": 1795775572043,
+  "sha256": "5223abcb9b4f99453dfbd07a0f97e22df7c27a2bab23572207c909f184b41905"
+ },
+ "screen": true
 }
