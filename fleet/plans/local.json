@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740035673,
+ "at": 1795740073269,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -218,26 +218,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Woodenstaff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
   },
   {
