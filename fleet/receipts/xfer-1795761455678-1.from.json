@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795761455678-1",
  "account": "OreElse",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 2,
  "claim": "b7b760dd-aa63-4f31-86c2-48a2a48b23ab",
- "count": 0,
- "ok": false,
- "at": 1795761709149,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795761755763,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795761734365
+ },
+ "logout": {
+  "attemptId": "1795761709163-0000012756-0000000001",
+  "at": 1795761755513,
+  "sha256": "8b810b8721a9283ad9e89970a5331942d2e33ad348b9c0c4c9d8f732f9f270ab"
+ },
+ "screen": true
 }
