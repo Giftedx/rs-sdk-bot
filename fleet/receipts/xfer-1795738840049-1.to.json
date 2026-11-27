@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795738840049-1",
+ "account": "WellHung",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 1,
+ "claim": "1031485e-4e25-4113-8966-fad7e7f94ce3",
+ "count": 0,
+ "ok": false,
+ "at": 1795739426742,
+ "detail": "trade claimed"
+}
