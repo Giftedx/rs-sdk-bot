@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795802664652-1",
+ "account": "Fatstack",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 23,
+ "claim": "439aea95-c07f-4bbf-968b-93a9a7175c77",
+ "count": 0,
+ "ok": false,
+ "at": 1795803340748,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795803270995-0000030956-0000000001",
+  "at": 1795803340737,
+  "sha256": "b600b468bc00cbee701b6b78a513556a08744fc894b73b844a7df34f642d0fc5"
+ },
+ "screen": false
+}

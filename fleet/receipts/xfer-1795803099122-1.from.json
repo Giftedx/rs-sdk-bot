@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803099122-1",
+ "account": "KnightRider",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "062463fe-bae1-44c0-9ce1-694af9ce73c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795803295740,
+ "detail": "trade claimed"
+}
