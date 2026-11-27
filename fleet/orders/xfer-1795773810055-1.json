@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795773810055-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Swordinhand",
+  "item": "Marrentill",
+  "count": 1,
+  "itemId": 251,
+  "start": 1795773810055,
+  "end": 1795774710055,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
