@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795785068911-2",
  "account": "Pocketpython",
  "partner": "Shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "224e8a73-848b-48c1-845e-658995b59355",
- "count": 0,
- "ok": false,
- "at": 1795785556377,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795785717590,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795785709618
+ },
+ "logout": {
+  "attemptId": "1795785556385-0000026832-0000000001",
+  "at": 1795785717577,
+  "sha256": "aafa3357493147b756878aa1c91d69abdd91a526bbec64abbfda5fbc6f3ccbde"
+ },
+ "screen": true
 }
