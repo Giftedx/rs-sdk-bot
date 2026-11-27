@@ -632,7 +632,9 @@ describe('infra fault status codes', () => {
             expect(kind(line), line).not.toBe('infra_fault');
     });
     test('a status named as one is an infra fault', () => {
-        for (const line of ['The requested URL returned error: 503', 'HTTP 502 from the gateway', '503 Service Unavailable', '429 Too Many Requests', 'status 429'])
+        for (const line of ['The requested URL returned error: 503', 'HTTP 502 from the gateway', '503 Service Unavailable', '429 Too Many Requests', 'status 429',
+            'Error: lite: GET https://rs-sdk-demo.fly.dev/crc failed with 502 http=[{"url":"https://rs-sdk-demo.fly.dev/crc","status":502,"ms":40}]',
+            '[object WebSocket] http=[{"url":"https://rs-sdk-demo.fly.dev/api/version","status":503,"ms":80}]'])
             expect(kind(line), line).toBe('infra_fault');
     });
 });
