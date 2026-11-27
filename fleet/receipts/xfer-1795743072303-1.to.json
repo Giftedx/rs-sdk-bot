@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795743072303-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 1,
+ "claim": "790051e3-3ec8-4691-a525-258ad1b12f12",
+ "count": 0,
+ "ok": false,
+ "at": 1795743406437,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795743398582-0000027568-0000000001",
+  "at": 1795743406426,
+  "sha256": "358a0302380cdf4b43e691e28ffbf3f5c045b57c7ea1fa9a1e1957854c23a415"
+ },
+ "screen": false
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795743072303-1",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 1,
+ "claim": "0328b854-87ff-4053-85f3-ed2fd05743b3",
+ "count": 0,
+ "ok": false,
+ "at": 1795743409672,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795743387558-0000030536-0000000001",
+  "at": 1795743409659,
+  "sha256": "f895a8f7ea26d5e3aafe6f348893be9f1aaca44805ea9269abe07a01615ab23e"
+ },
+ "screen": false
+}
