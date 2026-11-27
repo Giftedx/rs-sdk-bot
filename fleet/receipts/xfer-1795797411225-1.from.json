@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797411225-1",
+ "account": "mmtha0205",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "728efd1a-1ced-4d61-8230-d150cc68c6f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795797844367,
+ "detail": "trade claimed"
+}

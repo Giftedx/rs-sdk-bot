@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795797767308-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "YewFirst",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795797767308,
+  "end": 1795798667308,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
