@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795781299788-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "KnightRider",
+  "item": "Herb",
+  "count": 4,
+  "itemId": 205,
+  "start": 1795781299788,
+  "end": 1795782199788,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
