@@ -5,6 +5,6 @@
  "account": "FishAndChips",
  "partner": "Moneyshot",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795738366850,
- "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+ "at": 1795738811505,
+ "detail": "Error: fleet account claim held by swarm"
 }
