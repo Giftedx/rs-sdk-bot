@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795777053939-1",
+ "account": "Pocketpython",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "919ea497-274a-4516-b87d-6d36c86ada19",
+ "count": 0,
+ "ok": false,
+ "at": 1795777497918,
+ "detail": "trade claimed"
+}
