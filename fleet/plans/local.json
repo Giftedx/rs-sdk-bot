@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804488318,
+ "at": 1795804522353,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "38",
+    "MAX_ITEMS": "40",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "38"
+    "BATCH_UNITS": "40"
    },
    "enabled": true,
    "repeat": false,
@@ -97,7 +97,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "136"
+    "BATCH_UNITS": "133"
    },
    "enabled": true,
    "repeat": false,
@@ -131,6 +131,23 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1623",
    "role": "auto"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Kiltlifter",
@@ -168,20 +185,28 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:562",
+   "role": "auto"
   },
   {
    "account": "Spitroaster",
@@ -292,46 +317,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:93",
    "role": "auto"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "92",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "92"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "auto"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=72810 TARGET_COUNT=7281 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   }
  ],
  "army": [
