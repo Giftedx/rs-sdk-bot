@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795806850501,
+ "at": 1795806869512,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,31 +100,6 @@
    "role": "army"
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "366",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "366"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "auto"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -135,19 +110,44 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "78",
+    "MAX_ITEMS": "80",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "78"
+    "BATCH_UNITS": "80"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "376",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "376"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "auto"
   },
   {
    "account": "Ballspinner",
@@ -160,14 +160,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "38",
+    "MAX_ITEMS": "40",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "38"
+    "BATCH_UNITS": "40"
    },
    "enabled": true,
    "repeat": false,
@@ -200,6 +200,31 @@
    "role": "army"
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "150",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
    "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -213,37 +238,12 @@
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
     "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "17",
+    "BATCH_UNITS": "9",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "140",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "140"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -450,26 +450,51 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "92",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "92"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "brew:unf_ranarr_potion"
+    "strip:swamp-toad"
    ],
    "env": {
-    "MAX_MAKE": "3",
-    "CAP": "1200",
+    "MAX_MAKE": "1",
+    "CAP": "1000",
     "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:99",
-    "BATCH_UNITS": "3",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "1",
     "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
+   "goal": "campaign:haggis:item:2152",
+   "role": "auto"
   }
  ],
  "army": [
