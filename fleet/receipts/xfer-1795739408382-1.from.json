@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795739408382-1",
+ "account": "SporranDip",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 56,
+ "claim": "7489cfac-0c06-41a1-98ea-660216e4504c",
+ "count": 0,
+ "ok": false,
+ "at": 1795739805523,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Coal",
+   "requested": 156,
+   "count": 0
+  }
+ ]
+}

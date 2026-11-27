@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739711564,
+ "at": 1795739866584,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,38 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:fluffs",
-   "role": "army"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
   },
   {
    "account": "mmsmk1232",
@@ -211,25 +179,41 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Fingerblastr",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "sweep",
+    "barcrawl"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
+   "goal": "goal:quest_board:barcrawl",
    "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1845"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
   },
   {
    "account": "Wandwaver",
@@ -253,6 +237,21 @@
    "role": "army"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=3 ORDER_MODE=best-effort -- crafting inventory brew:unf_irit_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
+  },
+  {
    "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -272,22 +271,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:235",
    "role": "helper"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=5 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=5 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
   }
  ],
  "army": [
@@ -306,6 +289,7 @@
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
@@ -313,7 +297,7 @@
   "pocketrocket",
   "sausagefest",
   "sporrandip",
-  "thefullmonty",
+  "swordinhand",
   "undermykilt",
   "woodpecker",
   "yewfirst"

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795739444831-1",
+ "account": "SporranBulge",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "c3c20e04-571e-48dc-9f6d-b219b08439af",
+ "count": 0,
+ "ok": false,
+ "at": 1795739777653,
+ "detail": "trade claimed"
+}
