@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795794915294-1",
+ "account": "Fatstack",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 375,
+ "claim": "2541cda3-8cfb-42ae-91a4-88e7eba402a4",
+ "count": 375,
+ "ok": true,
+ "at": 1795795225125,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 375
+ },
+ "bank": {
+  "count": 375,
+  "at": 1795795224386
+ },
+ "logout": {
+  "attemptId": "1795795208867-0000031628-0000000001",
+  "at": 1795795225112,
+  "sha256": "ada66a860bf1b26c00626ea881568316e5b63de442d1602e361249af1e0b7956"
+ },
+ "screen": true
+}

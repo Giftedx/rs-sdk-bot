@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795088012-1",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "9dfab433-41c1-434e-9681-94d8f3fa903f",
+ "count": 0,
+ "ok": false,
+ "at": 1795795229419,
+ "detail": "trade claimed"
+}
