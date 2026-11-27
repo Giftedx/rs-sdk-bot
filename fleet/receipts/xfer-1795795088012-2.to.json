@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795795088012-2",
+ "account": "YewFirst",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "21b98e1c-c719-404d-9398-5df708a2956a",
+ "count": 1,
+ "ok": true,
+ "at": 1795795553599,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795795552791
+ },
+ "logout": {
+  "attemptId": "1795795541168-0000018164-0000000001",
+  "at": 1795795553502,
+  "sha256": "6df03234454228238c1b8ba7aa8f8c0fcdc508466deeb20a415aa830e93ca56f"
+ },
+ "screen": true
+}

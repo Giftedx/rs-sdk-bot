@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795088012-2",
  "account": "Billionaire",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "a598fefb-8460-4590-ba76-370c72c8ef02",
- "count": 0,
- "ok": false,
- "at": 1795795518748,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795795551988,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795795525549
+ },
+ "logout": {
+  "attemptId": "1795795518769-0000006492-0000000001",
+  "at": 1795795551940,
+  "sha256": "1f1951c8b35c93b81897295ffdd01fccb3f093632368aaa97e382aab3af4ba32"
+ },
+ "screen": true
 }
