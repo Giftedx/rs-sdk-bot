@@ -54,7 +54,10 @@ export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 export const MAX_RECOVERY_ATTEMPTS = 2;
 export const NEVER_RECOVERED: readonly string[] = [...RESERVED_ACCOUNTS, 'afknight'];
 const NEVER_RECOVERED_SET = new Set<string>(NEVER_RECOVERED);
-export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:\b| )/;
+// The ends after which a held session is recovered. The recovery only logs in, observes and logs out, so the end of the
+// latest run matters only to keep a death for diagnosis. A release-paused, released (a swarm stop, swarm.ts
+// brainStopEnd) or refused run stopped before or at login, and the held session is then an earlier run's.
+export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped|release-paused|released|refused)(?:\b| |:)/;
 export const END_SETTLE_MS = BOOTSTRAP_STATUS_AGE_MS + 5 * 60_000;
 // The start of the reason a live recovery is deferred with when no native qualification matches the current source.
 // The watchdog reads it to dispatch the hosted qualification (recovery-qualify.ts ensureHostedQualification).

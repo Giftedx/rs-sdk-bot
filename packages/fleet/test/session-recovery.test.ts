@@ -673,3 +673,11 @@ describe('fleet standalone session recovery', () => {
         })).toEqual({ eligible: false, reason: 'death requires diagnosis before recovery', log: true });
     });
 });
+
+test('a held session after a release-paused, released or refused run is recovered; a death is not', async () => {
+    const { RECOVERABLE_END } = await import('../src/session-recovery');
+    for (const reason of ['release-paused after 1 runs', 'released: stopped after 1 runs', 'refused after 1 runs', 'stopped after 2 runs', 'blocked after 2 runs', 'exit 1']) {
+        expect(RECOVERABLE_END.test(reason)).toBe(true);
+    }
+    for (const reason of ['died after 1 runs', 'done after 1 runs']) expect(RECOVERABLE_END.test(reason)).toBe(false);
+});

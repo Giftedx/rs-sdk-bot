@@ -66,3 +66,18 @@ describe('brain run kept when one brain cycle drops it', () => {
         expect(drops.has('a')).toBe(false);
     });
 });
+
+test('a brain run that a swarm stop ended is released; an owner stop, no food or a flee stays stopped', async () => {
+    const { brainStopEnd, SWARM_STOP } = await import('../src/swarm');
+    const own = 'stopped after 1 runs';
+    expect(brainStopEnd(own, 'RESULT fail stop file', SWARM_STOP.removed)).toBe('released: stopped after 1 runs');
+    expect(brainStopEnd(own, 'RESULT fail Error: live admission paused by stop file', undefined)).toBe('released: stopped after 1 runs');
+    expect(brainStopEnd(own, 'RESULT fail Error: cargo stopped chain rounds=1 ok=0 failed=1', SWARM_STOP.drain)).toBe('released: stopped after 1 runs');
+    // The owner's own stop file text keeps the end.
+    expect(brainStopEnd(own, 'RESULT fail stop file', 'owner: hold for the barcrawl test')).toBe(own);
+    // Stops that need a resupply or a heal first.
+    expect(brainStopEnd(own, 'RESULT fail no food', undefined)).toBe(own);
+    expect(brainStopEnd(own, 'RESULT fail ticks=40 hp=3 fled=true', undefined)).toBe(own);
+    // Other ends are untouched.
+    expect(brainStopEnd('blocked after 2 runs', 'RESULT fail stop file', undefined)).toBe('blocked after 2 runs');
+});
