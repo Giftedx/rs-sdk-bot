@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795783762962-1",
+ "account": "Wandwaver",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 14,
+ "claim": "eaa779a0-7779-416c-ac71-d12eab913634",
+ "count": 0,
+ "ok": false,
+ "at": 1795784041229,
+ "detail": "trade claimed"
+}

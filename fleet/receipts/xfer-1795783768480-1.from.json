@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795783768480-1",
+ "account": "SporranDip",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 15,
+ "claim": "22f84587-67c5-484e-aeb7-a5ec79a71943",
+ "count": 0,
+ "ok": false,
+ "at": 1795784027805,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795783935145-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "SporranBulge",
+  "item": "Copper ore",
+  "count": 30,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 30,
+      "itemId": 438
+    }
+  ],
+  "start": 1795783935145,
+  "end": 1795784835145,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

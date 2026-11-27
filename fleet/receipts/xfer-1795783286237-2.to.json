@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795783286237-2",
+ "account": "KnightRider",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "7dbf5399-1e35-4c93-975c-4dfbc31b9579",
+ "count": 0,
+ "ok": false,
+ "at": 1795784005283,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795783025597-1",
  "account": "Unsheathed",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 10,
  "claim": "c74e9017-b4d1-4395-ad6c-ec5af4c1a304",
- "count": 0,
- "ok": false,
- "at": 1795783728403,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795783916459,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795783907350
+ },
+ "logout": {
+  "attemptId": "1795783728412-0000027592-0000000001",
+  "at": 1795783916447,
+  "sha256": "c55cafd507aa5bfe0619e72b091c2cf3f411a0bf31ff8ab079ee46ddbb6bf955"
+ },
+ "screen": true
 }
