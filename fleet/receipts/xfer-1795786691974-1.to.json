@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786691974-1",
  "account": "Fingerblastr",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "57db6875-2e5b-4677-830e-844342f4b5b0",
- "count": 0,
- "ok": false,
- "at": 1795787107999,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795787119917,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795787119169
+ },
+ "logout": {
+  "attemptId": "1795787108009-0000023648-0000000001",
+  "at": 1795787119904,
+  "sha256": "0f931bf2f6fcfc4a8828da42afc951eb32245a73785a77cf0d453d7a64e60d13"
+ },
+ "screen": true
 }

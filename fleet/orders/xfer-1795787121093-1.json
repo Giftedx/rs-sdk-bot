@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795787121093-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "PickpockDick",
+  "item": "Copper ore",
+  "count": 1,
+  "itemId": 436,
+  "start": 1795787121093,
+  "end": 1795788021093,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
