@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795776114542-1",
  "account": "mmsmk1232",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Tarromin",
  "requested": 1,
  "claim": "4716afad-44d2-42cc-b843-3b65dc1b3f9d",
- "count": 0,
- "ok": false,
- "at": 1795776504306,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795776516396,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795776515662
+ },
+ "logout": {
+  "attemptId": "1795776504337-0000017864-0000000001",
+  "at": 1795776516386,
+  "sha256": "845aa824e9dc126edd81637e66c5a41c646453d037ffb9350ff24430147d582b"
+ },
+ "screen": true
 }

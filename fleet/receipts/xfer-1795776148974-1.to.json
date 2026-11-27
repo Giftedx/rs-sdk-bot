@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795776148974-1",
+ "account": "CoinCock",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 246,
+ "claim": "ecf2f4dc-5352-4d54-8e77-941b70608cfd",
+ "count": 246,
+ "ok": true,
+ "at": 1795776526827,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795776526065
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 246
+ },
+ "bank": {
+  "count": 246,
+  "at": 1795776525668
+ },
+ "logout": {
+  "attemptId": "1795776512566-0000018612-0000000001",
+  "at": 1795776526814,
+  "sha256": "2b955455a7b64b93ad35bfe91f57d051f288fefc095fae51fcb5be38d8ef847e"
+ },
+ "screen": true
+}

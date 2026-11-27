@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795776148974-1",
  "account": "Quickhandjob",
  "partner": "CoinCock",
@@ -10,15 +10,37 @@
  "item": "Mind rune",
  "requested": 246,
  "claim": "772fa861-410a-4592-b759-bb528429f368",
- "count": 0,
- "ok": false,
- "at": 1795776439338,
- "detail": "trade claimed",
+ "count": 246,
+ "ok": true,
+ "at": 1795776524805,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795776447282
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 246,
+  "after": 0
+ },
+ "bank": {
+  "count": 246,
+  "at": 1795776446882
+ },
+ "logout": {
+  "attemptId": "1795776439347-0000024744-0000000001",
+  "at": 1795776524796,
+  "sha256": "d11bf6fdb2661e065123c59fb2e85ab4682636e9b4f56537a33fa1c20fd13a24"
+ },
+ "screen": true
 }
