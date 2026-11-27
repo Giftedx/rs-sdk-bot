@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772928239-4",
+ "account": "Swordswallow",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "0fa5de9f-855e-4207-8f56-07c39443987a",
+ "count": 0,
+ "ok": false,
+ "at": 1795773545487,
+ "detail": "trade claimed"
+}
