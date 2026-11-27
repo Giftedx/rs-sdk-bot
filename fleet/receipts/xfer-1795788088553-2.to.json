@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795788088553-2",
  "account": "NabTheKnob",
  "partner": "SporranDip",
@@ -12,6 +12,16 @@
  "claim": "34a616f5-0a2a-4f97-a652-445afb6bdda3",
  "count": 0,
  "ok": false,
- "at": 1795788775370,
- "detail": "trade claimed"
+ "at": 1795788991401,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795788775380-0000009104-0000000001",
+  "at": 1795788991381,
+  "sha256": "4389bd8e39bf15918a4adf8f91c96d684bf04be88c1d8f342bd952cdd32f9b89"
+ },
+ "screen": false
 }
