@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795801698245-1",
+ "account": "Bigpackage",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "fd4853ba-32a1-42b1-a49a-ea2c93b4a87e",
+ "count": 0,
+ "ok": false,
+ "at": 1795801865967,
+ "detail": "trade claimed"
+}
