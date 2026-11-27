@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804161322,
+ "at": 1795804175069,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,7 +97,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "175"
+    "BATCH_UNITS": "172"
    },
    "enabled": true,
    "repeat": false,
@@ -242,6 +242,22 @@
    "role": "auto"
   },
   {
+   "account": "YewGotWood",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "auto"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -264,36 +280,20 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
+   "account": "Quickhandjob",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=54810 TARGET_COUNT=5481 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 -- sweep viking"
+    "sweep",
+    "grandtree"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:viking",
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   }
  ],
  "army": [
@@ -308,6 +308,7 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
@@ -319,7 +320,6 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
