@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795738241135-1",
+ "account": "Swordinhand",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "779dbbb9-cc31-4e20-a64d-00170229f2cf",
+ "count": 1,
+ "ok": true,
+ "at": 1795739120621,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795739119917
+ },
+ "logout": {
+  "attemptId": "1795739108309-0000009228-0000000001",
+  "at": 1795739120609,
+  "sha256": "1791d41f8877febffc8181a334fb6a8a7385125819cdf3e2fc1c5691817dbc90"
+ },
+ "screen": true
+}

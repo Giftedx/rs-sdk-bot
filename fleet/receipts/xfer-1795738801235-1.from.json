@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795738801235-1",
+ "account": "Pullmybow",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "258b4072-c1b6-4293-b98f-c908bec2fc46",
+ "count": 0,
+ "ok": false,
+ "at": 1795739129308,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795738241135-2",
+ "account": "CoinCock",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 7,
+ "claim": "6c3d7091-207a-4cb8-bca1-05b8b04d5932",
+ "count": 7,
+ "ok": true,
+ "at": 1795739102291,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 7
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795739101478
+ },
+ "logout": {
+  "attemptId": "1795739088522-0000025580-0000000001",
+  "at": 1795739102204,
+  "sha256": "49723b0557d0485f41a5334cceccf10a4a16f46111f56bddce340b1fc36ae3ad"
+ },
+ "screen": true
+}
