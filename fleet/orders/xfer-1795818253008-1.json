@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795818253008-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "ChaosInPants",
+  "to": "FishAndChips",
+  "item": "Dragon bones",
+  "count": 48,
+  "itemId": 536,
+  "start": 1795818253008,
+  "end": 1795819153008,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
