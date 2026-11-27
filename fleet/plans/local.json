@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791937797,
+ "at": 1795791967869,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,28 @@
    "role": "pvp"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
@@ -72,6 +94,25 @@
    "repeat": false,
    "goal": "goal:supply_chain:257",
    "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1724",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
    "account": "Sausagefest",
@@ -406,7 +447,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
@@ -417,7 +457,6 @@
   "pocketrocket",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "woodpecker",
   "yewfirst"
  ],
