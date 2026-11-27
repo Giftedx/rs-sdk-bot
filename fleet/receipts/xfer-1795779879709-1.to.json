@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779879709-1",
  "account": "BowBeforeMe",
  "partner": "MineYourBiz",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 1,
  "claim": "5d7d874d-d623-491f-972a-37c62266dfe8",
- "count": 0,
- "ok": false,
- "at": 1795780484940,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795780750211,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795780749479
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795780749067
+ },
+ "logout": {
+  "attemptId": "1795780484970-0000030620-0000000001",
+  "at": 1795780750201,
+  "sha256": "aedfb8f099023b9ce1f0e117b57633673e84457ed99f2d05cb6db6d78285adbc"
+ },
+ "screen": true
 }

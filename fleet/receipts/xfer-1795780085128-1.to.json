@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795780085128-1",
  "account": "Swordinhand",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "f634f2b9-fb9e-44fb-8c23-530d3cf12548",
- "count": 0,
- "ok": false,
- "at": 1795780720993,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795780733657,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795780732670
+ },
+ "logout": {
+  "attemptId": "1795780721032-0000020364-0000000001",
+  "at": 1795780733425,
+  "sha256": "59782c96284eb4dc3d0b22fbe500dc6129d596f97e9d4d3c99264eadd3d88286"
+ },
+ "screen": true
 }
