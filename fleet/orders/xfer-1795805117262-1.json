@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805117262-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "Woodenstaff",
+  "item": "Herb",
+  "count": 3,
+  "itemId": 205,
+  "start": 1795805117262,
+  "end": 1795806017262,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
