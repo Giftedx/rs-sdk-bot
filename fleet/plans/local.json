@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795742054277,
+ "at": 1795742076541,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,22 @@
    "role": "pvp"
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=556 \"ITEMS=Air rune\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy runeshop 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
@@ -74,12 +90,49 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "39",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "9"
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +145,33 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "9"
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -105,20 +184,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "9"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "9"
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +197,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "9"
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -252,58 +318,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1639",
    "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "army"
   }
  ],
  "army": [
@@ -316,7 +330,6 @@
   "ballspinner",
   "bowbeforeme",
   "dipstick",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "mineyourbiz",
