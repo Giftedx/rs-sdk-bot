@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795744513213-1",
  "account": "Swordinhand",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Marrentill",
  "requested": 1,
  "claim": "019ced0d-1b16-4e03-8eca-ceab9a92d384",
- "count": 0,
- "ok": false,
- "at": 1795744654121,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795744680750,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795744659996
+ },
+ "logout": {
+  "attemptId": "1795744654130-0000023712-0000000001",
+  "at": 1795744680738,
+  "sha256": "2240f705ad53e8a75f7b1a9a9cd3cc576e994d38d38cc1e08e4c78b77beaeeab"
+ },
+ "screen": true
 }
