@@ -158,6 +158,15 @@ test('the progress line prints the game progress, says when it was not read, and
     expect(nowLines(state(), local(), NOW).some(l => l.startsWith('progress'))).toBe(false);
 });
 
+test('the idle line warns when one blocker idles 10 or more accounts, and is left out for planned idle states', () => {
+    const progress = (idle: [string, number][]): ProgressReport => ({ hours: 24, since: NOW - 24 * 3_600_000, now: NOW, maxBots: 25,
+        sessions: null, runs: null, gains: null, work: { at: NOW, withWork: 0, idle }, errors: [] });
+    const lines = nowLines(null, local({ progress: progress([['unresolvable_supply:1289', 32], ['missing_skill_unlock:Hitpoints', 20], ['dead', 13], ['missing_skill_unlock:Magic', 2]]) }), NOW);
+    expect(lines).toContain('idle    WARN 32 accounts on unresolvable_supply:1289, 20 accounts on missing_skill_unlock:Hitpoints (one blocker on 10 or more accounts; bun tools/progress.ts)');
+    expect(nowLines(null, local({ progress: progress([['max_bots_limit', 40], ['paused_owner', 12], ['campaign_state_staging', 18]]) }), NOW).some(l => l.startsWith('idle'))).toBe(false);
+    expect(nowLines(null, local({ progress: null }), NOW).some(l => l.startsWith('idle'))).toBe(false);
+});
+
 test('readSwarmStops and resolveSyncedLeasesDir prefer .practice/live/ and fall back to legacy paths', () => {
     const base = mkdtempSync(join(tmpdir(), 'now-live-'));
     try {
