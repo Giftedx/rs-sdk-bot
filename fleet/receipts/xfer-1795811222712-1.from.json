@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795811222712-1",
  "account": "mmtha0205",
  "partner": "KnightRider",
@@ -10,8 +10,18 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "3a2afb45-5a1a-4d13-ab69-3c7f2bad374c",
- "count": 0,
- "ok": false,
- "at": 1795811516453,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795811581548,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795811516464-0000024556-0000000001",
+  "at": 1795811581525,
+  "sha256": "dcfa8f5e79719c4f62da8b6218f896d878db13054d7116c7ae6eeb610b355924"
+ },
+ "screen": true
 }
