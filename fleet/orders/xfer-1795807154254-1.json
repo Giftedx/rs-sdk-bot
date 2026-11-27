@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795807154254-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BackdoorMan",
+  "to": "BoneToPick",
+  "item": "Air rune",
+  "count": 25,
+  "itemId": 556,
+  "start": 1795807154254,
+  "end": 1795808054254,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
