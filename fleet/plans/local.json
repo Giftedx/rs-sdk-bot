@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795809734285,
+ "at": 1795809760444,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "118",
+    "MAX_ITEMS": "120",
     "COIN_RESERVE": "1000",
-    "FLOAT": "25600",
+    "FLOAT": "26000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "118"
+    "BATCH_UNITS": "120"
    },
    "enabled": true,
    "repeat": false,
@@ -100,32 +100,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:gear_collection:892",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -150,7 +125,32 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "Ballspinner",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:gear_collection:892",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:gear_collection:892",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -160,14 +160,14 @@
    "env": {
     "ITEM_ID": "556",
     "ITEMS": "Air rune",
-    "MAX_ITEMS": "243",
+    "MAX_ITEMS": "219",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "243"
+    "BATCH_UNITS": "219"
    },
    "enabled": true,
    "repeat": false,
@@ -198,7 +198,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "409"
+    "BATCH_UNITS": "549"
    },
    "enabled": true,
    "repeat": false,
@@ -262,19 +262,21 @@
    ]
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=409 -- thieving knights"
-   ],
+   "account": "Spitroaster",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Fingersmith",
@@ -331,28 +333,6 @@
    "role": "auto"
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-22-o0-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "22",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -372,6 +352,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:93",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1315",
+    "ITEMS": "Mithril 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1315",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1315",
    "role": "auto"
   },
   {
@@ -414,6 +419,25 @@
    "role": "auto"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -437,25 +461,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:554",
    "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1657",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
   }
  ],
  "army": [
