@@ -600,3 +600,48 @@ test('a flee stop ends the job: a restart would log in at low hitpoints with no 
         expect(n).toBe(1);
     }
 });
+
+test('a worker that spins with no output and no status write is ended, and the job ends as blocked', async () => {
+    const { runWorker, STALL_RESULT } = await import('../src/supervise');
+    const root = mkdtempSync(join(tmpdir(), 'supervise-stall-'));
+    try {
+        // A busy loop like Woodpecker's aio-fighter: one CPU core, no output, no status write.
+        const started = Date.now();
+        const r = await runWorker(['bun', '-e', 'while (true) {}'], {
+            accounts: ['Spinner'], root, stallMs: 1500, checkMs: 100,
+            match: { stdout: l => l.startsWith('RESULT') ? 'RESULT' : null, stderr: () => null },
+            write: { stdout: () => undefined, stderr: () => undefined },
+        });
+        expect(r.stalled).toBe(true);
+        expect(r.exitCode).not.toBe(0);
+        expect(r.stdout).toContain(STALL_RESULT);
+        expect(Date.now() - started).toBeLessThan(15_000);
+        const ended = await supervise({ run: async () => ({ stdout: r.stdout, exitCode: r.exitCode }), stopped: () => false, pause: async () => {}, maxRestarts: 5 });
+        expect(ended).toEqual({ reason: 'blocked', runs: 1 });
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+}, 30_000);
+
+test('a status write keeps a quiet worker alive past the stall limit', async () => {
+    const { runWorker } = await import('../src/supervise');
+    const root = mkdtempSync(join(tmpdir(), 'supervise-quiet-'));
+    const dir = join(root, '.practice', 'live', 'status');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, 'Quiet.json');
+    const tick = setInterval(() => writeFileSync(file, '{}'), 200);
+    try {
+        // A quiet fight: no output for 2 s, but a status write every 200 ms.
+        const r = await runWorker(['bun', '-e', 'await Bun.sleep(2000); console.log("RESULT ok")'], {
+            accounts: ['Quiet'], root, stallMs: 1000, checkMs: 100,
+            match: { stdout: l => l.startsWith('RESULT') ? 'RESULT' : null, stderr: () => null },
+            write: { stdout: () => undefined, stderr: () => undefined },
+        });
+        expect(r.stalled).toBe(false);
+        expect(r.exitCode).toBe(0);
+        expect(r.stdout).toContain('RESULT ok');
+    } finally {
+        clearInterval(tick);
+        rmSync(root, { recursive: true, force: true });
+    }
+}, 30_000);

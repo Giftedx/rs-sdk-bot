@@ -8,8 +8,66 @@
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {unplacedCause} from '../../core/src/order-refusal';
-import {hasStopFile,readStopFile} from '../../core/src/practice-paths';
+import {hasStopFile,readStopFile,statusReadDirs} from '../../core/src/practice-paths';
 import {DRAIN_STOP_TEXT,workerDrain} from '../../core/src/live-update-pending';
+import {killTree} from '../../core/src/proc';
+import {existsSync,statSync} from 'node:fs';
+import {join} from 'node:path';
+
+// A worker whose event loop is blocked (a synchronous loop) prints nothing and writes no status, but its process
+// stays up: Woodpecker's aio-fighter held one CPU core and 3.5 GB for 70 minutes, and its old status row held every
+// live start of a new release ("release peer state unknown"). A healthy run writes its status file about once a
+// game tick. With no output and no status write for STALL_MS the run's whole process tree ends.
+export const STALL_MS = 15 * 60_000;
+export const STALL_RESULT = 'RESULT fail no worker progress: stalled with no output and no status write';
+
+// The newest status file write of the accounts, in ms; 0 when none exists.
+export function newestStatusWrite(accounts: readonly string[], root = process.cwd()): number {
+    let newest = 0;
+    for (const dir of statusReadDirs(root)) {
+        for (const a of accounts) {
+            const file = join(dir, `${a}.json`);
+            try { if (existsSync(file)) newest = Math.max(newest, statSync(file).mtimeMs); } catch { /* a file being replaced */ }
+        }
+    }
+    return newest;
+}
+
+// Runs one worker command and ends its process tree when it stalls (STALL_MS with no output and no status write).
+export async function runWorker(cmd: readonly string[], opts: {
+    accounts: readonly string[];
+    root?: string;
+    stallMs?: number;
+    checkMs?: number;
+    env?: Record<string, string | undefined>;
+    match: { stdout: (line: string) => string | null; stderr: (line: string) => string | null };
+    write?: { stdout: (c: string) => unknown; stderr: (c: string) => unknown };
+}): Promise<{ stdout: string; stderr: string; exitCode: number; stalled: boolean }> {
+    const started = Date.now(), stallMs = opts.stallMs ?? STALL_MS;
+    let lastOutput = started, stalled = false;
+    const p = Bun.spawn([...cmd], { stdout: 'pipe', stderr: 'pipe', env: opts.env ?? process.env, windowsHide: true });
+    const out = opts.write ?? { stdout: (c: string) => process.stdout.write(c), stderr: (c: string) => process.stderr.write(c) };
+    const watch = setInterval(() => {
+        const last = Math.max(started, lastOutput, newestStatusWrite(opts.accounts, opts.root));
+        if (Date.now() - last < stallMs || stalled) return;
+        stalled = true;
+        clearInterval(watch);
+        void killTree(p.pid);
+    }, opts.checkMs ?? 30_000);
+    try {
+        const [stdout, stderr] = await Promise.all([
+            keepOutput(p.stdout, opts.match.stdout, c => { lastOutput = Date.now(); return out.stdout(c); }),
+            keepOutput(p.stderr, opts.match.stderr, c => { lastOutput = Date.now(); return out.stderr(c); }),
+        ]);
+        const exitCode = await p.exited;
+        if (!stalled) return { stdout, stderr, exitCode, stalled };
+        const line = `${STALL_RESULT} for ${Math.round(stallMs / 60_000)} min`;
+        out.stdout(`${line}\n`);
+        return { stdout: `${stdout}\n${line}\n`, stderr, exitCode: exitCode || 1, stalled };
+    } finally {
+        clearInterval(watch);
+    }
+}
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -302,12 +360,15 @@ if (import.meta.main) {
         run: async () => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
-            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'pipe', env: process.env ,windowsHide:true});
-            const [stdout, stderr] = await Promise.all([
-                keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : null),
-                keepOutput(p.stderr, l => isUncaughtErrorLine(l) ? 'ERROR' : null, c => process.stderr.write(c)),
-            ]);
-            return { stdout, stderr, exitCode: await p.exited };
+            const r = await runWorker(workerCommand(bot,script,scriptArgs), {
+                accounts: participants,
+                root: process.cwd(),
+                match: {
+                    stdout: l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : null,
+                    stderr: l => isUncaughtErrorLine(l) ? 'ERROR' : null,
+                },
+            });
+            return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode };
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),
         pause: ms => Bun.sleep(ms),
