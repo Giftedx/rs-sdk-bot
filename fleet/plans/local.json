@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799450146,
+ "at": 1795799463713,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -146,20 +146,17 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
+    "loot-trip"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
