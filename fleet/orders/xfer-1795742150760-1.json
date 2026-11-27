@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742150760-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Quickhandjob",
+  "item": "Law rune",
+  "count": 30,
+  "itemId": 563,
+  "start": 1795742150760,
+  "end": 1795743050760,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
