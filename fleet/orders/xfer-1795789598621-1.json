@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795789598621-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "BowBeforeMe",
+  "item": "Lobster",
+  "count": 10,
+  "itemId": 379,
+  "start": 1795789598621,
+  "end": 1795790498621,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
