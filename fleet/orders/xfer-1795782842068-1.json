@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795782842068-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "YewFirst",
+  "item": "Unicorn horn dust",
+  "count": 1,
+  "itemId": 235,
+  "start": 1795782842068,
+  "end": 1795783742068,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
