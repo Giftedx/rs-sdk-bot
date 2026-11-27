@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795773810055-1",
+ "account": "Swordinhand",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "f26614d5-bd1e-41f4-9b36-254c3d82e10a",
+ "count": 0,
+ "ok": false,
+ "at": 1795774453056,
+ "detail": "trade claimed"
+}
