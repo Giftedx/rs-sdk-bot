@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740593175-1",
  "account": "Moneyshot",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 560,
  "claim": "c10ff8bc-8022-4193-a31c-5b03042386d8",
- "count": 0,
- "ok": false,
- "at": 1795740802580,
- "detail": "trade claimed"
+ "count": 560,
+ "ok": true,
+ "at": 1795741020505,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1520,
+  "after": 960
+ },
+ "logout": {
+  "attemptId": "1795740802934-0000021640-0000000001",
+  "at": 1795741020493,
+  "sha256": "e1bcc0bdc30d043beb75e132bfd730066973fc62a22cca82f44c8f7665b3e64d"
+ },
+ "screen": true
 }

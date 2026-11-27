@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740688170-1",
+ "account": "Billionaire",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 5,
+ "claim": "6a745793-98a0-438c-a463-dfca559e663f",
+ "count": 0,
+ "ok": false,
+ "at": 1795741090421,
+ "detail": "trade claimed"
+}

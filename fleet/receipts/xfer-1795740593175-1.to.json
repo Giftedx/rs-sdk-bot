@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795740593175-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 560,
+ "claim": "f5e0504e-dcb6-4e16-9545-1812fec5c451",
+ "count": 560,
+ "ok": true,
+ "at": 1795741022456,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 560
+ },
+ "bank": {
+  "count": 560,
+  "at": 1795741021415
+ },
+ "logout": {
+  "attemptId": "1795741008491-0000023692-0000000001",
+  "at": 1795741022105,
+  "sha256": "99542e470731600104167b0b343a05d8df1f43e6ced3a29e4c2d931195df8afd"
+ },
+ "screen": true
+}

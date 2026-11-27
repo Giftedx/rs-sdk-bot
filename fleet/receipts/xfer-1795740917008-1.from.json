@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740917008-1",
+ "account": "Wandwaver",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "22c53338-60d6-4ae5-9558-3fc17ed04ab3",
+ "count": 0,
+ "ok": false,
+ "at": 1795741075775,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
