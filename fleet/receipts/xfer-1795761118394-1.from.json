@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795761118394-1",
+ "account": "Woodenstaff",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 4,
+ "claim": "9f59faf2-28be-420e-960f-37b7ac553435",
+ "count": 4,
+ "ok": true,
+ "at": 1795761403560,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795761381160-0000010156-0000000001",
+  "at": 1795761403538,
+  "sha256": "5ed4bd26905962e5b3093753c0aa40769e2a379d3d7baf34b02fef539f1d383b"
+ },
+ "screen": true
+}
