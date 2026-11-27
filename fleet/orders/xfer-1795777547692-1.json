@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795777547692-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "BowBeforeMe",
+  "item": "Gold bar",
+  "count": 3,
+  "itemId": 2357,
+  "start": 1795777547692,
+  "end": 1795778447692,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
