@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795780626138-1",
  "account": "Quickhandjob",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 300,
  "claim": "b2a7ef45-4ff4-41e1-af71-cbb6689171e8",
- "count": 0,
- "ok": false,
- "at": 1795781236976,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795781249860,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795781249058
+ },
+ "logout": {
+  "attemptId": "1795781236989-0000016588-0000000001",
+  "at": 1795781249846,
+  "sha256": "915987433e0aa840bcfcc940821d1a49a925f54098b7971685f3cd4d7800e4cf"
+ },
+ "screen": true
 }

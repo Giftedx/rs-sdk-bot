@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795780598145-2",
  "account": "Moneyshot",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Adamant pickaxe",
  "requested": 1,
  "claim": "efd0a408-ecbe-4515-8b36-c6ae7d4b0897",
- "count": 0,
- "ok": false,
- "at": 1795781166759,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795781249795,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795781238648
+ },
+ "logout": {
+  "attemptId": "1795781166769-0000010028-0000000001",
+  "at": 1795781249783,
+  "sha256": "b67689d4aa8acd6f10acd72f40fc7fa30916a4bed03172a17a1ec79da5c0b0a1"
+ },
+ "screen": true
 }
