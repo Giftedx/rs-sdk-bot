@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795783025597-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "BowBeforeMe",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795783025597,
+  "end": 1795783925597,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
