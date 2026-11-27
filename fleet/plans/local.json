@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748329589,
+ "at": 1795748478191,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,37 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:385 BATCH_UNITS=26 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:fullblooded:item:385",
-   "role": "auto"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -112,6 +81,24 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -221,24 +208,18 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/aio-skiller.ts",
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "grind:chocolate_bar"
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=10 TARGET_COUNT=29 CAP=1000 -- fletching shafts",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:grindmyherb:item:1975",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
+   "goal": "goal:quest_board:desertrescue",
    "role": "army"
   }
  ],
@@ -261,7 +242,7 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
-  "oreelse",
+  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -271,7 +252,7 @@
   "sporrandip",
   "swordinhand",
   "undermykilt",
-  "woodpecker"
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
