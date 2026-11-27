@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795784679943-1",
+ "account": "TheFullMonty",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 5,
+ "claim": "b76f34c7-d69b-4b53-a4b0-f9e1bb26f29d",
+ "count": 5,
+ "ok": true,
+ "at": 1795785197437,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795785196443
+ },
+ "logout": {
+  "attemptId": "1795785187091-0000030776-0000000001",
+  "at": 1795785197190,
+  "sha256": "0fb6e60c0eeff894afa9e6bd23816737df92bcb302fcbef7a76caca5c7b9be22"
+ },
+ "screen": true
+}

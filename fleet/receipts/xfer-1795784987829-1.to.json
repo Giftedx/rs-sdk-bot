@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784987829-1",
+ "account": "Woodenstaff",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "0a5dca78-2be6-4a8f-b647-124393b574d4",
+ "count": 0,
+ "ok": false,
+ "at": 1795785215276,
+ "detail": "trade claimed"
+}

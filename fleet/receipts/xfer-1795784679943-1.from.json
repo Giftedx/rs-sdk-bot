@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784679943-1",
  "account": "Hocuspokeus",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Snape grass",
  "requested": 5,
  "claim": "b4d1433e-e2a5-4579-87f2-3bb900815521",
- "count": 0,
- "ok": false,
- "at": 1795785033137,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795785195583,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795785181665
+ },
+ "logout": {
+  "attemptId": "1795785033149-0000014452-0000000001",
+  "at": 1795785195570,
+  "sha256": "491fe2ae5b1a84d2a3fd44932c2b29f4557747373db4caab4a2e7fa2df9db671"
+ },
+ "screen": true
 }
