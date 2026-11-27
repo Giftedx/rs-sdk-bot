@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795752116210-1",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 1,
+ "claim": "48e39ec9-0380-46a6-83d4-1a1ab12cf42c",
+ "count": 0,
+ "ok": false,
+ "at": 1795752197365,
+ "detail": "trade claimed"
+}
