@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795785197517-3",
+ "account": "Shaftsinker",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "f3929cc2-5fbd-4cfd-9ea3-cdf33613566d",
+ "count": 3,
+ "ok": true,
+ "at": 1795785451185,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795785450444
+ },
+ "logout": {
+  "attemptId": "1795785438450-0000027240-0000000001",
+  "at": 1795785451172,
+  "sha256": "4fde033005ad0ee2e7a5674dc8ebc2eed86b897690cb82aeb6dc7c7fb2ad94a8"
+ },
+ "screen": true
+}
