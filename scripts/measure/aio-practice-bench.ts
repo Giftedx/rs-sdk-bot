@@ -526,7 +526,7 @@ console.log('SAVES_DONE');`;
       }),
       run: (script, name, timeoutMs, args = []) => timed('scriptMs', async () => {
         // A case can name the account of this run, a partner and the save file in its arguments and job files.
-        const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w)\}/g, (_all, suffix) => name + suffix)
+        const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w+)\}/g, (_all, suffix) => name + suffix)
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
         const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env, ...(ackFile ? { SIM_ACK_FILE: ackFile } : {}) } }); // Bun.spawn does not pass env set at run time unless given

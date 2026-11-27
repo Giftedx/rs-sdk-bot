@@ -449,7 +449,9 @@ const noAntipoison = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.i
 const foodForAntipoison = (cfg: SaveConfig): SaveConfig => { const inv = cfg.inventory!.filter(i => i.id !== ANTIPOISON_3); return {...cfg, inventory: [...inv, ...Array.from({length: Math.max(0, Math.min(4, 28 - inv.length))}, () => ({id: SHARK, count: 1}))]}; };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
-  const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
+  // One character for the first 35 companions, then two (`bb`, `bc`, ...): 49 gang accounts and a squad need more than 35.
+  const one = 'bcdefghijklmnopqrstuvwxyz0123456789'.split(''), two = one.flatMap(p => one.map(s => p + s));
+  const group = size + sizeB, letters = [...one, ...two].slice(0, groups * group - 1);
   const sideA = (i: number) => i % group < size;
   const kitOf = (kits: string, member: number) => { const list = kits.split('+'); return list[member % list.length]!; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kitOf(kitA, 0), at.x + 2, at.z), output: /wins=(\d+)/,
@@ -1288,6 +1290,8 @@ return [
   // The gang's stack of 49 accounts in the same kit on the single-way tiles at (3135, 3602), Wilderness level 11: a squad
   // against 12 of them, each side's accounts against their own (SPAR_*_PICK=pair), the rest wait for a free target.
   ...([6, 10] as const).map(n => teamCase(`extra:team-${n}v12-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 12)),
+  // The squad against all 49 of the stack: the squad size that kills the stack with no deaths, from one pack each.
+  ...([6, 10, 15, 20, 25] as const).map(n => teamCase(`extra:team-${n}v49-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=3000'], 49)),
   // The four against the skulled gang (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
   teamCase('extra:team-4v3-gang-skull-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   // A squad against one runner (kit runner, SPAR_B_OPTS {"escapeAt":60}: its food gone at 60 HP or less it runs south
