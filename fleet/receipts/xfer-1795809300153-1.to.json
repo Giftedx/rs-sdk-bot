@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795809300153-1",
+ "account": "Billionaire",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "7cd3c677-1cd4-4a47-b933-d6404eb89c13",
+ "count": 0,
+ "ok": false,
+ "at": 1795809911428,
+ "detail": "trade claimed"
+}
