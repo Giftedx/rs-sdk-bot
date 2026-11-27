@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795754670594-1",
+ "account": "Quickhandjob",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 5,
+ "claim": "ddaf3ce4-5993-47d4-8797-fccd73a0f65c",
+ "count": 5,
+ "ok": true,
+ "at": 1795754915465,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795754914739
+ },
+ "logout": {
+  "attemptId": "1795754906084-0000025232-0000000001",
+  "at": 1795754915454,
+  "sha256": "b9d660de7757063dbcd21143133f65f1b1c776243a96e850492c587fd0c0e601"
+ },
+ "screen": true
+}

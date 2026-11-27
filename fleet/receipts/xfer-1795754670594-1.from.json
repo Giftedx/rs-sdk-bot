@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795754670594-1",
  "account": "Spitroaster",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 5,
  "claim": "480d84bc-3f0e-4266-b8eb-3aad8685d28f",
- "count": 0,
- "ok": false,
- "at": 1795754741381,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795754913843,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795754899490
+ },
+ "logout": {
+  "attemptId": "1795754741389-0000030052-0000000001",
+  "at": 1795754913834,
+  "sha256": "8d1854968caa841e2b4fe08ae4357372e0736edd5426ad9cd58fd2e92b622d63"
+ },
+ "screen": true
 }
