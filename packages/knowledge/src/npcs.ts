@@ -9,6 +9,9 @@ export interface Npc {
     combat: number;
     src: string;
     spawns: { x: number; z: number; level: number; src: string }[];
+    // blockwalk=all: the engine sets block collision on the npc's tiles, so no player steps through it
+    // (World.ts addNpc, PathingEntity.ts refreshZonePresence). Absent for every other blockwalk value.
+    blockwalk?: 'all';
 }
 
 // Matches tools/pack/config/NpcConfig.ts: `hide` packs as 0, an absent vislevel as 1.
@@ -37,6 +40,7 @@ export function buildNpcs(blocks: ConfigBlock[], pack: Map<number, string>, spaw
             combat: combatLevel(b.props.vislevel?.[0]),
             src: `${b.file}:${b.line}`,
             spawns: byId.get(id) ?? [],
+            ...(b.props.blockwalk?.[0] === 'all' ? { blockwalk: 'all' as const } : {}),
         });
     }
     return out.sort((a, b) => a.id - b.id);

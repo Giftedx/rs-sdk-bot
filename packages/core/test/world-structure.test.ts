@@ -177,6 +177,7 @@ test('world facade preserves the public runtime export surface', async () => {
     expect(Object.keys(worldFacade).sort()).toEqual([
         'ROUTE_BUDGET_MS',
         'blockedDoorsNear',
+        'blockwalkNpcIds',
         'canonicalTransport',
         'canonicalTransportLeg',
         'createWorld',
@@ -184,6 +185,7 @@ test('world facade preserves the public runtime export surface', async () => {
         'doorBlocks',
         'installDoorPolicy',
         'interactionApproach',
+        'npcBlockTiles',
         'routeFares',
         'rsPathLength',
         'transportAllowed',

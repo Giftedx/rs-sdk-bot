@@ -23240,7 +23240,8 @@
     "level": 0,
     "src": "maps/m43_49.jm2:9176"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 152,
@@ -23333,7 +23334,8 @@
     "level": 0,
     "src": "maps/m49_52.jm2:8818"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 153,
@@ -28416,7 +28418,8 @@
     "level": 0,
     "src": "maps/m43_73.jm2:6155"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 222,
@@ -29542,7 +29545,8 @@
     "level": 0,
     "src": "maps/m41_154.jm2:8680"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 275,
@@ -29563,7 +29567,8 @@
     "level": 0,
     "src": "maps/m41_154.jm2:8677"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 276,
@@ -29586,7 +29591,8 @@
   "debugname": "ikov_firewarrior",
   "combat": 84,
   "src": "scripts/quests/quest_ikov/configs/quest_ikov.npc:210",
-  "spawns": []
+  "spawns": [],
+  "blockwalk": "all"
  },
  {
   "id": 278,
@@ -39788,7 +39794,8 @@
     "level": 0,
     "src": "maps/m51_54.jm2:7756"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 768,
@@ -43773,7 +43780,8 @@
     "level": 0,
     "src": "maps/m37_73.jm2:8252"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 940,
@@ -44930,7 +44938,8 @@
     "level": 0,
     "src": "maps/m37_149.jm2:3007"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 987,
@@ -50408,7 +50417,8 @@
     "level": 0,
     "src": "maps/m44_157.jm2:15962"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1151,
@@ -53047,7 +53057,8 @@
     "level": 0,
     "src": "maps/m56_54.jm2:6425"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1227,
@@ -58213,7 +58224,8 @@
     "level": 0,
     "src": "maps/m43_43.jm2:10024"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1432,
@@ -58228,7 +58240,8 @@
     "level": 0,
     "src": "maps/m43_43.jm2:10017"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1433,
@@ -58870,7 +58883,8 @@
     "level": 0,
     "src": "maps/m43_43.jm2:10070"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1461,
@@ -58885,7 +58899,8 @@
     "level": 0,
     "src": "maps/m43_43.jm2:10058"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1462,
@@ -58900,7 +58915,8 @@
     "level": 0,
     "src": "maps/m43_43.jm2:10060"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1463,
@@ -61181,7 +61197,8 @@
   "debugname": "castlewars_barricade_saradomin",
   "combat": 0,
   "src": "scripts/_unpack/289/all.npc:90",
-  "spawns": []
+  "spawns": [],
+  "blockwalk": "all"
  },
  {
   "id": 1533,
@@ -61189,7 +61206,8 @@
   "debugname": "castlewars_barricade_burning_saradomin",
   "combat": 0,
   "src": "scripts/_unpack/289/all.npc:109",
-  "spawns": []
+  "spawns": [],
+  "blockwalk": "all"
  },
  {
   "id": 1534,
@@ -61197,7 +61215,8 @@
   "debugname": "castlewars_barricade_zamorak",
   "combat": 0,
   "src": "scripts/_unpack/289/all.npc:134",
-  "spawns": []
+  "spawns": [],
+  "blockwalk": "all"
  },
  {
   "id": 1535,
@@ -61205,7 +61224,8 @@
   "debugname": "castlewars_barricade_burning_zamorak",
   "combat": 0,
   "src": "scripts/_unpack/289/all.npc:153",
-  "spawns": []
+  "spawns": [],
+  "blockwalk": "all"
  },
  {
   "id": 1536,
@@ -61504,7 +61524,8 @@
     "level": 0,
     "src": "maps/m43_69.jm2:7698"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1543,
@@ -61570,7 +61591,8 @@
     "level": 0,
     "src": "maps/m43_69.jm2:7697"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1545,
@@ -61585,7 +61607,8 @@
     "level": 0,
     "src": "maps/m42_70.jm2:7416"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1546,
@@ -61600,7 +61623,8 @@
     "level": 0,
     "src": "maps/m42_70.jm2:7414"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1547,
@@ -61615,7 +61639,8 @@
     "level": 0,
     "src": "maps/m42_70.jm2:7415"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1548,
@@ -61630,7 +61655,8 @@
     "level": 0,
     "src": "maps/m42_70.jm2:7417"
    }
-  ]
+  ],
+  "blockwalk": "all"
  },
  {
   "id": 1549,

@@ -25,3 +25,4 @@ export {
     rsPathLength,
 } from './world/pathfinding';
 export { createWorld } from './world/search';
+export { blockwalkNpcIds, npcBlockTiles } from './world/npc-blocks';
