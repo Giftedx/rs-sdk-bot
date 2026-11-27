@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795800554852-1",
  "account": "Quickhandjob",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 38,
  "claim": "3b299a74-e3bb-46f8-a8a8-3f5662da0831",
- "count": 0,
- "ok": false,
- "at": 1795800918090,
- "detail": "trade claimed"
+ "count": 38,
+ "ok": true,
+ "at": 1795800947244,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 38
+ },
+ "bank": {
+  "count": 38,
+  "at": 1795800946502
+ },
+ "logout": {
+  "attemptId": "1795800918101-0000007576-0000000001",
+  "at": 1795800947225,
+  "sha256": "688865ec928b0f32e3bae1e7cb0c54facc0220a44b4b9121361a402622b34275"
+ },
+ "screen": true
 }

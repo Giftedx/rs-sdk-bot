@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795800948652-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Nockitoff",
+  "to": "Quickhandjob",
+  "item": "Staff of fire",
+  "count": 1,
+  "itemId": 1387,
+  "start": 1795800948652,
+  "end": 1795801848652,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
