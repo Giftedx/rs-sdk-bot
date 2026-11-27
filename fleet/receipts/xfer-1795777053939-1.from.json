@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795777053939-1",
  "account": "Pocketpython",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "919ea497-274a-4516-b87d-6d36c86ada19",
- "count": 0,
- "ok": false,
- "at": 1795777497918,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795777520545,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795777504027
+ },
+ "logout": {
+  "attemptId": "1795777497928-0000008952-0000000001",
+  "at": 1795777520370,
+  "sha256": "04a36d1ccd073a0f5add79dbf7d96a4dd400989b78acddbf3b44c5d1a80f25dc"
+ },
+ "screen": true
 }
