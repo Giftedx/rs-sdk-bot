@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795780692461-1",
  "account": "Wandwaver",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(3)",
  "requested": 2,
  "claim": "fdd04dca-a6d7-4adf-a452-17daea5b141d",
- "count": 0,
- "ok": false,
- "at": 1795781181617,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795781205404,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795781191426
+ },
+ "logout": {
+  "attemptId": "1795781181644-0000031124-0000000001",
+  "at": 1795781205388,
+  "sha256": "012822add4da25be5cfec4280419a8077ff1c26ba4d26a5d9981ac82fc9ee80e"
+ },
+ "screen": true
 }

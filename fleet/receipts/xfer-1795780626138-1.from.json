@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780626138-1",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 300,
+ "claim": "633c1242-bf61-401e-a670-241fc4b1d086",
+ "count": 0,
+ "ok": false,
+ "at": 1795781232477,
+ "detail": "trade claimed"
+}

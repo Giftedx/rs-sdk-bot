@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795780647437-1",
  "account": "Woodenstaff",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Tarromin",
  "requested": 1,
  "claim": "cbf396ad-aa13-4a17-b0ef-af27cca83cd5",
- "count": 0,
- "ok": false,
- "at": 1795781201203,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795781212615,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795781211840
+ },
+ "logout": {
+  "attemptId": "1795781201211-0000020136-0000000001",
+  "at": 1795781212598,
+  "sha256": "8314064bf8f10249c4d724fe72d5906b54f016525022ef3627bfc5621b1037d6"
+ },
+ "screen": true
 }
