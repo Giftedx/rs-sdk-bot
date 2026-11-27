@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804567647,
+ "at": 1795804584480,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,7 +97,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "125"
+    "BATCH_UNITS": "123"
    },
    "enabled": true,
    "repeat": false,
@@ -159,7 +159,7 @@
    ]
   },
   {
-   "account": "YewGotWood",
+   "account": "Spitroaster",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -176,19 +176,21 @@
    ]
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
-   ],
+   "account": "YewGotWood",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Fingersmith",
