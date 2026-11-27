@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795790063280-1",
+ "account": "Billionaire",
+ "partner": "TossTheCaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ee2d3e2c-1f17-4343-8029-8a9fb1cf345e",
+ "count": 0,
+ "ok": false,
+ "at": 1795790279102,
+ "detail": "trade claimed"
+}

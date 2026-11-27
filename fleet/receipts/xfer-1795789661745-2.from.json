@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795789661745-2",
+ "account": "mmtha0205",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 875,
+ "claim": "7f7a027b-e41e-43d8-8d66-cc4753df15e1",
+ "count": 0,
+ "ok": false,
+ "at": 1795790263989,
+ "detail": "trade claimed"
+}

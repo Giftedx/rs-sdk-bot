@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795790148399,
+ "at": 1795790297511,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,29 +59,22 @@
    "role": "pvp"
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio-skiller.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_kwuarm_potion"
+    "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 PRODUCT_TARGET=240 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=240 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:105",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:105",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 PRODUCT_TARGET=240 -- fishing cage cage",
@@ -111,24 +104,24 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "Sausagefest",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "110",
+    "MAX_ITEMS": "240",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "110"
+    "BATCH_UNITS": "240"
    },
    "enabled": true,
    "repeat": false,
@@ -139,9 +132,8 @@
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 PRODUCT_TARGET=30 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=50 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=30 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -152,82 +144,78 @@
    "role": "army"
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "account": "KnightRider",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "chompy"
+    "mining",
+    "ore"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Abracadickra",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
-    "essence"
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:haggis:item:440",
    "role": "helper",
    "resources": [
-    "essence-mine"
+    "varrock-se-mine"
    ]
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "247",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   }
  ],
  "army": [
@@ -243,7 +231,6 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
