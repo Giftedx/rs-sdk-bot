@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795292437-1",
+ "account": "Woodenstaff",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 5,
+ "claim": "f5afc94f-12c8-4666-8e2d-1f8c7bf3d175",
+ "count": 0,
+ "ok": false,
+ "at": 1795795809229,
+ "detail": "trade claimed"
+}

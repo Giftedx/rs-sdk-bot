@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795260759-2",
  "account": "Bigpackage",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Limpwurt root",
  "requested": 16,
  "claim": "97970700-10df-4d86-a6bd-1a2cef439bb0",
- "count": 0,
- "ok": false,
- "at": 1795795478949,
- "detail": "trade claimed"
+ "count": 16,
+ "ok": true,
+ "at": 1795795668313,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 16,
+  "after": 0
+ },
+ "bank": {
+  "count": 16,
+  "at": 1795795639212
+ },
+ "logout": {
+  "attemptId": "1795795478960-0000010896-0000000001",
+  "at": 1795795668278,
+  "sha256": "1566b9a3538c896be621d9c521d6ba2117b0d031fffcc0e78f7eec29c3039d42"
+ },
+ "screen": true
 }
