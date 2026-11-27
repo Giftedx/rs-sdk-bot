@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788399566-1",
  "account": "Woodpecker",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 5,
  "claim": "c950eecf-88f3-4617-85d9-82cb70104d62",
- "count": 0,
- "ok": false,
- "at": 1795788817781,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795788843429,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795788826676
+ },
+ "logout": {
+  "attemptId": "1795788818133-0000005896-0000000001",
+  "at": 1795788843417,
+  "sha256": "28b5890da2eb73d956fbe035873dd705650cf8b3e19a0c03d83c0b00d9002076"
+ },
+ "screen": true
 }
