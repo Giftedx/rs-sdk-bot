@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805102594-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Quickhandjob",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 205,
+  "start": 1795805102594,
+  "end": 1795806002594,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
