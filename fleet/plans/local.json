@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795738533056,
+ "at": 1795738543599,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -77,21 +77,6 @@
    "account": "Billionaire",
    "script": "scripts/pk.ts",
    "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
     "BATCH_UNITS": "1"
@@ -205,17 +190,39 @@
   },
   {
    "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery-trip"
+   ],
+   "env": {
+    "RECIPE": "diamond_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1643",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 -- crafting jewellery-trip"
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1639",
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {
@@ -275,7 +282,7 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "Spitroaster",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
