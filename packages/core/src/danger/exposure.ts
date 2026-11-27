@@ -13,9 +13,9 @@ import { join, resolve } from 'node:path';
 import { npcHunters } from '../../../knowledge/src/npc-hunters';
 import { npcThreats } from '../../../knowledge/src/npc-threat';
 import { contentRoot } from '../../../knowledge/src/paths';
-import { loadFood } from '../../../knowledge/src/item-sources/recipes';
 import { npcHitChance, retreatLine } from '../combat-admission';
 import { withDoorPolicy } from '../door-policy';
+import { allFoodIds, foodTotalHeal, objIdByDebugName } from '../sustain';
 import type { Account, Tile } from '../world-types';
 import { CAGED, combatLevel } from './catalog';
 import { activeDanger, pack, withDanger, type FloorGrid } from './tiles';
@@ -182,14 +182,17 @@ export const huntsAt = (t: WalkThreat, combat: number, x: number, z: number) => 
 // and `runTiles`, the path tiles its run energy covers (0 when not known: the account walks).
 export type WalkProfile = { readonly combat: number; readonly hp: number; readonly defence: number; readonly defenceBonus?: number; readonly foodHeal: number; readonly runTiles: number };
 
-let food: Map<string, { heal: number }> | undefined;
+// The heal of one piece of a food that the HP floor eats (hp-floor.ts eats sustain.ts allFoodIds), over all its bites;
+// undefined for any other item. Food the floor does not eat does not count for a walk.
+export function foodHealOf(name: string): number | undefined {
+    const id = objIdByDebugName(name);
+    return id !== undefined && allFoodIds().has(id) ? foodTotalHeal(id) : undefined;
+}
 export function packFoodHeal(counts: Readonly<Record<string, number>> | undefined): number {
-    food ??= loadFood();
     let heal = 0;
-    for (const [name, n] of Object.entries(counts ?? {})) { const f = food.get(name); if (f && n > 0) heal += f.heal * n; }
+    for (const [name, n] of Object.entries(counts ?? {})) { const h = n > 0 ? foodHealOf(name) : undefined; if (h) heal += h * n; }
     return heal;
 }
-export const foodHealOf = (name: string): number | undefined => (food ??= loadFood()).get(name)?.heal;
 
 // Path tiles that run energy (SDK player.runEnergy, 0-100) covers: a running tick (2 tiles) costs
 // 67 + 67 x kg / 64 of 10000 energy units (engine Player.ts updateEnergy, weight clamped to 0-64 kg).
@@ -222,8 +225,10 @@ export const allowedDetour = (open: number, saved: number, clear: boolean, bound
     clear ? Math.min(bound(open), open + Math.ceil(Math.max(0, saved) * TILES_PER_HP)) : bound(open);
 
 export type ExposureZone = { id: number; name: string; x: number; z: number; tiles: number; damage: number; maxHit: number };
-export type WalkExposure = { tiles: number; damage: number; maxHit: number; zones: ExposureZone[] };
-export const NO_EXPOSURE: WalkExposure = { tiles: 0, damage: 0, maxHit: 0, zones: [] };
+// `burst`: the largest damage one tick of the walk can take: the largest max hit of a tile in a single-combat zone, the
+// sum of the max hits that can attack a tile in a multi-combat zone. 0 or absent: `maxHit`.
+export type WalkExposure = { tiles: number; damage: number; maxHit: number; burst?: number; zones: ExposureZone[] };
+export const NO_EXPOSURE: WalkExposure = { tiles: 0, damage: 0, maxHit: 0, burst: 0, zones: [] };
 
 // `list`: the threats (default every spawn, walkThreats). `reach`: the tiles each threat can attack (npcReach);
 // without it each tile of a threat's square counts.
@@ -248,35 +253,44 @@ export function walkExposure(p: WalkProfile, level: number, tiles: readonly { x:
         const z = zones.get(t) ?? zones.set(t, { id: t.id, name: t.name, x: t.x, z: t.z, tiles: 0, damage: 0, maxHit: t.maxHit }).get(t)!;
         z.tiles++; z.damage += d;
     };
-    let inside = 0, damage = 0, maxHit = 0;
+    let inside = 0, damage = 0, maxHit = 0, burst = 0;
     for (let k = 0; k < tiles.length; k++) {
         const tile = tiles[k]!, ticks = k < p.runTiles ? RUN_TICKS_PER_TILE : WALK_TICKS_PER_TILE, many = isMulti(level, tile.x, tile.z);
-        let best = -1, any = false;
+        let best = -1, any = false, sum = 0;
         for (let i = 0; i < near.length; i++) {
             const t = near[i]!;
             if (!hits(o, t, tile.x, tile.z)) continue;
             any = true;
             if (t.maxHit > maxHit) maxHit = t.maxHit;
+            sum = many ? sum + t.maxHit : Math.max(sum, t.maxHit);
             if (many) { const d = rate[i]! * ticks; damage += d; add(t, d); }
             else if (best < 0 || rate[i]! > rate[best]!) best = i;
         }
         if (!any) continue;
-        inside++;
+        inside++; burst = Math.max(burst, sum);
         if (best >= 0) { const d = rate[best]! * ticks; damage += d; add(near[best]!, d); }
     }
-    return { tiles: inside, damage, maxHit, zones: [...zones.values()].sort((a, b) => b.damage - a.damage) };
+    return { tiles: inside, damage, maxHit, burst, zones: [...zones.values()].sort((a, b) => b.damage - a.damage) };
 }
 
+// The Hitpoints at which the HP floor eats on this walk: FLOOR_HITS (2) x the burst (hp-floor.ts floorLine; the floor
+// sums the max-hit estimates of the attackers in view, so it sees the burst of a multi-combat zone).
+export const walkFloorLine = (e: WalkExposure) => 2 * Math.max(e.burst || e.maxHit, e.maxHit);
+
 // clear: the Hitpoints hold the expected damage x WALK_SAFETY plus the retreat line of the largest hit in reach (one
-// max hit and a margin, combat-admission.ts retreatLine). eat: the pack food covers the rest (the eat guard eats on the
-// way). refuse: `needHeal` more heal of food is needed.
+// max hit and a margin, combat-admission.ts retreatLine). eat: the pack food covers the rest. No walk script eats:
+// the eat guard eats only in a fight that the script started (eat-guard.ts), and the HP floor eats any held food at its
+// line with no script attack (hp-floor.ts; test/hp-floor.test.ts "eats held food at the floor with no script attack").
+// So pack food counts only for the foods the floor eats (foodHealOf) and only when the Hitpoints start above the floor
+// line of the walk's burst: under it one burst can land before the floor's eat. refuse: `needHeal` more heal of food
+// is needed (and the Hitpoints must start above the floor line).
 export type WalkVerdict = { verdict: 'clear' | 'eat' | 'refuse'; need: number; needHeal: number };
 export function walkVerdict(p: WalkProfile, e: WalkExposure): WalkVerdict {
     if (e.damage <= 0) return { verdict: 'clear', need: 0, needHeal: 0 };
     const need = Math.ceil(e.damage * WALK_SAFETY + retreatLine(e.maxHit));
     if (p.hp >= need) return { verdict: 'clear', need, needHeal: 0 };
-    if (p.hp + p.foodHeal >= need) return { verdict: 'eat', need, needHeal: 0 };
-    return { verdict: 'refuse', need, needHeal: need - p.hp - p.foodHeal };
+    if (p.hp + p.foodHeal >= need && p.hp > walkFloorLine(e)) return { verdict: 'eat', need, needHeal: 0 };
+    return { verdict: 'refuse', need, needHeal: Math.max(1, need - p.hp - p.foodHeal) };
 }
 
 // The fields of a WALK_DANGER log line: the worst zone, the expected damage, the Hitpoints needed and the food short.
@@ -344,18 +358,18 @@ export function planAroundHarm<T>(grid: FloorGrid, p: WalkProfile, level: number
 // energy is spent along the legs in order. `path` returns the corners of a walk on one level (null when none).
 export type RouteLegLike = { kind: string; to: Tile };
 export function routeExposure(p: WalkProfile, from: Tile, legs: readonly RouteLegLike[], path: (level: number, a: { x: number; z: number }, b: { x: number; z: number }) => Corners | null, o: ExposureOptions = {}): WalkExposure {
-    let at = from, tiles = 0, damage = 0, maxHit = 0, walked = 0;
+    let at = from, tiles = 0, damage = 0, maxHit = 0, burst = 0, walked = 0;
     const zones: ExposureZone[] = [];
     for (const leg of legs) {
         if (leg.kind === 'walk' && leg.to.level === at.level) {
             const corners = path(at.level, at, leg.to), steps = corners?.length ? cornerTiles(at, corners) : [];
             const e = walkExposure({ ...p, runTiles: Math.max(0, p.runTiles - walked) }, at.level, steps, o);
             walked += steps.length;
-            tiles += e.tiles; damage += e.damage; maxHit = Math.max(maxHit, e.maxHit); zones.push(...e.zones);
+            tiles += e.tiles; damage += e.damage; maxHit = Math.max(maxHit, e.maxHit); burst = Math.max(burst, e.burst ?? 0); zones.push(...e.zones);
         }
         at = leg.to;
     }
-    return { tiles, damage, maxHit, zones: zones.sort((a, b) => b.damage - a.damage) };
+    return { tiles, damage, maxHit, burst, zones: zones.sort((a, b) => b.damage - a.damage) };
 }
 
 // What a planned route does about its harm: `clear` walks it, `detour` takes the safe route (a search with the harm

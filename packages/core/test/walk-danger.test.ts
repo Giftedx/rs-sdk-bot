@@ -1,8 +1,9 @@
 import { expect, test } from 'bun:test';
 import {
     cornerTiles, huntersNear, isMulti, npcReach, pack, planAroundHarm, routeDanger, routeHarmKeep, routeHarmSet, runTiles, walkExposure, walkProfile,
-    walkThreats, walkVerdict, type WalkThreat,
+    foodHealOf, walkFloorLine, walkThreats, walkVerdict, type WalkThreat,
 } from '../src/danger';
+import { floorLine } from '../src/hp-floor';
 import { installDoorPolicy } from '../src/world';
 import { foodToTake, walkPath, type PathDeps } from '../src/walk';
 
@@ -57,6 +58,20 @@ test('the walk verdict: clear above the retreat line, eat with pack food, refuse
     expect(walkVerdict({ combat: 3, hp: 16, defence: 1, foodHeal: 0, runTiles: 0 }, e)).toEqual({ verdict: 'clear', need: 16, needHeal: 0 });
     expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 6, runTiles: 0 }, e).verdict).toBe('eat');
     expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 2, runTiles: 0 }, e)).toEqual({ verdict: 'refuse', need: 16, needHeal: 4 });
+    // Food counts only above the HP floor's line (2 x the burst): at 8 HP one burst of a 4-hit can land before it eats.
+    expect(walkVerdict({ combat: 3, hp: 8, defence: 1, foodHeal: 60, runTiles: 0 }, e).verdict).toBe('refuse');
+    // Two 4-hits at once in a multi-combat zone: the line is 16, so 10 HP with food is refused.
+    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 60, runTiles: 0 }, { ...e, burst: 8 }).verdict).toBe('refuse');
+});
+
+test('the walk floor line is the HP floor line of the burst, and only food the HP floor eats counts', () => {
+    const e = { tiles: 1, damage: 1, maxHit: 3, burst: 9, zones: [] };
+    expect(walkFloorLine(e)).toBe(floorLine(9));
+    expect(walkFloorLine({ ...e, burst: undefined })).toBe(floorLine(3));
+    expect(foodHealOf('lobster')).toBe(12);
+    expect(foodHealOf('cake')).toBe(12); // three bites of 4
+    expect(foodHealOf('logs')).toBeUndefined();
+    expect(walkProfile({ skills: { hitpoints: 10 }, counts: { lobster: 2, logs: 5 } }).foodHeal).toBe(24);
 });
 
 test('Catherby to Taverley: a combat-50, 67 HP account with no food must carry food over White Wolf Mountain; a strong one keeps the pass', () => {
@@ -75,9 +90,13 @@ test('Catherby to Taverley: a combat-50, 67 HP account with no food must carry f
     expect(cornerTiles(CATHERBY, planned).length).toBe(tiles.length);
     const decision = routeDanger(spit, { cost: tiles.length, exposure: e }, null);
     expect(decision.action).toBe('refuse');
-    // With the food the verdict asks for (lobsters heal 12), the same walk eats on the way.
-    const fed = walkProfile({ ...SPIT, counts: { lobster: Math.ceil(decision.verdict.needHeal / 12) } }, { energy: 100 });
-    expect(routeDanger(fed, { cost: tiles.length, exposure: walkExposure(fed, 0, tiles, { reach }) }, null).action).toBe('eat');
+    // With a pack of lobsters (heal 12) that covers the need, and 67 HP above the HP floor's line of the pass's
+    // multi-combat burst, the walk eats on the way: the floor eats at that line with no script attack.
+    const fed = walkProfile({ ...SPIT, counts: { lobster: 20 } }, { energy: 100 }), fe = walkExposure(fed, 0, tiles, { reach });
+    expect(walkFloorLine(fe)).toBeLessThan(67);
+    expect(routeDanger(fed, { cost: tiles.length, exposure: fe }, null).action).toBe('eat');
+    // At 60 HP the same burst can land under the line before the floor eats: refused with the same food.
+    expect(routeDanger({ ...fed, hp: 60 }, { cost: tiles.length, exposure: fe }, null).action).toBe('refuse');
     // A safe route inside the bound is taken.
     const safe = { cost: tiles.length + 100, exposure: { tiles: 0, damage: 0, maxHit: 0, zones: [] } };
     expect(routeDanger(spit, { cost: tiles.length, exposure: e }, safe).action).toBe('detour');
@@ -89,6 +108,18 @@ test('Catherby to Taverley: a combat-50, 67 HP account with no food must carry f
     const kept = planAroundHarm(grid, strong, 0, CATHERBY, TAVERLEY, 32, () => pf.findLongPath(0, CATHERBY.x, CATHERBY.z, TAVERLEY.x, TAVERLEY.z, 500), { reach });
     expect(cornerTiles(CATHERBY, kept).length).toBe(tiles.length);
     expect(routeDanger(strong, { cost: tiles.length, exposure: se }, { cost: tiles.length + 104, exposure: { tiles: 0, damage: 0, maxHit: 0, zones: [] } }).action).toBe('clear');
+}, 120_000);
+
+test('Karamja: a 10 HP walker past the scorpions is refused with no food and eats with shrimps', () => {
+    pf.initPathfinding();
+    const reach = npcReach(grid, pf.getDoorAt), from = { x: 2954, z: 3147 }, to = { x: 2855, z: 3168 };
+    const tiles = cornerTiles(from, pf.findLongPath(0, from.x, from.z, to.x, to.z, 500));
+    const bare = walkProfile({ skills: { hitpoints: 10 }, counts: {} }), e = walkExposure(bare, 0, tiles, { reach });
+    expect(e.zones.some(z => z.name === 'Scorpion')).toBe(true);
+    expect(walkVerdict(bare, e).verdict).toBe('refuse');
+    const fed = walkProfile({ skills: { hitpoints: 10 }, counts: { shrimp: 5 } });
+    expect(walkFloorLine(e)).toBeLessThan(10);
+    expect(walkVerdict(fed, walkExposure(fed, 0, tiles, { reach })).verdict).toBe('eat');
 }, 120_000);
 
 test('a route search that avoids harm closes the White Wolf Mountain squares and keeps the start square open', () => {

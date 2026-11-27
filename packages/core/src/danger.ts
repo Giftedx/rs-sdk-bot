@@ -10,5 +10,5 @@ export { dangerSet, dangerTiles, escapeTiles, guardRoute, guardWalk } from './da
 export type { ExposureOptions, NpcReach, RouteDanger, WalkExposure, WalkProfile, WalkThreat, WalkVerdict } from './danger/exposure';
 export {
     cornerTiles, cornersOf, dangerSummary, foodHealOf, harmSet, huntersNear, isMulti, npcReach, planAroundHarm, routeDanger, routeExposure,
-    routeHarmKeep, routeHarmSet, runTiles, stateWalkProfile, walkExposure, walkProfile, walkThreats, walkVerdict,
+    routeHarmKeep, routeHarmSet, runTiles, stateWalkProfile, walkExposure, walkFloorLine, walkProfile, walkThreats, walkVerdict,
 } from './danger/exposure';
