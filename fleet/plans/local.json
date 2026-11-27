@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804019154,
+ "at": 1795804032339,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,7 +72,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "194"
+    "BATCH_UNITS": "192"
    },
    "enabled": true,
    "repeat": false,
@@ -202,25 +202,18 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
+    "scripts/aio-skiller.ts CAP=82000 TARGET_COUNT=8200 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
   },
   {
    "account": "Fingersmith",
