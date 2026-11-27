@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797610507-1",
+ "account": "Unsheathed",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 3,
+ "claim": "9e722bee-fc5d-4280-82b8-7d120540c366",
+ "count": 0,
+ "ok": false,
+ "at": 1795798011456,
+ "detail": "trade claimed"
+}

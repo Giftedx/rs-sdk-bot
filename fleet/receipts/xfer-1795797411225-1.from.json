@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797411225-1",
  "account": "mmtha0205",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 2,
  "claim": "728efd1a-1ced-4d61-8230-d150cc68c6f2",
- "count": 0,
- "ok": false,
- "at": 1795797844367,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795798014240,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795797998338
+ },
+ "logout": {
+  "attemptId": "1795797844403-0000031444-0000000001",
+  "at": 1795798014227,
+  "sha256": "cbd4c066b8af494b166efb86193bd370b89e29f08c7d6259348b70d95f955ae6"
+ },
+ "screen": true
 }

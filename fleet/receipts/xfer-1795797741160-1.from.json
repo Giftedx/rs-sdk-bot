@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797741160-1",
+ "account": "Woodenstaff",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 132,
+ "claim": "0cfd2dd5-2881-42a8-a194-cdb605f6835c",
+ "count": 0,
+ "ok": false,
+ "at": 1795798054379,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Mind rune",
+   "requested": 142,
+   "count": 0
+  }
+ ]
+}
