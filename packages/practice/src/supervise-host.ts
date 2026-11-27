@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isHpFloorStop, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {hasStopFile} from '../../core/src/practice-paths';
@@ -23,6 +23,8 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     if (stopFile || /stop file/.test(r)) return 'stopped';
     // A death means the route or the food plan failed; a blind restart repeats it.
     if (/died=true|RESULT fail died/.test(r)) return 'died';
+    // The session HP floor escaped at low Hitpoints (supervise.ts isHpFloorStop): a defect to fix, never a retry.
+    if (isHpFloorStop(r)) return 'blocked';
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
     if (isWorkerReleaseHold(r)) return 'release-paused';
@@ -31,11 +33,22 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     return null;
 }
 
-// The lines of host output that the supervisor reads: the RESULT and the LEDGER line of each account (the key is the
-// kind and the account). Everything else is dropped as it arrives.
+// The lines of host output that the supervisor reads: the RESULT, the LEDGER and the HP_FLOOR escape line of each
+// account (the key is the kind and the account). Everything else is dropped as it arrives.
+const HOST_FLOOR_RE = /^\[([^\]]+)\] (?:\s*\|\s*)?HP_FLOOR escape /;
 export function keptHostLine(line: string): string | null {
+    const floor = line.match(HOST_FLOOR_RE);
+    if (floor) return `H${floor[1]}`;
     const x = line.match(/^\[([^\]]+)\] (RESULT |LEDGER ticks=\d)/);
     return x ? `${x[2]![0]}${x[1]}` : null;
+}
+
+// The accounts whose session HP floor started an escape in this host output. Such an account ends as blocked whatever
+// RESULT its script printed after the escape.
+export function hpFloorAccounts(stdout: string): Set<string> {
+    const out = new Set<string>();
+    for (const l of stdout.split(/\r?\n/)) { const x = l.match(HOST_FLOOR_RE); if (x) out.add(x[1]!); }
+    return out;
 }
 
 // The last RESULT line of each account in host output (`[name] RESULT ...`).
@@ -70,7 +83,7 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
         if (active.length === 0) return { ends, runs };
         runs++;
         const r = await d.run(active);
-        const results = lastResults(r.stdout);
+        const results = lastResults(r.stdout), floors = hpFloorAccounts(r.stdout);
         // A peer's work cannot reset this account's streak. Only its own last ledger counts, as in supervise.ts.
         const ledgers = new Map<string, string>();
         for (const line of r.stdout.split(/\r?\n/)) {
@@ -83,6 +96,7 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
             d.log?.(`SUPERVISE-HOST run ${runs} exit ${r.exitCode} ${a}: ${(res ?? '(no RESULT)').slice(0, 200)}`);
             const why = classify(res, d.stopped(a));
             if (why) { end(a, why, runs); continue; }
+            if (floors.has(a)) { end(a, 'blocked', runs); continue; }
             const heldTries = res && isHeldClaimRefusal(res) ? (held.get(a) ?? 0) + 1 : 0;
             held.set(a, heldTries);
             if (heldTries >= HELD_CLAIM_TRIES) { end(a, 'gave-up', runs); continue; }

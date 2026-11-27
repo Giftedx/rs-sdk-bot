@@ -226,6 +226,11 @@ const DEATH_TEXT_RE = /\b(?:died|death)\b(?!\s*(?:=|"?\s*:))|\bdied(?:=|"\s*:\s*
 // Death Plateau's quest slug is "death": "quest-sweep death missing 2064:1", "quest:death", "quest-death.ts" and the
 // quest name name a quest, not a death.
 const DEATH_QUEST_NAME_RE = /\bquest(?:-sweep\s+|_board:|[-_:])death\b|\bdeath plateau\b/gi;
+// The session HP floor (packages/core/src/hp-floor.ts) ended the run after an escape at low Hitpoints: the activity's
+// food plan or target let the account fall to two hits of death. It is a defect of the activity, held like one.
+const HP_FLOOR_RE = /\bstop=hp-floor\b|^\s*(?:\|\s*)?HP_FLOOR escape /m;
+export const HP_FLOOR_SIGNATURE = 'hp-floor';
+export const hpFloorText = (text: string) => HP_FLOOR_RE.test(text);
 export const deathText = (text: string) => DEATH_TEXT_RE.test(text.replace(DEATH_QUEST_NAME_RE, 'quest plateau'));
 const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i;
 const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
@@ -348,6 +353,18 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
             ...base,
             ...(nonEmpty(input.faultSignature) ? { faultSignature: nonEmpty(input.faultSignature) } : {}),
             ...(input.pos !== undefined ? { pos: input.pos } : {}),
+            ...(nonEmpty(input.logPath) ? { logPath: nonEmpty(input.logPath) } : {}),
+            ...(nonEmpty(input.tickRecordPath) ? { tickRecordPath: nonEmpty(input.tickRecordPath) } : {}),
+            ...(detail ? { detail } : {}),
+        };
+        return out;
+    }
+
+    if (hpFloorText(text)) {
+        const out: WorkerDefectOutcome = {
+            kind: 'worker_defect',
+            ...base,
+            faultSignature: HP_FLOOR_SIGNATURE,
             ...(nonEmpty(input.logPath) ? { logPath: nonEmpty(input.logPath) } : {}),
             ...(nonEmpty(input.tickRecordPath) ? { tickRecordPath: nonEmpty(input.tickRecordPath) } : {}),
             ...(detail ? { detail } : {}),
