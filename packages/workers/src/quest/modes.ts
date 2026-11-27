@@ -171,6 +171,12 @@ export function prioritizeQuestsForAccount(
     return { readyNow, needsItems, blocked: evaluations.filter((e) => e.blockers.length > 0) };
 }
 
+// The brain's reason for a location recovery inside walled West Ardougne (packages/brain/src/worker-routing.ts
+// walledRecoveryReason), for the quest that opens it.
+export function walledExitRecovery(reason: string | undefined, quest: string): boolean {
+    return quest.toLowerCase() === 'biohazard' && /^walled in west-ardougne; exit by quest:biohazard$/i.test(reason?.trim() ?? '');
+}
+
 export function resolveQuesterStep(modeOrQuest: string, rest: readonly string[] = [], root = REPO_ROOT): Step {
     const { resolveRouteStep } = require('../../../core/src/route-step') as typeof import('../../../core/src/route-step');
     const key = modeOrQuest.toLowerCase().replace(/^--mode=/, '').replace(/^--quest=/, '');
@@ -225,6 +231,24 @@ export async function dispatchQuesterCli(
                 const { apiOptions, sweep, sweepPreset } = await import('./sweep');
                 const [quest, optionsPath] = subArgs;
                 if (!quest) throw Error('usage: bun scripts/aio-quester.ts <account> sweep <quest> [api-options.json]');
+                // A location recovery of an account walled in West Ardougne runs the city exit only: the quest itself
+                // may be started at a stage the sweep cannot resume, and the account only needs to be outside.
+                if (walledExitRecovery(mergedEnv.RECOVERY_REASON, quest)) {
+                    const [{ leaveWestArdougne }, { inWestArdougne }] = await Promise.all([import('./sweep-travel'), import('./sweep-plan')]);
+                    const s = await openBot(account);
+                    let ok = false, detail = 'location stranded in West Ardougne: exit failed';
+                    try {
+                        const left = await leaveWestArdougne(s);
+                        const p = s.sdk.getState()?.player;
+                        ok = left.ok && !!p && !inWestArdougne({ x: p.worldX, z: p.worldZ });
+                        detail = ok
+                            ? `location recovered from west ardougne to ${p!.worldX},${p!.worldZ},${p!.level}`
+                            : `location stranded in West Ardougne: ${left.detail ?? 'exit failed'}`;
+                    } finally {
+                        ok = await settle([s], ok, detail);
+                    }
+                    return ok ? 0 : 1;
+                }
                 let options: SweepApiOptions | undefined;
                 if ((quest === 'tbwt' || quest === 'itwatchtower') && optionsPath) {
                     const bytes = readFileSync(optionsPath);
