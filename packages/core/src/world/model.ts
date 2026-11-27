@@ -47,6 +47,8 @@ export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: numb
     // `q` at `to`, null when one is outside the map. Called inside withPolicy and withDanger.
     scopeAreas?(blocked: DoorBlock[]): ScopeAreas | null;
     measurePrechecked?(from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null;
+    // The tiles that walks end on (route graph nodes): a flood from a walk start keeps its distances to them.
+    addTargets?(tiles: readonly Tile[]): void;
 };
 
 export interface World {

@@ -223,9 +223,94 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     // measureNow sets `reachedGoal` when the flood took the goal from its queue: the length then depends only on the
     // tiles near the walk (leg-key.ts legKey), and any other result on the whole findLongPath grid (windowKey).
     let reachedGoal = false;
+    // One flood from a walk's start serves every later walk from that start in the same scope (doors and danger). A
+    // cold search from Varrock to Ardougne measured 9,472 walks from 516 starts. The flood is a breadth-first search
+    // over grid.canTravel steps (the moves findLongPath takes) inside a box of FLOOD_R tiles: from Lumbridge it settles
+    // 113,368 tiles in 25 ms, where one findLongPath leg of 150 to 300 tiles costs 3.75 ms; its distances equalled the
+    // findLongPath lengths on 4,773 of 4,773 walks of a search. It keeps only the distances to the route graph's tiles
+    // (addTargets), so a few hundred floods stay in memory. A start gets its flood on its second measured walk.
+    const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 512, FLOOD_AFTER = 2;
+    type Flood = { dist: Map<number, number>; complete: boolean; targets: number };
+    const floods = new Map<string, Flood>(), floodMisses = new Map<string, number>();
+    const scopeIds = new WeakMap<object, number>(), noDanger = {};
+    let nextScopeId = 0;
+    const idOf = (o: object) => { let id = scopeIds.get(o); if (id === undefined) scopeIds.set(o, id = ++nextScopeId); return id; };
+    // The tiles a flood keeps: route graph tiles in 64-tile buckets.
+    const targetSet = new Map<number, number>(), targetBuckets = new Map<number, number[]>();
+    const bucketOf = (level: number, x: number, z: number) => (level << 16) | ((x >> 6) << 8) | (z >> 6);
+    const addTargets = (tiles: readonly Tile[]) => {
+        for (const t of tiles) {
+            const k = pack(t.level, t.x, t.z);
+            if (targetSet.has(k)) continue;
+            targetSet.set(k, targetSet.size);
+            const b = bucketOf(t.level, t.x, t.z), list = targetBuckets.get(b);
+            if (list) list.push(k); else targetBuckets.set(b, [k]);
+        }
+    };
+    const seen = new Uint16Array(FLOOD_SIDE * FLOOD_SIDE), qx = new Int32Array(FLOOD_SIDE * FLOOD_SIDE), qz = new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
+    const floodFrom = (from: Tile): Flood => {
+        const x0 = from.x - FLOOD_R, z0 = from.z - FLOOD_R, lvl = from.level;
+        let head = 0, tail = 0, complete = true;
+        qx[tail] = from.x; qz[tail++] = from.z; seen[FLOOD_R * FLOOD_SIDE + FLOOD_R] = 1;
+        while (head < tail) {
+            const x = qx[head]!, z = qz[head++]!, d = seen[(x - x0) * FLOOD_SIDE + (z - z0)]! + 1;
+            for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+                if (!dx && !dz) continue;
+                const nx = x + dx, nz = z + dz;
+                if (nx < x0 || nz < z0 || nx >= x0 + FLOOD_SIDE || nz >= z0 + FLOOD_SIDE) { if (complete && grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) complete = false; continue; }
+                const i = (nx - x0) * FLOOD_SIDE + (nz - z0);
+                if (seen[i] || !grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) continue;
+                seen[i] = d; qx[tail] = nx; qz[tail++] = nz;
+            }
+        }
+        const dist = new Map<number, number>();
+        for (let bx = x0 >> 6; bx <= (x0 + FLOOD_SIDE - 1) >> 6; bx++) for (let bz = z0 >> 6; bz <= (z0 + FLOOD_SIDE - 1) >> 6; bz++) {
+            for (const k of targetBuckets.get(bucketOf(lvl, bx << 6, bz << 6)) ?? []) {
+                const x = (k >>> 14) & 0x3fff, z = k & 0x3fff;
+                if (x < x0 || z < z0 || x >= x0 + FLOOD_SIDE || z >= z0 + FLOOD_SIDE) continue;
+                const d = seen[(x - x0) * FLOOD_SIDE + (z - z0)]!;
+                if (d) dist.set(k, d - 1);
+            }
+        }
+        for (let i = 0; i < tail; i++) seen[(qx[i]! - x0) * FLOOD_SIDE + (qz[i]! - z0)] = 0;
+        return { dist, complete, targets: targetSet.size };
+    };
+    // The length of a walk read from the flood of its start, null when the walk has no path, or undefined when the
+    // flood does not decide it (the walk then goes to findLongPath). A path that leaves the box is at least
+    // 2 * (FLOOD_R + 1) - cheb(start, goal) long, so a shorter distance inside the box is the shortest path.
+    const floodLength = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number): number | null | undefined => {
+        if (from.level !== to.level) return undefined;
+        const c = cheb(from, to), goal = pack(to.level, to.x, to.z);
+        if (c > FLOOD_R || !targetSet.has(goal)) return undefined;
+        const key = `${blocked.length ? idOf(blocked) : 0}:${idOf(activeDanger() ?? noDanger)}:${from.level},${from.x},${from.z}`;
+        let f = floods.get(key);
+        if (!f) {
+            const n = (floodMisses.get(key) ?? 0) + 1;
+            if (n < FLOOD_AFTER) {
+                if (floodMisses.size >= 8192) floodMisses.delete(floodMisses.keys().next().value!);
+                floodMisses.set(key, n);
+                return undefined;
+            }
+            floodMisses.delete(key);
+            f = scoped(blocked, () => floodFrom(from));
+            if (floods.size >= FLOOD_KEEP) floods.delete(floods.keys().next().value!);
+            floods.set(key, f);
+        }
+        // A tile added after the flood was taken is not in it.
+        if (targetSet.get(goal)! >= f.targets) return undefined;
+        const d = f.dist.get(goal);
+        if (d !== undefined) return d <= 2 * (FLOOD_R + 1) - c ? d : undefined;
+        // A goal the complete flood did not reach has no path. With a tolerance, findLongPath walks to the nearest
+        // tile it reaches, which the flood does not choose.
+        return tol === 0 && f.complete ? null : undefined;
+    };
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         reachedGoal = false;
         const same = from.x === to.x && from.z === to.z;
+        if (!interaction && !same && process.env.ROUTE_FLOOD !== '0') {
+            const v = floodLength(from, to, blocked, tol);
+            if (v !== undefined) { reachedGoal = v !== null; return v; }
+        }
         if (!interaction) {
             // A leg that must end on its goal asks for no closest approach (moveNear false): a goal the flood does not
             // reach then returns no path at once, where moveNear scans the 2048x2048 grid for the nearest tile first
@@ -335,6 +420,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     measure.withPolicy = scoped;
     measure.walkable = t => { (pf as any).initPathfinding(); return (pf as any).isTileWalkable(t.level, t.x, t.z); };
     measure.areaOf = t => areas.area(t.level, t.x, t.z);
+    measure.addTargets = addTargets;
     // Labels that exist: the map labels of a plain scope, or the labels that SCOPE_LABEL_NULLS measured nulls built.
     // None are built here, so a search that can still finish does not pay a label flood inside its budget.
     measure.scopeAreas = blocked => {
