@@ -18,7 +18,7 @@ import { liveRoot, statusReadDirs } from '../../core/src/practice-paths';
 import { assertLiveWorkerRelease } from '../../core/src/worker-release';
 import type { Tile } from '../../core/src/world';
 import { ferryFallbackFare } from '../../brain/src/ferry-fare';
-import { isNoRouteFact, noRouteTo, type NoRouteFact } from '../../brain/src/no-route';
+import { isNoRouteFact, noRouteTo, routeDangerFor, type NoRouteFact } from '../../brain/src/no-route';
 import { meetingTiles } from '../../workers/src/logistics/location';
 
 // A refused login is not tried again for this long; the agent passes run each minute while an order is due.
@@ -64,6 +64,8 @@ export function routeRefusal(pos: Tile | null, tile: Tile, facts: readonly NoRou
     if (!pos) return undefined;
     const fact = noRouteTo(facts, pos, tile, now);
     if (fact) return `no route to the meet ${tileText(tile)}: its route search from ${tileText(fact.from)} found none to ${tileText(fact.to)}`;
+    const danger = routeDangerFor(facts, pos, tile, undefined, now);
+    if (danger) return `route danger to the meet ${tileText(tile)}: its walker refused ${tileText(danger.to)} from ${tileText(danger.from)} for ${danger.danger} (${danger.needHeal ?? '?'} heal of food short)`;
     const fare = ferryFallbackFare(pos, tile, travel, t => !noRouteTo(facts, pos, t, now));
     if (fare <= 0 || coins.bank === undefined) return undefined;
     const owned = coins.pack + coins.bank;

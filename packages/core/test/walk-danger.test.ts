@@ -1,11 +1,12 @@
 import { expect, test } from 'bun:test';
 import {
     cornerTiles, huntersNear, isMulti, npcReach, pack, planAroundHarm, routeDanger, routeHarmKeep, routeHarmSet, runTiles, walkExposure, walkProfile,
-    foodHealOf, walkFloorLine, walkThreats, walkVerdict, type WalkThreat,
+    foodHealOf, hunts, loadHunters, walkFloorLine, walkThreats, walkVerdict, type WalkThreat,
 } from '../src/danger';
 import { floorLine } from '../src/hp-floor';
+import { npcHunters } from '../../knowledge/src/npc-hunters';
 import { installDoorPolicy } from '../src/world';
-import { foodToTake, walkPath, type PathDeps } from '../src/walk';
+import { eatBeforeWalk, foodToTake, walkPath, type PathDeps } from '../src/walk';
 
 const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
 const grid: any = await import('../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
@@ -55,13 +56,56 @@ test('run energy halves the time spent in a square while it lasts', () => {
 test('the walk verdict: clear above the retreat line, eat with pack food, refuse with the heal short', () => {
     const e = { tiles: 10, damage: 8, maxHit: 4, zones: [] };
     // need = ceil(8 x 1.25 + retreatLine(4) = 4 + 2) = 16
-    expect(walkVerdict({ combat: 3, hp: 16, defence: 1, foodHeal: 0, runTiles: 0 }, e)).toEqual({ verdict: 'clear', need: 16, needHeal: 0 });
-    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 6, runTiles: 0 }, e).verdict).toBe('eat');
-    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 2, runTiles: 0 }, e)).toEqual({ verdict: 'refuse', need: 16, needHeal: 4 });
-    // Food counts only above the HP floor's line (2 x the burst): at 8 HP one burst of a 4-hit can land before it eats.
-    expect(walkVerdict({ combat: 3, hp: 8, defence: 1, foodHeal: 60, runTiles: 0 }, e).verdict).toBe('refuse');
-    // Two 4-hits at once in a multi-combat zone: the line is 16, so 10 HP with food is refused.
-    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 60, runTiles: 0 }, { ...e, burst: 8 }).verdict).toBe('refuse');
+    expect(walkVerdict({ combat: 3, hp: 16, defence: 1, foodHeal: 0, runTiles: 0 }, e)).toEqual({ verdict: 'clear', need: 16, needHeal: 0, eatFirst: 0 });
+    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 6, runTiles: 0 }, e)).toEqual({ verdict: 'eat', need: 16, needHeal: 0, eatFirst: 0 });
+    expect(walkVerdict({ combat: 3, hp: 10, defence: 1, foodHeal: 2, runTiles: 0 }, e)).toEqual({ verdict: 'refuse', need: 16, needHeal: 4, eatFirst: 0 });
+});
+
+test('at or under the floor line the walk eats first, and a refusal asks for the food that the start line and the need take together', () => {
+    const e = { tiles: 10, damage: 8, maxHit: 4, zones: [] }; // need 16, floor line 2 x 4 = 8
+    // 8 HP (on the line) with 60 heal of food: eat 1 heal first to start above the line, then walk.
+    expect(walkVerdict({ combat: 3, hp: 8, maxHp: 30, defence: 1, foodHeal: 60, runTiles: 0 }, e)).toEqual({ verdict: 'eat', need: 16, needHeal: 0, eatFirst: 1 });
+    // 3 HP, no food: the walk needs 16 - 3 = 13 heal; staging that much makes the next verdict `eat`.
+    const short = walkVerdict({ combat: 3, hp: 3, maxHp: 30, defence: 1, foodHeal: 0, runTiles: 0 }, e);
+    expect(short).toEqual({ verdict: 'refuse', need: 16, needHeal: 13, eatFirst: 6 });
+    expect(walkVerdict({ combat: 3, hp: 3, maxHp: 30, defence: 1, foodHeal: short.needHeal, runTiles: 0 }, e).verdict).toBe('eat');
+    // Two 4-hits at once in a multi-combat zone: the line is 16, over 12 base Hitpoints. No food lets it start above.
+    expect(walkVerdict({ combat: 3, hp: 10, maxHp: 12, defence: 1, foodHeal: 60, runTiles: 0 }, { ...e, burst: 8 })).toEqual({ verdict: 'refuse', need: 16, needHeal: 0, eatFirst: 0 });
+});
+
+test('eatBeforeWalk eats until the Hitpoints are above the line, and fails when the food runs out', async () => {
+    const fake = (hp: number, pieces: number) => {
+        let tick = 0;
+        const listeners = new Set<() => void>();
+        const s: any = {
+            tick: () => tick,
+            onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+            sdk: { getState: () => ({ tick, player: { hp } }), onStateUpdate: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); } },
+            bot: { walkTo: async () => ({}), interactLoc: async () => ({}), eatFood: async () => pieces-- > 0 ? (hp += 4, { success: true }) : { success: false } },
+        };
+        const timer = setInterval(() => { tick++; for (const l of [...listeners]) l(); }, 1);
+        return { s, stop: () => clearInterval(timer), hp: () => hp };
+    };
+    const a = fake(3, 5);
+    expect(await eatBeforeWalk(a.s, 8)).toBe(true);
+    expect(a.hp()).toBe(11);
+    a.stop();
+    const b = fake(3, 1);
+    expect(await eatBeforeWalk(b.s, 8)).toBe(false);
+    b.stop();
+});
+
+test('the hard-closure catalog reads the npc-hunters table: kinds outside the three old hunt modes are in it', () => {
+    const names = new Set(loadHunters().map(h => h.name));
+    for (const n of ['Jungle spider', 'King black dragon', 'Monkey Zombie', 'Rocks']) expect([n, names.has(n)]).toEqual([n, true]);
+    const ids = new Set(loadHunters().map(h => h.id));
+    for (const id of npcHunters().keys()) if (walkThreats().some(t => t.id === id)) expect(ids.has(id)).toBe(true);
+    // The too-strong flag of the table decides the 2 x vislevel rule.
+    const kbd = loadHunters().find(h => h.name === 'King black dragon')!;
+    expect(kbd.tooStrong).toBe(npcHunters().get(kbd.id!)!.tooStrong);
+    const jail = loadHunters().find(h => h.name === 'Jail guard')!;
+    expect(jail.tooStrong).toBe(false);
+    expect(hunts(jail, 126)).toBe(true);
 });
 
 test('the walk floor line is the HP floor line of the burst, and only food the HP floor eats counts', () => {
@@ -164,7 +208,7 @@ test('walkPath does not start a walk that the harm check refuses, and starts one
     });
     const r = await walkPath(deps(false), [{ x: 3030, z: 3200, tol: 1 }]);
     expect(r.ok).toBe(false);
-    expect(r.detail).toContain('walk danger: Big Wolf 2840,3497 needs 20 heal');
+    expect(r.detail).toContain('walk danger from 3000,3200,0: route danger to 3030,3200,0: Big Wolf 2840,3497 needs 20 heal');
     expect(clicks).toBe(0);
     const ac = new AbortController();
     const p = walkPath(deps(true), [{ x: 3030, z: 3200, tol: 1 }], { signal: ac.signal, maxTicks: 1 });

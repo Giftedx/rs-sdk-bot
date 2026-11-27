@@ -1,13 +1,18 @@
 // Monster hunt-range and leash-range definitions loaded from knowledge/npcs.json and server NPC configs.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { npcHunters } from '../../../knowledge/src/npc-hunters';
 import type { Tile } from '../world-types';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
+// The hunt modes that parseHunter reads from one config block (a test or a hand-made hunter). loadHunters reads the
+// npc-hunters table instead.
 const HUNTS_WEAKER = new Set(['cowardly', 'ranged']);
 export const HUNTS_ALL = new Set(['aggressive_melee']);
 // `hunt` is the huntrange alone: the square around the monster's current tile in which it picks a target.
-export type Hunter = { id?: number; name: string; combat: number; mode: string; reach: number; hunt?: number; spawns: Tile[] };
+// `tooStrong`: the hunt skips a player above 2 x the NPC's vislevel outside the Wilderness (npc-hunters.ts); absent,
+// the mode says it (HUNTS_ALL hunts every player).
+export type Hunter = { id?: number; name: string; combat: number; mode: string; reach: number; hunt?: number; tooStrong?: boolean; spawns: Tile[] };
 
 export function combatLevel(skills: Record<string, number>): number {
     const s = (k: string, d = 1) => skills[k] ?? d;
@@ -75,7 +80,7 @@ export function loadRoamers(): ReadonlyMap<number, Roamer> { loadHunters(); retu
 export function loadHunters(): Hunter[] {
     if (hunters) return hunters;
     const npcs = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'), 'utf8')) as { id?: number; name: string; combat: number; src: string; spawns?: Tile[] }[];
-    const files = new Map<string, string[]>();
+    const files = new Map<string, string[]>(), table = npcHunters();
     hunters = []; roamers = new Map();
     for (const n of npcs) {
         if (!n.spawns?.length || !n.src) continue;
@@ -90,8 +95,12 @@ export function loadHunters(): Hunter[] {
         while (end < lines.length && !lines[end]!.startsWith('[')) end++;
         const fields = parseFields(lines, start, end);
         const uncagedSpawns = n.spawns.some(caged) ? n.spawns.filter(s => !caged(s)) : n.spawns;
-        const h = buildHunter(uncagedSpawns === n.spawns ? n : { ...n, spawns: uncagedSpawns }, fields);
-        if (h) hunters.push(h);
+        // The hunt facts come from the one table of player hunters (knowledge npc-hunters.ts), which the walk exposure
+        // (exposure.ts) reads too: every hunt mode whose hunt attacks a player, with its blocks from every file.
+        const t = n.id === undefined ? undefined : table.get(n.id);
+        if (t && uncagedSpawns.length) {
+            hunters.push({ id: n.id!, name: n.name, combat: n.combat, mode: fields.huntmode ?? 'hunt', reach: Math.max(0, t.wander) + t.range, hunt: t.range, tooStrong: t.tooStrong, spawns: uncagedSpawns });
+        }
         const roam = buildRoamer(n, fields);
         if (roam) roamers.set(roam.id, roam);
     }

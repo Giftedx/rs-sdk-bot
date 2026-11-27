@@ -16,4 +16,4 @@ export type {
 export { expandPath, walkPath } from './walk/path';
 export { applyKnownDoorBlocks, sessionWalker } from './walk/session';
 export type { RouteHarm } from './walk/harm';
-export { foodToTake, routeHarm, stageFood } from './walk/harm';
+export { eatBeforeWalk, foodToTake, routeDangerText, routeHarm, stageFood } from './walk/harm';

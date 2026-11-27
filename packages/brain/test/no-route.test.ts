@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { defaultActivityCatalog } from '../src/catalog';
-import type { AccountState, NoRouteFact, WorldSnapshot } from '../src/contracts';
+import type { AccountState, ActivityDefinition, GoalDemand, NoRouteFact, WorldSnapshot } from '../src/contracts';
+import { planAccount } from '../src/planner';
 import { enclosedAt, NO_ROUTE_TTL_MS, noRouteState, noRouteTo, parseNoRoute } from '../src/no-route';
 import { OutcomeClassifier } from '../src/outcome-classifier';
 import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability } from '../src/preflight';
@@ -292,4 +293,66 @@ test('a no-route fact found at its target keeps its activity refused after the a
     expect(refused(meat(VARROCK_WEST, [{ ...res.noRoute!, from: far }]))).toBe(true);
     // A start far from the target is a fact about the start: the walk away ends it.
     expect(refused(meat(VARROCK_WEST, [{ ...res.noRoute!, from: MEAT }]))).toBe(false);
+});
+
+// A 10 HP account at Catherby whose walker refused the walk over White Wolf Mountain (core/src/walk/harm.ts).
+const CATHERBY = { x: 2809, z: 3436, level: 0 };
+const TAVERLEY = { x: 2895, z: 3445, level: 0 };
+const DANGER = 'RESULT fail Error: shop walk failed: precondition walk danger from 2809,3436,0: route danger to 2895,3445,0: Big Wolf 2840,3497 needs 42 heal of food (expected damage 30.2)';
+const weak = (noRoutes?: readonly NoRouteFact[], bankItems: Record<number, number> = {}): AccountState => ({
+    ...meat(CATHERBY, noRoutes),
+    name: 'Tenhp',
+    skills: { Attack: { level: 1, xp: 0 }, Strength: { level: 1, xp: 0 }, Defence: { level: 1, xp: 0 }, Hitpoints: { level: 10, xp: 1_154 } },
+    bank: { items: bankItems, observedAt: NOW - 1000, trusted: true },
+});
+
+test('a walk danger refusal is a route-danger fact: the 10 HP account is not dispatched to the job until food is staged', () => {
+    expect(parseNoRoute(DANGER)).toEqual({ from: CATHERBY, to: TAVERLEY, danger: 'Big Wolf 2840,3497', needHeal: 42 });
+    const classifier = new OutcomeClassifier({ root, persist: false });
+    const res = classifier.classifyAndApplyRaw(
+        { activityId: 'market:shop-buy', account: 'Tenhp', exitCode: 1, status: 'fail', reason: 'blocked after 1 runs', detail: DANGER, pos: CATHERBY },
+        { now: NOW },
+    );
+    expect(res.defect).toBeUndefined();
+    expect(res.noRoute).toMatchObject({ from: CATHERBY, to: TAVERLEY, danger: 'Big Wolf 2840,3497', needHeal: 42 });
+    expect(res.summary).toContain('route danger');
+    const acct = classifier.applyToAccount(weak(), NOW + 1_000);
+    expect(acct.noRoutes?.[0]?.danger).toBe('Big Wolf 2840,3497');
+    // The job at Taverley is blocked on food, not refused as unreachable.
+    const job = { id: 'market:shop-buy', config: { targetTile: TAVERLEY } };
+    const pre = activityPreflightFromConfig(acct, job as any, world(acct));
+    expect(pre.ok).toBe(false);
+    expect(pre.blockers).toContainEqual(expect.objectContaining({ kind: 'combat_survivability', reason: 'food', required: 42 }));
+    expect(pre.blockers.some(b => b.kind === 'unreachable_tile')).toBe(false);
+    expect(noRouteTo(acct.noRoutes, CATHERBY, TAVERLEY, NOW + 1_000)).toBeUndefined();
+    expect(enclosedAt([...acct.noRoutes!, { ...acct.noRoutes![0]!, to: VARROCK_WEST }], CATHERBY, NOW + 1_000)).toBeUndefined();
+    // Food in the bank changes the account state, and the fact ends.
+    expect(classifier.applyToAccount(weak(undefined, { 379: 10 }), NOW + 2_000).noRoutes).toBeUndefined();
+    // A refusal that food cannot fix (needHeal 0) refuses the job as unreachable.
+    const hopeless = weak([{ ...acct.noRoutes![0]!, needHeal: 0 }]);
+    expect(activityPreflightFromConfig(hopeless, job as any, world(hopeless)).blockers).toContainEqual(expect.objectContaining({ kind: 'unreachable_tile', reason: 'no_route' }));
+});
+
+test('the planner stages food before the refused walk, and gives no job whose route food cannot make safe', () => {
+    const OUT = 99_998;
+    const taverley: ActivityDefinition = {
+        id: 'gather:taverley-probe', workerId: 'gather', family: 'gather', kind: 'train', label: 'Work at Taverley', skill: 'Woodcutting',
+        location: TAVERLEY, config: {},
+        baselineRate: { xpPerTick: 10, unitsPerTick: 0.1, gpPerTick: 5, setupTicks: 10, minBatchUnits: 1, confidence: 'live' },
+        outputs: [{ itemId: OUT, countPerUnit: 1 }], trust: 'live_proven',
+    };
+    const demand: GoalDemand = {
+        id: 'demand:taverley', goalKind: 'pk_army', valueScore: 100, valuePerHour: 1000,
+        target: { kind: 'item', itemId: OUT, itemName: 'probe output', count: 5 }, fulfilled: 0, remaining: 5, priorityWeight: 1, active: true,
+    };
+    const fact: NoRouteFact = { from: CATHERBY, to: TAVERLEY, activityId: taverley.id, observedAt: NOW - 60_000, expiresAt: NOW + NO_ROUTE_TTL_MS, danger: 'Big Wolf 2840,3497', needHeal: 42 };
+    const rich = (noRoutes: readonly NoRouteFact[]): AccountState => ({ ...weak(noRoutes), inventory: { 995: 20_000 }, bank: { items: { 995: 200_000 }, observedAt: NOW - 1000, trusted: true } });
+    const plan = (acct: AccountState) => planAccount(acct, { world: world(acct), activities: [taverley], demands: [demand] });
+    const free = plan(rich([]));
+    expect(free.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(true);
+    const staged = plan(rich([fact]));
+    expect(staged.steps[0]?.stepKind).toBe('acquire');
+    expect(staged.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(true);
+    const hopeless = plan(rich([{ ...fact, needHeal: 0 }]));
+    expect(hopeless.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(false);
 });

@@ -7,10 +7,31 @@ import type { BankStock, TripPlan } from '../trip';
 import type { WalkOptions, Walker } from '../walk-leg';
 import type { Account, Tile, World } from '../world';
 
+// `eatAbove`: the Hitpoints line to eat above from the pack before the first step (0: none; exposure.ts walkVerdict).
+// A refusal with needHeal 0 cannot be fixed with food (the maximum Hitpoints are at or under the floor line).
 export type RouteHarm =
-    | { action: 'clear' | 'eat'; plan: TripPlan }
+    | { action: 'clear'; plan: TripPlan }
+    | { action: 'eat'; plan: TripPlan; eatAbove: number }
     | { action: 'detour'; plan: TripPlan }
     | { action: 'refuse'; plan: TripPlan; zone: string; damage: number; needHeal: number };
+
+// The head of a harm refusal: brain/src/no-route.ts parseNoRoute reads its start and target, and the planner turns
+// it into a route-danger fact (food staged first, or another job).
+export const routeDangerText = (from: Tile, to: Tile) => `walk danger from ${from.x},${from.z},${from.level}: route danger to ${to.x},${to.z},${to.level}`;
+
+// Eats pack food until the Hitpoints are above `line`: one piece, then the eat delay (3 ticks), at most 28 pieces.
+// False when the Hitpoints do not get there (no food left, or the eats do not land).
+export async function eatBeforeWalk(s: Walker, line: number, stop: () => boolean = () => false): Promise<boolean> {
+    const bot = s.bot as Walker['bot'] & { eatFood?(target?: unknown): Promise<{ success?: boolean } | unknown> };
+    const hp = () => s.sdk.getState()?.player?.hp ?? 0;
+    for (let i = 0; i < 28 && hp() <= line && !stop(); i++) {
+        if (typeof bot.eatFood !== 'function') return false;
+        const r = await bot.eatFood() as { success?: boolean } | undefined;
+        if (r && r.success === false) return hp() > line;
+        await waitTicks(s, 3);
+    }
+    return hp() > line;
+}
 
 const legsOf = (t: TripPlan) => [...t.legs, ...(t.bank?.then ?? [])];
 
@@ -43,7 +64,8 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
     console.log(`WALK_DANGER ${JSON.stringify({ action: d.action, from, to, cost: r.cost, safeCost: safePlan?.cost ?? null, safeDamage: safe ? Math.round(safe.exposure.damage * 10) / 10 : null, hp: p.hp, foodHeal: p.foodHeal, runTiles: p.runTiles, ...summary })}`);
     if (d.action === 'detour') return { action: 'detour', plan: safePlan! };
     if (d.action === 'refuse') return { action: 'refuse', plan: r, zone: summary.zone, damage: summary.damage, needHeal: summary.needHeal };
-    return { action: d.action, plan: r };
+    if (d.action === 'eat') return { action: 'eat', plan: r, eatAbove: d.verdict.eatFirst > 0 ? summary.floorLine : 0 };
+    return { action: 'clear', plan: r };
 }
 
 // Food to take from the bank stock for `needHeal` Hitpoints: the highest heal first, within the free pack slots and
