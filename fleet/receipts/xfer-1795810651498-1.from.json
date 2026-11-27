@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795810651498-1",
+ "account": "Spitroaster",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 2,
+ "claim": "38cca35d-7057-4ccd-b701-cf8a71bfd522",
+ "count": 0,
+ "ok": false,
+ "at": 1795811250992,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795811117075-1",
+ "account": "Nockitoff",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "c0af9d27-f67d-4116-b92e-7154b620efec",
+ "count": 0,
+ "ok": false,
+ "at": 1795811283153,
+ "detail": "trade claimed"
+}
