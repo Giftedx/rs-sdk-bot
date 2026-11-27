@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785471328,
+ "at": 1795785648290,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -190,6 +190,28 @@
    "role": "army"
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_ranarr_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:99",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:99",
+   "role": "army"
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -210,25 +232,6 @@
    "repeat": false,
    "goal": "campaign:shaftshooter:item:2434",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "141"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "auto",
-   "resources": [
-    "essence-mine"
-   ]
   }
  ],
  "army": [
@@ -250,7 +253,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",

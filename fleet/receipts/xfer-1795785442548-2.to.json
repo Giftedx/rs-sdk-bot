@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795785442548-2",
+ "account": "Hocuspokeus",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "062dce8c-fe76-4d8b-89f6-557373a20683",
+ "count": 10,
+ "ok": true,
+ "at": 1795785646362,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795785645677
+ },
+ "logout": {
+  "attemptId": "1795785633259-0000009984-0000000001",
+  "at": 1795785646350,
+  "sha256": "613e0896c73791df09d9c96ee25a3cba857533b8e90bc85398419619b67ebdb6"
+ },
+ "screen": true
+}
