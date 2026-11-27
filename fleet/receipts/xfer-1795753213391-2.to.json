@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795753213391-2",
+ "account": "SporranDip",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "edfeee1b-9c7a-427e-b50e-ba926e3cafc3",
+ "count": 1,
+ "ok": true,
+ "at": 1795753511935,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795753511178
+ },
+ "logout": {
+  "attemptId": "1795753501586-0000011756-0000000001",
+  "at": 1795753511926,
+  "sha256": "88b5462d0059e898711779aa57d363ecf351c586b9b52736d728d6bdae47ff85"
+ },
+ "screen": true
+}

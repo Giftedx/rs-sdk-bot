@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795753213391-2",
  "account": "Swordinhand",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "817a8ebd-5b4f-4e7d-a495-48ad515498aa",
- "count": 0,
- "ok": false,
- "at": 1795753487928,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795753510327,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795753496829
+ },
+ "logout": {
+  "attemptId": "1795753487936-0000001136-0000000001",
+  "at": 1795753510315,
+  "sha256": "74bb8d05229bc5097bad725ae015dd50deccdeff757c983b1a94d66a9fde45de"
+ },
+ "screen": true
 }
