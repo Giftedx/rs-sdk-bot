@@ -60,6 +60,8 @@ async function withRepos(run: (a: string, b: string) => void | Promise<void>) {
     }
 }
 
+// A case name that makes a worker exit with code 3 (the pool test below).
+const CRASH_CASE = '__crash_worker__';
 const CONCURRENT_CASES: Array<{ name: string; fn: () => void | Promise<void>; timeout: number }> = [];
 const test = (name: string, fn: () => void | Promise<void>, timeout = 30_000) => {
     CONCURRENT_CASES.push({ name, fn, timeout });
@@ -807,7 +809,7 @@ if (!isWorker) {
     // waits here for a free worker, so a bun timeout alone also counts the queue: on the 2 workers of a 4-vCPU runner
     // the last of 34 cases waited past 60 s and failed.
     type Job = { name: string; timeout: number; resolve: () => void; reject: (err: Error) => void };
-    type WorkerSlot = { proc: ReturnType<typeof spawnSlot> };
+    type WorkerSlot = { proc: ReturnType<typeof spawnSlot>; stopped?: boolean };
     const idle: WorkerSlot[] = [], queue: Job[] = [], workers: WorkerSlot[] = [];
     const pending = new Map<number, Job & { slot: WorkerSlot; timer: ReturnType<typeof setTimeout>; started: number }>();
     const times: { name: string; ms: number }[] = [];
@@ -823,6 +825,7 @@ if (!isWorker) {
         const timer = setTimeout(() => {
             if (!pending.delete(id)) return;
             job.reject(new Error(`case ran over its ${job.timeout} ms timeout`));
+            slot.stopped = true;
             slot.proc.kill();
             if (!closed) release(addSlot());
         }, job.timeout);
@@ -861,8 +864,14 @@ if (!isWorker) {
                 if (done) break;
             }
         })();
+        // A worker that exits by itself fails its case at once with its exit code and error text, and is replaced.
+        // `slot.stopped` marks the workers this file stops (Bun's `killed` is also true after an exit of its own).
         void proc.exited.then(async code => {
-            if (!closed && code !== 0 && !proc.killed) failAll(new Error(`claim test worker exited with ${code}: ${await new Response(proc.stderr).text()}`));
+            if (closed || slot.stopped) return;
+            const at = idle.indexOf(slot);
+            if (at >= 0) idle.splice(at, 1);
+            failAll(new Error(`claim test worker exited with ${code}: ${await new Response(proc.stderr).text()}`));
+            if (!closed) release(addSlot());
         });
         return slot;
     };
@@ -885,11 +894,16 @@ if (!isWorker) {
     // its own timeout at the latest, so the sum of all timeouts is never reached while the dispatch timers work.
     const cases = [...CONCURRENT_CASES].sort((a, b) => b.timeout - a.timeout), queueBound = cases.reduce((n, c) => n + c.timeout, 0);
     for (const { name, timeout } of cases) bunTest.concurrent(name, () => runInPool(name, timeout), queueBound);
+    // The crash, not the case timer, fails the case: the error names the exit code.
+    bunTest.concurrent('a worker that crashes fails its case at once with its exit code, and the pool goes on', async () => {
+        await expect(runInPool(CRASH_CASE, 60_000)).rejects.toThrow('claim test worker exited with 3');
+    }, queueBound);
 } else {
     const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
     rl.on('line', async line => {
         if (!line.trim()) return;
         const { id, name } = JSON.parse(line) as { id: number; name: string };
+        if (name === CRASH_CASE) process.exit(3);
         try {
             const entry = CONCURRENT_CASES.find(c => c.name === name);
             if (!entry) throw new Error(`missing test case ${name}`);
