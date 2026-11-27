@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779459374-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Fatstack",
+  "item": "Rune pickaxe",
+  "count": 1,
+  "itemId": 1275,
+  "start": 1795779459374,
+  "end": 1795780359374,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
