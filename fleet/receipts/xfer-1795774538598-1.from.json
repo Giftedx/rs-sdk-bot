@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774538598-1",
  "account": "Shaftsinker",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "35a4c1a8-7b32-466e-9b15-55d0c3999a7c",
- "count": 0,
- "ok": false,
- "at": 1795774772160,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774867314,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795774839770
+ },
+ "logout": {
+  "attemptId": "1795774772170-0000024156-0000000001",
+  "at": 1795774867303,
+  "sha256": "7a6bbc90f1f8f940462af3700fbd7e535c5c8016ea64808334a505561ae754f1"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774870354-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "mmtha0205",
+  "item": "Swamp toad",
+  "count": 1,
+  "itemId": 2150,
+  "start": 1795774870354,
+  "end": 1795775770354,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774134577-1",
  "account": "SporranDip",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "8a73455c-a12b-4065-9e8a-af6de28eba2f",
- "count": 0,
- "ok": false,
- "at": 1795774796909,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774866916,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795774856162
+ },
+ "logout": {
+  "attemptId": "1795774796918-0000031240-0000000001",
+  "at": 1795774866905,
+  "sha256": "ac01a9f2575d7a390d9749dd5267a4f265f9b97bb3ea6bce136c0e33a4cdd784"
+ },
+ "screen": true
 }
