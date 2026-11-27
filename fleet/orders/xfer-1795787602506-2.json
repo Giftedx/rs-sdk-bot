@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795787602506-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "Fingerblastr",
+  "item": "Tin ore",
+  "count": 2,
+  "itemId": 438,
+  "start": 1795787602506,
+  "end": 1795788502506,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

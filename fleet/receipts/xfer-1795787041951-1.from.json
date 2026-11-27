@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795787041951-1",
+ "account": "Billionaire",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 3,
+ "claim": "0913c522-98a1-4a5d-a828-d424ee0b2237",
+ "count": 0,
+ "ok": false,
+ "at": 1795787590254,
+ "detail": "trade claimed"
+}

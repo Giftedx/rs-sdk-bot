@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795787602506-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Fingerblastr",
+  "item": "Copper ore",
+  "count": 2,
+  "itemId": 436,
+  "start": 1795787602506,
+  "end": 1795788502506,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

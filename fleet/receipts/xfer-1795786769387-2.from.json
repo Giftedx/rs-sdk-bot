@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795786769387-2",
+ "account": "Wandwaver",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 3,
+ "claim": "6424e12c-ecad-4b4d-ade6-c87c05de992f",
+ "count": 0,
+ "ok": false,
+ "at": 1795787583790,
+ "detail": "trade claimed"
+}

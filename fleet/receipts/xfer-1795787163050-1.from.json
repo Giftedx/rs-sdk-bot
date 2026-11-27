@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795787163050-1",
+ "account": "Fingerblastr",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "32a52261-5777-4e8f-b253-8bfb030fa5a1",
+ "count": 1,
+ "ok": true,
+ "at": 1795787589901,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787566359
+ },
+ "logout": {
+  "attemptId": "1795787559461-0000019396-0000000001",
+  "at": 1795787589884,
+  "sha256": "84f2e13d579358eea2a37b00f0b6aae3fe49f0b398e65724f16a885f88460514"
+ },
+ "screen": true
+}
