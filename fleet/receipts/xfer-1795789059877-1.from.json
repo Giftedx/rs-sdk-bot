@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789059877-1",
  "account": "Woodenstaff",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "b803f82c-e889-4a2b-bd70-37354a5c5768",
- "count": 0,
- "ok": false,
- "at": 1795789209925,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795789281431,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795789254663
+ },
+ "logout": {
+  "attemptId": "1795789210276-0000024572-0000000001",
+  "at": 1795789281411,
+  "sha256": "2b9ae5e4047feef3e78e694f3750c82845ced4566d913b5d18a124691d6b10a6"
+ },
+ "screen": true
 }

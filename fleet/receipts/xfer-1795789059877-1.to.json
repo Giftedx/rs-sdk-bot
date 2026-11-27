@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795789059877-1",
+ "account": "PickpockDick",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "7161df21-3f72-4108-90dd-a5e8c0bc17f7",
+ "count": 1,
+ "ok": true,
+ "at": 1795789283328,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795789282308
+ },
+ "logout": {
+  "attemptId": "1795789269996-0000022788-0000000001",
+  "at": 1795789283021,
+  "sha256": "feb2846983d2a26d9a76f9cdad8eec8e2b50717b6286514c1c871eedebe05a1b"
+ },
+ "screen": true
+}
