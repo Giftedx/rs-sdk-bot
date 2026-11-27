@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774117053-1",
  "account": "mmtha0205",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "5a648979-447e-4bb5-b32d-f5800c122b7b",
- "count": 0,
- "ok": false,
- "at": 1795774438365,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774511359,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795774496575
+ },
+ "logout": {
+  "attemptId": "1795774438376-0000009592-0000000001",
+  "at": 1795774511332,
+  "sha256": "6ac74fa5a3b5607b8b441229467cf73e102aaef2a45b2e51d1c3dac327c3970f"
+ },
+ "screen": true
 }
