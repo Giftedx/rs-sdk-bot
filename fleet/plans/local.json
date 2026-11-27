@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753663574,
+ "at": 1795753674955,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -88,6 +88,24 @@
   },
   {
    "account": "YewFirst",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -203,8 +221,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
-  "woodpecker"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
