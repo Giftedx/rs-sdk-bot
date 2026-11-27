@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795784527656-1",
  "account": "TheFullMonty",
  "partner": "TackleBox",
@@ -12,13 +12,23 @@
  "claim": "7f691b04-ed3e-4321-b50d-438cc84b7055",
  "count": 0,
  "ok": false,
- "at": 1795784599674,
- "detail": "trade claimed",
+ "at": 1795784675626,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Coins",
    "requested": 27,
    "count": 0
   }
- ]
+ ],
+ "bank": {
+  "count": 249,
+  "at": 1795784659673
+ },
+ "logout": {
+  "attemptId": "1795784599684-0000003820-0000000001",
+  "at": 1795784675613,
+  "sha256": "ea527ff054a65c04bd020dea3bd6c416f82b785a342f8f95d9c90e19b1ba2c7b"
+ },
+ "screen": false
 }

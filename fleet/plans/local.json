@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795784674480,
+ "at": 1795784692478,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -99,8 +99,8 @@
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=6 PRODUCT_TARGET=6 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
     "ROUNDS": "1"
@@ -192,28 +192,6 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_irit_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "5",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:101",
-    "BATCH_UNITS": "5",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:101",
-   "role": "army"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -264,79 +242,55 @@
    "role": "auto"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "22",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
-  },
-  {
    "account": "mmtha0205",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
+    "ranged-camp"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "7",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "7"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army"
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
+    "ranged-camp"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "112",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "112"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -358,6 +312,7 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpool",
   "pocketrocket",
   "sausagefest",
