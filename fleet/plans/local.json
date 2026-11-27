@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795790864281,
+ "at": 1795790879933,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1580 TARGET_COUNT=158 PRODUCT_TARGET=177 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1570 TARGET_COUNT=157 PRODUCT_TARGET=177 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=177 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
@@ -84,14 +84,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "111",
+    "MAX_ITEMS": "109",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "111"
+    "BATCH_UNITS": "109"
    },
    "enabled": true,
    "repeat": false,
@@ -103,24 +103,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild",
+    "2handedshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "55",
+    "ITEM_ID": "1311",
+    "ITEMS": "Steel 2h sword",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "55"
+    "DEMAND_ID": "campaign:haggis:item:1311",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -144,37 +144,6 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=16 PRODUCT_TARGET=16 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=16 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=16 PRODUCT_TARGET=16 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=16 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
@@ -193,8 +162,8 @@
    "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=4 PRODUCT_TARGET=4 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
     "ROUNDS": "1"
@@ -208,8 +177,8 @@
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=4 PRODUCT_TARGET=4 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
     "ROUNDS": "1"
@@ -250,6 +219,76 @@
    "repeat": false,
    "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "loot-trip"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "loot-trip"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:irit_leaf"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:259",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
+   "role": "army"
   }
  ],
  "army": [

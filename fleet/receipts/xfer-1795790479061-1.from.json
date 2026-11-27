@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790479061-1",
  "account": "Fingersmith",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "89be320f-1a8f-48e0-8659-71c1a1ae1474",
- "count": 0,
- "ok": false,
- "at": 1795790841651,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790864549,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790846987
+ },
+ "logout": {
+  "attemptId": "1795790841660-0000007460-0000000001",
+  "at": 1795790864536,
+  "sha256": "0fee5cac1a4957157879df9230595ee20d22507c09ab88b7de8492c9d825021d"
+ },
+ "screen": true
 }
