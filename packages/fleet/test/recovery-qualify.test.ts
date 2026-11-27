@@ -141,3 +141,16 @@ test('a run that cannot be imported, read or finished counts as failed, so a fre
     expect(logs.at(-2)).toBe('recovery qualification: run 123 queued 120 min after its dispatch; counted as failed');
     expect(logs.at(-1)).toBe('recovery qualification: dispatched run 789 at ffffffffff for source cccccccccccc');
 });
+
+test('an imported run older than the newest deferred end is dispatched again at once; a failed run keeps the wait', () => {
+    const source = 'a'.repeat(64), now = 10_000_000;
+    const imported = { run: '1', sha: 'b'.repeat(40), source, at: now - 5 * 60_000, state: 'imported' as const };
+    // The deferred recovery waits on an end after that run's dispatch: the run qualifies none of it.
+    expect(qualifyDispatchWait(imported, source, now, now - 60_000)).toBeNull();
+    // An end before the run's dispatch is covered by it: the usual retry wait holds.
+    expect(qualifyDispatchWait(imported, source, now, now - 10 * 60_000)).toMatch(/next dispatch after/);
+    expect(qualifyDispatchWait(imported, source, now)).toMatch(/next dispatch after/);
+    // A failed run of the same source keeps the retry wait, whatever the end.
+    expect(qualifyDispatchWait({ ...imported, state: 'failed' }, source, now, now - 60_000)).toMatch(/next dispatch after/);
+    expect(qualifyDispatchWait({ ...imported, state: 'dispatched' }, source, now, now - 60_000)).toMatch(/has not finished/);
+});

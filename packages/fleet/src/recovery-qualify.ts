@@ -40,9 +40,13 @@ function readQualifyRun(file: string): QualifyRun | null {
     } catch { return null; }
 }
 
-// Why no qualification run is dispatched now, or null to dispatch one.
-export function qualifyDispatchWait(last: QualifyRun | null, source: string, now: number): string | null {
+// Why no qualification run is dispatched now, or null to dispatch one. A qualification counts for a recovery only when it
+// is newer than the account's end (session-recovery.ts findCurrentNativeRecoveryQualification). So an imported run that
+// was dispatched before the newest end a deferred recovery waits on (`newestEnd`) qualifies none of them, and the next run
+// is dispatched at once instead of after QUALIFY_RETRY_MS. A failed run keeps the wait.
+export function qualifyDispatchWait(last: QualifyRun | null, source: string, now: number, newestEnd = 0): string | null {
     if (last?.state === 'dispatched') return `run ${last.run} has not finished`;
+    if (last?.state === 'imported' && last.source === source && last.at <= newestEnd) return null;
     if (last && last.source === source && now - last.at < QUALIFY_RETRY_MS) {
         return `run ${last.run} for source ${source.slice(0, 12)} was dispatched ${Math.floor((now - last.at) / 60_000)} min ago (${last.state}); next dispatch after ${QUALIFY_RETRY_MS / 60_000} min`;
     }
@@ -80,7 +84,8 @@ export function importQualifyRun(base: string, run: string, exec: Exec, scratch:
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
-export function ensureHostedQualification(base: string, clock: () => number, log: (line: string) => void, deps: QualifyDeps = {}): void {
+// newestEnd: the newest end that a recovery deferred for a missing qualification waits on (qualifyDispatchWait).
+export function ensureHostedQualification(base: string, clock: () => number, log: (line: string) => void, deps: QualifyDeps = {}, newestEnd = 0): void {
     const exec = deps.exec ?? defaultExec, say = (line: string) => log(`recovery qualification: ${line}`);
     const file = qualifyStateFile(base);
     let source: string;
@@ -123,7 +128,7 @@ export function ensureHostedQualification(base: string, clock: () => number, log
             say(`run ${run.run} ended ${v.conclusion ?? 'with no conclusion'}`);
         }
     }
-    const wait = qualifyDispatchWait(last, source, clock());
+    const wait = qualifyDispatchWait(last, source, clock(), newestEnd);
     if (wait) { say(`not dispatched: ${wait}`); return; }
     // The run checks out master: a main checkout behind it would get a qualification for a source it does not run.
     exec(['git', 'fetch', '-q', 'origin', 'master'], base);
