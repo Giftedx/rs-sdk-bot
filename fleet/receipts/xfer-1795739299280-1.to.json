@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739299280-1",
  "account": "CoinCock",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 560,
  "claim": "6803bfca-6129-48ba-baed-64f509238ec9",
- "count": 0,
- "ok": false,
- "at": 1795739434704,
- "detail": "trade claimed"
+ "count": 560,
+ "ok": true,
+ "at": 1795739446188,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 560
+ },
+ "bank": {
+  "count": 560,
+  "at": 1795739445443
+ },
+ "logout": {
+  "attemptId": "1795739434712-0000028796-0000000001",
+  "at": 1795739446177,
+  "sha256": "288aaec6fd47d90f511e793e8c36eb7c2fabb3114747ba04a5001195f659427e"
+ },
+ "screen": true
 }

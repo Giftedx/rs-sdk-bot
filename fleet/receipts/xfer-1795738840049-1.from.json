@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738840049-1",
  "account": "SporranBulge",
  "partner": "WellHung",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 1,
  "claim": "150af5cc-ff12-4938-b53b-c6d161c7a02a",
- "count": 0,
- "ok": false,
- "at": 1795739384954,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795739438580,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795739390311
+ },
+ "logout": {
+  "attemptId": "1795739384964-0000018944-0000000001",
+  "at": 1795739438568,
+  "sha256": "6e75eddc63e344b8a08febedf2b62adb795a1beeb23020ea7a63ad1f17ce2393"
+ },
+ "screen": true
 }

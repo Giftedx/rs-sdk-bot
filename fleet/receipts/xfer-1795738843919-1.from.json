@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738843919-1",
  "account": "BoneToPick",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 2,
  "claim": "7c00fcff-84a1-42db-9c08-3cb63eb255da",
- "count": 0,
- "ok": false,
- "at": 1795739415029,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795739441860,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795739421849
+ },
+ "logout": {
+  "attemptId": "1795739415037-0000005668-0000000001",
+  "at": 1795739441774,
+  "sha256": "b3efcfd7f21d3e5cac158e1fbb77535cddf2efe645b91a6918719b8b8eed57af"
+ },
+ "screen": true
 }

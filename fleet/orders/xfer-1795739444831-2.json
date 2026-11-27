@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795739444831-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Hocuspokeus",
+  "item": "Unicorn horn",
+  "count": 2,
+  "itemId": 237,
+  "start": 1795739444831,
+  "end": 1795740344831,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
