@@ -48,6 +48,8 @@ export type RecoveryPermitChecks = {
     nativeFixture?: boolean;
     processStarts?: ProcessStarts;
     pidAlive?: (pid: number) => boolean;
+    // One launch's fleet heartbeat reads by path: the exact bytes and the clock read taken after them (launchObservations).
+    fleetReads?: Map<string, { raw: string; observedAt: number }>;
 };
 export type ProducerRef = { attemptId: string; sha256: string | null };
 export type Permit = {

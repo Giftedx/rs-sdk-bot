@@ -25,6 +25,8 @@ const setupCauses=new Set([
  'recovery lacks current controller-native qualification','recovery native output outside delivery',
  'recovery native proof is not linked to its gate','recovery native proof gate binding changed',
  'recovery remote launch outside the repository controller; no lease issued','recovery runner differs from permit',
+ 'invalid recovery child','recovery child deadline; lease held','recovery child consumption not bound',
+ 'recovery child did not confirm preserved cleanup','recovery producer result superseded or crossed',
  ...FLEET_REFUSALS.map(x=>'recovery fleet ownership unresolved: '+x),
 ]);
 function setupCause(error:unknown){
@@ -93,7 +95,8 @@ export function createRecoveryDispatch(options:DispatchOptions){
      finally{active=undefined;}
     };
     void launched.completion.then(completed=>finished({changed:false,sessionRecovered:true,completed,reason:'confirmed session cleanup; old failure retained'}),
-     ()=>finished({changed:false,sessionRecovered:false,reason:'recovery child held; inspect fixed child output and retained account lease; no retry'}));
+     error=>{const cause=setupCause(error);log('SWARM recovery child held: '+cause);
+      finished({changed:false,sessionRecovered:false,reason:'recovery child held; inspect fixed child output and retained account lease; no retry',child:{cause}});});
    }catch(error){
     seen.add(raw);
     const leased=existsSync(paths.lease);

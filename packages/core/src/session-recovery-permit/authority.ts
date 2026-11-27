@@ -102,7 +102,7 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
     const brainStatePath = fleetStateFile(base);
     const clock = options.now ?? Date.now;
     if (existsSync(swarmStatePath)) {
-        assertFleetResolved(swarmStatePath, r.account, owner.pid, clock);
+        assertFleetResolved(swarmStatePath, r.account, owner.pid, clock, options.fleetReads);
         if (existsSync(brainStatePath)) {
             // Cross-check active account status in fleet-state.json only when fresh; a stale Brain cycle
             // snapshot does not invalidate a fresh 2 s swarm-state.json controller heartbeat.
@@ -122,7 +122,7 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
             }
         }
     } else {
-        assertFleetResolved(brainStatePath, r.account, owner.pid, clock);
+        assertFleetResolved(brainStatePath, r.account, owner.pid, clock, options.fleetReads);
     }
     const status = findAccountStatus(base, r.account);
     if (status && status.server === r.server && !status.result && (!Number.isFinite(status.at) || now - status.at < 30000)) throw Error('recovery account has an active external observation');

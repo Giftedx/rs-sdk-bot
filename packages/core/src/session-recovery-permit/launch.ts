@@ -48,9 +48,11 @@ export function finishRecoveryPermit(r: ControlledRecoveryRequest, exitCode: num
 // PowerShell command-line lookup costs over 1 s under load, so repeating the lookups at binding can age the heartbeat
 // past FLEET_HEARTBEAT_MAX_MS. Binding reuses the issue observations of this one call; it still re-reads every file and the
 // source stamp, and the child's consumeRecoveryConnection observes both processes again in its own process.
+// The issue itself takes seconds, so a heartbeat that was fresh at the issue read can be stale by binding. Binding
+// judges the heartbeat at the issue read when its bytes are unchanged (assertFleetResolved); changed bytes are read anew.
 export function launchObservations(options: RecoveryPermitChecks): RecoveryPermitChecks {
     const lookup = options.matches ?? processMatchesRecent, seen = new Map<string, boolean>();
-    return { ...options, matches: (pid, marker) => { const key = pid + '\0' + marker; let hit = seen.get(key); if (hit === undefined) { hit = lookup(pid, marker); seen.set(key, hit); } return hit; } };
+    return { ...options, fleetReads: new Map(), matches: (pid, marker) => { const key = pid + '\0' + marker; let hit = seen.get(key); if (hit === undefined) { hit = lookup(pid, marker); seen.set(key, hit); } return hit; } };
 }
 
 export function launchPermittedRecovery(r: ControlledRecoveryRequest, base: string, options: RecoveryPermitChecks = {}) {
