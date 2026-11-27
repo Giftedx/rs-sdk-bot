@@ -74,3 +74,16 @@ test('a 10 HP account\'s route out of the essence mine plans as one route when i
     expect(whole.ok).toBe(true);
     if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
 }, 180_000);
+
+// A ladder from 2909,3334 level 1 lands at 2908,3336 inside the square of a hunter that would kill this account. A walk
+// from the landing may leave through that square, as a walk from the route start may (danger/guard.ts escapeTiles), so
+// the route plans as one route as its two halves do.
+test('a 10 HP account\'s route through a ladder that lands in a hunter\'s square plans as one route as its halves do', () => {
+    const top: Tile = { x: 2909, z: 3334, level: 1 }, foot: Tile = { x: 2908, z: 3336, level: 0 }, falador: Tile = { x: 2965, z: 3380, level: 0 };
+    const deadline = () => ({ deadline: performance.now() + ROUTE_BUDGET_MS });
+    const first = w.route(top, foot, weak, deadline()), second = w.route(foot, falador, weak, deadline()), whole = w.route(top, falador, weak, deadline());
+    console.log('top->foot', first.ok ? first.cost : first.reason, 'foot->falador', second.ok ? second.cost : second.reason, 'top->falador', whole.ok ? whole.cost : whole.reason);
+    expect(first.ok && second.ok).toBe(true);
+    expect(whole.ok).toBe(true);
+    if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
+}, 180_000);

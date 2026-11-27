@@ -32,7 +32,7 @@ export interface Transport extends TransportMeta {
 export type RouteOptions = { deadline?: number };
 export const ROUTE_BUDGET_MS = 45_000;
 
-export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null };
+export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null; escape(at: Tile, open: Int32Array): number[] };
 export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget) => number | null) & {
     withPolicy?<T>(blocked: DoorBlock[], query: () => T): T;
     withDanger?<T>(acct: Account, from: Tile, to: Tile, query: () => T): T;

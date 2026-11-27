@@ -84,6 +84,8 @@ export function goalReachable(
     scope: ScopeAreas,
     from: Tile, to: Tile, goalTol: number,
     transports: readonly Transport[], allowedT: Uint8Array, travel: readonly Travel[], travelOk: (t: Travel) => boolean,
+    // Areas a walk from a landing reaches past the closed squares that hold it (search.ts escapeOf), if any.
+    escaped: (t: Tile) => readonly number[] = () => [],
 ): boolean {
     const area = scope.area;
     // A box past the loaded map gets the map square node (< 0), which joins every area of that square.
@@ -122,6 +124,7 @@ export function goalReachable(
         const s = v === -2 ? null : scope.step(t);
         return s === null ? [square(t)] : s.length ? s : near(t, 0);
     };
+    const landed = (t: Tile): number[] => { const e = escaped(t); return e.length ? [...new Set([...own(t), ...e])] : own(t); };
 
     // Ends: the tiles where a walk starts or stops, with their areas and box reach.
     type End = { t: Tile; areas: number[]; r: number };
@@ -137,11 +140,11 @@ export function goalReachable(
         const r = q && !t.entry ? Math.max(PORTAL_TOL, q.width, q.height) : 1;
         const reach = q && !t.entry ? scope.reach(at, r, q) : null;
         const src = end(at, q && !t.entry ? reach === null ? [square(at)] : reach.length ? reach : near(at, 0) : own(at), r + Math.max(q?.width ?? 1, q?.height ?? 1));
-        out[src]!.push(end(t.to, own(t.to)));
+        out[src]!.push(end(t.to, landed(t.to)));
     }
     for (const t of travel) {
         if (!travelOk(t)) continue;
-        const lands = [t.to, ...(t.lands ?? [])].map(l => end(l, own(l)));
+        const lands = [t.to, ...(t.lands ?? [])].map(l => end(l, landed(l)));
         // A teleport leaves from the route start.
         if (t.from) out[end(t.from, own(t.from))]!.push(...lands); else first.push(...lands);
     }
@@ -264,7 +267,9 @@ export function routeOnGraph(
         if (!scope) return false;
         areaChecked = true;
         const goalTol = strictTo ? 0 : opts.goalTolerance ?? GOAL_TOL;
-        return !goalReachable(scope, from, to, goalTol, transports, allowedT, travel, t => travelZeroOk.get(t)!);
+        // The areas a walk from a landing reaches through its opened escape tiles (escapeOf).
+        const escaped = (t: Tile): number[] => { const e = opts.pathLength.escapeAt?.(acct, t); return e?.length ? scope.escape(t, e) : []; };
+        return !goalReachable(scope, from, to, goalTol, transports, allowedT, travel, t => travelZeroOk.get(t)!, escaped);
     };
 
     const search = (trackFares: boolean): ReturnType<World['route']> => {

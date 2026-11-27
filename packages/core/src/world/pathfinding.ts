@@ -351,6 +351,27 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
                 }
                 return out;
             },
+            // The areas a walk from `at` reaches with `open` open again: a flood from `at` through the opened tiles,
+            // which stops at the first labelled tile past them.
+            escape: (at, open) => {
+                const inside = new Set<number>(open), out: number[] = [];
+                return withOpened(grid, open, `${at.level},${at.x},${at.z}`, () => {
+                    const seen = new Set<number>([pack(at.level, at.x, at.z)]), qx = [at.x], qz = [at.z];
+                    for (let i = 0; i < qx.length; i++) {
+                        const x = qx[i]!, z = qz[i]!;
+                        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+                            if (!(dx || dz) || !grid.canTravel(at.level, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) continue;
+                            const k = pack(at.level, x + dx, z + dz);
+                            if (seen.has(k)) continue;
+                            seen.add(k);
+                            if (inside.has(k)) { qx.push(x + dx); qz.push(z + dz); continue; }
+                            const v = labels.area(at.level, x + dx, z + dz);
+                            if (v >= 0 && !out.includes(v)) out.push(v);
+                        }
+                    }
+                    return out;
+                });
+            },
         };
     };
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
