@@ -35,7 +35,7 @@ import { BREW_STOCK_IDS, brewShortfall } from '../../workers/src/bank-artisan/he
 import { loadTravel } from '../../core/src/travel';
 import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
-import { noRouteForActivity, noRouteMessage, noRouteTo } from './no-route';
+import { noRouteForActivity, noRouteMessage, noRouteTo, routeDangerFor } from './no-route';
 
 // The no-route facts of a brain AccountState (outcome-classifier.ts). A bare WorkerAccountView has none.
 const accountNoRoutes = (acct: WorkerAccountView): readonly NoRouteFact[] | undefined =>
@@ -1400,6 +1400,15 @@ export function evaluatePreflight(
             reason: 'no_route',
             message: noRouteMessage(acct.name, searched),
         });
+    }
+    // The account's walker refused the route to this target or activity for its hunters (no-route.ts route-danger
+    // fact). With food short, the job needs food first: the planner stages it (combat_survivability food), and the new
+    // pack or bank ends the fact. With no food that helps (needHeal 0), no route serves the account now.
+    const danger = routeDangerFor(accountNoRoutes(acct), acct.pos, spec.targetTile ?? undefined, spec.activityId, world.at);
+    if (danger && !blockers.some(b => b.kind === 'unreachable_tile')) {
+        blockers.push((danger.needHeal ?? 1) > 0
+            ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `route danger: ${noRouteMessage(acct.name, danger)}` }
+            : { kind: 'unreachable_tile', target: danger.to, from: acct.pos, reason: 'no_route', message: noRouteMessage(acct.name, danger) });
     }
 
     const totalCoinNeed = coinsRequired + travelCoins;

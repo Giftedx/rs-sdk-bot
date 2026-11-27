@@ -3,7 +3,7 @@ import type { Account } from '../world-types';
 import { npcAttackStyles } from '../../../knowledge/src/npc-attack-styles';
 import { HUNTS_ALL, combatLevel, loadHunters, type Hunter } from './catalog';
 
-export const hunts = (h: Hunter, combat: number) => HUNTS_ALL.has(h.mode) || combat <= 2 * h.combat;
+export const hunts = (h: Hunter, combat: number) => (h.tooStrong === undefined ? HUNTS_ALL.has(h.mode) : !h.tooStrong) || combat <= 2 * h.combat;
 // A hunter is a danger when it hunts the account and is strong enough to kill it: its combat level is above
 // the account's combat level and at least 1.5 times the account's hitpoints. Rats and muggers stay walkable.
 export const deadly = (h: Hunter, combat: number, hitpoints: number) => hunts(h, combat) && h.combat > combat && h.combat >= 1.5 * hitpoints;

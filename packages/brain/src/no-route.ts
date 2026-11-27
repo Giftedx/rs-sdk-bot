@@ -18,7 +18,15 @@ export interface NoRouteFact {
     // noRouteState of the account that the search ran for. The outcome classifier sets it on the first snapshot
     // after the run, while the account is still logged out where the run ended.
     readonly state?: string;
+    // A route-danger fact (the walker's harm check, core/src/walk/harm.ts): a route exists, but its hunters (`danger`,
+    // the worst zone) take more Hitpoints than the account and its pack food hold; `needHeal` is the food short (0:
+    // food cannot help). The planner stages food for it (preflight.ts) instead of a no-route refusal, and a change of
+    // pack, bank or levels ends it (noRouteState).
+    readonly danger?: string;
+    readonly needHeal?: number;
 }
+
+export const isRouteDanger = (f: NoRouteFact): boolean => f.danger !== undefined;
 
 // A fact ends when the account moves or its state changes. A walker change can still open the route, so a fact also
 // ends 3 days after its search.
@@ -57,15 +65,22 @@ function lastStart(head: string, levelIfAbsent: number): WorkerTile | null {
     return best?.tile ?? null;
 }
 
-// The start and target of the first "no route" in a worker's failure text. The start is the one that the text names
-// before it, else `pos` (where the run ended). Null when the text has no "no route" or no start is known.
-export function parseNoRoute(text: string, pos?: WorkerTile | null): { from: WorkerTile; to: WorkerTile } | null {
-    const m = NO_ROUTE_RE.exec(text);
+// The walker's harm refusal (core/src/walk/harm.ts routeDangerText): "walk danger from <tile>: route danger to
+// <tile>: <zone> needs <n> heal ...".
+const DANGER_RE = /\broute danger to (-?\d+),(-?\d+),(\d+): (.+?) needs (\d+) heal\b/;
+
+// The start and target of the first "no route" or "route danger" in a worker's failure text. The start is the one
+// that the text names before it, else `pos` (where the run ended). Null when the text has neither or no start is known.
+export function parseNoRoute(text: string, pos?: WorkerTile | null): { from: WorkerTile; to: WorkerTile; danger?: string; needHeal?: number } | null {
+    const n = NO_ROUTE_RE.exec(text), d = DANGER_RE.exec(text);
+    const m = n && (!d || n.index <= d.index) ? n : d;
     if (!m) return null;
     const to = { x: Number(m[1]), z: Number(m[2]), level: Number(m[3]) };
     if (!isWorkerTile(to)) return null;
     const from = lastStart(text.slice(0, m.index), pos?.level ?? 0) ?? (pos && isWorkerTile(pos) ? pos : null);
-    return from ? { from: { x: from.x, z: from.z, level: from.level }, to } : null;
+    if (!from) return null;
+    const out = { from: { x: from.x, z: from.z, level: from.level }, to };
+    return m === d ? { ...out, danger: d[4]!, needHeal: Number(d[5]) } : out;
 }
 
 export function isNoRouteFact(v: unknown): v is NoRouteFact {
@@ -74,7 +89,9 @@ export function isNoRouteFact(v: unknown): v is NoRouteFact {
     return isWorkerTile(f.from) && isWorkerTile(f.to) && typeof f.activityId === 'string' && f.activityId.trim().length > 0
         && typeof f.observedAt === 'number' && Number.isFinite(f.observedAt) && f.observedAt > 0
         && typeof f.expiresAt === 'number' && Number.isFinite(f.expiresAt) && f.expiresAt > 0
-        && (f.state === undefined || (typeof f.state === 'string' && f.state.length > 0));
+        && (f.state === undefined || (typeof f.state === 'string' && f.state.length > 0))
+        && (f.danger === undefined || (typeof f.danger === 'string' && f.danger.length > 0))
+        && (f.needHeal === undefined || (typeof f.needHeal === 'number' && Number.isInteger(f.needHeal) && f.needHeal >= 0));
 }
 
 // What a route search for the account reads beside its position: the danger rule reads its levels, quest doors read
@@ -98,11 +115,22 @@ export function noRouteHolds(f: NoRouteFact, pos: WorkerTile | null, now: number
     return now < f.expiresAt && standsAt(pos, f.from);
 }
 
-// The fact that refuses `target` for an account at `pos`, if one does.
+const nearTarget = (f: NoRouteFact, pos: WorkerTile, target: WorkerTile) =>
+    target.level === f.to.level && cheb(target, f.to) <= NO_ROUTE_TARGET_TILES && cheb(target, f.to) < cheb(target, pos);
+
+// The fact that refuses `target` for an account at `pos`, if one does. A route-danger fact refuses nothing here: a
+// route exists (routeDangerTo).
 export function noRouteTo(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, target: WorkerTile, now: number): NoRouteFact | undefined {
     if (!facts?.length || !pos) return undefined;
-    return facts.find(f => noRouteHolds(f, pos, now) && target.level === f.to.level
-        && cheb(target, f.to) <= NO_ROUTE_TARGET_TILES && cheb(target, f.to) < cheb(target, pos));
+    return facts.find(f => !isRouteDanger(f) && noRouteHolds(f, pos, now) && nearTarget(f, pos, target));
+}
+
+// The route-danger fact for `target` (by place, as noRouteTo) or for `activityId` (as noRouteForActivity), if one holds.
+export function routeDangerFor(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, target: WorkerTile | undefined, activityId: string | undefined, now: number): NoRouteFact | undefined {
+    if (!facts?.length) return undefined;
+    return facts.find(f => isRouteDanger(f) && (
+        (activityId !== undefined && f.activityId === activityId && (noRouteHolds(f, pos, now) || (atTarget(f) && now < f.expiresAt)))
+        || (target !== undefined && pos !== null && noRouteHolds(f, pos, now) && nearTarget(f, pos, target))));
 }
 
 // A fact that shows the account cannot leave where it stands, if one does: two holding facts whose targets lie on
@@ -111,7 +139,7 @@ export function noRouteTo(facts: readonly NoRouteFact[] | undefined, pos: Worker
 // Ardougne Mourner HQ at 2546,3325 had no route to Varrock, Karamja or the Ardougne market).
 export function enclosedAt(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, now: number): NoRouteFact | undefined {
     if (!facts || facts.length < 2 || !pos) return undefined;
-    const held = facts.filter(f => noRouteHolds(f, pos, now));
+    const held = facts.filter(f => !isRouteDanger(f) && noRouteHolds(f, pos, now));
     for (let i = 0; i < held.length; i++) {
         for (let j = i + 1; j < held.length; j++) {
             const a = held[i]!.to;
@@ -131,11 +159,13 @@ export function atTarget(f: NoRouteFact): boolean {
 
 // The fact that refuses `activityId` for an account at `pos`, if one does.
 export function noRouteForActivity(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, activityId: string, now: number): NoRouteFact | undefined {
-    return facts?.find(f => f.activityId === activityId && (noRouteHolds(f, pos, now) || (atTarget(f) && now < f.expiresAt)));
+    return facts?.find(f => !isRouteDanger(f) && f.activityId === activityId && (noRouteHolds(f, pos, now) || (atTarget(f) && now < f.expiresAt)));
 }
 
 export function noRouteMessage(account: string, f: NoRouteFact): string {
-    return `${account} has no route from ${tileText(f.from)} to ${tileText(f.to)} (${f.activityId})`;
+    return isRouteDanger(f)
+        ? `${account} has route danger from ${tileText(f.from)} to ${tileText(f.to)} (${f.activityId}): ${f.danger} needs ${f.needHeal ?? '?'} heal of food`
+        : `${account} has no route from ${tileText(f.from)} to ${tileText(f.to)} (${f.activityId})`;
 }
 
 // The facts after a new one: it replaces a fact of the same activity and target, and the newest facts are kept.

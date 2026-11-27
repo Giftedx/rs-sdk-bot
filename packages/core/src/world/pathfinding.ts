@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, guardRoute, guardWalk, npcReach, pack, planAroundHarm, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
+import { activeDanger, guardRoute, guardWalk, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
@@ -18,7 +18,7 @@ const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 3, SCOPE_NULL_KEYS = 256;
 const policySdks = new WeakSet<object>();
 
 async function loadPathfinding() {
-    if (!rsPath) rsPath = await import(join(worldRepoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
+    if (!rsPath) { rsPath = await import(join(worldRepoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts')); setDangerDoorAt(rsPath!.getDoorAt as Parameters<typeof setDangerDoorAt>[0]); }
     return rsPath!;
 }
 

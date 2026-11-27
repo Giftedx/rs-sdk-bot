@@ -6,7 +6,7 @@ import type { TripPlan } from '../trip';
 import { topUpFareFloat, unpaidFaresNear } from './fare-float';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
-import { routeHarm, stageFood } from './harm';
+import { eatBeforeWalk, routeDangerText, routeHarm, stageFood } from './harm';
 import { walkRoute } from './legs';
 import { leaveMineJail } from './mine-jail';
 import { leaveDeck } from './travel';
@@ -138,12 +138,14 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if (!opts.noHarmCheck) {
         const harm = await routeHarm(s, from, to, acct, r, a => plan(a));
         if (harm.action === 'detour') r = harm.plan;
-        else if (harm.action === 'refuse') {
-            if (hasBank && !opts.noFoodStage && rawStock) {
+        else if (harm.action === 'eat' && harm.eatAbove > 0 && !await eatBeforeWalk(s, harm.eatAbove, () => opts.signal?.aborted === true)) {
+            return { ok: false, reason: 'precondition', detail: `${routeDangerText(from, to)}: the Hitpoints stay at or under ${harm.eatAbove} after eating`, ticks: s.tick() - started };
+        } else if (harm.action === 'refuse') {
+            if (harm.needHeal > 0 && hasBank && !opts.noFoodStage && rawStock) {
                 const staged = await stageFood(s, world, to, acct, rawStock, harm.needHeal, opts, goTo);
                 if (staged) return { ...staged, ticks: s.tick() - started };
             }
-            return { ok: false, reason: 'precondition', detail: `walk danger: ${harm.zone} needs ${harm.needHeal} heal of food (expected damage ${harm.damage})`, ticks: s.tick() - started };
+            return { ok: false, reason: 'precondition', detail: `${routeDangerText(from, to)}: ${harm.zone} needs ${harm.needHeal} heal of food (expected damage ${harm.damage})`, ticks: s.tick() - started };
         }
     }
     // A route that walks round a fare the pack cannot pay (the Al Kharid toll gate with no coins: 307 path tiles

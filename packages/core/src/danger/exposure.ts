@@ -27,10 +27,11 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
 // it looks) + 1 margin tile, as dangerSet counts it. `vislevel`: the NPC's visible combat level. `tooStrong`: the NPC
 // skips a player outside the Wilderness whose combat level is above 2 x vislevel (engine Npc.ts huntPlayers,
 // HuntCheckNotTooStrong.OUTSIDE_WILDERNESS). `distant`: it attacks with ranged or magic, so a wall between does not
-// keep its hits off (npcReach counts the whole square).
+// keep its hits off (npcReach counts the whole square). `hitRange`: the tiles past its walk tiles that npcReach counts
+// (default 1, a melee attack from an adjacent tile).
 export type WalkThreat = {
     readonly id: number; readonly name: string; readonly x: number; readonly z: number; readonly level: number;
-    readonly r: number; readonly vislevel: number; readonly tooStrong: boolean; readonly distant: boolean;
+    readonly r: number; readonly vislevel: number; readonly tooStrong: boolean; readonly distant: boolean; readonly hitRange?: number;
     readonly maxHit: number; readonly attackRoll: number; readonly attackRate: number;
 };
 
@@ -154,9 +155,10 @@ export function npcReach(grid: ReachGrid, doorAt: (level: number, x: number, z: 
             return w ? [{ x: d.x, z: d.z, level: d.level, angle: w.angle, shape: w.shape, blockrange: !!(w as { blockrange?: boolean }).blockrange }] : [];
         });
         if (doors.length && grid.changeWall && grid.__set) withDoorPolicy(grid as Parameters<typeof withDoorPolicy>[0], doors, run); else run();
+        const hit = Math.max(1, t.hitRange ?? 1);
         for (let x = -t.r; x <= t.r; x++) for (let z = -t.r; z <= t.r; z++) {
             if (!walk[(x + t.r) * side + (z + t.r)]) continue;
-            for (let ax = Math.max(-t.r, x - 1); ax <= Math.min(t.r, x + 1); ax++) for (let az = Math.max(-t.r, z - 1); az <= Math.min(t.r, z + 1); az++) out[(ax + t.r) * side + (az + t.r)] = 1;
+            for (let ax = Math.max(-t.r, x - hit); ax <= Math.min(t.r, x + hit); ax++) for (let az = Math.max(-t.r, z - hit); az <= Math.min(t.r, z + hit); az++) out[(ax + t.r) * side + (az + t.r)] = 1;
         }
         return out;
     };
@@ -180,7 +182,8 @@ export const huntsAt = (t: WalkThreat, combat: number, x: number, z: number) => 
 
 // What the walk check reads from an account: combat level, Hitpoints now, Defence, the heal of the food in the pack,
 // and `runTiles`, the path tiles its run energy covers (0 when not known: the account walks).
-export type WalkProfile = { readonly combat: number; readonly hp: number; readonly defence: number; readonly defenceBonus?: number; readonly foodHeal: number; readonly runTiles: number };
+// `maxHp`: the base Hitpoints (absent: `hp`).
+export type WalkProfile = { readonly combat: number; readonly hp: number; readonly maxHp?: number; readonly defence: number; readonly defenceBonus?: number; readonly foodHeal: number; readonly runTiles: number };
 
 // The heal of one piece of a food that the HP floor eats (hp-floor.ts eats sustain.ts allFoodIds), over all its bites;
 // undefined for any other item. Food the floor does not eat does not count for a walk.
@@ -202,12 +205,12 @@ export function runTiles(energy: number | undefined, weightKg = 0): number {
     return 2 * Math.floor((energy * 100) / loss);
 }
 
-export function walkProfile(acct: Pick<Account, 'skills' | 'counts'>, run?: { energy?: number; weightKg?: number }): WalkProfile {
-    return { combat: combatLevel(acct.skills), hp: acct.skills.hitpoints ?? 10, defence: acct.skills.defence ?? 1, foodHeal: packFoodHeal(acct.counts), runTiles: runTiles(run?.energy, run?.weightKg) };
+export function walkProfile(acct: Pick<Account, 'skills' | 'counts'>, run?: { energy?: number; weightKg?: number; maxHp?: number }): WalkProfile {
+    return { combat: combatLevel(acct.skills), hp: acct.skills.hitpoints ?? 10, ...(run?.maxHp ? { maxHp: run.maxHp } : {}), defence: acct.skills.defence ?? 1, foodHeal: packFoodHeal(acct.counts), runTiles: runTiles(run?.energy, run?.weightKg) };
 }
-// The profile of the player in an SDK state: run energy and weight (grams) from the player record.
-export const stateWalkProfile = (acct: Pick<Account, 'skills' | 'counts'>, player: { runEnergy?: number; runWeight?: number } | null | undefined): WalkProfile =>
-    walkProfile(acct, { energy: player?.runEnergy, weightKg: (player?.runWeight ?? 0) / 1000 });
+// The profile of the player in an SDK state: run energy, weight (grams) and maximum Hitpoints from the player record.
+export const stateWalkProfile = (acct: Pick<Account, 'skills' | 'counts'>, player: { runEnergy?: number; runWeight?: number; maxHp?: number } | null | undefined): WalkProfile =>
+    walkProfile(acct, { energy: player?.runEnergy, weightKg: (player?.runWeight ?? 0) / 1000, ...(player?.maxHp ? { maxHp: player.maxHp } : {}) });
 
 // Ticks a path tile costs: 0.5 while the run energy lasts (2 tiles a tick), then 1. A hunter walks 1 tile a tick, so
 // it falls behind a running player; the time in its square still counts.
@@ -284,20 +287,28 @@ export const walkFloorLine = (e: WalkExposure) => 2 * Math.max(e.burst || e.maxH
 // So pack food counts only for the foods the floor eats (foodHealOf) and only when the Hitpoints start above the floor
 // line of the walk's burst: under it one burst can land before the floor's eat. refuse: `needHeal` more heal of food
 // is needed (and the Hitpoints must start above the floor line).
-export type WalkVerdict = { verdict: 'clear' | 'eat' | 'refuse'; need: number; needHeal: number };
+// `eatFirst`: the heal to eat before the first step, when the Hitpoints start at or under the floor line: the walk
+// eats it from the pack (walk/harm.ts eatBeforeWalk), then starts above the line. A walk whose maximum Hitpoints are
+// at or under the floor line cannot start above it, and food does not help: needHeal is 0 and the walk is refused.
+// needHeal: the heal of food still short, the start line and the need together.
+export type WalkVerdict = { verdict: 'clear' | 'eat' | 'refuse'; need: number; needHeal: number; eatFirst: number };
 export function walkVerdict(p: WalkProfile, e: WalkExposure): WalkVerdict {
-    if (e.damage <= 0) return { verdict: 'clear', need: 0, needHeal: 0 };
-    const need = Math.ceil(e.damage * WALK_SAFETY + retreatLine(e.maxHit));
-    if (p.hp >= need) return { verdict: 'clear', need, needHeal: 0 };
-    if (p.hp + p.foodHeal >= need && p.hp > walkFloorLine(e)) return { verdict: 'eat', need, needHeal: 0 };
-    return { verdict: 'refuse', need, needHeal: Math.max(1, need - p.hp - p.foodHeal) };
+    if (e.damage <= 0) return { verdict: 'clear', need: 0, needHeal: 0, eatFirst: 0 };
+    const need = Math.ceil(e.damage * WALK_SAFETY + retreatLine(e.maxHit)), line = walkFloorLine(e);
+    // At or under the floor line the first hit sends the HP floor into its eat or escape, so the walk starts above it.
+    if (p.hp >= need && p.hp > line) return { verdict: 'clear', need, needHeal: 0, eatFirst: 0 };
+    const maxHp = Math.max(p.hp, p.maxHp ?? p.hp);
+    if (maxHp <= line) return { verdict: 'refuse', need, needHeal: 0, eatFirst: 0 };
+    const eatFirst = Math.max(0, line + 1 - p.hp), total = Math.max(need, line + 1) - p.hp;
+    if (p.foodHeal >= total) return { verdict: 'eat', need, needHeal: 0, eatFirst };
+    return { verdict: 'refuse', need, needHeal: total - p.foodHeal, eatFirst };
 }
 
 // The fields of a WALK_DANGER log line: the worst zone, the expected damage, the Hitpoints needed and the food short.
-export function dangerSummary(e: WalkExposure, v: WalkVerdict): { zone: string; damage: number; need: number; needHeal: number; tiles: number; zones: { name: string; x: number; z: number; tiles: number; damage: number }[] } {
+export function dangerSummary(e: WalkExposure, v: WalkVerdict): { zone: string; damage: number; need: number; needHeal: number; eatFirst: number; floorLine: number; tiles: number; zones: { name: string; x: number; z: number; tiles: number; damage: number }[] } {
     const top = e.zones[0];
     return {
-        zone: top ? `${top.name} ${top.x},${top.z}` : '-', damage: Math.round(e.damage * 10) / 10, need: v.need, needHeal: v.needHeal, tiles: e.tiles,
+        zone: top ? `${top.name} ${top.x},${top.z}` : '-', damage: Math.round(e.damage * 10) / 10, need: v.need, needHeal: v.needHeal, eatFirst: v.eatFirst, floorLine: walkFloorLine(e), tiles: e.tiles,
         zones: e.zones.slice(0, 5).map(z => ({ name: z.name, x: z.x, z: z.z, tiles: z.tiles, damage: Math.round(z.damage * 10) / 10 })),
     };
 }

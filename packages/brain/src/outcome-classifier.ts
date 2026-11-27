@@ -870,7 +870,7 @@ export class OutcomeClassifier {
             readonly workerEntries?: readonly string[];
             readonly skipRateSample?: boolean;
             // The "no route" in the run's failure text and where that search started (no-route.ts parseNoRoute).
-            readonly noRoute?: { readonly from: WorkerTile; readonly to: WorkerTile };
+            readonly noRoute?: { readonly from: WorkerTile; readonly to: WorkerTile; readonly danger?: string; readonly needHeal?: number };
             readonly deathLevels?: DeathLevels;
         },
     ): OutcomeClassificationResult {
