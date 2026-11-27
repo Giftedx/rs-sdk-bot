@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795806295449-1",
  "account": "DropMyLoad",
  "partner": "BowBeforeMe",
@@ -12,13 +12,19 @@
  "claim": "07d40530-f0a4-4032-8205-5320d54c3d81",
  "count": 0,
  "ok": false,
- "at": 1795806469343,
- "detail": "trade claimed",
+ "at": 1795806553805,
+ "detail": "Error: route to 3183, 3440: precondition walk danger from 2619,3332,0: route danger to 2679,3275,0: Guard dog 2646,3325 needs 0 heal of food (expected damage 2.2)",
  "lines": [
   {
    "item": "Chocolate bar",
    "requested": 4,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795806469355-0000000760-0000000001",
+  "at": 1795806553780,
+  "sha256": "17f69c6ad810ed2a115e22688681cbcf583555ce5abbb8a8dacfd6765a3d0290"
+ },
+ "screen": false
 }

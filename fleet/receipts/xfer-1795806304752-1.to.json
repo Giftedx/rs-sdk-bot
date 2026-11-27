@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795806304752-1",
  "account": "Quickhandjob",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 14,
  "claim": "5bd4f692-5c0c-4087-ba35-2af471e98173",
- "count": 0,
- "ok": false,
- "at": 1795806521797,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795806535402,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 14
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795806534623
+ },
+ "logout": {
+  "attemptId": "1795806521839-0000024228-0000000001",
+  "at": 1795806535370,
+  "sha256": "502d1cf6e8726d8c8f158d862dc817bdf21481bcb27242ba0213411e1407db48"
+ },
+ "screen": true
 }
