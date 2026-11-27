@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795754190272-1",
  "account": "Shaftsinker",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 4,
  "claim": "a71f8332-2e41-41a8-a2e1-ac5004a64633",
- "count": 0,
- "ok": false,
- "at": 1795754302413,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795754316690,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795754315921
+ },
+ "logout": {
+  "attemptId": "1795754302445-0000028752-0000000001",
+  "at": 1795754316679,
+  "sha256": "958e8460fcea0ccb560a04ce1725eacf4f943c6ff93f1a88ec5feebb4fdd7a66"
+ },
+ "screen": true
 }
