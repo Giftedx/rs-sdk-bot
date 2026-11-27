@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795806634264-1",
  "account": "Billionaire",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "c9deb2a8-819d-4de7-9c01-aa610499c04d",
- "count": 0,
- "ok": false,
- "at": 1795807039196,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795807061769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795807047006
+ },
+ "logout": {
+  "attemptId": "1795807039204-0000033424-0000000001",
+  "at": 1795807061756,
+  "sha256": "e0d20f6a49a4a1a0cd066d3b7023719ce44c837041197df917372a826ec49e43"
+ },
+ "screen": true
 }
