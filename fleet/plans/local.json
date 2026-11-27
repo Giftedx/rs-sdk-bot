@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749060909,
+ "at": 1795749074204,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -134,24 +134,6 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -160,24 +142,6 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -237,6 +201,7 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -244,7 +209,8 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "undermykilt"
+  "undermykilt",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

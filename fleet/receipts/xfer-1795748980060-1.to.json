@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795748980060-1",
  "account": "Spitroaster",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 250,
  "claim": "52c63392-038f-4341-b7ab-675e1a9f2b3d",
- "count": 0,
- "ok": false,
- "at": 1795749057021,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795749067333,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795749066585
+ },
+ "logout": {
+  "attemptId": "1795749057031-0000024548-0000000001",
+  "at": 1795749067324,
+  "sha256": "cc7a5dd4999c3d4fd54f6dbef19fded5113534b9708230ada4c70a89b01d2b9b"
+ },
+ "screen": true
 }
