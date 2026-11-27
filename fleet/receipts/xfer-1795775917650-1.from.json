@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775917650-1",
+ "account": "Swordinhand",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "932cade5-8404-4cf5-9c95-e5f2e0cd68a8",
+ "count": 0,
+ "ok": false,
+ "at": 1795776185536,
+ "detail": "trade claimed"
+}

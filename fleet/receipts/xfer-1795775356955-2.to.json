@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775356955-2",
  "account": "Quickhandjob",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "314f029d-baac-4622-8c01-155d84e1794e",
- "count": 0,
- "ok": false,
- "at": 1795775973324,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795776113692,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795776112894
+ },
+ "logout": {
+  "attemptId": "1795775973332-0000023596-0000000001",
+  "at": 1795776113669,
+  "sha256": "ee70afce7558d2ff6dee29d8f4d5ab9d1e3290d427577aa7405ce2689dc71d3a"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795776148974-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "CoinCock",
+  "item": "Mind rune",
+  "count": 246,
+  "itemId": 558,
+  "extra": [
+    {
+      "item": "Staff of fire",
+      "count": 1,
+      "itemId": 1387
+    }
+  ],
+  "start": 1795776148974,
+  "end": 1795777048974,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
