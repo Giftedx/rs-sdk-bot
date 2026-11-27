@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795793131930,
+ "at": 1795793157151,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,22 +62,20 @@
    "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
+    "mining",
+    "essence"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "238",
-    "STALL_TICKS": "280"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "421"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1436",
+   "role": "auto",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "KnightRider",
@@ -265,21 +263,21 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "essence"
+    "giant"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "421"
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1090",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:haggis:item:564",
    "role": "army",
    "resources": [
-    "essence-mine"
+    "hill-giants"
    ]
   },
   {
@@ -306,19 +304,22 @@
    "account": "Fatstack",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "giant"
+    "trooper"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1090",
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "20",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
+   "goal": "goal:coin_fund:fleet",
    "role": "army",
    "resources": [
-    "hill-giants"
+    "khazard-troopers"
    ]
   }
  ],
