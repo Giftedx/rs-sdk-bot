@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797149573-1",
  "account": "Woodenstaff",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 28,
  "claim": "ca167ece-093e-496a-a8d9-ba9de8842c0c",
- "count": 0,
- "ok": false,
- "at": 1795797578918,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795797595831,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795797595074
+ },
+ "logout": {
+  "attemptId": "1795797578937-0000015276-0000000001",
+  "at": 1795797595818,
+  "sha256": "df663db4e12cda200b8c9cd6ae92eaad98984ad1149468b1829a2f908f576b67"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795797337713-1",
+ "account": "YewFirst",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "1e4a2355-410e-4204-b363-b670f0fa6b68",
+ "count": 1,
+ "ok": true,
+ "at": 1795797612201,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797611446
+ },
+ "logout": {
+  "attemptId": "1795797600406-0000025440-0000000001",
+  "at": 1795797612189,
+  "sha256": "4d1ff71bbc770bc32f01109f2a493ef3b57c6dc442d53c581fd78c4c1a5f5bf1"
+ },
+ "screen": true
+}
