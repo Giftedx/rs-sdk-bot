@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795820244362,
+ "at": 1795820346278,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,22 +87,6 @@
    "role": "pvp"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -184,6 +168,7 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
