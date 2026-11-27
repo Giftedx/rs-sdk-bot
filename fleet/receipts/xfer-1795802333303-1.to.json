@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795802333303-1",
+ "account": "UnderMyKilt",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "b120d561-630f-4e60-b989-c26d98dcf482",
+ "count": 0,
+ "ok": false,
+ "at": 1795802561167,
+ "detail": "trade claimed"
+}

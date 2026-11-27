@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795802522053-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Shaftmaker",
+  "item": "Feather",
+  "count": 52,
+  "itemId": 314,
+  "start": 1795802522053,
+  "end": 1795803422053,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

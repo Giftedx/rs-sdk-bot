@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795802333303-2",
+ "account": "Quickhandjob",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "eb2aed1d-171c-40f6-895d-e7c2a6bd0ea0",
+ "count": 0,
+ "ok": false,
+ "at": 1795802509538,
+ "detail": "trade claimed"
+}

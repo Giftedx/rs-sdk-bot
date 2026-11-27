@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795802522053-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 6,
+  "itemId": 215,
+  "start": 1795802522053,
+  "end": 1795803422053,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795802112120-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 15,
+ "claim": "2c27e357-c56a-4953-b339-2249f7f16626",
+ "count": 0,
+ "ok": false,
+ "at": 1795802585671,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801985693-1",
  "account": "Shaftmaker",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 22,
  "claim": "2278a8cb-5bbd-4404-9b6d-48195b2be56c",
- "count": 0,
- "ok": false,
- "at": 1795802279795,
- "detail": "trade claimed"
+ "count": 22,
+ "ok": true,
+ "at": 1795802503590,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795802486049
+ },
+ "logout": {
+  "attemptId": "1795802279805-0000033624-0000000001",
+  "at": 1795802503572,
+  "sha256": "8e93727e7d0c8995dde2c47ac50e85c0d9c8482ab8755c22ea5599f559f4c849"
+ },
+ "screen": true
 }

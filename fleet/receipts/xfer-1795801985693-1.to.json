@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795801985693-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 22,
+ "claim": "0cdd4ad4-43cc-45f6-bc0c-539f50b46cf7",
+ "count": 22,
+ "ok": true,
+ "at": 1795802505210,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 22
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795802504405
+ },
+ "logout": {
+  "attemptId": "1795802492545-0000024980-0000000001",
+  "at": 1795802505182,
+  "sha256": "c42fc6a0950cffce41d4bf7f1fbf5b8ec73ef0237b3f464eeb52bd59f2022316"
+ },
+ "screen": true
+}

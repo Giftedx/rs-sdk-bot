@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795802403556-1",
+ "account": "TossTheCaber",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "bdc343f9-c9a4-4f42-bbbc-f8de725f144c",
+ "count": 1,
+ "ok": true,
+ "at": 1795802564385,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795802563652
+ },
+ "logout": {
+  "attemptId": "1795802552569-0000033924-0000000001",
+  "at": 1795802564369,
+  "sha256": "cb3adac50e4f7a422ffc0c685546f3ef4ba420dfb9fac010244835d26724230f"
+ },
+ "screen": true
+}
