@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795806422243-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "UnderMyKilt",
+  "item": "Swamp toad",
+  "count": 1,
+  "itemId": 2150,
+  "start": 1795806422243,
+  "end": 1795807322243,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

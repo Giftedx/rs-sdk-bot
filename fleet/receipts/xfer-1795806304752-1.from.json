@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795806304752-1",
+ "account": "Sausagefest",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 14,
+ "claim": "77976faf-965f-4a9f-8dfd-3eca7a88f87c",
+ "count": 0,
+ "ok": false,
+ "at": 1795806450844,
+ "detail": "trade claimed"
+}

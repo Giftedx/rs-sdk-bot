@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795805991252-1",
+ "account": "SporranDip",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "83f5057f-c91e-4bfa-bcf7-c065ce845da1",
+ "count": 10,
+ "ok": true,
+ "at": 1795806421388,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795806407454
+ },
+ "logout": {
+  "attemptId": "1795806399648-0000035008-0000000001",
+  "at": 1795806421375,
+  "sha256": "8125b82c485fa72de4871edd4691f32edcb8cf2a65597987ce48923979a31009"
+ },
+ "screen": true
+}
