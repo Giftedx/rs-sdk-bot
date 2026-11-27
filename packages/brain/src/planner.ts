@@ -1537,7 +1537,7 @@ function planAccountCore(
                     });
                     if (!acq.ok || !acq.step) break;
                     // The owned total after the purchase: a chain rerun that finds it buys nothing.
-                    prep.push({ ...acq.step, stockTarget: Math.max(1, b.required + b.reserved) });
+                    prep.push({ ...acq.step, stockTarget: Math.max(1, b.required + b.reserved), ...(b.owned !== undefined ? { ownedBefore: b.owned } : {}) });
                     coins += stepCommittedCoinCost(acq.step);
                 }
                 if (prep.length === pre.blockers.length) {
@@ -1991,7 +1991,7 @@ function planAccountCore(
                             break;
                         }
                         // The owned total after the purchase: a rerun of the chain that finds it buys nothing.
-                        prepSteps.push({ ...acq.step, stockTarget: Math.max(1, blocker.required + blocker.reserved) });
+                        prepSteps.push({ ...acq.step, stockTarget: Math.max(1, blocker.required + blocker.reserved), ...(blocker.owned !== undefined ? { ownedBefore: blocker.owned } : {}) });
                         committedCoins += stepCommittedCoinCost(acq.step);
                     } else if (blocker.kind === 'missing_coins') {
                         const shortfall = Math.max(1, blocker.required - blocker.available);

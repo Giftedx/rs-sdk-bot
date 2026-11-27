@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { resolveAcquireItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
 import { activityPreflightFromConfig } from '../src/preflight';
+import { FIRE_STAVES } from '../../workers/src/bank-artisan';
 import { resolveActivityWorkerRoute, resolvePlannedStepWorkerRoute } from '../src/worker-routing';
 import { validateActivityDefinition, type AccountState, type WorldSnapshot } from '../src/contracts';
 
@@ -53,6 +54,12 @@ describe('catalog-worker parity', () => {
         expect(fireBlocked.missingItems?.map(m => m.itemId)).toContain(554);
         const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, 554: 2500 }, observedAt: NOW - 5_000, trusted: true } });
         expect(activityPreflightFromConfig(ready, act, world, 50).ok).toBe(true);
+        // alchStagePlan takes a fire staff from the pack or bank and then needs no fire runes.
+        for (const staff of FIRE_STAVES) {
+            const withStaff = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, [staff]: 1 }, observedAt: NOW - 5_000, trusted: true } });
+            expect(activityPreflightFromConfig(withStaff, act, world, 50).ok).toBe(true);
+        }
+        expect(act.inputs?.find(i => i.itemId === 554)?.unlessOwned).toEqual(FIRE_STAVES);
     });
 
     test('bank-artisan:prayer-bury needs the worker bone reserve on top of the batch, for the bone the worker buries', () => {

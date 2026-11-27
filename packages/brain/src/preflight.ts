@@ -1290,6 +1290,7 @@ export function evaluatePreflight(
                     required: req.count,
                     available,
                     reserved,
+                    owned,
                     message: `Need ${req.count}x item ${req.itemId} (available after reserve: ${available})`,
                 });
                 missingItems.push({
@@ -1547,7 +1548,7 @@ export function activityPreflightFromConfig(
         readonly maxConcurrentAccounts?: number;
         readonly location?: WorkerTile;
         readonly protectedAllowed?: boolean;
-        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number; readonly reserve?: number }[];
+        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number; readonly reserve?: number; readonly unlessOwned?: readonly number[] }[];
         readonly config?: Readonly<Record<string, unknown>>;
     },
     world: WorkerWorldView,
@@ -1560,6 +1561,7 @@ export function activityPreflightFromConfig(
         const clampedBatch = Math.max(1, batchUnits);
         const mutableItems: RequiredItemSpec[] = [...base.staticRequiredItems];
         for (const io of activity.inputs) {
+            if (io.unlessOwned?.some(id => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }) > 0)) continue;
             const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch)) + Math.max(0, io.reserve ?? 0);
             mutableItems.push({ itemId: io.itemId, count });
         }
