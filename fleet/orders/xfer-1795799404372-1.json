@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799404372-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "PickpockDick",
+  "item": "Vial of water",
+  "count": 3,
+  "itemId": 227,
+  "start": 1795799404372,
+  "end": 1795800304372,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
