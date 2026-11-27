@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795785068911-1",
+ "account": "Shaftmaker",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 460,
+ "claim": "17669f53-a12a-49a0-9e55-672b730d909e",
+ "count": 0,
+ "ok": false,
+ "at": 1795785237793,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784987829-1",
  "account": "mmtha0205",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "9bffc621-0383-4a69-99ba-5550c1adef7b",
- "count": 0,
- "ok": false,
- "at": 1795785200189,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795785224071,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795785209644
+ },
+ "logout": {
+  "attemptId": "1795785200197-0000017120-0000000001",
+  "at": 1795785223986,
+  "sha256": "a0a2590aacebbc75c09f40c6b69d5cd30fa1bc2e1ca11856e3565bb126fdb96d"
+ },
+ "screen": true
 }
