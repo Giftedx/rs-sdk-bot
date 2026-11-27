@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795806352119-1",
+ "account": "YewFirst",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "d37ee9e6-ee6e-4d3c-80ab-f0195ce0ea2a",
+ "count": 2,
+ "ok": true,
+ "at": 1795806791025,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795806790219
+ },
+ "logout": {
+  "attemptId": "1795806779224-0000013700-0000000001",
+  "at": 1795806791012,
+  "sha256": "d04e2677c765999d4f229c9cad3785f8a9c33a7dd62cafcc6b108eaf80962ca6"
+ },
+ "screen": true
+}
