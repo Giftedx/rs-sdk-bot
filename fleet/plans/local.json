@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795778403157,
+ "at": 1795778492536,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -67,7 +67,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "681"
+    "BATCH_UNITS": "631"
    },
    "enabled": true,
    "repeat": false,
@@ -207,14 +207,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "66",
+    "MAX_ITEMS": "64",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "66"
+    "BATCH_UNITS": "64"
    },
    "enabled": true,
    "repeat": false,
@@ -272,28 +272,43 @@
    "role": "auto"
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2481",
+   "role": "army"
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild_elemental",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "237",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "6",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "237"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "6"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -362,27 +377,17 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "92",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "92"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:1470",
    "role": "auto"
   },
   {
@@ -405,6 +410,23 @@
    "repeat": false,
    "goal": "goal:pk_army:MeatNTwoVeg",
    "role": "auto"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
   }
  ],
  "army": [
@@ -428,7 +450,6 @@
   "oreelse",
   "pickpockdick",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
