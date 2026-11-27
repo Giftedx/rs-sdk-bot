@@ -243,6 +243,10 @@ const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in
 const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
 const MARKET_UNAVAILABLE_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i;
 const SHOP_STOCK_WAIT_RE = /\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
+// A shop run that bought nothing and stopped to wait for stock: the venue failed even when the run exits 0, so the
+// swarm (fleet/src/swarm.ts stockOutEnd) and the brain runtime (fleet/src/brain-runtime.ts extractWorkerOutcomeInput)
+// cool the shop down for the item and the next plan goes to the next seller or the GE.
+export const shopStockWaitText = (text: string) => SHOP_STOCK_WAIT_RE.test(text);
 // The quest sweep names what it could not stage as <id>:<count> pairs: "missing 2325:1" (no bank row, shop or gather
 // plan) and "withdraw short 2351:2" (packages/workers/src/quest/sweep.ts).
 const MISSING_PAIRS_RE = /\b(?:missing|withdraw short) (\d+:\d+(?:,\d+:\d+)*)\b/;

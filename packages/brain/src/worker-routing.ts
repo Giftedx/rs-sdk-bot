@@ -882,6 +882,7 @@ export function resolvePlannedStepWorkerRoute(
                         shopId: typeof cfg.shopId === 'string' ? cfg.shopId : undefined,
                         estimatedCoinCost: typeof cfg.estimatedCoinCost === 'number' ? cfg.estimatedCoinCost : undefined,
                         coinFloatPreserved: typeof cfg.coinFloatPreserved === 'number' ? cfg.coinFloatPreserved : undefined,
+                        ownedBefore: Number.isSafeInteger(cfg.ownedBefore) && Number(cfg.ownedBefore) >= 0 ? Number(cfg.ownedBefore) : undefined,
                     },
                     ctx,
                     false,

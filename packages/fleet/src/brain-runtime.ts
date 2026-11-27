@@ -19,7 +19,7 @@ import {
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import { cachedReleaseFor, isWorkerReleaseHold, workerEntries } from '../../core/src/worker-release';
-import { isClaimHeldResult, isStopResult } from '../../brain/src/outcome-classifier';
+import { isClaimHeldResult, isStopResult, shopStockWaitText } from '../../brain/src/outcome-classifier';
 import { parseNoRoute, standsAt } from '../../brain/src/no-route';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
 import {
@@ -1224,10 +1224,12 @@ export function extractWorkerOutcomeInput(params: {
     // The base levels of the account that died: a death does not change them, so the status of any run serves.
     const deathLevels = died ? statusDeathLevels(status?.skills) : undefined;
     const signalText = [params.endReason, stdout].filter(Boolean).join('\n');
-    const isMarketUnavailable =
-        !params.successful
-        && !died
-        && /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here|\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i.test(signalText);
+    // A shop run that bought nothing exits 0 but its venue failed: it names the item and venue like a failed buy.
+    const isMarketUnavailable = !died && (
+        (!params.successful
+            && /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i.test(signalText))
+        || shopStockWaitText(signalText)
+    );
 
     return {
         activityId: params.activityId,

@@ -121,6 +121,31 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(ok.detail).toBeUndefined();
     });
 
+    test('a shop run that exits 0 with nothing bought cools down its own shop for the item, so the next plan takes another source', () => {
+        const root = makeTempRoot();
+        const startedAt = 1_700_000_500_000;
+        const raw = extractWorkerOutcomeInput({
+            root, account: 'AlphaBot', activityId: 'market:shop-buy', server: 'rs-sdk-demo.fly.dev',
+            startedAt, finishedAt: startedAt + 30_000, exitCode: 0, endReason: 'done after 1 runs', successful: true,
+            lastResultLine: 'RESULT ok ticks=72 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1066 spentTotal=0 maxItems=1 stop=stock-wait targetMet=0',
+            logPath: join(practiceRoot(root), 'logs', 'AlphaBot.log'), marketItemId: 1621, marketVenue: 'shop:gemshop2',
+        });
+        expect(raw).toMatchObject({ marketItemId: 1621, marketVenue: 'shop:gemshop2' });
+        const catalog = createActivityCatalog();
+        const classifier = new OutcomeClassifier({ rateStore: createRateStore({ catalog, root }), root });
+        const res = classifier.classifyAndApplyRaw(raw, { now: startedAt + 30_000, domain: 'live' });
+        expect(res.outcome).toMatchObject({ kind: 'market_unavailable', itemId: 1621, venue: 'shop:gemshop2' });
+        expect(Object.keys(classifier.activeMarketCooldowns(startedAt + 31_000))).toEqual(['1621:shop:gemshop2']);
+        // A shop run that bought part of the order passes and names no venue.
+        const partial = extractWorkerOutcomeInput({
+            root, account: 'AlphaBot', activityId: 'market:shop-buy', server: 'rs-sdk-demo.fly.dev',
+            startedAt, finishedAt: startedAt + 30_000, exitCode: 0, endReason: 'done after 1 runs', successful: true,
+            lastResultLine: 'RESULT ok ticks=385 boughtTotal=53 bankedTotal=53 stop=stock-wait targetMet=0',
+            logPath: join(practiceRoot(root), 'logs', 'AlphaBot.log'), marketItemId: 44, marketVenue: 'shop:rangeshop',
+        });
+        expect(partial.marketItemId).toBeUndefined();
+    });
+
     test('a brain cycle lifts a repeat-fault hold whose worker release changed', () => {
         const root = makeTempRoot();
         const now = 1_700_000_100_000;

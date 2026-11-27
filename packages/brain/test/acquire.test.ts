@@ -19,6 +19,7 @@ import {
     resolveAcquireItem,
 } from '../src/acquire';
 import { hubRouteCooldownKey } from '../src/transfer-memory';
+import { loadItemsMap } from '../src/preflight';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
 import { resolveShopProfile } from '../../workers/src/market/preflight';
 
@@ -737,4 +738,41 @@ test('a shop whose restock wait exceeds one shop-buy run is no source for a full
     const shelf = resolveAcquireItem(acct, { itemId: 383, quantity: 2, allowedSources: ['npc_shop'] }, { world, customShops: [stall] });
     expect(shelf.step?.shopId).toBe('slow_test_stall');
     expect(shelf.step?.quantity).toBe(2);
+});
+
+test('a venue that failed sends the next plan to the next seller, then the GE; a GE buy that cannot be placed is no source', () => {
+    const acct = makeAcct({ bank: { items: { 995: 10_000 }, observedAt: NOW - 10_000, trusted: true } });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
+    const quotes = { 314: { ask: 5, sell: 500, trades: 10 } };
+    const req = () => ({ itemId: 314, quantity: 100, allowedSources: ['npc_shop' as const, 'ge' as const] });
+    const shops = new Set((loadShopCatalogByItem().get(314) ?? []).map((s) => s.shop));
+    // Each empty shop cools down its own venue key (outcome-classifier market_unavailable); the next plan takes another.
+    const cooled: Record<string, number> = {};
+    const seen: string[] = [];
+    let step = resolveAcquireItem(acct, req(), { world, marketQuotes: quotes }).step;
+    expect(step?.source).toBe('npc_shop');
+    while (step?.source === 'npc_shop') {
+        expect(seen).not.toContain(step.shopId!);
+        seen.push(step.shopId!);
+        expect(seen.length).toBeLessThanOrEqual(shops.size);
+        cooled[marketCooldownKey(314, `shop:${step.shopId}`)] = NOW + 600_000;
+        step = resolveAcquireItem(acct, req(), { world: { ...world, marketCooldowns: { ...cooled } }, marketQuotes: quotes }).step;
+    }
+    expect(step?.source).toBe('ge');
+
+    // No GE offers in the market cache, an item that does not trade, or an ask over the price cap: the plan refuses
+    // the GE before any login.
+    const geOnly = () => ({ itemId: 314, quantity: 100, allowedSources: ['ge' as const] });
+    const noQuote = resolveAcquireItem(acct, geOnly(), { world, marketQuotes: {} });
+    expect(noQuote.ok).toBe(false);
+    expect(noQuote.skippedReasons).toContainEqual({ source: 'ge', reason: 'no valid GE ask quote in market cache' });
+    const capped = resolveAcquireItem(acct, { ...geOnly(), maxUnitPrice: 4 }, { world, marketQuotes: quotes });
+    expect(capped.ok).toBe(false);
+    expect(capped.skippedReasons).toContainEqual({ source: 'ge', reason: 'GE ask 5 > maxUnitPrice 4' });
+    const untradeable = [...loadItemsMap().values()].find((i) => !i.tradeable && i.id !== 995)!;
+    const bound = resolveAcquireItem(acct, { itemId: untradeable.id, quantity: 1, allowedSources: ['ge'] }, {
+        world, marketQuotes: { [untradeable.id]: { ask: 5, sell: 500, trades: 10 } },
+    });
+    expect(bound.ok).toBe(false);
+    expect(bound.skippedReasons).toContainEqual({ source: 'ge', reason: 'item is untradeable' });
 });
