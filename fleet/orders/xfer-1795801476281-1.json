@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795801476281-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Pocketpython",
+  "item": "Salmon",
+  "count": 10,
+  "itemId": 329,
+  "start": 1795801476281,
+  "end": 1795802376281,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795801200395-1",
+ "account": "Woodpecker",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 1,
+ "claim": "337cb189-efa5-44a3-8d37-6dc9580677f7",
+ "count": 0,
+ "ok": false,
+ "at": 1795801578701,
+ "detail": "trade claimed"
+}
