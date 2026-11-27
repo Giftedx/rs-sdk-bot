@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795779720441-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Quickhandjob",
+  "item": "Earth talisman",
+  "count": 1,
+  "itemId": 1440,
+  "extra": [
+    {
+      "item": "Rune essence",
+      "count": 84,
+      "itemId": 1436
+    }
+  ],
+  "start": 1795779720441,
+  "end": 1795780620441,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

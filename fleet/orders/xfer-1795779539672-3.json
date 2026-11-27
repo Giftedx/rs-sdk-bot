@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779539672-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "KnightRider",
+  "item": "Feather",
+  "count": 917,
+  "itemId": 314,
+  "start": 1795779539672,
+  "end": 1795780439672,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

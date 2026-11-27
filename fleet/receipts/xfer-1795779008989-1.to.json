@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779008989-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "6cf8d3c1-fdd8-494c-bf81-f21aaab85479",
+ "count": 10,
+ "ok": true,
+ "at": 1795779720679,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795779719920
+ },
+ "logout": {
+  "attemptId": "1795779711382-0000029160-0000000001",
+  "at": 1795779720667,
+  "sha256": "6b3f60aec25e089660f1eee463f588406034d2bba4052b7659f1f64636d61397"
+ },
+ "screen": true
+}

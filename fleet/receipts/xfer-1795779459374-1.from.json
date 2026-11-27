@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779459374-1",
+ "account": "Pocketpython",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "f124ef5a-c56b-41e5-b65d-ddfe0627cbed",
+ "count": 0,
+ "ok": false,
+ "at": 1795779602362,
+ "detail": "trade claimed"
+}

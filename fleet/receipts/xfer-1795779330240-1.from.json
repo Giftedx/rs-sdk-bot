@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779330240-1",
+ "account": "BowBeforeMe",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 86,
+ "claim": "9eb2cfaf-9475-4e62-a30a-7da09c5d4a3c",
+ "count": 0,
+ "ok": false,
+ "at": 1795779566879,
+ "detail": "trade claimed"
+}
