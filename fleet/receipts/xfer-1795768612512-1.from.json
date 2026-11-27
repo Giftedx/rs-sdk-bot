@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795768612512-1",
+ "account": "Fatstack",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "ea1635f7-3c9d-4184-a603-dbe1858f55d7",
+ "count": 0,
+ "ok": false,
+ "at": 1795768899935,
+ "detail": "trade claimed"
+}
