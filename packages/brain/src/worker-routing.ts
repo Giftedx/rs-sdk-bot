@@ -580,9 +580,15 @@ function resolveAcquireOrGearSource(
             const unitLimit = params.estimatedCoinCost && params.estimatedCoinCost > 0
                 ? Math.max(1, Math.ceil((params.estimatedCoinCost / Math.max(1, params.quantity)) * GE_LIMIT_BUFFER))
                 : undefined;
+            // A planned acquire buys required - available and names the owned total required + reserved, so the
+            // owned count before the buy is their difference. The GE worker refuses a held item without it.
+            const expectedOwned = stepKind === 'acquire' && params.stockTarget !== undefined
+                ? Math.max(0, params.stockTarget - params.quantity)
+                : undefined;
+            const ownedPart = expectedOwned !== undefined ? `-o${expectedOwned}` : '';
             const orderKey = unitLimit
-                ? `brain-${params.itemId}-${params.quantity}-p${unitLimit}`
-                : `brain-${params.itemId}-${params.quantity}`;
+                ? `brain-${params.itemId}-${params.quantity}${ownedPart}-p${unitLimit}`
+                : `brain-${params.itemId}-${params.quantity}${ownedPart}`;
             return {
                 account,
                 stepKind,
@@ -598,8 +604,9 @@ function resolveAcquireOrGearSource(
                     CASH_RESERVE: reserve,
                     COIN_RESERVE: reserve,
                     ...(unitLimit ? { LIMIT_PRICE: String(unitLimit) } : {}),
+                    ...(expectedOwned !== undefined ? { EXPECTED_OWNED: String(expectedOwned) } : {}),
                 },
-                config: { mode: 'ge-buy', itemId: params.itemId, quantity: params.quantity },
+                config: { mode: 'ge-buy', itemId: params.itemId, quantity: params.quantity, ...(expectedOwned !== undefined ? { expectedOwned } : {}) },
                 warnings: [],
             };
         }

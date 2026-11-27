@@ -215,6 +215,34 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(repricedGe.env.LIMIT_PRICE).toBe('575');
     expect(repricedGe.env.ORDER_KEY).toBe('brain-383-100-p575');
     expect(repricedGe.env.ORDER_KEY).not.toBe(resolved.steps[0]?.env.ORDER_KEY);
+    expect(repricedGe.env.EXPECTED_OWNED).toBeUndefined();
+
+    // A top-up of a partly held input names the owned count before the buy: stockTarget - quantity.
+    const topUpGe = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire',
+        source: 'ge',
+        itemId: 561,
+        quantity: 1,
+        stockTarget: 2,
+        estimatedTicks: 40,
+        estimatedCoinCost: 0,
+        coinFloatPreserved: 0,
+    });
+    expect(topUpGe.env.EXPECTED_OWNED).toBe('1');
+    expect(topUpGe.config.expectedOwned).toBe(1);
+    expect(topUpGe.env.ORDER_KEY).toBe('brain-561-1-o1');
+    const fromZeroGe = resolvePlannedStepWorkerRoute('Caster', {
+        stepKind: 'acquire',
+        source: 'ge',
+        itemId: 561,
+        quantity: 2,
+        stockTarget: 2,
+        estimatedTicks: 40,
+        estimatedCoinCost: 400,
+        coinFloatPreserved: 0,
+    });
+    expect(fromZeroGe.env.EXPECTED_OWNED).toBe('0');
+    expect(fromZeroGe.env.ORDER_KEY).toBe('brain-561-2-o0-p230');
 
     const blueDragonRoute = resolveActivityWorkerRoute({
         id: 'combat:boss-blue-dragon',

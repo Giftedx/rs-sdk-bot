@@ -540,3 +540,11 @@ test('an account in walled West Ardougne before Biohazard needs location recover
     // East Ardougne, outside the wall, stays a safe hub.
     expect(classifyAccountLifecycle({ ...base, pos: { x: 2617, z: 3333, level: 0 }, quests: {} })).toBe('idle');
 });
+
+test('an account in the fenced Lumber Yard needs location recovery; just outside the fence it is idle', () => {
+    const base = { name: 'YardBot', protectedClock: false, logoutProofState: 'confirmed' as const, statusSettledOffline: true };
+    expect(classifyAccountLifecycle({ ...base, pos: { x: 3313, z: 3509, level: 0 } })).toBe('needs_location_recovery');
+    expect(classifyAccountLifecycle({ ...base, pos: { x: 3293, z: 3493, level: 0 } })).toBe('needs_location_recovery');
+    expect(classifyAccountLifecycle({ ...base, pos: { x: 3305, z: 3492, level: 0 } })).toBe('idle');
+    expect(classifyAccountLifecycle({ ...base, pos: { x: 3314, z: 3509, level: 0 } })).toBe('idle');
+});

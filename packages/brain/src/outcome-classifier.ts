@@ -43,7 +43,7 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import { shopRestockTicks } from './acquire';
-import { addNoRoute, enclosedAt, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, noRouteState, parseNoRoute, standsAt } from './no-route';
+import { addNoRoute, atTarget, enclosedAt, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, noRouteState, parseNoRoute, standsAt } from './no-route';
 import type { RateStore } from './rate-store';
 
 export const DEFAULT_MARKET_COOLDOWN_MS = 10 * 60_000;
@@ -1074,7 +1074,8 @@ export class OutcomeClassifier {
     }
 
     // The facts that still hold for the account. A fact ends when it expires, when the account leaves the start of
-    // its search, or when the account's levels, quests or items change (noRouteState): then a new search decides.
+    // its search (unless the search started at its target, no-route.ts atTarget), or when the account's levels, quests
+    // or items change (noRouteState): then a new search decides.
     // A fact without a state takes the account's state of its first snapshot, which is still the state of the run.
     private holdingNoRoutes(acct: AccountState, now: number): readonly NoRouteFact[] | undefined {
         const key = acct.name.toLowerCase();
@@ -1082,7 +1083,7 @@ export class OutcomeClassifier {
         if (!facts) return acct.noRoutes;
         const state = noRouteState(acct);
         const kept = facts
-            .filter(f => (acct.pos === null ? now < f.expiresAt : noRouteHolds(f, acct.pos, now)) && (f.state === undefined || f.state === state))
+            .filter(f => (acct.pos === null || atTarget(f) ? now < f.expiresAt : noRouteHolds(f, acct.pos, now)) && (f.state === undefined || f.state === state))
             .map(f => (f.state === undefined ? { ...f, state } : f));
         const changed = kept.length < facts.length || kept.some((f, i) => f !== facts[i]);
         if (kept.length === 0) this.noRoutes.delete(key);

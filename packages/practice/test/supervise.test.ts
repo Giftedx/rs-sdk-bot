@@ -290,6 +290,15 @@ test('a walker result with no route ends the session as blocked at the first run
     const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
     expect(end).toEqual({ reason: 'blocked', runs: 1 });
     expect(runs).toBe(1);
+    // A shop buy reports the same walker no-route in its own words.
+    const shopNoRoute = 'RESULT fail Error: shop travel failed: position=2618,3332,0; no route to 2596,3400,0';
+    expect(isPrerequisiteFailure(shopNoRoute)).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail Error: shop travel failed: position=unknown; no route to 2596,3400,0')).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail Error: shop travel failed: position=2618,3332,0; door stuck')).toBe(false);
+    let shopRuns = 0;
+    const shopEnd = await supervise({ run: async () => { shopRuns++; return { exitCode: 1, stdout: ['LEDGER ticks=4', shopNoRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(shopEnd).toEqual({ reason: 'blocked', runs: 1 });
+    expect(shopRuns).toBe(1);
 });
 
 test('a failure that ended on another tile is not the same failure', async () => {

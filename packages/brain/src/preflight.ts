@@ -103,6 +103,7 @@ export const SHOP_GATES: Readonly<Record<string, ShopGateRule>> = {
     ranging_guild_armourshop: { requiresSkill: { skill: 'ranged', level: 40 } },
     ranging_guild_tribalshop: { requiresSkill: { skill: 'ranged', level: 40 } },
     magicguildshop: { requiresSkill: { skill: 'magic', level: 66 } },
+    fishingguild: { requiresSkill: { skill: 'fishing', level: 68 } },
     magearena_staffshop: { requiresSkill: { skill: 'magic', level: 60 } },
     magearena_runeshop: { requiresSkill: { skill: 'magic', level: 60 } },
     championshop: { requiresQuestPoints: 32 },

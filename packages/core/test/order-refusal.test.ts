@@ -28,7 +28,7 @@ test('one source: the supervisor, the drain rule and the planner mark read the s
     expect(unplacedCause(result(texts.coins).replace('"escrow":0', '"escrow":9'))).toBeUndefined();
     expect(unplacedCause(result('GE interface unavailable'))).toBeUndefined();
     expect(DRAIN_RESULT.test(result('GE interface unavailable'))).toBe(false);
-    expect(STABLE_CAUSES).toEqual(['coins', 'pack']);
+    expect(STABLE_CAUSES).toEqual(['coins', 'pack', 'present']);
 });
 
 test('a round starts with the margin of coins and names its numbers when it does not', () => {

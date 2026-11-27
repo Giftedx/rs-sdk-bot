@@ -423,7 +423,7 @@ async function tryOpenBlockingExitDoor(s: Session, stop: () => boolean): Promise
     }
 }
 
-async function exitLumberYard(s: Session, stop: () => boolean): Promise<void> {
+export async function exitLumberYard(s: Session, stop: () => boolean = () => false): Promise<void> {
     const cur = () => {
         const p = s.sdk.getState()?.player;
         return p ? { worldX: p.worldX, worldZ: p.worldZ, level: p.level } : undefined;

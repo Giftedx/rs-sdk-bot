@@ -85,8 +85,9 @@ export function npcTravel(records: NpcRecord[]): Travel[] {
             if (!g || angle === null) continue;
             to = landing(g, angle); deck = true;
         }
-        const coins = r.fare?.coins ?? (r.fare?.rule ? 200 : 0);
         const held = (r.items ?? []).filter(i => i.use === 'consumed' && /^[a-z0-9_]+$/.test(i.item)).map(i => ({ held: i.item, count: 1 }));
+        // A fare given only as a rule costs 200 coins, unless a consumed item (a pass or a ticket) is the fare.
+        const coins = r.fare?.coins ?? (r.fare?.rule && !held.length ? 200 : 0);
         for (const f of r.from) out.push({
             id: `npc:${r.id}@${f.x},${f.z}`, kind: r.kind, name: `${r.npc.name} to ${r.destination}`, from: { x: f.x, z: f.z, level: f.level }, to, coins,
             needs: [...r.requires.map(q => ({ varp: q.varp, op: q.op, value: q.value })), ...held], runes: [],
@@ -139,10 +140,12 @@ type ShortcutRecord = { kind: string; locName: string; id: number; option: strin
 export function passageStart(e: { from: Tile; to: Tile; side?: string[] }): Tile {
     return e.side?.length && e.from.level === e.to.level ? { x: 2 * e.from.x - e.to.x, z: 2 * e.from.z - e.to.z, level: e.from.level } : e.from;
 }
+// Locs in quest scripts that the server crosses with no quest check. Other 'quest' rows include traps and wrong portals.
+const UNGATED_QUEST_PASSAGES = new Set(['gertrudefence']);
 export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
     const out: Travel[] = [];
     for (const e of edges) {
-        if ((e.kind !== 'shortcut' && e.kind !== 'passage') || e.via || e.failure || e.requires?.useItem || e.requires?.items?.length) continue;
+        if ((e.kind !== 'shortcut' && e.kind !== 'passage' && !(e.kind === 'quest' && UNGATED_QUEST_PASSAGES.has(e.locName))) || e.via || e.failure || e.requires?.useItem || e.requires?.items?.length) continue;
         if (e.from.level !== e.to.level && Math.abs(e.from.level - e.to.level) > 3) continue;
         const op = Number(e.option.match(/^op(\d)$/)?.[1]);
         if (!op) continue;
@@ -188,7 +191,8 @@ export function loadCrossings(): CrossingRecord[] {
     return (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'special-crossings.json'), 'utf8')) as { crossings: CrossingRecord[] }).crossings;
 }
 
-const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v1.json');
+// The stamps cover the data files only: change this name when a builder above changes its output.
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v2.json');
 type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
 const fileStamp = (file: string): string => {
     try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }

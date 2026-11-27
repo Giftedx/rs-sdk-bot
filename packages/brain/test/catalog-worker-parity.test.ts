@@ -37,15 +37,21 @@ describe('catalog-worker parity', () => {
         }
     });
 
-    test('bank-artisan:magic-alch-train needs a nature rune and the default alch item (feather) for each cast', () => {
+    test('bank-artisan:magic-alch-train needs a nature rune, the default alch item (feather) and the fire runes for each cast', () => {
         // The worker refuses with "the bank holds no supplies for one cast" (workers/src/bank-artisan/preflight.ts alch-train).
+        // Without a fire staff a cast takes FIRE_PER fire runes (3 low, 5 high: workers/src/bank-artisan/catalog.ts).
         const act = createActivityCatalog().require('bank-artisan:magic-alch-train');
+        expect(act.inputs?.find(i => i.itemId === 554)?.countPerUnit).toBe(5);
         const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
         const noRunes = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500 }, observedAt: NOW - 5_000, trusted: true } });
         const blocked = activityPreflightFromConfig(noRunes, act, world, 50);
         expect(blocked.ok).toBe(false);
         expect(blocked.missingItems?.map(m => m.itemId)).toContain(561);
-        const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500 }, observedAt: NOW - 5_000, trusted: true } });
+        const noFire = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, 554: 2 }, observedAt: NOW - 5_000, trusted: true } });
+        const fireBlocked = activityPreflightFromConfig(noFire, act, world, 50);
+        expect(fireBlocked.ok).toBe(false);
+        expect(fireBlocked.missingItems?.map(m => m.itemId)).toContain(554);
+        const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500, 554: 2500 }, observedAt: NOW - 5_000, trusted: true } });
         expect(activityPreflightFromConfig(ready, act, world, 50).ok).toBe(true);
     });
 

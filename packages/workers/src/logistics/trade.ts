@@ -21,6 +21,7 @@ import { cachedReleaseFor, releaseEntries } from '../../../core/src/worker-relea
 import { acquireAccountLeases, checkTransferAccounts, transferOrderKey } from './admission';
 import { createHandoff } from './handoff';
 import { meetingTiles } from './location';
+import { exitLumberYard } from './recover';
 import {
     ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, assertTradeAdmission, coinTradeObservation, courierCargo, courierFoodAllocation,
     courierIslandProblem, courierRecord, deliveryRecipientAtBank, deliveryResume, draynorApproach, exactCoinDelta,
@@ -1151,6 +1152,7 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
             const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
             const exited = await leaveElementalWorkshop(s);
             if (exited && !exited.ok) throw Error(`elemental workshop exit: ${exited.reason} ${exited.detail}`);
+            await exitLumberYard(s);
             const there = await walkTarget(s, tile, false, undefined, { noJewelry: true }) as Outcome;
             if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
             await s.bot.walkTo(tile.x, tile.z, 0);

@@ -22,6 +22,7 @@ import { jobLogStart } from '../../core/src/job-log';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { rotateLog } from '../../core/src/log-rotate';
 import { FREE_FLOOR_GB } from '../../core/src/memory';
+import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../../core/src/order-refusal';
 import { atomicJson, ownerPlanPath } from '../../core/src/plan-lock';
 import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, practiceRoot, readStopFile, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../../core/src/proc';
@@ -289,7 +290,8 @@ export function brainPlanHold(
     const end = endedMapByLower(ended).get(p.accounts[0]!.toLowerCase())?.[1];
     if (!end || end.marketItemId !== selected.marketItemId || end.marketVenue !== selected.marketVenue) return undefined;
     const until = end.at + stockOutHoldMs(selected.marketItemId, selected.marketVenue);
-    return now < until ? `ended: ${selected.marketVenue} out of stock for item ${selected.marketItemId} until ${new Date(until).toISOString()}` : undefined;
+    const cause = end.marketRefusal ? `refused item ${selected.marketItemId} (${end.marketRefusal})` : `out of stock for item ${selected.marketItemId}`;
+    return now < until ? `ended: ${selected.marketVenue} ${cause} until ${new Date(until).toISOString()}` : undefined;
 }
 
 // A campaign is ready only with a hiscore margin under 1 h old (brain/src/contracts.ts MAX_CAMPAIGN_HISCORE_AGE_MS).
@@ -646,20 +648,23 @@ export function overlappingRun<T extends { accounts: readonly string[] }>(runs: 
     return undefined;
 }
 
-// marketItemId and marketVenue name the shop or GE item of a run that ended because the venue had no stock.
-export type EndRecord = { at: number; reason: string; revision?: string; marketItemId?: number; marketVenue?: string };
+// marketItemId and marketVenue name the shop or GE item of a run that ended because the venue had no stock, or because
+// the buy refused to start for a cause that the next login meets again (marketRefusal).
+export type EndRecord = { at: number; reason: string; revision?: string; marketItemId?: number; marketVenue?: string; marketRefusal?: RefusalCause };
 
 // The same out-of-stock text that sets a venue cooldown (brain/src/outcome-classifier.ts MARKET_UNAVAILABLE_RE and
 // SHOP_STOCK_WAIT_RE, brain-runtime.ts extractWorkerOutcomeInput).
 const STOCK_OUT_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here|\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
 
-// The market venue of a failed run that the venue's empty stock ended, for its end record.
+// The market venue of a failed run that the venue's empty stock ended, or that a stable buy refusal ended, for its end record.
 export function stockOutEnd(
     run: { marketItemId?: number; marketVenue?: string },
     reason: string,
     lastResultLine: string | undefined,
-): { marketItemId: number; marketVenue: string } | undefined {
+): { marketItemId: number; marketVenue: string; marketRefusal?: RefusalCause } | undefined {
     if (run.marketItemId === undefined || !run.marketVenue || successfulEnd(reason) || /^died\b/.test(reason)) return undefined;
+    const refusal = lastResultLine !== undefined ? unplacedCause(lastResultLine) : undefined;
+    if (refusal !== undefined && STABLE_CAUSES.includes(refusal)) return { marketItemId: run.marketItemId, marketVenue: run.marketVenue, marketRefusal: refusal };
     return STOCK_OUT_RE.test(`${reason}\n${lastResultLine ?? ''}`) ? { marketItemId: run.marketItemId, marketVenue: run.marketVenue } : undefined;
 }
 
