@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805907411-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "TossTheCaber",
+  "item": "Iron ore",
+  "count": 6,
+  "itemId": 440,
+  "start": 1795805907411,
+  "end": 1795806807411,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795805016969-3",
  "account": "Billionaire",
  "partner": "Nockitoff",
@@ -12,6 +12,16 @@
  "claim": "09e6e4fc-1495-448e-ae3c-4f3b4ea1fff4",
  "count": 0,
  "ok": false,
- "at": 1795805893764,
- "detail": "trade claimed"
+ "at": 1795805917446,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 14,
+  "at": 1795805903475
+ },
+ "logout": {
+  "attemptId": "1795805893774-0000030856-0000000001",
+  "at": 1795805917380,
+  "sha256": "9fb8da6d840b5e4fd6ce0cc1458c82b131fe90e6ecd36344b5a8b8a706f22dd8"
+ },
+ "screen": false
 }

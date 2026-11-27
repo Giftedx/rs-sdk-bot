@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795805016969-3",
+ "role": "to",
+ "account": "Nockitoff",
+ "partner": "Billionaire",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795805917092,
+ "detail": "Error: fleet trade: outside order window"
+}
