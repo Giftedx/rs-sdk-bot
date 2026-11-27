@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790350544-1",
  "account": "WellHung",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Copper ore",
  "requested": 10,
  "claim": "707f8a95-2fa9-4524-b39a-6704ad6b33e3",
- "count": 0,
- "ok": false,
- "at": 1795790571145,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795790641726,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795790640974
+ },
+ "logout": {
+  "attemptId": "1795790571154-0000016432-0000000001",
+  "at": 1795790641718,
+  "sha256": "2468b1d0c3d94b169589a140c5168c056078784789d9e6ae7ceee6aa8a5d9a0c"
+ },
+ "screen": true
 }
