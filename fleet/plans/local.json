@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795797010479,
+ "at": 1795797030603,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,29 +59,56 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "scripts/aio-skiller.ts CAP=2210 TARGET_COUNT=221 PRODUCT_TARGET=221 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=221 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "111",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "111"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2210 TARGET_COUNT=221 PRODUCT_TARGET=221 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=221 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
   },
   {
    "account": "Pocketpython",
@@ -149,6 +176,23 @@
    ]
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -169,46 +213,29 @@
    ]
   },
   {
-   "account": "MeatNTwoVeg",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "51",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "51"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "helper",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -228,24 +255,7 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "Shaftmaker",
+   "account": "MeatNTwoVeg",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -279,59 +289,26 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "fire-combat"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army",
-   "resources": [
-    "fire-giants"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
    "account": "Wandwaver",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "giant"
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1674",
-    "BANK_PACK": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
+   "goal": "campaign:shaftshooter:item:175",
+   "role": "army"
   }
  ],
  "army": [

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796692984-1",
  "account": "mmsmk1232",
  "partner": "Swordswallow",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 117,
  "claim": "3a71783a-177d-4554-bb11-3e0e99ac3b0c",
- "count": 0,
- "ok": false,
- "at": 1795796964702,
- "detail": "trade claimed"
+ "count": 117,
+ "ok": true,
+ "at": 1795797020626,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1216,
+  "after": 1099
+ },
+ "logout": {
+  "attemptId": "1795796964711-0000017192-0000000001",
+  "at": 1795797020616,
+  "sha256": "789493784a619a4a7546707cf2064c0716f7ccdd790bce03646cee299353f66c"
+ },
+ "screen": true
 }
