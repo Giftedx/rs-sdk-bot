@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797075382-1",
+ "account": "Fingerblastr",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "69b153b0-8315-4a2e-ad10-98aff32c5cdb",
+ "count": 0,
+ "ok": false,
+ "at": 1795797300469,
+ "detail": "trade claimed"
+}

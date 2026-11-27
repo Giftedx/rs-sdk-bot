@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795797231672-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Swordswallow",
+  "item": "Lobster",
+  "count": 10,
+  "itemId": 379,
+  "start": 1795797231672,
+  "end": 1795798131672,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
