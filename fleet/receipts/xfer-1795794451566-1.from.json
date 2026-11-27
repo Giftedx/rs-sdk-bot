@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795794451566-1",
+ "account": "Fingersmith",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "849d456c-dec9-4e50-9e15-75e0bf2c19d3",
+ "count": 1,
+ "ok": true,
+ "at": 1795794784347,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795794760777
+ },
+ "logout": {
+  "attemptId": "1795794754845-0000027776-0000000001",
+  "at": 1795794784332,
+  "sha256": "211d97217283b365a566dc85be8aa994af0fde6f0dd45c41bc41cacc1126e881"
+ },
+ "screen": true
+}

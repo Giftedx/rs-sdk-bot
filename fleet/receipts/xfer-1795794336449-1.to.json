@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795794336449-1",
+ "account": "Bigpackage",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 1075,
+ "claim": "c6c13c50-3cff-4528-8c05-65133b015307",
+ "count": 1075,
+ "ok": true,
+ "at": 1795794809150,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1075
+ },
+ "bank": {
+  "count": 1075,
+  "at": 1795794808389
+ },
+ "logout": {
+  "attemptId": "1795794792709-0000027016-0000000001",
+  "at": 1795794809133,
+  "sha256": "b11893a8255b98843fb9336e1fa5c921f54701a11e8c6259b581036dae1835b2"
+ },
+ "screen": true
+}
