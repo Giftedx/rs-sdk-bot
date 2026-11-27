@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795776344226,
+ "at": 1795776372376,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,29 +59,37 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-market.ts",
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
    "args": [
-    "ge-buy"
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
    ],
    "env": {
-    "ORDER_KEY": "brain-1515-5-o0-p456",
-    "ITEM_ID": "1515",
-    "QUANTITY": "5",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "456",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "5"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2250 TARGET_COUNT=225 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -91,18 +99,65 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "372",
+    "MAX_ITEMS": "337",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "372"
+    "BATCH_UNITS": "337"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "1714",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1714"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-440-2-o0-p97",
+    "ITEM_ID": "440",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "97",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
    "role": "army"
   },
   {
@@ -114,35 +169,35 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "117",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "FLOAT": "25400",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "117"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:gear_collection:892",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
-   "account": "Pocketpython",
+   "account": "Unsheathed",
    "script": "scripts/ranged-train.ts",
    "args": [],
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
@@ -185,44 +240,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -238,6 +255,28 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1621-1-o0-p690",
+    "ITEM_ID": "1621",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "690",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1621",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1621",
    "role": "army"
   }
  ],
