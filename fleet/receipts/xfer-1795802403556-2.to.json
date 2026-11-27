@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795802403556-2",
+ "account": "TossTheCaber",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 3,
+ "claim": "9321d1b8-333f-4592-9d75-320727b768b1",
+ "count": 3,
+ "ok": true,
+ "at": 1795802946359,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795802945621
+ },
+ "logout": {
+  "attemptId": "1795802933551-0000032360-0000000001",
+  "at": 1795802946346,
+  "sha256": "cbfa61c5117791368a984f044784edd805534f8b828576aa5957d4b92e8a77f1"
+ },
+ "screen": true
+}

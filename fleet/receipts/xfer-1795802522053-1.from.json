@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795802522053-1",
+ "account": "Bigpackage",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 6,
+ "claim": "f652c128-c498-454b-9ad3-8d5123202b90",
+ "count": 0,
+ "ok": false,
+ "at": 1795802973262,
+ "detail": "trade claimed"
+}

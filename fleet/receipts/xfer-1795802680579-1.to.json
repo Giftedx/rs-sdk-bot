@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795802680579-1",
+ "account": "PickpockDick",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "7de08533-876a-4fe5-a5b2-c030d7389dd8",
+ "count": 1,
+ "ok": true,
+ "at": 1795802979149,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795802978427
+ },
+ "logout": {
+  "attemptId": "1795802969195-0000032176-0000000001",
+  "at": 1795802979137,
+  "sha256": "71cb438408ae975707b49c8ec4bbc8a1e54d41fdbad8a03a25cadbe1a97a75ec"
+ },
+ "screen": true
+}
