@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795776767926-3",
  "account": "Fatstack",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "0a653cf6-24a5-4703-9ed9-887d98ea6784",
- "count": 0,
- "ok": false,
- "at": 1795777258673,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795777303587,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795777284034
+ },
+ "logout": {
+  "attemptId": "1795777258682-0000015840-0000000001",
+  "at": 1795777303575,
+  "sha256": "1cf1cfd38f40249bb8a6d6b0e6cc01455ea174bf13d54973ea77d82cddf314d3"
+ },
+ "screen": true
 }
