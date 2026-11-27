@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795782648398,
+ "at": 1795782676894,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,7 +66,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1727",
+    "BATCH_UNITS": "1224",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -241,11 +241,11 @@
     "identify:irit_leaf"
    ],
    "env": {
-    "MAX_MAKE": "9",
+    "MAX_MAKE": "2",
     "CAP": "1000",
     "MEMBERS": "1",
     "DEMAND_ID": "goal:supply_chain:259",
-    "BATCH_UNITS": "9",
+    "BATCH_UNITS": "2",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
@@ -309,11 +309,61 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "6",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
    "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
     "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -360,27 +410,17 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "scripts/aio-fighter.ts CAP=2330 TARGET_COUNT=233 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
   },
   {
@@ -388,46 +428,49 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "35",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "35"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-1621-2-o1-p690",
-    "ITEM_ID": "1621",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "555",
+    "ITEMS": "Water rune",
+    "MAX_ITEMS": "350",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "690",
-    "EXPECTED_OWNED": "1",
-    "DEMAND_ID": "campaign:cutmyjewels:item:1621",
-    "BATCH_UNITS": "2"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:555",
+    "BATCH_UNITS": "350"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:cutmyjewels:item:1621",
+   "goal": "campaign:haggis:item:555",
    "role": "army"
   }
  ],
@@ -443,14 +486,12 @@
   "bowbeforeme",
   "dipstick",
   "fingersmith",
-  "hocuspokeus",
   "knightrider",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
   "pocketrocket",
-  "sausagefest",
-  "thefullmonty"
+  "sausagefest"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795781877137-2",
  "account": "Hocuspokeus",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 5,
  "claim": "5185b932-ac18-4685-b095-37a174876c85",
- "count": 0,
- "ok": false,
- "at": 1795782600080,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795782654135,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795782644996
+ },
+ "logout": {
+  "attemptId": "1795782600088-0000025768-0000000001",
+  "at": 1795782654122,
+  "sha256": "e3a639a143b734e5ee791d0257bbc0c03c0f053615338551e2b440bd9abf1295"
+ },
+ "screen": true
 }
