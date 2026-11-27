@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741195935,
+ "at": 1795741207470,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -86,19 +86,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -330,6 +317,7 @@
   "bigpackage",
   "billionaire",
   "dipstick",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
