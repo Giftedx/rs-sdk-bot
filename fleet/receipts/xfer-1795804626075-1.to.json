@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795804626075-1",
+ "account": "Woodenstaff",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "8cc34402-7808-4a98-890b-442557c6e127",
+ "count": 10,
+ "ok": true,
+ "at": 1795805054251,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795805053494
+ },
+ "logout": {
+  "attemptId": "1795805043078-0000032692-0000000001",
+  "at": 1795805054239,
+  "sha256": "f0e166311127462dd1ee8dd91102c2bb705b14f8036b7ef4b8fed29a22b1d3b8"
+ },
+ "screen": true
+}

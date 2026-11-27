@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804626075-1",
  "account": "Kiltlifter",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "c0a9073e-efaa-44bb-b870-8573f0b5763d",
- "count": 0,
- "ok": false,
- "at": 1795804949351,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795805052656,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795805016691
+ },
+ "logout": {
+  "attemptId": "1795804949361-0000026276-0000000001",
+  "at": 1795805052645,
+  "sha256": "6ad33c5445a531a326cfc6af06abe2da2589d23be8941de0a41994871c13a05e"
+ },
+ "screen": true
 }
