@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795779879709-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "BowBeforeMe",
+  "item": "Copper ore",
+  "count": 1,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 1,
+      "itemId": 438
+    }
+  ],
+  "start": 1795779879709,
+  "end": 1795780779709,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

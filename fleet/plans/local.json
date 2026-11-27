@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779857359,
+ "at": 1795779894723,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,31 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "88",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "88"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -145,24 +120,6 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:steelrod:item:2353",
-    "BATCH_UNITS": "14",
-    "ORE_RESERVE": "0",
-    "STALL_TICKS": "350"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:steelrod:item:2353",
-   "role": "army"
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -183,6 +140,40 @@
    "repeat": false,
    "goal": "goal:supply_chain:261",
    "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
@@ -195,12 +186,14 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
