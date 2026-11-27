@@ -6,6 +6,7 @@ import type { TripPlan } from '../trip';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
 import { walkRoute } from './legs';
+import { leaveMineJail } from './mine-jail';
 import { leaveDeck } from './travel';
 
 // The account with no law rune: no teleport spell is castable, so a route planned for it keeps to the ground.
@@ -64,6 +65,9 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // Brimhaven deck at 2775,3234,1 until it was moved by hand; practice: "no route" at tick 0 from that tile). So a
     // walk that starts on level 1 beside a gangplank crosses it first.
     if (await leaveDeck(s, () => opts.signal?.aborted === true) === 'stuck') return { ok: false, reason: 'precondition', detail: 'on a ship deck and the gangplank did not take the account off', ticks: s.tick() - started };
+    // The desert mining camp guards jail a caught player in a cell that no route leaves (live: Woodpecker and
+    // BowBeforeMe at 3287,3032, "no route" to every target). The cell window and the cliff rocks take it out first.
+    if (await leaveMineJail(s, to, () => opts.signal?.aborted === true) === 'stuck') return { ok: false, reason: 'precondition', detail: 'in the desert mining camp jail and the window and rocks did not take the account out', ticks: s.tick() - started };
     // The prayer probe may itself climb. Capture start and actor after it returns.
     const p = s.sdk.getState()?.player;
     if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };
