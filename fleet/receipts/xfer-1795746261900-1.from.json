@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795746261900-1",
  "account": "Moneyshot",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Cannonball",
  "requested": 208,
  "claim": "fcd9649b-978b-4485-94a3-39ca20c4e4b1",
- "count": 0,
- "ok": false,
- "at": 1795746328372,
- "detail": "trade claimed"
+ "count": 208,
+ "ok": true,
+ "at": 1795746407458,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 208,
+  "after": 0
+ },
+ "bank": {
+  "count": 208,
+  "at": 1795746336324
+ },
+ "logout": {
+  "attemptId": "1795746328547-0000030080-0000000001",
+  "at": 1795746407448,
+  "sha256": "02320b5236c547c4fa4fc919ce9729daba923e8887b90ab31cdeddff69ac2dbe"
+ },
+ "screen": true
 }
