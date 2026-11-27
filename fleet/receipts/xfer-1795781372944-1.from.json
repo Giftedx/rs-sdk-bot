@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781372944-1",
+ "account": "Shaftmaker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 105,
+ "claim": "2a75e83a-0568-4aab-a2c7-c6e987e89f27",
+ "count": 105,
+ "ok": true,
+ "at": 1795781885368,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 105,
+  "after": 0
+ },
+ "bank": {
+  "count": 105,
+  "at": 1795781806624
+ },
+ "logout": {
+  "attemptId": "1795781798678-0000024076-0000000001",
+  "at": 1795781885356,
+  "sha256": "95ccc833f8f8ea2bb019b4b451f2f7f59cbd901e02b712c83b226c2e2a5062a2"
+ },
+ "screen": true
+}

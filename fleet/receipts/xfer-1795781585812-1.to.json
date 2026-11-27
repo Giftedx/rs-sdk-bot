@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781585812-1",
+ "account": "Fatstack",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "0fff5f13-1852-456e-8da3-50c584a8158d",
+ "count": 1,
+ "ok": true,
+ "at": 1795781878958,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795781878240
+ },
+ "logout": {
+  "attemptId": "1795781865478-0000015020-0000000001",
+  "at": 1795781878941,
+  "sha256": "c7ec3d3b2aa256c83358e4c9b6b8e6fb349f0250131fd3ac32adbcfdfdde1192"
+ },
+ "screen": true
+}
