@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779391966,
+ "at": 1795779403289,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,18 +60,42 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -99,46 +123,23 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
    "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
+    "mining",
+    "essence"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "Woodpecker",
