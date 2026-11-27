@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779809669-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "TossTheCaber",
+  "item": "Tarromin",
+  "count": 1,
+  "itemId": 253,
+  "start": 1795779809669,
+  "end": 1795780709669,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
