@@ -18,8 +18,11 @@ test('route-danger food: ceil(heal short / heal per piece) + 2, within the free 
     expect(routeDangerFoodCount(42, 385, 3)).toBe(3);
     expect(routeDangerFoodCount(42, 385, 2)).toBeNull();
     expect(routeDangerFoodCount(42, 995, 28)).toBeNull(); // coins heal nothing
-    expect(freePackSlots({ 995: 20_000, 1351: 1, 590: 1 })).toBe(26);
-    expect(freePackSlots({ 1511: 40 })).toBe(0);
+    // Coins and a stack of 300 fire runes take one slot each; a bronze axe and a tinderbox one each.
+    expect(freePackSlots({ inventory: { 995: 20_000, 554: 300, 1351: 1, 590: 1 } })).toBe(24);
+    expect(freePackSlots({ inventory: { 1511: 40 } })).toBe(0); // logs do not stack
+    // The status rows win: a noted stack of 40 logs is one row.
+    expect(freePackSlots({ inventory: { 1511: 40 }, packSlots: { 1511: 1 } })).toBe(27);
 });
 
 const NOW = 1_800_000_000_000;

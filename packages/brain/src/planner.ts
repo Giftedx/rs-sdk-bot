@@ -1496,7 +1496,7 @@ function planAccountCore(
         // A route-danger blocker names the heal short (`required`): buy the pieces of the first food that covers it in
         // one carry (preflight.ts routeDangerFoodCount), so one stage is enough for the walk.
         if ((blocker.message ?? '').startsWith(ROUTE_DANGER_PREFIX) && blocker.required !== undefined) {
-            const free = freePackSlots(acct.inventory);
+            const free = freePackSlots(acct);
             for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
                 const count = routeDangerFoodCount(blocker.required, fid, free);
                 if (count === null) continue;

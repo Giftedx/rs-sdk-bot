@@ -1,7 +1,8 @@
 // Pure shared preflight evaluator for AccountPlanner and WorkerModules.
 // Evaluates tile reachability, ferry fares, wearable skill/quest gates, reserve-adjusted stock,
 // GE escrow + operating coin float math, max-level caps, cooldowns, spot capacity, and combat survivability.
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
@@ -67,11 +68,18 @@ export const ROUTE_DANGER_FOOD_MARGIN = 2;
 // The most food pieces the walker takes from the bank for a walk (core/src/walk/harm.ts foodToTake carryMax).
 export const ROUTE_DANGER_CARRY_MAX = 20;
 
-// Pack slots the account has free: every held item but coins takes a slot for each piece (a stack is counted as its
-// pieces, up to the pack), so the count errs low.
-export function freePackSlots(inventory: Readonly<Record<number, number>>): number {
+let stackableIds: ReadonlySet<number> | undefined;
+const isStackable = (id: number): boolean => (stackableIds ??= new Set(
+    (JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge', 'items.json'), 'utf8')) as { id: number; stackable?: boolean }[]).filter(i => i.stackable).map(i => i.id),
+)).has(id);
+
+// Pack slots the account has free. The status rows (AccountState.packSlots: the slots of each base id, one for each
+// row, so a stack or a noted stack is one) give it exactly. Without them each stackable item (knowledge/items.json)
+// takes one slot and each other item one slot a piece.
+export function freePackSlots(acct: { readonly inventory: Readonly<Record<number, number>>; readonly packSlots?: Readonly<Record<number, number>> }): number {
     let used = 0;
-    for (const [id, n] of Object.entries(inventory)) if (n > 0 && Number(id) !== COINS_ITEM_ID) used += Math.min(n, 28);
+    if (acct.packSlots) for (const n of Object.values(acct.packSlots)) used += Math.max(0, n);
+    else for (const [key, n] of Object.entries(acct.inventory)) { const id = Number(key); if (n > 0) used += isStackable(id) ? 1 : n; }
     return Math.max(0, 28 - Math.min(28, used));
 }
 
