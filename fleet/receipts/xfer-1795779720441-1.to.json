@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779720441-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth talisman",
+ "requested": 1,
+ "claim": "2c8c49c3-1806-4891-815c-6b3336692d44",
+ "count": 1,
+ "ok": true,
+ "at": 1795780002266,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Rune essence",
+   "requested": 84,
+   "count": 84,
+   "inventory": {
+    "before": 0,
+    "after": 84
+   },
+   "bank": {
+    "count": 84,
+    "at": 1795780001508
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795780001110
+ },
+ "logout": {
+  "attemptId": "1795779987359-0000015332-0000000001",
+  "at": 1795780002253,
+  "sha256": "f8dce9f998978f6fb3972f27058a49acfd7384d33b6e6b720a9b8d3ca7f2bb29"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779575977-1",
+ "account": "Wandwaver",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "be16788d-4d26-4f79-84db-9683afffb34f",
+ "count": 0,
+ "ok": false,
+ "at": 1795780044320,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795779539672-2",
+ "account": "Unsheathed",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 925,
+ "claim": "110d0ef3-1887-44ee-aa93-446692fcbb5c",
+ "count": 0,
+ "ok": false,
+ "at": 1795779976340,
+ "detail": "trade claimed"
+}
