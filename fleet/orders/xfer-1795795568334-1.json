@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795795568334-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "TheFullMonty",
+  "item": "Unicorn horn",
+  "count": 1,
+  "itemId": 237,
+  "start": 1795795568334,
+  "end": 1795796468334,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
