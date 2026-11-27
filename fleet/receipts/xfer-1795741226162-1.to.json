@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795741226162-1",
  "account": "ChaosInPants",
  "partner": "DropMyLoad",
@@ -12,6 +12,12 @@
  "claim": "7801a8e5-abef-40e5-a000-e79fba59928d",
  "count": 0,
  "ok": false,
- "at": 1795741518439,
- "detail": "trade claimed"
+ "at": 1795741526896,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795741518447-0000014548-0000000001",
+  "at": 1795741526886,
+  "sha256": "3ea105058c91f7dd0f4c393b48aad957d2e82a13b749bec1fb26be27fe68abca"
+ },
+ "screen": false
 }

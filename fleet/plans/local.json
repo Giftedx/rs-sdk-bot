@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741521263,
+ "at": 1795741534930,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 PRODUCT_TARGET=226 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2180 TARGET_COUNT=218 PRODUCT_TARGET=226 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
    ],
    "env": {
@@ -79,7 +79,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +92,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -105,7 +105,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -118,7 +118,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +131,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -144,7 +144,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -157,7 +157,22 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "trawler"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "43"
    },
    "enabled": true,
    "repeat": false,
@@ -280,24 +295,25 @@
    "role": "army"
   },
   {
-   "account": "MeatNTwoVeg",
+   "account": "DropMyLoad",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
+    "crafting",
+    "inventory",
+    "grind:chocolate_bar"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:1975",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
   },
   {
    "account": "Billionaire",

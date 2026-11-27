@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741261942-1",
  "account": "Kiltlifter",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 500,
  "claim": "03b8c1be-509e-4d64-86de-6d5fac66312e",
- "count": 0,
- "ok": false,
- "at": 1795741493949,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795741528951,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795741528156
+ },
+ "logout": {
+  "attemptId": "1795741493992-0000027748-0000000001",
+  "at": 1795741528939,
+  "sha256": "46da1349133decf2a639db02f2834fe9c251f2b205727308b238e2a1860ddd6a"
+ },
+ "screen": true
 }
