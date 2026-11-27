@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779330240-1",
+ "account": "BoneToPick",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 86,
+ "claim": "0f8e6425-d4aa-4e80-9557-adc5f6f0eb6e",
+ "count": 86,
+ "ok": true,
+ "at": 1795779766272,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 161,
+  "after": 247
+ },
+ "bank": {
+  "count": 86,
+  "at": 1795779765518
+ },
+ "logout": {
+  "attemptId": "1795779756644-0000027156-0000000001",
+  "at": 1795779766260,
+  "sha256": "c7cc30a0cb7baadd657d6d65c092c95e19cdd21fa95a4548a47f42e076492704"
+ },
+ "screen": true
+}

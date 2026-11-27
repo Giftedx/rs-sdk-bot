@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795779263614-1",
  "account": "Abracadickra",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "3d9ad06c-2233-4cf5-9b85-655d656eae44",
- "count": 0,
- "ok": false,
- "at": 1795779692509,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795779756264,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795779755513
+ },
+ "logout": {
+  "attemptId": "1795779692518-0000015580-0000000001",
+  "at": 1795779756252,
+  "sha256": "e4e7c82568952e6213f4e71c633c05af22fc678bdbeefef42bed6cb645db0192"
+ },
+ "screen": true
 }

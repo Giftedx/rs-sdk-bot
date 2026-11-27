@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779763265-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "Abracadickra",
+  "item": "Staff of fire",
+  "count": 1,
+  "itemId": 1387,
+  "start": 1795779763265,
+  "end": 1795780663265,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

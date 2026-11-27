@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795779763265-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Abracadickra",
+  "item": "Mind rune",
+  "count": 219,
+  "itemId": 558,
+  "start": 1795779763265,
+  "end": 1795780663265,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795779754071,
+ "at": 1795779782816,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,23 +84,6 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:FishAndChips",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
-   "role": "auto"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -119,6 +102,21 @@
    "role": "army"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -134,6 +132,39 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:steelrod:item:2353",
+    "BATCH_UNITS": "14",
+    "ORE_RESERVE": "0",
+    "STALL_TICKS": "350"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:steelrod:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {
@@ -159,34 +190,29 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:harralander",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:97 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_harralander_potion"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "90",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "90"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:97",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 STALL_TICKS=150 -- fletching shafts",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "auto"
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
   }
  ],
  "army": [
@@ -197,11 +223,8 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -215,7 +238,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",
