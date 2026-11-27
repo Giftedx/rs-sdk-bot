@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795785068911-1",
  "account": "Billionaire",
  "partner": "Shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 460,
  "claim": "60c58a64-5b9c-4047-8609-176533b77438",
- "count": 0,
- "ok": false,
- "at": 1795785224282,
- "detail": "trade claimed"
+ "count": 460,
+ "ok": true,
+ "at": 1795785283330,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 460,
+  "after": 0
+ },
+ "bank": {
+  "count": 460,
+  "at": 1795785232066
+ },
+ "logout": {
+  "attemptId": "1795785224403-0000014848-0000000001",
+  "at": 1795785283184,
+  "sha256": "5bca97e1f46d70e488162fb5ef445be18cdcc7c6312ecc0f278a7c5063e771da"
+ },
+ "screen": true
 }

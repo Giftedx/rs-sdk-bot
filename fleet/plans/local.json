@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785272994,
+ "at": 1795785289695,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,25 +60,18 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
+    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -207,14 +200,14 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "738",
+    "MAX_ITEMS": "596",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "738"
+    "BATCH_UNITS": "596"
    },
    "enabled": true,
    "repeat": false,
@@ -226,24 +219,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild_elemental",
+    "magic_guild",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "335",
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "184",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "335"
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "184"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:554",
    "role": "army"
   },
   {
@@ -275,7 +268,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "113"
+    "BATCH_UNITS": "140"
    },
    "enabled": true,
    "repeat": false,
@@ -287,49 +280,42 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "magic_guild",
+    "magic",
+    "orbs",
+    "water",
+    "27",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "85",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "85"
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "ge-buy"
+    "ranged-camp"
    ],
    "env": {
-    "ORDER_KEY": "brain-557-1-o15-p81",
-    "ITEM_ID": "557",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "81",
-    "EXPECTED_OWNED": "15",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army"
   },
   {
