@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795805117262-1",
+ "account": "TossTheCaber",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "1e9566f5-80d8-493a-9df2-469f2a065b3f",
+ "count": 3,
+ "ok": true,
+ "at": 1795805463910,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795805445888
+ },
+ "logout": {
+  "attemptId": "1795805439125-0000035188-0000000001",
+  "at": 1795805463820,
+  "sha256": "2cc29a8a7c806f603cd9b422b41331bd00592b86455074d215523a4a88225666"
+ },
+ "screen": true
+}

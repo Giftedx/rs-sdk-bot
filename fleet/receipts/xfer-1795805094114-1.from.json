@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805094114-1",
  "account": "UnderMyKilt",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Nails",
  "requested": 12,
  "claim": "519ce87f-f810-42ac-98c0-c0682d741a1c",
- "count": 0,
- "ok": false,
- "at": 1795805232700,
- "detail": "trade claimed"
+ "count": 12,
+ "ok": true,
+ "at": 1795805413023,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 12,
+  "after": 0
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795805397090
+ },
+ "logout": {
+  "attemptId": "1795805232712-0000021632-0000000001",
+  "at": 1795805413009,
+  "sha256": "71cf8b40e87341476b6d2858038b99b83e42ad79512b60b25102972ae21f5c2f"
+ },
+ "screen": true
 }

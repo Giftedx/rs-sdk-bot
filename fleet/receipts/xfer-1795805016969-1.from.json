@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795805016969-1",
  "account": "Fatstack",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune axe",
  "requested": 1,
  "claim": "423c33c9-4a62-4af2-bbbd-5f2c655fe879",
- "count": 0,
- "ok": false,
- "at": 1795805238069,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795805407018,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795805390289
+ },
+ "logout": {
+  "attemptId": "1795805238083-0000011488-0000000001",
+  "at": 1795805407008,
+  "sha256": "d3293ecbd088d9ff82b4db7bb37dc46836a31017d01dc6fd5d412b8a452a3e32"
+ },
+ "screen": true
 }

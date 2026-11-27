@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795805016969-2",
+ "account": "Woodpecker",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 14,
+ "claim": "17cdafa8-86fb-4523-8b01-d474e53551c8",
+ "count": 0,
+ "ok": false,
+ "at": 1795805463974,
+ "detail": "trade claimed"
+}

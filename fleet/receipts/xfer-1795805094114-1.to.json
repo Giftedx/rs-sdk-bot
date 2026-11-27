@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795805094114-1",
+ "account": "mmsmk1232",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nails",
+ "requested": 12,
+ "claim": "3a1ffc0d-ae89-46d3-8c92-6a22f1473a21",
+ "count": 12,
+ "ok": true,
+ "at": 1795805414638,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795805413861
+ },
+ "logout": {
+  "attemptId": "1795805403553-0000025032-0000000001",
+  "at": 1795805414625,
+  "sha256": "ea564d4ef81c035388327a1103c8b2e0c499cb0c91acbc0cb66f860d8fae5747"
+ },
+ "screen": true
+}
