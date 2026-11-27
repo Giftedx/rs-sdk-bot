@@ -221,7 +221,8 @@ function sanitizeItemsDelta(raw?: Readonly<Record<number, number>>): Record<numb
     return Object.keys(out).length > 0 ? out : undefined;
 }
 
-const INFRA_PROXY_RE = /(?:proxy|socks|econnrefused|ehostunreach|enetunreach|gateway.*502|\b502\b|\b503\b|\b429\b|tunnel)/i;
+// An HTTP status counts only with a word that names it as one: result lines carry plain numbers such as ticks=503.
+const INFRA_PROXY_RE = /(?:proxy|socks|econnrefused|ehostunreach|enetunreach|gateway.*502|\b(?:http|status|code|error:?|failed with)"?\s*:?\s*(?:502|503|429)\b|\b(?:502|503)\s+(?:bad gateway|service unavailable)\b|\b429\s+too many requests\b|tunnel)/i;
 const INFRA_DRAIN_RE = /(?:server.?drain|world.?update|restarting|maintenance|engine.?shutdown|eaddrinuse|localserver)/i;
 const INFRA_CLAIM_RE = /(?:remote.?git|push.*rejected|non-fast-forward|git.*lock|fleet-data.*sync|claim.?authority)/i;
 const INFRA_NETWORK_RE = /(?:websocket|gateway|connect|network|socket).*(?:timeout|timed out|etimedout)/i;
