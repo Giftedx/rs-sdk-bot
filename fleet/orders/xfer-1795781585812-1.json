@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795781585812-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "Fatstack",
+  "item": "Emerald",
+  "count": 1,
+  "itemId": 1605,
+  "start": 1795781585812,
+  "end": 1795782485812,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
