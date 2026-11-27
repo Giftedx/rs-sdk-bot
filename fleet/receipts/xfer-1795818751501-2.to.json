@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795818751501-2",
+ "account": "Woodenstaff",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rope",
+ "requested": 1,
+ "claim": "abe82281-0ffb-4f1d-a695-b2a342fcd694",
+ "count": 1,
+ "ok": true,
+ "at": 1795819226348,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795819225629
+ },
+ "logout": {
+  "attemptId": "1795819216677-0000011632-0000000001",
+  "at": 1795819226336,
+  "sha256": "5246d82ae66fde2e4a86557622af79dcd744c49402548d8a05f0ed3e127b30e6"
+ },
+ "screen": true
+}
