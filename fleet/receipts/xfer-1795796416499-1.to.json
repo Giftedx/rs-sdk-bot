@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795796416499-1",
+ "account": "UnderMyKilt",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "31f0a098-1025-404a-afbe-8954234105b6",
+ "count": 1,
+ "ok": true,
+ "at": 1795796689728,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795796688756
+ },
+ "logout": {
+  "attemptId": "1795796676373-0000027572-0000000001",
+  "at": 1795796689444,
+  "sha256": "bfaa32b787dc2380e1fff8c54f3fc5804ac6e84e54dc75a4f06a361f7eff0756"
+ },
+ "screen": true
+}
