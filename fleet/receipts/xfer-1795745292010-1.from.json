@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795745292010-1",
  "account": "Billionaire",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "5430186c-da56-4d30-b1f4-1e347e0fa7c9",
- "count": 0,
- "ok": false,
- "at": 1795745426625,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795745504288,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795745488364
+ },
+ "logout": {
+  "attemptId": "1795745426634-0000007024-0000000001",
+  "at": 1795745504278,
+  "sha256": "da3b78c8dd813eec1f8fb423e333cc4b9e4ed7b0f6511f3af8b3603a646fedeb"
+ },
+ "screen": true
 }
