@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775694752-1",
  "account": "Shaftmaker",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 29,
  "claim": "a2834519-b199-42e5-a96e-624fe5145992",
- "count": 0,
- "ok": false,
- "at": 1795775786476,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795776066054,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29,
+  "after": 0
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795776008503
+ },
+ "logout": {
+  "attemptId": "1795775786486-0000010704-0000000001",
+  "at": 1795776066032,
+  "sha256": "f4c02b08ca838b606ca22344514b5e16877515ec3eb7bde0bbd309e94ffac853"
+ },
+ "screen": true
 }

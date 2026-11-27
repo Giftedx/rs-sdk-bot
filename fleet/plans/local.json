@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795776059133,
+ "at": 1795776072954,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -103,31 +103,6 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "2handedshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "auto"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -151,6 +126,31 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1313",
+   "role": "auto"
   },
   {
    "account": "Hocuspokeus",
