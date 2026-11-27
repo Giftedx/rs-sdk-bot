@@ -39,6 +39,32 @@ export function readRecentResults(file: string, bytes = 4_000_000): ResultRow[] 
     return lines.flatMap(l => { try { return l.trim() ? [JSON.parse(l) as ResultRow] : []; } catch { return []; } });
 }
 
+// Cross-account faults: one error (numbers as #) that ends short failed runs of many accounts in a window, whatever the
+// goal. A fault of shared code repeats on each account that the planner sends, so a per-account loop can miss it: live,
+// "quest-sweep tree missing #:# (unsold; others in shops)" ended 17 runs of 10 accounts in 24 h, none 3 times on one.
+export type CrossAccountFault = { error: string; runs: number; accounts: number; goals: number; lostSec: number; lastAt: number };
+export const CROSS_WINDOW_MS = 24 * 3600_000, CROSS_MIN_ACCOUNTS = 3, CROSS_MAX_RUN_MS = 120_000;
+
+export function crossAccountFaults(rows: readonly ResultRow[], now: number, o: { windowMs?: number; minAccounts?: number; maxRunMs?: number } = {}): CrossAccountFault[] {
+    const windowMs = o.windowMs ?? CROSS_WINDOW_MS, minAccounts = o.minAccounts ?? CROSS_MIN_ACCOUNTS, maxRunMs = o.maxRunMs ?? CROSS_MAX_RUN_MS;
+    const groups = new Map<string, { runs: number; accounts: Set<string>; goals: Set<string>; lostMs: number; lastAt: number }>();
+    for (const r of rows) {
+        if (r.ok !== false || typeof r.name !== 'string' || !Number.isFinite(r.at) || !Number.isFinite(r.started)) continue;
+        if (now - r.at! > windowMs || r.at! - r.started! > maxRunMs || r.at! < r.started!) continue;
+        const error = errorKey(String(r.text ?? ''));
+        const g = groups.get(error) ?? { runs: 0, accounts: new Set<string>(), goals: new Set<string>(), lostMs: 0, lastAt: 0 };
+        g.runs++; g.accounts.add(r.name.toLowerCase()); g.goals.add(String(r.goal ?? '').replace(/\d+/g, '#'));
+        g.lostMs += r.at! - r.started!; g.lastAt = Math.max(g.lastAt, r.at!); groups.set(error, g);
+    }
+    return [...groups].filter(([, g]) => g.accounts.size >= minAccounts)
+        .map(([error, g]) => ({ error, runs: g.runs, accounts: g.accounts.size, goals: g.goals.size, lostSec: Math.round(g.lostMs / 1000), lastAt: g.lastAt }))
+        .sort((a, b) => b.runs - a.runs || b.lastAt - a.lastAt);
+}
+
+export function crossAccountLines(faults: readonly CrossAccountFault[], limit = 5): string[] {
+    return faults.slice(0, limit).map(f => `${f.runs}x on ${f.accounts} accounts, ${f.goals} goals, ${f.lostSec} s in runs: ${f.error}`);
+}
+
 export function loopLines(loops: readonly FailLoop[], limit = 5): string[] {
     return loops.slice(0, limit).map(l => `${l.name} ${l.runs}x ${l.medianSec} s: ${l.goal} | ${l.error}`);
 }
