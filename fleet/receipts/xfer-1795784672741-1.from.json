@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795784672741-1",
  "account": "Swordswallow",
  "partner": "BoneToPick",
@@ -12,6 +12,16 @@
  "claim": "e7fe69b0-a646-49f0-8f0b-967576f99536",
  "count": 0,
  "ok": false,
- "at": 1795784783389,
- "detail": "trade claimed"
+ "at": 1795784882427,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795784791281
+ },
+ "logout": {
+  "attemptId": "1795784783399-0000030304-0000000001",
+  "at": 1795784882414,
+  "sha256": "6b55d8b2a08853bb5f25a9b4f51741926fc19dcc7c81f6239d05143309cab804"
+ },
+ "screen": false
 }
