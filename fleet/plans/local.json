@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805308315,
+ "at": 1795805316173,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -88,6 +88,31 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "104",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "22800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "104"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
     "magic_guild_elemental",
     "3000"
    ],
@@ -107,28 +132,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army",
-   "resources": [
-    "khazard-troopers"
-   ]
   },
   {
    "account": "mmtha0205",
@@ -153,19 +156,26 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1349 \"ITEMS=Iron axe\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army"
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
   },
   {
    "account": "KnightRider",
