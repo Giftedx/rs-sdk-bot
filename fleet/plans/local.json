@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795743116771,
+ "at": 1795743228636,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -175,6 +175,21 @@
    "role": "helper"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=3 ORDER_MODE=best-effort -- crafting inventory brew:unf_irit_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
@@ -225,21 +240,6 @@
    "role": "auto"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -255,12 +255,12 @@
    "role": "army"
   },
   {
-   "account": "Woodenstaff",
+   "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=8 STOCK_TARGET=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=8 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=8 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -268,6 +268,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=555 \"ITEMS=Water rune\" MAX_ITEMS=2 STOCK_TARGET=4 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-561-1-p276 ITEM_ID=561 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=276 -- ge-buy",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=46 -- magic bones"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
    "role": "auto"
   }
  ],
@@ -281,6 +297,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -297,7 +314,6 @@
   "quickhandjob",
   "sausagefest",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
   "woodpecker"
  ],

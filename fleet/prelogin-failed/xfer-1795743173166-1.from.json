@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795743173166-1",
+ "role": "from",
+ "account": "Kiltlifter",
+ "partner": "MeatNTwoVeg",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795743220896,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

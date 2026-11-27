@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795743173166-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "MeatNTwoVeg",
+  "item": "Cosmic rune",
+  "count": 1,
+  "itemId": 564,
+  "start": 1795743173166,
+  "end": 1795744073166,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
