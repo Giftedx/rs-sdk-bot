@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742037345-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Spitroaster",
+  "item": "Nature rune",
+  "count": 238,
+  "itemId": 561,
+  "start": 1795742037345,
+  "end": 1795742937345,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

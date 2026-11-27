@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795741565460-1",
  "account": "DropMyLoad",
  "partner": "mmtha0205",
@@ -12,6 +12,12 @@
  "claim": "2eb7a35a-c2be-44c8-91a2-4e2f1fa1b86d",
  "count": 0,
  "ok": false,
- "at": 1795742010218,
- "detail": "trade claimed"
+ "at": 1795742040601,
+ "detail": "fled at low hitpoints: flee_guard id=23 at=2673,3276 ticks=5",
+ "logout": {
+  "attemptId": "1795742010227-0000018868-0000000001",
+  "at": 1795742040512,
+  "sha256": "7b4420f6cc7fe2217d51da2d8f6750b328467e174dd012259f34aa6c6148ad72"
+ },
+ "screen": false
 }
