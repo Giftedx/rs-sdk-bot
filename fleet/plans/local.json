@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751429722,
+ "at": 1795751448138,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,22 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
   },
   {
    "account": "Woodpecker",
@@ -137,27 +121,6 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:3doseantipoison"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:shaftshooter:item:175",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:shaftshooter:item:175",
-   "role": "army"
-  },
-  {
    "account": "mmthv2350",
    "script": "scripts/aio-boss.ts",
    "args": [
@@ -165,7 +128,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:536",
-    "BATCH_UNITS": "429"
+    "BATCH_UNITS": "319"
    },
    "enabled": true,
    "repeat": false,
@@ -188,6 +151,7 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -195,6 +159,7 @@
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795751426410-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Shaftsinker",
+  "item": "Lobster",
+  "count": 4,
+  "itemId": 379,
+  "start": 1795751426410,
+  "end": 1795752326410,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
