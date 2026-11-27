@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795807154254-2",
  "account": "Shaftmaker",
  "partner": "BoneToPick",
@@ -12,6 +12,16 @@
  "claim": "e072e4c8-48a2-4c59-853a-5c6a6fe6ae31",
  "count": 0,
  "ok": false,
- "at": 1795807769395,
- "detail": "trade claimed"
+ "at": 1795807946111,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 35,
+  "at": 1795807945372
+ },
+ "logout": {
+  "attemptId": "1795807769405-0000031792-0000000001",
+  "at": 1795807946097,
+  "sha256": "99aa7454a9970d73a2909acbb82bdbd04a586ab5f0805246cabf9443c1867466"
+ },
+ "screen": false
 }

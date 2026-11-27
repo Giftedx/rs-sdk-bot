@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795807682467-1",
+ "account": "KnightRider",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "2c3e5afe-b51e-48dc-9f54-d1f98c90ec4f",
+ "count": 1,
+ "ok": true,
+ "at": 1795808045556,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795808044146
+ },
+ "logout": {
+  "attemptId": "1795808030243-0000030400-0000000001",
+  "at": 1795808044901,
+  "sha256": "043faa0e65d4b72d4c2016ab12450e43e96c87eadd71f4f2e315055297ab6444"
+ },
+ "screen": true
+}

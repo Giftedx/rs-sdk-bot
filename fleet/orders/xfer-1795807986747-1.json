@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795807986747-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "ChaosInPants",
+  "item": "Mind rune",
+  "count": 14,
+  "itemId": 558,
+  "start": 1795807986747,
+  "end": 1795808886747,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

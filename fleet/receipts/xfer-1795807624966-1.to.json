@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795807624966-1",
+ "account": "ChaosInPants",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "d3110a65-2106-41d6-a0a5-09a371af0c35",
+ "count": 1,
+ "ok": true,
+ "at": 1795807971305,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 3,
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795807970581
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795807970186
+ },
+ "logout": {
+  "attemptId": "1795807952535-0000028708-0000000001",
+  "at": 1795807971292,
+  "sha256": "ceb5f464313bc7695505f33f46441f4f026bc5b61ea9d755d0486ab55d6160e5"
+ },
+ "screen": true
+}

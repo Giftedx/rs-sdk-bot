@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795807624966-1",
  "account": "Fingerblastr",
  "partner": "ChaosInPants",
@@ -10,15 +10,37 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "8092e74c-d7d6-4bb0-bb08-0b59216e0bc0",
- "count": 0,
- "ok": false,
- "at": 1795807782207,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795807968945,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Chocolate bar",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795807946200
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795807944978
+ },
+ "logout": {
+  "attemptId": "1795807782217-0000004056-0000000001",
+  "at": 1795807968915,
+  "sha256": "fd63424e5443872d42b219d0645703080d1308eb44437d0070c0593b5733a6fd"
+ },
+ "screen": true
 }
