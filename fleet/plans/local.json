@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740919853,
+ "at": 1795740935532,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1560 TARGET_COUNT=156 PRODUCT_TARGET=168 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=1550 TARGET_COUNT=155 PRODUCT_TARGET=168 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=168 -- cooking food"
    ],
    "env": {
@@ -77,7 +77,7 @@
    "account": "DropMyLoad",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],

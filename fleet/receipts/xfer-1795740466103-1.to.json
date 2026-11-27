@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795740466103-1",
  "account": "Ballbag",
  "partner": "SporranBulge",
@@ -12,13 +12,27 @@
  "claim": "a272a48b-6edc-451f-b0e2-28f805a8df31",
  "count": 0,
  "ok": false,
- "at": 1795740840572,
- "detail": "trade claimed",
+ "at": 1795740922547,
+ "detail": "Error: transfer requires reconciliation: timeout: Trade timed out on the offer screen",
  "lines": [
   {
    "item": "Unicorn horn",
    "requested": 3,
-   "count": 0
+   "count": 0,
+   "inventory": {
+    "before": 0,
+    "after": 0
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795740840581-0000027112-0000000001",
+  "at": 1795740922540,
+  "sha256": "c01f48116d04fb1d1a8bc95b8fefff85d89e78104fa3b761e99a411f67202b1b"
+ },
+ "screen": true
 }
