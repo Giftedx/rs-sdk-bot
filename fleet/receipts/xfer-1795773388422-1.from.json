@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795773388422-1",
  "account": "Billionaire",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 3,
  "claim": "6819b777-c269-4790-9672-59edcd06dc3d",
- "count": 0,
- "ok": false,
- "at": 1795773696775,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795773733332,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795773703817
+ },
+ "logout": {
+  "attemptId": "1795773696784-0000027408-0000000001",
+  "at": 1795773733321,
+  "sha256": "5e482c742dfc2d36011f6724e8d4a1cdbafe9b86f59b544d4e655c0b98715294"
+ },
+ "screen": true
 }
