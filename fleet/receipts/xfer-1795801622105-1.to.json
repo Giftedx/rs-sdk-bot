@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801622105-1",
  "account": "Nockitoff",
  "partner": "YewGotWood",
@@ -10,8 +10,22 @@
  "item": "Staff of air",
  "requested": 1,
  "claim": "1950db2a-20ea-49a8-8308-4f083de9d5cc",
- "count": 0,
- "ok": false,
- "at": 1795802098555,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795802108925,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795802108067
+ },
+ "logout": {
+  "attemptId": "1795802098565-0000032616-0000000001",
+  "at": 1795802108782,
+  "sha256": "51274ed968139474a7e48d558b86738f3c4559d9d84a36965e2bd0d423135e32"
+ },
+ "screen": true
 }
