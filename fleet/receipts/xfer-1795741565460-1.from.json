@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741565460-1",
+ "account": "DropMyLoad",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "2eb7a35a-c2be-44c8-91a2-4e2f1fa1b86d",
+ "count": 0,
+ "ok": false,
+ "at": 1795742010218,
+ "detail": "trade claimed"
+}
