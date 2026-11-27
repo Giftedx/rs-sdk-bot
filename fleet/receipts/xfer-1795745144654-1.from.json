@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795745144654-1",
+ "account": "Wandwaver",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "41491fa6-cf66-4b5c-b7e5-641f0ecb78cc",
+ "count": 4,
+ "ok": true,
+ "at": 1795745242843,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795745228756
+ },
+ "logout": {
+  "attemptId": "1795745220956-0000019624-0000000001",
+  "at": 1795745242755,
+  "sha256": "54b46bb1e86afb6011b55429a6c361f4f03e2f823f46bb9b3f604f3a8ae6a4d8"
+ },
+ "screen": true
+}
