@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795744865427-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Wandwaver",
+  "item": "Unicorn horn dust",
+  "count": 3,
+  "itemId": 235,
+  "start": 1795744865427,
+  "end": 1795745765427,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
