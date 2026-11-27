@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FleetTradeClaim } from '../../core/src/fleet-trade-claim';
-import { claimedOrderDeletions, droppedTradeClaims, fleetDataReader, keepClaimedOrders } from '../src/fleet-sync';
+import { claimedOrderDeletions, droppedTradeClaims, fleetDataReader, keepClaimedOrders, strandedTradePairs } from '../src/fleet-sync';
 
 const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', '-c', 'core.autocrlf=false', ...args],
     { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000, windowsHide: true }).trim();
@@ -133,3 +133,51 @@ test('the release rules read a deleted order from the commit before its deletion
         expect(fleetDataReader(dir)(`receipts/${order.id}.from.json`)).toBeNull();
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }, 30_000);
+
+test('both parties of an order whose workers died while prepared are freed together an hour after the window', () => {
+    // Order xfer-1795644882874-1: both workers died in a PC restart after they took their claims.
+    const stuck = {
+        id: 'xfer-1795644882874-1', server: 'rs-sdk-demo.fly.dev', from: 'Shaftmaker', to: 'Swordswallow', item: 'Coins', count: 60, itemId: 995,
+        start: 1795644882874, end: 1795645782874, meet: [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }], takerWaits: true,
+    };
+    const giverNonce = '476a58f5-ce3e-4017-9edd-46bbbfcca812', takerNonce = '5a4538f1-9c06-4cf5-bb6b-54d6b1063cbd';
+    const prepared = (role: 'from' | 'to', account: string, partner: string, claimNonce: string, at: number) => ({
+        version: 2, state: 'prepared', id: stuck.id, account, partner, role, side: 'local', server: 'rs-sdk-demo.fly.dev',
+        item: 'Coins', requested: 60, claim: claimNonce, count: 0, ok: false, at, detail: 'trade claimed',
+    });
+    const giver: FleetTradeClaim = { account: 'shaftmaker', server: 'rs-sdk-demo.fly.dev', side: 'local', orderId: stuck.id, role: 'from', nonce: giverNonce, phase: 'held', at: 1795645246775, host: 'PC', pid: 32508, checkout: 'main' };
+    const taker: FleetTradeClaim = { account: 'swordswallow', server: 'rs-sdk-demo.fly.dev', side: 'local', orderId: stuck.id, role: 'to', nonce: takerNonce, phase: 'held', at: 1795645259612, host: 'PC', pid: 17852, checkout: 'main' };
+    const takerReceipt = prepared('to', 'Swordswallow', 'Shaftmaker', takerNonce, 1795645263537);
+    const files = (extra: Record<string, unknown> = {}) => (p: string) => (({
+        [`orders/${stuck.id}.json`]: stuck,
+        [`receipts/${stuck.id}.from.json`]: prepared('from', 'Shaftmaker', 'Swordswallow', giverNonce, 1795645249863),
+        [`receipts/${stuck.id}.to.json`]: takerReceipt,
+        ...extra,
+    } as Record<string, unknown>)[p] ?? null);
+    const HOUR = 60 * 60_000, after = stuck.end + HOUR, dead = () => false;
+    const pairs = (claims: FleetTradeClaim[], read = files(), now = after, alive: (pid: number, at: number) => boolean = dead, host = 'PC') =>
+        strandedTradePairs(claims, 'local', read, now, host, alive);
+
+    expect(pairs([giver, taker])).toEqual([[giver, taker]]);
+    expect(pairs([taker, giver])).toEqual([[giver, taker]]);
+    // The existing rule keeps each claim: the partner's receipt is not a failed one.
+    expect(droppedTradeClaims([giver, taker], 'local', files(), after)).toEqual([]);
+
+    // The window ended less than an hour ago.
+    expect(pairs([giver, taker], files(), after - 1)).toEqual([]);
+    // A worker still runs, or the claim was taken on another host, where its process cannot be checked.
+    expect(pairs([giver, taker], files(), after, pid => pid === 17852)).toEqual([]);
+    expect(pairs([giver, taker], files(), after, dead, 'OTHER')).toEqual([]);
+    expect(pairs([giver, { ...taker, pid: undefined }])).toEqual([]);
+    // Only one party holds a claim, or a claim is of another side.
+    expect(pairs([giver])).toEqual([]);
+    expect(pairs([giver, { ...taker, side: 'cloud' }])).toEqual([]);
+    // A receipt that is not the claim's own `prepared` record: a newer claim, or a worker that wrote its end.
+    expect(pairs([giver, { ...taker, nonce: 'aaaaaaaa-0000-4000-8000-000000000000' }])).toEqual([]);
+    for (const changed of [{ state: 'reconcile' }, { count: 60 }, { inventory: { before: 0, after: 60 } }, { logout: { attemptId: '1', at: 1, sha256: 'c'.repeat(64) } }]) {
+        expect(pairs([giver, taker], files({ [`receipts/${stuck.id}.to.json`]: { ...takerReceipt, ...changed } }))).toEqual([]);
+    }
+    expect(pairs([giver, taker], files({ [`receipts/${stuck.id}.to.json`]: null }))).toEqual([]);
+    // The order is gone from fleet data.
+    expect(pairs([giver, taker], files({ [`orders/${stuck.id}.json`]: null }))).toEqual([]);
+});
