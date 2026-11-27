@@ -1,10 +1,8 @@
 import type { FlagGrid } from '../door-policy';
 import { loadKnowledgeJson, type Tile } from './model';
 
-// An npc type with blockwalk=all puts block collision on its tiles (engine World.ts addNpc), so a player step onto
-// one is refused and the player stands still. The static collision export has no npcs, so the SDK path goes
-// straight through such a tile: the lumber yard crates (kittens_mew) held a walk at 3307,3508 for 63 ticks with
-// "Stuck at", as its path south crossed the crate at 3307,3507.
+// An npc type with blockwalk=all puts block collision on its tiles (engine World.ts addNpc), so the engine refuses a
+// player step onto one. The static collision export has no npcs, so a path query must block those tiles itself.
 const LOC = 256; // CollisionFlag.LOC
 
 let ids: ReadonlySet<number> | null = null;
