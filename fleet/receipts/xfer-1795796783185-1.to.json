@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796783185-1",
  "account": "YewFirst",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Irit leaf",
  "requested": 1,
  "claim": "75a171fc-29fa-48b8-8d75-72f7eec26041",
- "count": 0,
- "ok": false,
- "at": 1795797129827,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795797142617,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797141891
+ },
+ "logout": {
+  "attemptId": "1795797129838-0000031096-0000000001",
+  "at": 1795797142604,
+  "sha256": "447c451a8974ebd15453bbb383ad461b7a33e83fb0cfe24fbfedc735b907d6ba"
+ },
+ "screen": true
 }
