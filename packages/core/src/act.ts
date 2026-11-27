@@ -3,7 +3,7 @@ import { watchTickStream } from './tick-stream';
 
 export type Outcome =
     | { ok: true; ticks: number }
-    | { ok: false; reason: 'precondition' | 'rejected' | 'timeout' | 'aborted'; detail: string; ticks: number };
+    | { ok: false; reason: 'precondition' | 'rejected' | 'timeout' | 'aborted'; detail: string; ticks: number; offPlan?: true };
 
 export type Effect = (before: any, now: any) => boolean;
 

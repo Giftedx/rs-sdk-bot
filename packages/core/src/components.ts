@@ -6,7 +6,7 @@ import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, unli
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { renameRetry } from './atomic-file';
-import { pathfindingDataKey } from './pathcache';
+import { openDiagonalDoors, pathfindingDataKey } from './pathcache';
 
 // Labels hold one flat array of 64 labels for each zone (cells, in the order of zoneKeys; 0xffff in a Uint16Array, or -1 in an
 // Int32Array, for a tile that is not walkable) and an open-addressing table from a zone key to the place of its labels.
@@ -327,13 +327,23 @@ const publishBuiltAreas = (l: Labels): Labels => {
     (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels = () => built ? shareLabels(built) : null;
     return l;
 };
+// The labels' cache key: the pathfinding data key and the label build version. Version 2 labels the map with the
+// diagonal doors open; files of the earlier build carry no version and are built again.
+export const MAP_LABELS_VERSION = 2;
+export function mapLabelSource(): string {
+    return JSON.stringify({ ...JSON.parse(pathfindingDataKey()) as object, labels: MAP_LABELS_VERSION });
+}
 // Labels for the SDK map, built on first use; pf and grid must be the modules the route search uses.
 export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     if (built) return built;
     pf.initPathfinding();
-    const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = pathfindingDataKey();
+    const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = mapLabelSource();
     const cached = readLabels(file, source);
     if (cached) return publishBuiltAreas(cached);
+    // A cold process builds the labels before pathcache.ts loadPathfinding opens the diagonal doors (that load runs
+    // in a microtask after the first initPathfinding), so the labels sealed every building behind a shape-9 door: the
+    // Wizards' Tower ladder room (3105,3162) and the essence mine exit to Sedridor had "no route" out.
+    openDiagonalDoors(grid);
     const rawZones = readCollisionZones(join(repoRoot, 'vendor/rs-sdk/sdk/collision-data.json'));
     // Zones are given by their origin tile, as pathfinding.ts allocates them; the same mainland fill follows.
     const zones: [number, number, number][] = [...rawZones];
