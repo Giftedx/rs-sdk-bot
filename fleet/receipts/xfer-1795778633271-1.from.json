@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795778633271-1",
+ "account": "Kiltlifter",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 32,
+ "claim": "02e96fc9-5921-4329-8bf4-b280ba0e0af7",
+ "count": 0,
+ "ok": false,
+ "at": 1795778950874,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 32,
+   "count": 0
+  }
+ ]
+}

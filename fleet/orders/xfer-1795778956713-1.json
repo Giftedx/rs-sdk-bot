@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795778956713-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "mmtha0205",
+  "item": "Swamp toad",
+  "count": 1,
+  "itemId": 2150,
+  "start": 1795778956713,
+  "end": 1795779856713,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

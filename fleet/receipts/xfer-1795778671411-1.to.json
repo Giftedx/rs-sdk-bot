@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795778671411-1",
+ "account": "BowBeforeMe",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 27,
+ "claim": "a5f11b7b-e3e4-4cf3-8df7-d4c6c2d4cacf",
+ "count": 27,
+ "ok": true,
+ "at": 1795778935551,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Coal",
+   "requested": 70,
+   "count": 70,
+   "inventory": {
+    "before": 0,
+    "after": 70
+   },
+   "bank": {
+    "count": 70,
+    "at": 1795778934736
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 27
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795778934359
+ },
+ "logout": {
+  "attemptId": "1795778921086-0000011116-0000000001",
+  "at": 1795778935488,
+  "sha256": "f5ddbdc63c1de60acd282ccaa117680dff565b7a88e0411a48b9bdde5f26f244"
+ },
+ "screen": true
+}

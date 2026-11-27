@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795778844092,
+ "at": 1795778992326,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,28 +60,21 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
+    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "auto",
-   "resources": [
-    "earth-altar"
-   ]
+   "role": "auto"
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Fatstack",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -91,14 +84,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "113",
+    "MAX_ITEMS": "36",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "113"
+    "BATCH_UNITS": "36"
    },
    "enabled": true,
    "repeat": false,
@@ -106,53 +99,28 @@
    "role": "army"
   },
   {
-   "account": "Hocuspokeus",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_armourshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1169",
-    "ITEMS": "Coif",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "1274",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1169",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1274"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1169",
-   "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "90",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "90"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:557",
    "role": "army"
   },
   {
@@ -170,45 +138,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-317-2-o0-p13",
-    "ITEM_ID": "317",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "13",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:317",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:317",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
@@ -230,50 +159,66 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
+   "account": "Shaftmaker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "decant:prayer_restore"
+    "identify:kwuarm"
+   ],
+   "env": {
+    "MAX_MAKE": "6",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "6",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
    ],
    "env": {
     "MAX_MAKE": "1",
     "CAP": "1000",
     "MEMBERS": "1",
-    "DEMAND_ID": "campaign:fullblooded:item:2434",
+    "DEMAND_ID": "goal:supply_chain:263",
     "BATCH_UNITS": "1",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:fullblooded:item:2434",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "1274",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "1274"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "goal:supply_chain:263",
    "role": "army"
   }
  ],
@@ -285,13 +230,15 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",

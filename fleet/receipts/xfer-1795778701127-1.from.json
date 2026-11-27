@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795778701127-1",
+ "account": "Woodenstaff",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ce596402-eedd-47cc-85ec-276486958152",
+ "count": 0,
+ "ok": false,
+ "at": 1795778975994,
+ "detail": "trade claimed"
+}
