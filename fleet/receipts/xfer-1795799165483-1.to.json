@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799165483-1",
+ "account": "Nockitoff",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 15,
+ "claim": "ecd0f188-ad67-4e86-9c34-cadfe4a4634c",
+ "count": 15,
+ "ok": true,
+ "at": 1795799663724,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795799662966
+ },
+ "logout": {
+  "attemptId": "1795799649892-0000033828-0000000001",
+  "at": 1795799663714,
+  "sha256": "5094c7b2b4902cd15253acb05123e189481bf52f4b48017bc9b294cd5e194eff"
+ },
+ "screen": true
+}

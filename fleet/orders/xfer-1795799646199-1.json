@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799646199-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketrocket",
+  "to": "Shaftmaker",
+  "item": "Arrow shaft",
+  "count": 499,
+  "itemId": 52,
+  "start": 1795799646199,
+  "end": 1795800546199,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
