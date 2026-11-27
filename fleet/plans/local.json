@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795787937234,
+ "at": 1795787986519,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -67,20 +67,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "246",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "36",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "246"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "36"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "11",
+    "MAX_ITEMS": "16",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "11"
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
@@ -128,22 +128,6 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=12 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=12 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
@@ -216,43 +200,7 @@
    "role": "auto"
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
    "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "PickpockDick",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -298,20 +246,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "74",
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "1894",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "74"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1894"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:557",
    "role": "auto"
   },
   {
@@ -331,6 +279,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:53",
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=561 \"ITEMS=Nature rune\" MAX_ITEMS=3 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   }
  ],
@@ -352,6 +315,7 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
@@ -360,7 +324,8 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

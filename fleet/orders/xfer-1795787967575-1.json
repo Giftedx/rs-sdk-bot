@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795787967575-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "PickpockDick",
+  "item": "Herb",
+  "count": 3,
+  "itemId": 211,
+  "start": 1795787967575,
+  "end": 1795788867575,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
