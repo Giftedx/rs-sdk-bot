@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795744738709-1",
  "account": "Moneyshot",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 3,
  "claim": "c01730a5-785f-41f9-b1b9-03f2b9fc795e",
- "count": 0,
- "ok": false,
- "at": 1795744792913,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795744806323,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795744805633
+ },
+ "logout": {
+  "attemptId": "1795744793265-0000029988-0000000001",
+  "at": 1795744806315,
+  "sha256": "bc8f975b9fade4b9180732964673a8da901c1b3beb7be4777afaff4b2c158132"
+ },
+ "screen": true
 }
