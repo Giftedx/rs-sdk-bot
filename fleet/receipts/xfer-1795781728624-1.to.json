@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795781728624-1",
  "account": "OreElse",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 1,
  "claim": "7594495b-1db0-4314-a0d3-09ac9c14825e",
- "count": 0,
- "ok": false,
- "at": 1795782148623,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795782210558,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795782209807
+ },
+ "logout": {
+  "attemptId": "1795782148633-0000027072-0000000001",
+  "at": 1795782210545,
+  "sha256": "4e4fd2ddeecd04ef46a5c7ba4fffaf873b09a733b09b4662d52247a707c31bf0"
+ },
+ "screen": true
 }

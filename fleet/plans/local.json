@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795782133431,
+ "at": 1795782216733,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -150,24 +150,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "266",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "266"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -215,28 +215,6 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "725",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -259,6 +237,28 @@
    "role": "army"
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "497",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -278,6 +278,53 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:cutmyjewels:item:1621",
+   "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_tarromin_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:95",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
+   "role": "auto"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -304,48 +351,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:44",
    "role": "auto"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "gemshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1623",
-   "role": "army"
   },
   {
    "account": "BoneToPick",
@@ -386,6 +391,23 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
   }
  ],
  "army": [
@@ -403,11 +425,13 @@
   "fatstack",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "knightrider",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "thefullmonty",
