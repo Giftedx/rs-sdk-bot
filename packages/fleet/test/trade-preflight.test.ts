@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writePreloginFailure, type Order } from '../../core/src/fleet-trade-settlement';
 import type { NoRouteFact } from '../../brain/src/no-route';
-import { meetTile, PRELOGIN_RETRY_MS, routeRefusal, tradePreflight } from '../src/trade-preflight';
+import { meetTile, PRELOGIN_RETRY_MS, routeRefusal, stockRefusal, tradePreflight } from '../src/trade-preflight';
 
 const NOW = 1_795_743_072_303;
-// Order xfer-1795743072303-1: Quickhandjob failed "precondition no route to 3182,3440,0" four times in a row.
+// A Varrock meet: "precondition no route to 3182,3440,0" from a tile that the walker cannot leave.
 const VARROCK: Order = { id: 'xfer-1795743072303-1', server: 's', from: 'Shaftsinker', to: 'Quickhandjob', item: 'Lobster', count: 1, start: NOW, end: NOW + 900_000, meet: [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }] };
-// Order xfer-1795725998186-1: Hocuspokeus failed "precondition ferry needs 60 coins and the bank holds 0".
+// A meet that the walk reaches by boat: "precondition ferry needs 60 coins and the bank holds 0" without the fares.
 const ARDOUGNE: Order = { id: 'xfer-1795725998186-1', server: 's', from: 'Hocuspokeus', to: 'Quickhandjob', item: 'Air rune', count: 918, start: NOW, end: NOW + 900_000, meet: [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }] };
 const HERE = { x: 2546, z: 3325, level: 0 };
 const fact: NoRouteFact = { from: HERE, to: { x: 3182, z: 3440, level: 0 }, activityId: 'logistics:trade', observedAt: NOW - 60_000, expiresAt: NOW + 3_600_000 };
@@ -43,6 +43,39 @@ describe('trade preflight: route and fare', () => {
         expect(routeRefusal(varrock, tile, undefined, { pack: 0 }, NOW, travel)).toBeUndefined();
         // No boat on the way: no fare.
         expect(routeRefusal(varrock, meetTile(VARROCK, 'from')!, undefined, { pack: 0, bank: 0 }, NOW, travel)).toBeUndefined();
+    });
+});
+
+describe('trade preflight: giver stock', () => {
+    // The worker gives no worn item: "stock short: Rune scimitar 0 banked + 0 held < 1" with the scimitar worn.
+    const SCIMITAR: Order = { ...VARROCK, id: 'xfer-1795631358429-1', from: 'Fingerblastr', item: 'Rune scimitar', itemId: 1333, count: 1 };
+    const seen = (over: object) => ({ started: NOW - 3_600_000, bankAt: NOW - 3_000_000, bank: [], inventory: [], ...over });
+
+    test('a giver whose latest run saw the bank without the items is refused; a worn item does not count', () => {
+        expect(stockRefusal(SCIMITAR, seen({ equipment: [{ id: 1333, count: 1 }] })))
+            .toBe('the giver holds 0 Rune scimitar in its pack and bank, and the order gives 1');
+        expect(stockRefusal(SCIMITAR, seen({ bank: [{ id: 1333, baseId: 1333, count: 1 }] }))).toBeUndefined();
+    });
+
+    test('a note counts as its base item, and each extra line is checked', () => {
+        const ore: Order = { ...VARROCK, item: 'Gold ore', itemId: 444, count: 35, extra: [{ item: 'Coal', itemId: 453, count: 10 }] };
+        expect(stockRefusal(ore, seen({ inventory: [{ id: 445, baseId: 444, count: 20 }], bank: [{ id: 444, baseId: 444, count: 15 }, { id: 453, baseId: 453, count: 10 }] }))).toBeUndefined();
+        expect(stockRefusal(ore, seen({ bank: [{ id: 444, baseId: 444, count: 35 }, { id: 453, baseId: 453, count: 9 }] })))
+            .toBe('the giver holds 9 Coal in its pack and bank, and the order gives 10');
+        // An order line by name only.
+        expect(stockRefusal({ item: 'Herb', count: 2 }, seen({ bank: [{ id: 199, name: 'Herb', count: 2 }] }))).toBeUndefined();
+    });
+
+    test('a bank from before the latest run, or no bank, gives no refusal', () => {
+        expect(stockRefusal(SCIMITAR, seen({ bankAt: NOW - 4_000_000 }))).toBeUndefined();
+        expect(stockRefusal(SCIMITAR, { started: NOW - 1 })).toBeUndefined();
+        expect(stockRefusal(SCIMITAR, null)).toBeUndefined();
+    });
+
+    test('the agent refuses the giver, not the taker', () => {
+        const admit = tradePreflight({ base: tmpdir(), dir: tmpdir(), env: () => ({}), now: NOW, release: () => {}, noRoutes: () => undefined, status: () => seen({}) });
+        expect(admit('Fingerblastr', SCIMITAR, 'from')).toContain('the giver holds 0 Rune scimitar');
+        expect(admit('Quickhandjob', SCIMITAR, 'to')).toBeUndefined();
     });
 });
 

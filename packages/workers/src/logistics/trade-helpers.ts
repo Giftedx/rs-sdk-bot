@@ -817,7 +817,7 @@ const requestRefusal = (result: TradeResult) => !result.success && !result.partn
 
 // A failed or reconcile receipt of the partner ends its side for good. A refused login of the partner counts only when
 // it is not older than `since`, the start of this run: the agent starts both parties again after a refused login, and
-// a party that read the earlier refusal stopped while its partner logged in and waited out the window alone.
+// a party that obeys the earlier refusal leaves its partner to wait out the window alone.
 export function partnerFailed(dir: string, order: Order, role: TradeRole, preloginDir = join(dirname(dir), 'prelogin-failed'), since = -Infinity): boolean {
     const other: TradeRole = role === 'from' ? 'to' : 'from';
     try {
@@ -826,6 +826,40 @@ export function partnerFailed(dir: string, order: Order, role: TradeRole, prelog
     } catch { /* absent or unreadable */ }
     const refused = readPreloginFailure(preloginDir, order, other);
     return refused !== null && !(refused.at < since);
+}
+
+// A giver at the meet waits this long for a taker on another side to show that it started.
+export const TAKER_GRACE_MS = 5 * 60_000;
+
+// Watches a taker on another side from the meet. The taker shows that it started by its receipt of this order (the
+// prepared receipt comes at its claim, and fleet-sync brings it here) or by its trade claim for this order. A giver
+// whose taker shows neither TAKER_GRACE_MS after it reached the meet ends with the returned reason, and does not wait
+// for "order window ended during work". A claim authority that cannot be read gives no reason.
+export function absentTakerWatch(o: {
+    order: Pick<Order, 'id'>;
+    partner: string;
+    partnerSide: string;
+    receipts: string;
+    readClaims: () => readonly { orderId: string }[];
+    now?: () => number;
+    graceMs?: number;
+    everyMs?: number;
+}): { arrived(): void; why(): string | undefined } {
+    const now = o.now ?? Date.now, grace = o.graceMs ?? TAKER_GRACE_MS, every = o.everyMs ?? 60_000;
+    let arrivedAt: number | undefined, present = false, checked = -Infinity, absent: string | undefined;
+    return {
+        arrived: () => { arrivedAt ??= now(); },
+        why: () => {
+            if (present || absent || arrivedAt === undefined || now() - arrivedAt < grace) return absent;
+            if (existsSync(join(o.receipts, `${o.order.id}.to.json`))) { present = true; return undefined; }
+            if (now() - checked < every) return undefined;
+            checked = now();
+            try { present = o.readClaims().some(c => c.orderId === o.order.id); }
+            catch { return undefined; }
+            if (!present) absent = `taker ${o.partner} on side ${o.partnerSide} showed no claim or receipt for this order ${Math.round((now() - arrivedAt) / 60_000)} min after the giver reached the meet`;
+            return absent;
+        },
+    };
 }
 
 export const giverReadyFile = (base: string, id: string) => join(base, '.practice', 'fleet-ready', `${id}.ready`);

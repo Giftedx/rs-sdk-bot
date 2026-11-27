@@ -140,8 +140,8 @@ describe('fleet agent: a trade claim held for another order holds both parties',
         } finally { rmSync(base, { recursive: true, force: true }); }
     });
 
-    // Order xfer-1795751426410-1: FishAndChips' login failed "fleet account claim held by swarm" 8 times in 10 minutes,
-    // and each time Shaftsinker stopped with "partner failed before login".
+    // The login of the held party fails "fleet account claim held by swarm", and its partner then stops with
+    // "partner failed before login".
     test('a swarm claim that the login refuses holds both parties', () => {
         const p = pass({ claimHeld: () => new Map([['knightstick', SWARM_HELD]]) });
         expect(starts(p)).not.toContain(`Moneyshot ${MK.id}`);

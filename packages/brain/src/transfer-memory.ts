@@ -27,6 +27,14 @@ export const TRANSFER_FAILURE_MAX_BACKOFF_MS = 8 * 3_600_000;
 const PARTNER_FAULT_RE = /partner failed|order window ended|no matching trade|partner .*before login/i;
 // An owner pause ends the trade; it is not a fault of either party.
 const OWNER_PAUSE_RE = /stop file/i;
+// A party whose own walk to the meet failed ("route to 3182, 3440: precondition no route to 3182,3440,0", "ferry
+// needs 60 coins and the bank holds 0") fails the same way with any item, so its backoff covers the hub, not one
+// item. The receipt is the first evidence: the worker's no-route fact reaches the outcome record only after its
+// process ends, and the next cycle can plan before that.
+const ROUTE_FAULT_RE = /\broute to -?\d+, -?\d+: |\bprecondition (?:no route to|(?:(?:westbound|eastbound) )?ferry needs)/;
+
+// The cooldown key that holds a party out of every hub trade at `hub` (acct.cooldowns, acquire.ts hub_banker).
+export const hubRouteCooldownKey = (hub: HubBankId): string => `route:hub:${hub}`;
 
 const HUB_IDS = Object.keys(HUB_BANKER_LOCATIONS) as HubBankId[];
 
@@ -38,6 +46,8 @@ export type TransferEvent =
         readonly order: Order;
         readonly donorFault: boolean;
         readonly recipientFault: boolean;
+        // The parties (lower case) whose own walk to the meet failed.
+        readonly routeFault?: readonly string[];
     };
 
 export interface TransferMemory {
@@ -95,7 +105,10 @@ export function transferEvent(order: Order, receipts: readonly Receipt[], now: n
     let recipientFault = recipientOwn || (!to && !donorOwn);
     // Both reached the meet and blamed each other: the pair failed.
     if (!donorFault && !recipientFault) donorFault = recipientFault = true;
-    return { kind: 'failed', at, order, donorFault, recipientFault };
+    const routeFault = ([[from, order.from], [to, order.to]] as const)
+        .filter(([r]) => ownFault(r) && ROUTE_FAULT_RE.test(String(r!.detail ?? '')))
+        .map(([, name]) => name.toLowerCase());
+    return { kind: 'failed', at, order, donorFault, recipientFault, ...(routeFault.length ? { routeFault } : {}) };
 }
 
 // scripts/fleet-order.ts makes orders with an item name and no id (scripts/route-stage.ts). A name that exactly one
@@ -137,6 +150,7 @@ export function transferMemory(events: readonly TransferEvent[], now: number): T
     const recentTransfers: TransferOrder[] = [];
     const donorFailures = new Map<string, { itemId: number; donor: string; times: number[] }>();
     const recipientFailures = new Map<string, { itemId: number; recipient: string; times: number[] }>();
+    const routeFailures = new Map<string, { party: string; hub: HubBankId; times: number[] }>();
 
     for (const ev of events) {
         if (ev.at > now) continue;
@@ -166,6 +180,12 @@ export function transferMemory(events: readonly TransferEvent[], now: number): T
             continue;
         }
         if (now - ev.at >= TRANSFER_FAILURE_LOOKBACK_MS) continue;
+        for (const party of ev.routeFault ?? []) {
+            const hub = inferHubFromOrder(ev.order), key = `${party}|${hub}`;
+            const rec = routeFailures.get(key) ?? { party, hub, times: [] };
+            rec.times.push(ev.at);
+            routeFailures.set(key, rec);
+        }
         for (const line of lines) {
             if (ev.donorFault) {
                 const donor = ev.order.from.toLowerCase();
@@ -199,6 +219,13 @@ export function transferMemory(events: readonly TransferEvent[], now: number): T
         if (until <= now) continue;
         const key = marketCooldownKey(itemId, 'hub_banker');
         const acct = (accountCooldowns[recipient] ??= {});
+        acct[key] = Math.max(acct[key] ?? 0, until);
+    }
+    for (const { party, hub, times } of routeFailures.values()) {
+        const until = backoffUntil(times);
+        if (until <= now) continue;
+        const key = hubRouteCooldownKey(hub);
+        const acct = (accountCooldowns[party] ??= {});
         acct[key] = Math.max(acct[key] ?? 0, until);
     }
     return { recentTransfers, marketCooldowns, accountCooldowns };

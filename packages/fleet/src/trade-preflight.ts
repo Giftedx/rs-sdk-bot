@@ -1,17 +1,19 @@
 // Checks before the fleet agent starts a party of an order: would its login be admitted, and can it reach the meet?
 // A party that fails one of them is not started, and through planTradePass its partner on this side waits with it.
-// Each check reads files only. The causes are the first failed steps of the trade failures in .practice/fleet-agent.log:
-// - "no worker progress: release peer state unknown" and the other release holds refused the login of one party;
-//   the other party then stopped with "partner failed before login", or stood at the meet for "partner failed: no trade".
-// - a login refused in the last PRELOGIN_RETRY_MS (prelogin-failed/<order>.<role>.json): the agent started both
-//   parties again each pass, and the same refusal came back.
+// Each check reads files only, and each one stops a first failed step of a trade before the login:
+// - "no worker progress: release peer state unknown" and the other release holds refuse the login of a party; its
+//   partner then stops with "partner failed before login", or waits at the meet for "partner failed: no trade".
+// - a login refused in the last PRELOGIN_RETRY_MS (prelogin-failed/<order>.<role>.json) is refused again for the
+//   same cause, so the pair waits.
 // - "precondition no route to <meet>": the account's own route search found no route from where it stands, and the
 //   brain keeps that fact (packages/brain/src/no-route.ts) while the account stays there.
 // - "precondition ferry needs 60 coins and the bank holds 0": the walk to the meet takes boats that the account cannot
 //   pay for (packages/brain/src/ferry-fare.ts prices the same fallback as the worker walk).
+// - "stock short: Rune scimitar 0 banked + 0 held < 1": the giver does not hold the items in its pack and bank. The
+//   worker gives no worn item, and the bank counts only when the giver's last run observed it.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readPreloginFailure, type Order, type TradeRole } from '../../core/src/fleet-trade-settlement';
+import { orderLines, readPreloginFailure, type Order, type TradeRole } from '../../core/src/fleet-trade-settlement';
 import { liveRoot, statusReadDirs } from '../../core/src/practice-paths';
 import { assertLiveWorkerRelease } from '../../core/src/worker-release';
 import type { Tile } from '../../core/src/world';
@@ -30,7 +32,27 @@ export function meetTile(order: Pick<Order, 'meet'>, role: TradeRole): Tile | nu
     return meet ? (role === 'from' ? meet[0] : meet[1]) ?? null : null;
 }
 
-type StatusRow = { pos?: Tile | null; inventory?: readonly { id?: number; count?: number }[]; bank?: readonly { id?: number; count?: number }[] | null; bankAt?: number };
+type ItemRow = { id?: number; baseId?: number; name?: string; count?: number };
+type StatusRow = { pos?: Tile | null; inventory?: readonly ItemRow[]; bank?: readonly ItemRow[] | null; bankAt?: number; started?: number };
+
+// The units of an order line in rows of a pack or bank. A note counts as its base item (the status row's baseId).
+const lineCount = (rows: readonly ItemRow[] | null | undefined, line: { item: string; itemId?: number }) =>
+    (rows ?? []).reduce((n, r) => {
+        const match = line.itemId !== undefined ? (r?.baseId ?? r?.id) === line.itemId
+            : typeof r?.name === 'string' && r.name.toLowerCase() === line.item.toLowerCase();
+        return n + (match && Number.isFinite(r.count) ? r.count! : 0);
+    }, 0);
+
+// The giver's stock check. The bank is proof only when its last observation came in the giver's latest run
+// (bankAt >= started): an older bank can have changed since. Without that proof no refusal is given.
+export function stockRefusal(order: Pick<Order, 'item' | 'count' | 'itemId' | 'extra'>, row: StatusRow | null): string | undefined {
+    if (!row || !Array.isArray(row.bank) || !Number.isFinite(row.bankAt) || !Number.isFinite(row.started) || row.bankAt! < row.started!) return undefined;
+    for (const line of orderLines(order as Order)) {
+        const held = lineCount(row.inventory, line) + lineCount(row.bank, line);
+        if (held < line.count) return `the giver holds ${held} ${line.item} in its pack and bank, and the order gives ${line.count}`;
+    }
+    return undefined;
+}
 const coinsIn = (rows: readonly { id?: number; count?: number }[] | null | undefined) =>
     (rows ?? []).reduce((n, r) => n + (r?.id === COINS_ID && Number.isFinite(r.count) ? r.count! : 0), 0);
 const isTile = (t: unknown): t is Tile => !!t && Number.isInteger((t as Tile).x) && Number.isInteger((t as Tile).z) && Number.isInteger((t as Tile).level);
@@ -80,9 +102,13 @@ export function tradePreflight(o: PreflightInput): (account: string, order: Orde
         if (failed && o.now - failed.at < PRELOGIN_RETRY_MS) {
             return `login refused ${Math.max(0, Math.round((o.now - failed.at) / 1000))} s ago: ${failed.detail.replace(/^Error: /, '').slice(0, 120)}`;
         }
+        const row = status(account);
+        if (role === 'from') {
+            const short = stockRefusal(order, row);
+            if (short) return short;
+        }
         const tile = meetTile(order, role);
         if (!tile) return undefined;
-        const row = status(account);
         const pos = isTile(row?.pos) ? row!.pos! : null;
         const bank = Number.isFinite(row?.bankAt) && Array.isArray(row?.bank) ? coinsIn(row!.bank) : undefined;
         return routeRefusal(pos, tile, noRoutes(account), { pack: coinsIn(row?.inventory), ...(bank === undefined ? {} : { bank }) }, o.now);

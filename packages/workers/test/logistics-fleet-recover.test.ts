@@ -37,6 +37,7 @@ import {
     canEnterHeroesBasement,
     chooseAntipoison,
     classifyLocation,
+    absentTakerWatch,
     clearPreloginFailure,
     dosesOf,
     exitLumberYard,
@@ -1740,4 +1741,48 @@ test('partnerFailed and pickOrder treat partner reconcile receipts as terminal f
     writeTradeReceipt(dir, reconcile);
     expect(partnerFailed(dir, trade, 'to')).toBe(true);
     expect(pickOrder([trade], [reconcile], 'Taker', 2000)).toBeNull();
+});
+
+test('a giver at the meet ends when its taker on another side shows no claim or receipt after the grace', () => {
+    // A giver that does not end waits at the meet until "order window ended during work" when the taker never starts.
+    const receipts = makeTempDir('fleet-trade-absent-');
+    let t = 1000, reads = 0, claims: { orderId: string }[] = [];
+    const watch = (readClaims: () => readonly { orderId: string }[] = () => { reads++; return claims; }) =>
+        absentTakerWatch({ order: { id: 'xfer-9-1' }, partner: 'Taker', partnerSide: 'cloud', receipts, readClaims, now: () => t, graceMs: 300_000, everyMs: 60_000 });
+    const w = watch();
+    expect(w.why()).toBeUndefined(); // not at the meet yet
+    w.arrived();
+    t += 299_999;
+    expect(w.why()).toBeUndefined();
+    expect(reads).toBe(0);
+    t += 1;
+    expect(w.why()).toBe('taker Taker on side cloud showed no claim or receipt for this order 5 min after the giver reached the meet');
+    expect(reads).toBe(1);
+    // A taker that claimed the order is present for good.
+    claims = [{ orderId: 'xfer-9-1' }];
+    t = 1000;
+    const claimed = watch();
+    claimed.arrived();
+    t += 300_000;
+    expect(claimed.why()).toBeUndefined();
+    claims = [];
+    t += 600_000;
+    expect(claimed.why()).toBeUndefined();
+    // Its receipt brought by fleet-sync shows it too, with no claim read.
+    t = 1000; reads = 0;
+    const synced = watch();
+    synced.arrived();
+    writeFileSync(join(receipts, 'xfer-9-1.to.json'), '{}');
+    t += 300_000;
+    expect(synced.why()).toBeUndefined();
+    expect(reads).toBe(0);
+    // An unreadable claim authority gives no reason, and the next read waits everyMs.
+    rmSync(join(receipts, 'xfer-9-1.to.json'));
+    t = 1000; reads = 0;
+    const unread = watch(() => { reads++; throw Error('ls-remote timed out'); });
+    unread.arrived();
+    t += 300_000;
+    expect(unread.why()).toBeUndefined();
+    expect(unread.why()).toBeUndefined();
+    expect(reads).toBe(1);
 });
