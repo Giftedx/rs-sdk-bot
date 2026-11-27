@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795802112120-1",
+ "account": "Nockitoff",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 15,
+ "claim": "15773f88-7aba-4687-8a58-091e923fd65d",
+ "count": 15,
+ "ok": true,
+ "at": 1795802610402,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795802609617
+ },
+ "logout": {
+  "attemptId": "1795802598584-0000027504-0000000001",
+  "at": 1795802610389,
+  "sha256": "a8f98fadae5dd2382cae1092c0a67ea70f25181bb84eddc98e917c94480e65b2"
+ },
+ "screen": true
+}

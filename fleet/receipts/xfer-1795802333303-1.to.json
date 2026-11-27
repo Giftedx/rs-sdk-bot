@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795802333303-1",
  "account": "UnderMyKilt",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "b120d561-630f-4e60-b989-c26d98dcf482",
- "count": 0,
- "ok": false,
- "at": 1795802561167,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795802628375,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795802627627
+ },
+ "logout": {
+  "attemptId": "1795802561179-0000035348-0000000001",
+  "at": 1795802628355,
+  "sha256": "b428936ebdbf0c206d158b48fa268730d46756015869a7c17865b38990c468b1"
+ },
+ "screen": true
 }

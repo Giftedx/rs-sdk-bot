@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795802112120-1",
  "account": "MeatNTwoVeg",
  "partner": "Nockitoff",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 15,
  "claim": "2c27e357-c56a-4953-b339-2249f7f16626",
- "count": 0,
- "ok": false,
- "at": 1795802585671,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795802608763,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795802592537
+ },
+ "logout": {
+  "attemptId": "1795802585682-0000029520-0000000001",
+  "at": 1795802608750,
+  "sha256": "3cb00ef2b7fa1ccf9c266dee5965d2809bfe46b3ee272a3db99419e811323253"
+ },
+ "screen": true
 }
