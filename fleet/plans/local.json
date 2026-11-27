@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795789503218,
+ "at": 1795789568680,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -176,41 +176,27 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "ranged-gather"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "44",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "44"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_avantoe_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:103",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
+   "goal": "campaign:haggis:item:554",
    "role": "army"
   },
   {
@@ -239,26 +225,45 @@
    "role": "auto"
   },
   {
-   "account": "SporranDip",
+   "account": "TheFullMonty",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "identify:ranarr_weed"
+    "brew:unf_avantoe_potion"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1000",
+    "MAX_MAKE": "1",
+    "CAP": "1200",
     "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:257",
-    "BATCH_UNITS": "2",
+    "DEMAND_ID": "campaign:haggis:item:103",
+    "BATCH_UNITS": "1",
     "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "STALL_TICKS": "169"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "campaign:haggis:item:103",
    "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "489"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "OreElse",
@@ -306,25 +311,6 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1568"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
    "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -340,6 +326,69 @@
    "repeat": false,
    "goal": "goal:pk_army:YewGotWood",
    "role": "auto"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "567"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:pouchstuffed:item:1436",
+    "BATCH_UNITS": "1443"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:pouchstuffed:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "555",
+    "ITEMS": "Water rune",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:555",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:555",
+   "role": "army"
   }
  ],
  "army": [
