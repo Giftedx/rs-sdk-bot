@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795793785962-1",
+ "account": "Fatstack",
+ "partner": "Bigpackage",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Necklace mould",
+ "requested": 1,
+ "claim": "17384dba-4838-450a-910d-025fc188ccc3",
+ "count": 0,
+ "ok": false,
+ "at": 1795793993650,
+ "detail": "trade claimed"
+}

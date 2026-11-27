@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795793970580-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "TossTheCaber",
+  "item": "Steel bar",
+  "count": 1,
+  "itemId": 2353,
+  "start": 1795793970580,
+  "end": 1795794870580,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
