@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795783842106-1",
+ "account": "Billionaire",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "31c90fb6-1d1c-4784-84f1-3242b13171d4",
+ "count": 10,
+ "ok": true,
+ "at": 1795784357653,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795784356888
+ },
+ "logout": {
+  "attemptId": "1795784347034-0000007500-0000000001",
+  "at": 1795784357636,
+  "sha256": "465ae929d42b09dab2fc4edda42d4e43ecd04f534fd859aa3c45326a943ccfdc"
+ },
+ "screen": true
+}

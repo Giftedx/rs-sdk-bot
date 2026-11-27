@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795783842106-1",
  "account": "Shaftsinker",
  "partner": "Billionaire",
@@ -10,8 +10,18 @@
  "item": "Shark",
  "requested": 10,
  "claim": "b693d177-70aa-47cf-8dd5-ad5d6c19fdd0",
- "count": 0,
- "ok": false,
- "at": 1795784243408,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795784355252,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795784243417-0000010896-0000000001",
+  "at": 1795784355237,
+  "sha256": "368d3b3ea0991cd45dc735fa66ebd0e77828e70d8d7638cdaf5ef60ccccf49f6"
+ },
+ "screen": true
 }
