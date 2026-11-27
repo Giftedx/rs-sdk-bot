@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795807154254-2",
  "account": "BoneToPick",
  "partner": "Shaftmaker",
@@ -12,6 +12,12 @@
  "claim": "694f0497-e03c-4d38-a96a-b96681d2a53b",
  "count": 0,
  "ok": false,
- "at": 1795807807934,
- "detail": "trade claimed"
+ "at": 1795807820148,
+ "detail": "Error: route to 2617, 3333: precondition walk danger from 2613,3091,0: route danger to 2617,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "logout": {
+  "attemptId": "1795807807944-0000003544-0000000001",
+  "at": 1795807820130,
+  "sha256": "48590eeb0cb20873c7cfaeeea51d2c089de60ce709f31fa9f7ac39f35404a410"
+ },
+ "screen": false
 }
