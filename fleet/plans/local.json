@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777173244,
+ "at": 1795777285540,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,48 +60,61 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1540 TARGET_COUNT=154 PRODUCT_TARGET=175 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
+    "chicken"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1610 TARGET_COUNT=161 PRODUCT_TARGET=175 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1750 TARGET_COUNT=175 PRODUCT_TARGET=175 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
+    "thieving",
+    "knights"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "50"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "Fingersmith",
@@ -186,25 +199,22 @@
    "account": "Swordswallow",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "66",
+    "ORDER_KEY": "brain-1513-2-o0-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "66"
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -275,6 +285,21 @@
    "role": "army"
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1363 MAX_MAKE=7 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=35 TARGET_COUNT=7 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=41 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:41 BATCH_UNITS=5 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:41",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -298,6 +323,27 @@
    "repeat": false,
    "goal": "campaign:haggis:item:557",
    "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:avantoe"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:261",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:261",
+   "role": "army"
   }
  ],
  "army": [
@@ -317,7 +363,6 @@
   "mmtha0205",
   "mmthv2350",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",

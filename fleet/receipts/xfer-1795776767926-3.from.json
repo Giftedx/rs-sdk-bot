@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795776767926-3",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "0a653cf6-24a5-4703-9ed9-887d98ea6784",
+ "count": 0,
+ "ok": false,
+ "at": 1795777258673,
+ "detail": "trade claimed"
+}

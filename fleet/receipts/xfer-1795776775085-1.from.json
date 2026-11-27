@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795776775085-1",
+ "account": "Billionaire",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "f1180255-30dc-4440-bc8f-b22e11464286",
+ "count": 0,
+ "ok": false,
+ "at": 1795777280347,
+ "detail": "trade claimed"
+}
