@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819454030-pocketpython-masterbaiter-149e789ff74f70c5",
+ "account": "Pocketpython",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "7288d7c4-297b-4082-a5f2-4aba402cecc2",
+ "count": 0,
+ "ok": false,
+ "at": 1795821644370,
+ "detail": "trade claimed"
+}
