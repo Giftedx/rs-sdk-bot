@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795812679791-1",
+ "account": "Woodenstaff",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "0cf6111a-9f93-47a6-bd32-65413ac2c7a0",
+ "count": 0,
+ "ok": false,
+ "at": 1795812860797,
+ "detail": "trade claimed"
+}
