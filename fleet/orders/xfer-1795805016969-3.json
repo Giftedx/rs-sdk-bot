@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795805016969-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Nockitoff",
+  "item": "Mind rune",
+  "count": 14,
+  "itemId": 558,
+  "start": 1795805016969,
+  "end": 1795805916969,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

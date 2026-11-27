@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804455188-1",
  "account": "TossTheCaber",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "4dad46b4-7e08-42bc-9730-4bcba276d55c",
- "count": 0,
- "ok": false,
- "at": 1795804932101,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795805015428,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795804941100
+ },
+ "logout": {
+  "attemptId": "1795804932128-0000029804-0000000001",
+  "at": 1795805015416,
+  "sha256": "569a2763688743a466491d958dd55e8749fdfadeca1f0bd01f446c14a14a0c2b"
+ },
+ "screen": true
 }

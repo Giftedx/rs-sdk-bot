@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804550557-1",
  "account": "Woodpecker",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 1,
  "claim": "23a6bef0-b504-4eff-82ac-b0710dadca18",
- "count": 0,
- "ok": false,
- "at": 1795804989395,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795805010672,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795804995503
+ },
+ "logout": {
+  "attemptId": "1795804989403-0000033660-0000000001",
+  "at": 1795805010658,
+  "sha256": "344aa9f308ffe264edc07203038cef920566fb32375d66040fdaf10293e525b9"
+ },
+ "screen": true
 }
