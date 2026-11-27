@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791689305,
+ "at": 1795791725815,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -82,8 +82,8 @@
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
     "ROUNDS": "1"
@@ -94,25 +94,75 @@
    "role": "army"
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Sausagefest",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-12-o0-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "12",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "111",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "12"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "111"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1513",
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "659",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "659"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_avantoe_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:103",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:103",
    "role": "army"
   },
   {
@@ -141,75 +191,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_avantoe_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:103",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_marrentill_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:93",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:93",
-   "role": "auto"
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "338",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "338"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -233,6 +214,28 @@
    "repeat": false,
    "goal": "campaign:haggis:item:892",
    "role": "army"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_marrentill_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:93",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:93",
+   "role": "auto"
   },
   {
    "account": "Pocketpython",
@@ -287,6 +290,23 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:91",
+   "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
   },
   {

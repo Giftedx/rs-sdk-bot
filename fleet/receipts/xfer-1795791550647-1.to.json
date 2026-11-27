@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795791550647-1",
+ "account": "PickpockDick",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "b4e638a0-d581-46e4-83cf-92014fab4ef4",
+ "count": 60,
+ "ok": true,
+ "at": 1795791717700,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795791716923
+ },
+ "logout": {
+  "attemptId": "1795791690596-0000024976-0000000001",
+  "at": 1795791717687,
+  "sha256": "ee1081f3a146b56365507d843d0d71e0dff623f9db5b48e463da121442148d3f"
+ },
+ "screen": true
+}

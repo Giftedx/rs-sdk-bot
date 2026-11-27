@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795791503114-1",
+ "account": "YewFirst",
+ "partner": "Bigpackage",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "9f68fce7-4857-4d55-9888-c2cc6c8878c2",
+ "count": 10,
+ "ok": true,
+ "at": 1795791720085,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795791705360
+ },
+ "logout": {
+  "attemptId": "1795791696852-0000007780-0000000001",
+  "at": 1795791720066,
+  "sha256": "a9fdf5be17bee5ec44c66686281761e646ee8a785ab37dbe5f8c377f4ea8e570"
+ },
+ "screen": true
+}

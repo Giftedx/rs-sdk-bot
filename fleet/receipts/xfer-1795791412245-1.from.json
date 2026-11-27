@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791412245-1",
  "account": "Woodpecker",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "846e5858-755a-4830-920c-c33c00f8340f",
- "count": 0,
- "ok": false,
- "at": 1795791683960,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795791713717,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795791694542
+ },
+ "logout": {
+  "attemptId": "1795791683969-0000017312-0000000001",
+  "at": 1795791713701,
+  "sha256": "4d5d5d5a905b230974d44b421a734e371fd5b51fb30b2af4f84f9d0a97bf29b1"
+ },
+ "screen": true
 }
