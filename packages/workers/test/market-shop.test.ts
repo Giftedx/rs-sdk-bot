@@ -7,6 +7,7 @@ import {
     PROFILES,
     approachLegs,
     approachShop,
+    planShortOf,
     blindBuyNow,
     blindBuyObserved,
     buyEarthObserved,
@@ -869,3 +870,17 @@ test('a shop walk with no route ends the run with the start and target that the 
     expect(shopNoRouteError({ reason: 'precondition', detail: 'no route (search over 45000 ms) to 2654,3283,0' }, here)).toBeNull();
     expect(shopNoRouteError({ reason: 'timeout', detail: 'leg timed out' }, here)).toBeNull();
 });
+
+test('a static plan that stops at the ranging guild wall is short of the bow shop, so the walk goes to goTo at once', async () => {
+    const pf = await import('../../../vendor/rs-sdk/sdk/pathfinding');
+    pf.initPathfinding();
+    const shop = { x: 2673, z: 3434 };
+    // The rs-sdk static map keeps the guild door shut: the way in stops on the east wall, and the way out plans nothing.
+    const inward = pf.findLongPath(0, 2727, 3493, shop.x, shop.z, 500) as { x: number; z: number }[];
+    expect(planShortOf({ x: 2727, z: 3493 }, shop, inward, 2)).toMatch(/^plan ends short: 2679,3437 is 6 tiles from 2673,3434/);
+    const outward = pf.findLongPath(0, 2673, 3440, 2727, 3493, 500) as { x: number; z: number }[];
+    expect(planShortOf({ x: 2673, z: 3440 }, { x: 2727, z: 3493 }, outward, 2)).toMatch(/^plan ends short: 2673,3440 /);
+    // A plan that ends inside the tolerance passes.
+    expect(planShortOf({ x: 0, z: 0 }, { x: 10, z: 10 }, [{ x: 5, z: 5 }, { x: 9, z: 8 }], 2)).toBeUndefined();
+    expect(planShortOf({ x: 10, z: 9 }, { x: 10, z: 10 }, [], 2)).toBeUndefined();
+}, 60_000);
