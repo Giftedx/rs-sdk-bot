@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795794001878-1",
+ "account": "Woodenstaff",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 3,
+ "claim": "23968f89-ab0c-4bcb-8765-f43919032249",
+ "count": 3,
+ "ok": true,
+ "at": 1795794329567,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795794328803
+ },
+ "logout": {
+  "attemptId": "1795794316464-0000015876-0000000001",
+  "at": 1795794329551,
+  "sha256": "87b49f79c4770071984b5f0f93245c09c251fbcef81ff9a0bf92de798a48cc2b"
+ },
+ "screen": true
+}

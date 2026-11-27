@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795793811185-1",
+ "account": "YewFirst",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 15,
+ "claim": "e7872c70-d9da-4d27-98ac-6f426fd0a545",
+ "count": 0,
+ "ok": false,
+ "at": 1795794323572,
+ "detail": "trade claimed"
+}
