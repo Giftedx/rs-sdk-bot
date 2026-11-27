@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795749762032-1",
+ "account": "BowBeforeMe",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 2,
+ "claim": "99356a51-9518-4478-bfa7-72af1f5e0fcb",
+ "count": 2,
+ "ok": true,
+ "at": 1795749821298,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795749796125
+ },
+ "logout": {
+  "attemptId": "1795749790992-0000005776-0000000001",
+  "at": 1795749821285,
+  "sha256": "c8efea9407ef8608595664ba6b3707fa1302a219a4e30a277a3f6dfcf80498c9"
+ },
+ "screen": true
+}
