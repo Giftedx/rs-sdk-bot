@@ -469,6 +469,49 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
     });
 }
 
+// The two held claims of one order whose workers on this host both died while `prepared` (a PC restart). A worker
+// writes its `prepared` receipt one time, when it takes its claim and before it logs in, and replaces it only when its
+// session ends (scripts/fleet-trade.ts). So neither receipt tells what moved, and no worker is left to write another
+// one: droppedTradeClaims never frees such a pair, and session recovery refuses an account with a held trade claim.
+// The pair is freed together when, for both claims, the receipt is the exact `prepared` record of that claim, the
+// claim's owner process on this host is gone (the saved start time rules out a reused pid), and the claim and the
+// order's window both ended DROPPED_CLAIM_MS ago. No worker takes an order after its window (pickOrder,
+// assertTradeAdmission), so the order cannot move items a second time. The release does not prove that nothing moved:
+// the planner reads each account's items from its next session, not from this order.
+export function strandedTradePairs(
+    claims: readonly FleetTradeClaim[],
+    side: string,
+    read: (path: string) => any,
+    now = Date.now(),
+    host = thisHost(),
+    alive: (pid: number, savedAt: number) => boolean = savedProcessAlive,
+): [FleetTradeClaim, FleetTradeClaim][] {
+    const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+    const byOrder = new Map<string, FleetTradeClaim[]>();
+    for (const claim of claims) {
+        if (claim.phase !== 'held' || claim.side !== side) continue;
+        const key = claim.orderId.toLowerCase();
+        byOrder.set(key, [...(byOrder.get(key) ?? []), claim]);
+    }
+    const pairs: [FleetTradeClaim, FleetTradeClaim][] = [];
+    for (const group of byOrder.values()) {
+        const from = group.find(c => c.role === 'from'), to = group.find(c => c.role === 'to');
+        if (group.length !== 2 || !from || !to) continue;
+        const order = read(`orders/${from.orderId}.json`);
+        if (!validOrder(order) || order.id !== from.orderId || order.id !== to.orderId || now - order.end < DROPPED_CLAIM_MS) continue;
+        const stranded = (claim: FleetTradeClaim) => {
+            const own = read(`receipts/${order.id}.${claim.role}.json`);
+            return !!own && own.version === 2 && own.state === 'prepared' && own.id === order.id && own.role === claim.role
+                && own.claim === claim.nonce && own.side === claim.side && same(own.account, claim.account) && same(claim.account, order[claim.role])
+                && same(own.server, order.server) && same(claim.server, order.server) && own.count === 0 && own.ok === false
+                && !own.inventory && !own.bank && !own.logout && (own.lines ?? []).every((l: { count?: unknown; inventory?: unknown; bank?: unknown }) =>l.count === 0 && !l.inventory && !l.bank)
+                && now - claim.at >= DROPPED_CLAIM_MS && claim.host === host && Number.isSafeInteger(claim.pid) && !alive(claim.pid!, claim.at);
+        };
+        if (stranded(from) && stranded(to)) pairs.push([from, to]);
+    }
+    return pairs;
+}
+
 const ORDER_FILE = /^fleet\/orders\/([A-Za-z0-9_-]{1,64})\.json$/;
 
 // The staged order deletions to undo: each one that a held trade claim names. A held claim can be released only
@@ -535,6 +578,10 @@ function releaseSyncedTrades(dir: string, side: string, base = root) {
     for (const claim of droppedTradeClaims(held, side, read)) {
         releaseFleetTradeClaim(base, claim);
         console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner moved nothing (a failed receipt, or no claim by the end of the window)`);
+    }
+    for (const pair of strandedTradePairs(held, side, read)) {
+        releaseFleetTradeClaims(base, pair);
+        console.log(`FLEET_SYNC released the stranded trade claims of ${pair[0].account} and ${pair[1].account} for order ${pair[0].orderId}: both workers died while prepared and the window ended an hour ago; what moved is not known`);
     }
 }
 
