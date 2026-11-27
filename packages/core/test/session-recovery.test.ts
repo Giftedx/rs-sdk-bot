@@ -180,3 +180,17 @@ test('CLI lifecycle root matches live and fixture producer trees',()=>{
  const simFixture=resolveRecoveryCliLifecycleRoot('localhost:8888',repoDir,fixtureDir,'Rod');
  expect(simFixture).toEqual({root:join(fixtureDir,'.practice','sim','session-lifecycle'),overrideForConnect:true});
 });
+
+test('a recovery logout leaves a fight first, and still logs out when the leave step fails', async () => {
+    const { recoveryLogout } = await import('../src/session-recovery');
+    const order: string[] = [], lines: string[] = [];
+    const session = {} as any;
+    const leave = async () => { order.push('leave'); return { underAttack: true, left: true, quiet: true, ticks: 12, moves: 1, tiles: 6, eats: 0 }; };
+    const logout = async () => { order.push('logout'); return 'logged-out'; };
+    expect(await recoveryLogout(session, leave as any, logout as any, l => lines.push(l))).toBe('logged-out');
+    expect(order).toEqual(['leave', 'logout']);
+    expect(lines[0]).toStartWith('RECOVERY_LEAVE ');
+    const failing = async () => { throw Error('no route'); };
+    expect(await recoveryLogout(session, failing as any, logout as any, l => lines.push(l))).toBe('logged-out');
+    expect(lines.at(-1)).toBe('RECOVERY_LEAVE failed');
+});
