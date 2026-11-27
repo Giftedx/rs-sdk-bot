@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795775617933,
+ "at": 1795775647141,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -109,6 +109,21 @@
    "role": "army"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2010 TARGET_COUNT=201 PRODUCT_TARGET=201 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=201 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
    "account": "Hocuspokeus",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -134,90 +149,83 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1746"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1746"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=33 PRODUCT_TARGET=33 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1746 -- mining essence"
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=33 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "shop-buy",
+    "generalshop5",
+    "3000"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ITEM_ID": "1755",
+    "ITEMS": "Chisel",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1755",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "campaign:haggis:item:1755",
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-1-o0-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2552",
-   "role": "army"
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
