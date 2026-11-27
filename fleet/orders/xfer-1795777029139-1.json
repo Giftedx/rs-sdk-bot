@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795777029139-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 213,
+  "start": 1795777029139,
+  "end": 1795777929139,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

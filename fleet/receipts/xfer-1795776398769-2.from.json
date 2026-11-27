@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795776398769-2",
+ "account": "mmtha0205",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "51369b9d-1d1a-4409-bcc1-d84940a72a04",
+ "count": 10,
+ "ok": true,
+ "at": 1795777043411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1152,
+  "after": 1142
+ },
+ "logout": {
+  "attemptId": "1795777024947-0000024940-0000000001",
+  "at": 1795777043176,
+  "sha256": "380afc342614e145afdb85a567182221488859eb6d027ec98f2c9f2aa687917d"
+ },
+ "screen": true
+}
