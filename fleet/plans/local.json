@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795803480331,
+ "at": 1795803505709,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -81,20 +81,25 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:40",
+   "role": "army"
   },
   {
    "account": "Quickhandjob",
@@ -222,20 +227,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "39",
-    "ITEMS": "Bronze arrowtips",
-    "MAX_ITEMS": "60",
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "50",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "60"
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "50"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   },
   {
