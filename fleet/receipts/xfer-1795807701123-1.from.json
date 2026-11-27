@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795807701123-1",
  "account": "Woodpecker",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "c7652b1d-1de6-4d1f-a1b7-0ba076bc69d0",
  "count": 0,
  "ok": false,
- "at": 1795808052048,
- "detail": "trade claimed"
+ "at": 1795808601794,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 3,
+  "at": 1795808064167
+ },
+ "logout": {
+  "attemptId": "1795808052057-0000019720-0000000001",
+  "at": 1795808601736,
+  "sha256": "64b65726cb3fed2f5b3d47ebffcfe44714b09e052149e906614e00b0365f4cd1"
+ },
+ "screen": false
 }
