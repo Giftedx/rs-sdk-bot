@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821779433,
+ "at": 1795821823622,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,14 +97,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "316",
+    "MAX_ITEMS": "340",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "316"
+    "BATCH_UNITS": "340"
    },
    "enabled": true,
    "repeat": false,
@@ -113,6 +113,22 @@
   },
   {
    "account": "Ballspinner",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -134,22 +150,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-skiller.ts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 -- foraging feathers",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
    "role": "army"
   },
   {
