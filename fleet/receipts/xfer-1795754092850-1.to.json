@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795754092850-1",
+ "account": "Shaftsinker",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 1941,
+ "claim": "de87430e-c937-4d64-980a-a229f102f18d",
+ "count": 1941,
+ "ok": true,
+ "at": 1795754189964,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1941
+ },
+ "bank": {
+  "count": 1941,
+  "at": 1795754189140
+ },
+ "logout": {
+  "attemptId": "1795754178094-0000026172-0000000001",
+  "at": 1795754189882,
+  "sha256": "35acc08fa72c454d573503ce73f988580ba56996297cfc155faf6f4c896dcfa7"
+ },
+ "screen": true
+}
