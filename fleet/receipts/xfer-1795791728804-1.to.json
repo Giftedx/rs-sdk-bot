@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791728804-1",
  "account": "Wandwaver",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "fffb354e-9529-44cd-8287-17d2398afce7",
- "count": 0,
- "ok": false,
- "at": 1795792194249,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795792206865,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795792206119
+ },
+ "logout": {
+  "attemptId": "1795792194262-0000028748-0000000001",
+  "at": 1795792206853,
+  "sha256": "238c913f2e71ed8b1aa6785764888a2f74fe0d9fa1f14a3affd5868d2fbaa455"
+ },
+ "screen": true
 }

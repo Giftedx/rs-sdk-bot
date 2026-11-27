@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795792051950-1",
  "account": "Shaftsinker",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "dfbc8eb2-61f4-4da5-97da-c5bcd00c521d",
- "count": 0,
- "ok": false,
- "at": 1795792120381,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795792213681,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795792126521
+ },
+ "logout": {
+  "attemptId": "1795792120391-0000026656-0000000001",
+  "at": 1795792213667,
+  "sha256": "212fc1aefa770cedc05f4f5520c99ebc79664fbdd9c81131f606fd8cf60138e1"
+ },
+ "screen": true
 }
