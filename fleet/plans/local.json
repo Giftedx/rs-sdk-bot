@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751448138,
+ "at": 1795751510935,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "Woodpecker",
+   "account": "OreElse",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -121,22 +121,25 @@
    "role": "auto"
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/aio-boss.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "black-dragon"
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:536",
-    "BATCH_UNITS": "319"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:536",
-   "role": "army",
-   "resources": [
-    "taverley-black-dragons"
-   ]
+   "goal": "campaign:shaftshooter:item:175",
+   "role": "army"
   }
  ],
  "army": [
@@ -151,15 +154,14 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -170,6 +172,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
