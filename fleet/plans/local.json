@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795813185990,
+ "at": 1795813209478,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -115,14 +115,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "103",
+    "MAX_ITEMS": "107",
     "COIN_RESERVE": "1000",
-    "FLOAT": "22600",
+    "FLOAT": "23400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "103"
+    "BATCH_UNITS": "107"
    },
    "enabled": true,
    "repeat": false,
@@ -171,52 +171,6 @@
    "role": "army"
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Spitroaster",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -227,14 +181,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "27",
+    "MAX_ITEMS": "29",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "27"
+    "BATCH_UNITS": "29"
    },
    "enabled": true,
    "repeat": false,
@@ -243,6 +197,31 @@
   },
   {
    "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "13",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -267,28 +246,68 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "17",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "17"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1313",
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1349 \"ITEMS=Iron axe\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:lightmylog:item:1519 BATCH_UNITS=28 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "17",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "17"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -321,7 +340,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "839"
+    "BATCH_UNITS": "759"
    },
    "enabled": true,
    "repeat": false,
@@ -329,23 +348,6 @@
    "role": "auto",
    "resources": [
     "ardougne-knights"
-   ]
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
    ]
   },
   {
@@ -368,7 +370,7 @@
    ]
   },
   {
-   "account": "SporranDip",
+   "account": "Pocketrocket",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -385,22 +387,22 @@
    ]
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "giant"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1280",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "709"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
    "resources": [
-    "hill-giants"
+    "ardougne-knights"
    ]
   },
   {
@@ -418,24 +420,6 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "auto"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -472,6 +456,24 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "Unsheathed",
