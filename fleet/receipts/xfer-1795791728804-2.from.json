@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791728804-2",
  "account": "Billionaire",
  "partner": "Kiltlifter",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "6213a9ac-eadf-4090-8c08-1b4f8cb46cfd",
- "count": 0,
- "ok": false,
- "at": 1795791931492,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795792012507,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795791998125
+ },
+ "logout": {
+  "attemptId": "1795791931502-0000023788-0000000001",
+  "at": 1795792012495,
+  "sha256": "603dae5626c81c4fb01c5437e5c345516947030ffc7f3210eb9b78b17b6fffec"
+ },
+ "screen": true
 }

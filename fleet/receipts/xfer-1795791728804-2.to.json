@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795791728804-2",
+ "account": "Kiltlifter",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "cf1f4036-3cfa-4da1-ae05-21ce9ad34470",
+ "count": 10,
+ "ok": true,
+ "at": 1795792014301,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795792013323
+ },
+ "logout": {
+  "attemptId": "1795792004638-0000011664-0000000001",
+  "at": 1795792014072,
+  "sha256": "7bf731711d5bc13f6b0bc0f2a1dc23ab7d34267559881ba00257b1a7f473b7e7"
+ },
+ "screen": true
+}
