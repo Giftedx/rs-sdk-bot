@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795800519396-1",
  "account": "Sausagefest",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "8dff2fa7-bfbf-434c-8977-c2d3dd7db0ce",
- "count": 0,
- "ok": false,
- "at": 1795801197092,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795801236895,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801205692
+ },
+ "logout": {
+  "attemptId": "1795801197101-0000035232-0000000001",
+  "at": 1795801236883,
+  "sha256": "6e70aca793cc38fa2f97817cbf30fba068bd15c19a00f50c3dcb6a130eb28ef2"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800519396-1",
+ "account": "ChaosInPants",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "895710ad-95b4-438f-b595-3c5f0401aa03",
+ "count": 1,
+ "ok": true,
+ "at": 1795801238417,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801237676
+ },
+ "logout": {
+  "attemptId": "1795801224278-0000022188-0000000001",
+  "at": 1795801238404,
+  "sha256": "a4e8ae8c7ad8836df81a802a1f0d7ae7c2ef5e510e9ba803b7b764ae8b3bce86"
+ },
+ "screen": true
+}
