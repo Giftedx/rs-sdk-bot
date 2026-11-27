@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795803524774,
+ "at": 1795803541993,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,28 +206,6 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:tarromin"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:253",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:253",
-   "role": "army"
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -236,42 +214,61 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "106",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "92",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "92"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "21",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "106"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "auto"
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1539 MAX_MAKE=12 BAR_RESERVE=0 CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 STALL_TICKS=280 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts CAP=115740 TARGET_COUNT=11574 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:dragon BATCH_UNITS=1 -- sweep dragon"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "41",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "3",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:41",
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   },
   {
@@ -306,7 +303,6 @@
   "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
@@ -315,6 +311,7 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "sporrandip",
   "swordinhand",
   "woodpecker",
   "yewfirst"
