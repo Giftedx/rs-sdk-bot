@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795807154254-2",
+ "account": "BoneToPick",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 35,
+ "claim": "694f0497-e03c-4d38-a96a-b96681d2a53b",
+ "count": 0,
+ "ok": false,
+ "at": 1795807807934,
+ "detail": "trade claimed"
+}

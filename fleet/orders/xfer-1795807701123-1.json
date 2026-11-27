@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795807701123-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "UnderMyKilt",
+  "item": "Unicorn horn",
+  "count": 3,
+  "itemId": 237,
+  "start": 1795807701123,
+  "end": 1795808601123,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
