@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795782383928-1",
  "account": "KnightRider",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 150,
  "claim": "5bf9d5b4-5f72-4986-8fdc-c3e5b6f6d506",
- "count": 0,
- "ok": false,
- "at": 1795782608732,
- "detail": "trade claimed"
+ "count": 150,
+ "ok": true,
+ "at": 1795782620153,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 150
+ },
+ "bank": {
+  "count": 150,
+  "at": 1795782619404
+ },
+ "logout": {
+  "attemptId": "1795782608740-0000013468-0000000001",
+  "at": 1795782620140,
+  "sha256": "d39a419aa7fac4d2f1f0c387428ba4b633dbcb67d1ed5cc6fa6b0be6c6d68765"
+ },
+ "screen": true
 }
