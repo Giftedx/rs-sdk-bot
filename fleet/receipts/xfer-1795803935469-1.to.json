@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803935469-1",
  "account": "Pocketpython",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Trout",
  "requested": 10,
  "claim": "8f31ef1b-9552-4bf6-be0d-90dbe9ff5cd4",
- "count": 0,
- "ok": false,
- "at": 1795804541413,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795804650259,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795804649519
+ },
+ "logout": {
+  "attemptId": "1795804541422-0000006724-0000000001",
+  "at": 1795804650245,
+  "sha256": "0d03d57cc62b8b7f647160197b530b6e23deaa8ab050f0f00d6ba27d6b985d7b"
+ },
+ "screen": true
 }
