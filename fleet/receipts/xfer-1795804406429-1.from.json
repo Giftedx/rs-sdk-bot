@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795804406429-1",
  "account": "Quickhandjob",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Unfinished potion",
  "requested": 1,
  "claim": "9e5c0194-657e-4bf2-911b-9f93a5c217fb",
- "count": 0,
- "ok": false,
- "at": 1795804657913,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795804725931,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795804682495
+ },
+ "logout": {
+  "attemptId": "1795804657930-0000006216-0000000001",
+  "at": 1795804725918,
+  "sha256": "34e53da438e8c7e2b3909e8e30aa0ff97a22b53b37390b6ab5cbcd9ccac62157"
+ },
+ "screen": true
 }
