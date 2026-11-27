@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795774806826-1",
+ "account": "Wandwaver",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "a1da9266-f20c-4d42-9406-085f793ab87f",
+ "count": 0,
+ "ok": false,
+ "at": 1795775269845,
+ "detail": "trade claimed"
+}
