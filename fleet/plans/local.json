@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795789326044,
+ "at": 1795789386899,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -211,28 +211,6 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_avantoe_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:103",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
-   "role": "army"
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -280,6 +258,28 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_avantoe_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:103",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:103",
    "role": "army"
   },
   {
@@ -390,6 +390,47 @@
    "repeat": false,
    "goal": "campaign:haggis:item:103",
    "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "3",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1614",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   }
  ],
  "army": [
@@ -401,11 +442,9 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "kiltlifter",
   "mmtha0205",
