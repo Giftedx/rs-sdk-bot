@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798546882,
+ "at": 1795798560714,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "100",
+    "MAX_ITEMS": "102",
     "COIN_RESERVE": "1000",
-    "FLOAT": "22000",
+    "FLOAT": "22400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "100"
+    "BATCH_UNITS": "102"
    },
    "enabled": true,
    "repeat": false,
@@ -433,7 +433,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1088"
+    "BATCH_UNITS": "1086"
    },
    "enabled": true,
    "repeat": false,
