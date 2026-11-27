@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795775274113,
+ "at": 1795775290483,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magicshop",
     "3000"
    ],
    "env": {
@@ -159,6 +159,22 @@
    "role": "army"
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "1106"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -166,7 +182,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "20",
+    "BATCH_UNITS": "27",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -176,22 +192,6 @@
    "resources": [
     "hill-giants"
    ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1330"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -220,17 +220,27 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1267 \"ITEMS=Iron pickaxe\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy nurmof 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1695 -- mining essence"
+    "shop-buy",
+    "gemshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1623",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:haggis:item:1623",
    "role": "army"
   },
   {
@@ -242,7 +252,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1695"
+    "BATCH_UNITS": "1690"
    },
    "enabled": true,
    "repeat": false,
@@ -257,7 +267,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1695 -- mining essence"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1690 -- mining essence"
    ],
    "env": {
     "ROUNDS": "1"
@@ -304,25 +314,21 @@
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "2000",
+    "ORDER_KEY": "brain-1513-8-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "8",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "2000"
+    "LIMIT_PRICE": "1681",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -336,14 +342,14 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "224",
+    "MAX_ITEMS": "365",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "224"
+    "BATCH_UNITS": "365"
    },
    "enabled": true,
    "repeat": false,
@@ -351,18 +357,28 @@
    "role": "army"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
+   "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- magic alch-train 90 3000"
+    "shop-buy",
+    "gemshop2",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "1621",
+    "ITEMS": "Uncut emerald",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1621",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "campaign:haggis:item:1621",
    "role": "army"
   }
  ],
@@ -377,7 +393,6 @@
   "billionaire",
   "dipstick",
   "fingersmith",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795775280932-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "Wandwaver",
+  "item": "Ranarr weed",
+  "count": 1,
+  "itemId": 257,
+  "start": 1795775280932,
+  "end": 1795776180932,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

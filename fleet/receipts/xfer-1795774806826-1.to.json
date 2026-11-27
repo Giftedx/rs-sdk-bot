@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795774806826-1",
  "account": "Wandwaver",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "a1da9266-f20c-4d42-9406-085f793ab87f",
- "count": 0,
- "ok": false,
- "at": 1795775269845,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795775280076,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795775279339
+ },
+ "logout": {
+  "attemptId": "1795775269853-0000007016-0000000001",
+  "at": 1795775280063,
+  "sha256": "c4093c2eb826900d021846f390e23ceb7c27212eaccf500a6ffcca12bc984f76"
+ },
+ "screen": true
 }
