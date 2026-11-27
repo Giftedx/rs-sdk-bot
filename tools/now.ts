@@ -11,7 +11,7 @@
 import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
 import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
-import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
+import {crossAccountFaults,crossAccountLines,failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type CrossAccountFault,type FailLoop} from './fail-loops';
 import {progressLine,readProgress,type ProgressReport} from './progress';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
@@ -39,7 +39,7 @@ export type Checkout={path:string;branch:string;head:string;dirty:number;behind:
 // `loops`: the fast-fail loops of the main checkout's results (tools/fail-loops.ts); null when they were not read.
 // `progress`: the game progress of the main checkout's records (tools/progress.ts); null when it was not read.
 export type SyncedLease={side:string;pid:number|null;at:number|null};
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null};
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null};
 
 // Fleet-data mirrors are a saved observation, not a remote process or network health check.
 export function readSyncedLeases(dir:string):SyncedLease[]|null{
@@ -158,6 +158,12 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         if(loops==null)return null;
         const window=age(LOOP_WINDOW_MS);
         return loops.length?[`loops   ${loops.length} fast-fail loops in ${window} (bun tools/fail-loops.ts):`,...loopLines(loops).map(l=>`  loop  ${l}`)]:`loops   none in ${window}`;
+    });
+    // One error that ends short runs of many accounts is a defect of shared code, not of one account.
+    add('repeats',()=>{
+        const repeats=local.repeats;
+        if(!repeats?.length)return null;
+        return [`repeats ${repeats.length} errors ended short runs of 3 or more accounts in 24 h (bun tools/fail-loops.ts):`,...crossAccountLines(repeats,3).map(l=>`  fault ${l}`)];
     });
     add('here',()=>checkoutLine('here   ',local.here,now));
     add('main',()=>local.main?checkoutLine('main   ',local.main,now):null);
@@ -282,10 +288,15 @@ if(import.meta.main){
     const same=main.toLowerCase()===here.toLowerCase();
     const mainPromise=same?Promise.resolve(null):readCheckoutAsync(main);
     const stops=readSwarmStops(main);
-    let loops:FailLoop[]|null=null;
-    try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
+    let loops:FailLoop[]|null=null,repeats:CrossAccountFault[]|null=null;
+    try{
+        // The default 4 MB tail holds many days: 24 h of results is about 0.5 MB at the fleet rate.
+        const rows=readRecentResults(join(main,'.practice','results.jsonl'));
+        loops=failLoops(rows,now);
+        repeats=crossAccountFaults(rows,now);
+    }catch{/* an unreadable results file hides only these lines */}
     const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
     const progressPromise=readProgress(main,24,now).catch(()=>null);
     const [state,procs,hereCheckout,mainCheckout,progress]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise,progressPromise]);
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,syncedLeases,progress},Date.now()))console.log(line);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,syncedLeases,progress},Date.now()))console.log(line);
 }
