@@ -57,7 +57,7 @@ export async function sessionWalker(s: {
         dialog: () => s.sdk.getDialog?.() ?? null,
         answer: index => s.direct({ type: 'clickDialogOption', optionIndex: index, reason: 'SDK' }),
         // A session with a bank (a name and bot.openBank) takes the fare float before a walk through an unpaid fare.
-        ...(walkOpts.noFareFloat ? {} : { prepare: (goal: { x: number; z: number; level: number }) => topUpFareFloat(s as Parameters<typeof topUpFareFloat>[0], goal) }),
+        ...(walkOpts.noFareFloat ? {} : { prepare: (goal: { x: number; z: number; level: number }) => topUpFareFloat(s as unknown as Parameters<typeof topUpFareFloat>[0], goal) }),
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
         doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
