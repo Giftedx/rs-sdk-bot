@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795814970378-1",
  "account": "KnightRider",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Steel bar",
  "requested": 2,
  "claim": "572ba2a4-c10b-403b-8e76-1f466ae9be42",
- "count": 0,
- "ok": false,
- "at": 1795815094020,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795815172967,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795815157025
+ },
+ "logout": {
+  "attemptId": "1795815094369-0000026200-0000000001",
+  "at": 1795815172955,
+  "sha256": "4816b8e62285445bd542e7b5e4c3f4e2333bf3f51ebedcaf7b5f03ef94492bb5"
+ },
+ "screen": true
 }

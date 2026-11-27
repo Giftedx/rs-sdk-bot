@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795814970378-1",
+ "account": "Woodenstaff",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 2,
+ "claim": "4ca75248-cdb6-4d1b-a7c2-af796537e0a7",
+ "count": 2,
+ "ok": true,
+ "at": 1795815174562,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795815173808
+ },
+ "logout": {
+  "attemptId": "1795815161866-0000035692-0000000001",
+  "at": 1795815174550,
+  "sha256": "b207a63957973023cffeef34febe81fe14998bee970fd096b750efca8ae1114e"
+ },
+ "screen": true
+}
