@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798965215-1",
+ "account": "PickpockDick",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "ec164fe2-ecd8-491e-ba9b-f036edc125d7",
+ "count": 6,
+ "ok": true,
+ "at": 1795799356530,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795799300609
+ },
+ "logout": {
+  "attemptId": "1795799289696-0000018216-0000000001",
+  "at": 1795799356509,
+  "sha256": "7c431fd8719d6872ea165544883b811db8f16b70d0618a6249c4841ae9a21c59"
+ },
+ "screen": true
+}

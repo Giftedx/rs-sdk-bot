@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799044305-1",
+ "account": "Bigpackage",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 4,
+ "claim": "c08d1bf6-ee96-4de9-870d-f39a9a6816b2",
+ "count": 4,
+ "ok": true,
+ "at": 1795799359323,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795799339796
+ },
+ "logout": {
+  "attemptId": "1795799327682-0000023124-0000000001",
+  "at": 1795799359306,
+  "sha256": "aee7d8e449bcf80e964bf595f4c04c36e8a5a8c4dd4e74e2d30e96cc21478376"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795798650105-2",
+ "account": "UnderMyKilt",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "6f8957ed-e859-46f6-b852-505cab03f08c",
+ "count": 0,
+ "ok": false,
+ "at": 1795799302383,
+ "detail": "trade claimed"
+}

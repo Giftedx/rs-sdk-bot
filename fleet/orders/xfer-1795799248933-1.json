@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799248933-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Pullmybow",
+  "item": "Prayer potion(4)",
+  "count": 3,
+  "itemId": 2434,
+  "start": 1795799248933,
+  "end": 1795800148933,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
