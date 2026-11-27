@@ -23,7 +23,7 @@ import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { rotateLog } from '../../core/src/log-rotate';
 import { FREE_FLOOR_GB } from '../../core/src/memory';
 import { atomicJson, ownerPlanPath } from '../../core/src/plan-lock';
-import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, practiceRoot, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
+import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, practiceRoot, readStopFile, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../../core/src/proc';
 import {
     BOOTSTRAP_STATUS_AGE_MS, missionSignature as sharedMissionSignature, successfulEnd, withSessionAdmission,
@@ -742,6 +742,15 @@ export function countBrainDrops(
 
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
+}
+
+// The end of a brain run that a stop file ended. When the swarm wrote that stop (it dropped the run from the plan, or a
+// live-update drain), or the stop is gone, the end is `released`: startable resumes it, so the next plan of the same job
+// starts. A plain `stopped` end with the same revision held the account for good. An owner's stop file keeps `stopped`,
+// and so do the stops that need a resupply or a heal first (no food, a flee), which do not print "stop file".
+export function brainStopEnd(own: string, lastResultLine: string | undefined, stopText: string | undefined): string {
+    if (!/^stopped\b/.test(own) || !/\bstop file\b|\bcargo stopped\b/i.test(lastResultLine ?? '')) return own;
+    return stopText === undefined || swarmWroteStop(stopText) ? `released: ${own}` : own;
 }
 
 export function isAutoStopText(text: string | undefined): boolean {
@@ -1599,14 +1608,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         persistEnded(deathsFile, ended);
         return ended;
     };
-    // An operator resume_account with clearDead removes the account's death record here, in the map that
-    // each persist writes back (brain-runtime.ts applyCommand).
-    const clearDeath = (account: string): number => {
+    // An operator resume_account removes the account's end record here, in the map that each persist writes back
+    // (brain-runtime.ts applyCommand): an end that is not a death always, and a death only with clearDead.
+    const clearDeath = (account: string, death = true): number => {
         const key = account.toLowerCase();
-        const dead = [...ended].filter(([name, r]) => name.toLowerCase() === key && /^died\b/i.test(r.reason.trim()));
-        for (const [name] of dead) ended.delete(name);
-        if (dead.length) persistEnded(deathsFile, ended);
-        return dead.length;
+        const gone = [...ended].filter(([name, r]) => name.toLowerCase() === key && (death || !/^died\b/i.test(r.reason.trim())));
+        for (const [name] of gone) ended.delete(name);
+        if (gone.length) persistEnded(deathsFile, ended);
+        return gone.length;
     };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
     let tickStatusByLower: Map<string, { file: string; mtimeMs: number; data: any }> | null = null;
@@ -1721,8 +1730,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         } catch { /* outcome persistence errors never stop controller */ }
                     }
                     if (keepEnded) {
-                        ended.set(account, { at: Date.now(), reason: own, revision: run.revision, ...stockOutEnd(run, own, lastResultLine) });
-                        console.log(`SWARM end ${account} ${own}`);
+                        const endReason = run.brain ? brainStopEnd(own, lastResultLine, readStopFile(account, root)) : own;
+                        ended.set(account, { at: Date.now(), reason: endReason, revision: run.revision, ...stockOutEnd(run, own, lastResultLine) });
+                        console.log(`SWARM end ${account} ${endReason}`);
                     } else {
                         const existingKey = [...ended.keys()].find(n => n.toLowerCase() === account.toLowerCase());
                         if (existingKey) {
