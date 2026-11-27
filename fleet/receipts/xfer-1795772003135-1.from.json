@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772003135-1",
  "account": "Woodpecker",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "7a1c93ed-b157-4775-b655-a2d02451d5f2",
- "count": 0,
- "ok": false,
- "at": 1795772242913,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772294701,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772251123
+ },
+ "logout": {
+  "attemptId": "1795772242922-0000029544-0000000001",
+  "at": 1795772294677,
+  "sha256": "c5d2bb3e54fec179aeb22a60a72a7a6962db83b1a03c0d4e3843c2315f691d84"
+ },
+ "screen": true
 }
