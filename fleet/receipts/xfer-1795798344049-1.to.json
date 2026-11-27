@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798344049-1",
  "account": "mmsmk1232",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn dust",
  "requested": 1,
  "claim": "21000741-b05f-47c2-8482-aeb8bfac7c93",
- "count": 0,
- "ok": false,
- "at": 1795798723901,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795798734626,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795798733862
+ },
+ "logout": {
+  "attemptId": "1795798723914-0000003224-0000000001",
+  "at": 1795798734612,
+  "sha256": "c6981e74e3ca5affeb6397f1f57391f4ffc259eaa7cee7aaa0d41505bf21ed11"
+ },
+ "screen": true
 }
