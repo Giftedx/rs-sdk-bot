@@ -196,6 +196,13 @@ export function heldTradeClaims(base: string, accounts: readonly string[], read 
 export type TradeWait = { account: string; order: Order; kind: 'held' | 'busy'; why: string };
 export type TradeEnd = { account: string; order: string; why: string };
 
+// The trade starts of a pass while the agent's own reload is due: only the second party of an order that already runs.
+export function reloadStarts<T extends { order: { id: string } }>(starts: readonly T[], runningOrders: ReadonlyMap<string, string>, reloadIsDue: boolean): T[] {
+    if (!reloadIsDue) return [...starts];
+    const live = new Set(runningOrders.values());
+    return starts.filter(t => live.has(t.order.id));
+}
+
 // One pass of the agent over the due orders: the trades to start, the trades that wait and why, and the running trades
 // to end early. `halt` is a fleet owner stop or the agent's own stop. `stopHeld` checks an account's stop file and
 // removes nothing. `wrote` says whether a receipt of that order and role exists; the agent reads the receipt file at
@@ -483,6 +490,13 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             claimHeld: accounts => heldTradeClaims(base, accounts),
         });
         for (const w of pass.waits) log(`FLEET_AGENT ${w.kind} ${w.account}: order ${w.order.id} waits (${w.why})`);
+        // A due reload waits for the running trades, and new trades keep it waiting: each new trade runs the old
+        // source, and its release holds every new-release start in the fleet. While the reload is due only the second
+        // party of an order that already runs starts, so the running trades end and the agent reloads.
+        const starts = reloadStarts(pass.starts, runningOrders, !once && reloadDue(base, 'fleet-agent', startedAt));
+        if (starts.length < pass.starts.length) {
+            log(`FLEET_AGENT reload waits: ${pass.starts.length - starts.length} new trade(s) held until ${running.size} running trade(s) end`);
+        }
         for (const e of pass.ends) {
             const key = e.account.toLowerCase();
             if (endAsked.has(key)) continue;
@@ -490,7 +504,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             writeTradeStop(base, e.account);
             log(`FLEET_AGENT end ${e.account}: order ${e.order} ends early (${e.why})`);
         }
-        for (const t of pass.starts) {
+        for (const t of starts) {
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
             if (stop.held) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
