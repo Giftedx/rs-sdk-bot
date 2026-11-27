@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739591852-1",
  "account": "MeatNTwoVeg",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "a36dd05a-dfa4-47b8-98ee-1cf2186b3d79",
- "count": 0,
- "ok": false,
- "at": 1795739872383,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795739955775,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795739877817
+ },
+ "logout": {
+  "attemptId": "1795739872390-0000011528-0000000001",
+  "at": 1795739955766,
+  "sha256": "d29d21aa3597f1bfe8d12ddd429f66140efd11d57c958e182cce481766ea0f97"
+ },
+ "screen": true
 }

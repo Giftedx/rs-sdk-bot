@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739932779,
+ "at": 1795739966219,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -268,6 +268,26 @@
    "role": "army"
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
+  },
+  {
    "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -306,6 +326,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=50 PRODUCT_TARGET=50 -- thieving nature-chest",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=50 CAP=1000 -- magic alch-train 56 3000",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:MeatNTwoVeg BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
    "role": "auto"
   },
   {
