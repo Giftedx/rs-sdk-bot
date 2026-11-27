@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795743631191-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "mmtha0205",
+  "item": "Sapphire necklace",
+  "count": 1,
+  "itemId": 1656,
+  "start": 1795743631191,
+  "end": 1795744531191,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795743173166-2",
+ "account": "BowBeforeMe",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 1,
+ "claim": "91b38c33-b210-4a4e-a4c4-dcb3fe91aee1",
+ "count": 1,
+ "ok": true,
+ "at": 1795743647632,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795743630906
+ },
+ "logout": {
+  "attemptId": "1795743622334-0000023336-0000000001",
+  "at": 1795743647621,
+  "sha256": "6577f0226437bf603029a0b849312906f23a0a6bf296f4fb9632e890f556d24b"
+ },
+ "screen": true
+}

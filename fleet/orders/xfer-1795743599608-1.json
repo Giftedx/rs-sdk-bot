@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795743599608-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Swordinhand",
+  "item": "Unfinished potion",
+  "count": 1,
+  "itemId": 93,
+  "start": 1795743599608,
+  "end": 1795744499608,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
