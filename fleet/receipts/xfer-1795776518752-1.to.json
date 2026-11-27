@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795776518752-1",
+ "account": "mmsmk1232",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "da867c5e-4d36-47df-aa5a-45127a4a804f",
+ "count": 0,
+ "ok": false,
+ "at": 1795777010637,
+ "detail": "trade claimed"
+}
