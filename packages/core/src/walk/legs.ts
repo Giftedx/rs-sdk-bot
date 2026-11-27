@@ -49,6 +49,12 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
             }
         }
         if (!last!.ok) return opts.signal?.aborted ? { ok: false, reason: 'aborted', detail: String(opts.signal.reason ?? 'aborted'), ticks: total } : { ...last!, ticks: total };
+        // An edge with several landings (travel.ts pocketExitTravel) that ended on another one than the plan's: the
+        // legs after it start from the wrong place, so the walk stops and goTo plans again from where it stands.
+        const p = leg.kind === 'travel' && leg.travel.lands?.length ? s.sdk.getState()?.player : undefined;
+        if (p && leg.kind === 'travel' && legs[legs.length - 1] !== leg && (p.level !== leg.to.level || cheb(leg.to, p) > 8)) {
+            return { ok: false, reason: 'precondition', detail: `${leg.travel.name}: landed at ${p.worldX},${p.worldZ},${p.level}, off the plan`, ticks: total, offPlan: true };
+        }
     }
     return { ok: true, ticks: total };
 }

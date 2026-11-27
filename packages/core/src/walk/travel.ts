@@ -214,7 +214,7 @@ export async function travelLeg(s: Walker, leg: TravelLeg, opts: WalkOptions): P
     // landing, as a short location passage does: within 8 tiles of it the player already stands, on the wrong side.
     const shortNpc = run.how === 'npc' && !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
     const reach = shortNpc ? Math.max(0, Math.min(1, cheb(t.to, { worldX: t.from!.x, worldZ: t.from!.z }) - 1)) : 8;
-    const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= reach; };
+    const arrived = () => { const p = st()?.player; return !!p && [t.to, ...(t.lands ?? [])].some(e => p.level === e.level && cheb(e, p) <= reach); };
     // A paid edge that fails says why: the walk after it retries the edge (legs.ts), and a route that then goes round
     // it costs far more ticks. The line names the dialogue text the account saw and the coins it held.
     const talk: string[] = [];

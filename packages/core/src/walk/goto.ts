@@ -168,6 +168,14 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
     let first = await walkRoute(s, r.legs, opts);
+    // A pocket exit that landed on another of its landings (the essence mine sends the player back to its wizard):
+    // the walk is planned again from there, once.
+    if (!first.ok && first.offPlan && (opts.offPlanReplans ?? 0) < 1) {
+        const q = s.sdk.getState()?.player;
+        console.log(`WALK_REPLAN_OFF_PLAN ${JSON.stringify({ from, to, at: q ? { x: q.worldX, z: q.worldZ, level: q.level } : null, failed: first.detail })}`);
+        const again = await goTo(s, world, to, acct, { ...opts, offPlanReplans: (opts.offPlanReplans ?? 0) + 1 });
+        return { ...again, ticks: s.tick() - started };
+    }
     // A spell leg that failed (the runes gone, a cast the server did not take) is not tried again: the route is planned
     // once more for the account without its law runes, so the walk goes by foot and boat from where it stands.
     if (!first.ok && first.reason !== 'aborted' && r.legs.some(l => l.kind === 'travel' && l.travel.kind === 'spell')) {

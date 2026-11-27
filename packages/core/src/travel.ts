@@ -1,9 +1,11 @@
 // Travel the route search can use besides walking, ladders and stairs: NPC boats, gliders, carts and tolls
 // (knowledge/npc-travel.json), teleports by spell, jewellery, lever and spirit tree (knowledge/teleports.json), and
-// agility shortcuts and passages (knowledge/shortcuts.json).
+// agility shortcuts and passages (knowledge/shortcuts.json), and the exit portals of pockets with several landings
+// (pocketExitTravel).
 // Each edge says what the account needs (coins, quest stages, skills, runes, items held or worn) and how the
-// walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness,
-// jails and random-tile teleports (essence mine), runecraft ruins and portals; shortcuts with a failure roll (a
+// walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness (except
+// the chaos altar exit, the only way out of that pocket), jails and random-tile teleports (the wizards' teleports
+// into the essence mine), runecraft ruins; shortcuts with a failure roll (a
 // fall hurts a low-level account), a use-item, a first step (via) or a held-item check. The river log
 // (RIVER_LOG_TRAVEL) has a failure roll and is in: its slip still crosses, for 6% of hitpoints.
 import { readFileSync, statSync } from 'node:fs';
@@ -34,6 +36,10 @@ export interface Travel {
     to: Tile;                            // where the player stands after it, on the ground
     slips?: Tile[];                      // exact tiles a failed Agility roll ends on, on the far side of the crossing
     slipDamage?: { percent: number; plus: number }; // a slip deals floor(current hitpoints * percent / 100) + plus
+    // Other tiles the edge can end on: the server picks one by a state the client does not see (the essence mine
+    // exit by the wizard who sent the player in) or at random (the chaos altar exit). A walk that lands on one of
+    // these is planned again from there.
+    lands?: Tile[];
     coins: number;                       // coins the account must hold
     needs: TravelNeed[];
     runes: { item: string; count: number }[];
@@ -67,10 +73,19 @@ export function landing(plank: { x: number; z: number; level: number }, angle: n
     const dir = angle === 0 || angle === 1 ? 1 : -1;
     return angle === 0 || angle === 2 ? { x: plank.x - 2 * dir, z: plank.z, level: plank.level - 1 } : { x: plank.x, z: plank.z + 2 * dir, level: plank.level - 1 };
 }
-function mapAngle(src: string): number | null {
+function mapLine(src: string): string[] | null {
     const m = src.match(/^(.*):(\d+)$/);
     if (!m) return null;
-    try { return Number(readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/)[Number(m[2]) - 1]!.trim().split(/\s+/)[5]); } catch { return null; }
+    try { return readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/)[Number(m[2]) - 1]!.trim().split(/\s+/); } catch { return null; }
+}
+function mapAngle(src: string): number | null {
+    const f = mapLine(src);
+    return f ? Number(f[5]) : null;
+}
+// The loc id of a map line ("level x z: id shape angle").
+export function mapLocId(src: string): number | null {
+    const id = Number(mapLine(src)?.[3]);
+    return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 type NpcRecord = { id: string; kind: string; destination: string; npc: { name: string; debugname: string; id?: number }; op: { index: number }; options: { text: string }[]; button?: { component: string; src?: string };
@@ -100,7 +115,7 @@ export function npcTravel(records: NpcRecord[]): Travel[] {
     return out;
 }
 
-type TeleRecord = { id: string; kind: string; name: string; trigger: string; from: (Tile & { wilderness?: number })[] | null;
+type TeleRecord = { id: string; kind: string; name: string; trigger: string; from: (Tile & { wilderness?: number; src?: string })[] | null;
     requires: { type: string; skill?: string; level?: number; varp?: string; op?: string; value?: number; item?: string }[];
     runes?: { item: string; count: number }[]; charges?: { item: string }[];
     to: { option: string | null; candidates: (Tile & { wilderness?: number })[]; maxRadius?: number }[] };
@@ -128,6 +143,35 @@ export function teleportTravel(records: TeleRecord[]): Travel[] {
                 id: `${r.id}:${d.option ?? 'to'}${f ? `@${f.x},${f.z}` : ''}`, kind: r.kind, name: d.option ? `${r.name}: ${d.option}` : r.name,
                 from: f ? { x: f.x, z: f.z, level: f.level } : null, to, coins: 0, needs, runes: r.runes ?? [], run,
                 cost: r.kind === 'spirit_tree' ? NPC_COST : TELEPORT_COST,
+            });
+        }
+    }
+    return out;
+}
+
+// The exit portals of closed pockets whose landing the client cannot know: teleports.json runecraft_portal rows with
+// more than one landing tile. The essence mine portal (essence_mine.rs2:28-42) sends the player back to the wizard
+// who sent it in (%exit_essence_mine_coord, a server varp the client never gets), and the chaos altar portal
+// (runecraft.rs2:1-9) to a random one of 9 exit_coord rows. shortcuts.json leaves both out ("destination not
+// resolved"), so no route left the essence mine (live: Woodpecker at 2924,4848, "no route" to Edgeville and Catherby).
+// Each portal gets one edge for each landing, and each edge lists the other landings in `lands`. Exit portals with one
+// landing are shortcuts.json passage rows already.
+export function pocketExitTravel(records: TeleRecord[]): Travel[] {
+    const out: Travel[] = [];
+    for (const r of records) {
+        if (r.kind !== 'runecraft_portal') continue;
+        const tiles = new Map<string, Tile>();
+        for (const d of r.to) for (const c of d.candidates) tiles.set(`${c.x},${c.z},${c.level}`, { x: c.x, z: c.z, level: c.level });
+        if (tiles.size < 2) continue;
+        const loc = r.id.slice(r.id.indexOf(':') + 1), op = Number(r.trigger.match(/^\[oploc(\d)/)?.[1] ?? 1), lands = [...tiles.values()];
+        for (const f of r.from ?? []) {
+            const id = f.src ? mapLocId(f.src) : null;
+            if (id === null) continue;
+            const at = { x: f.x, z: f.z, level: f.level };
+            for (const to of lands) out.push({
+                id: `${r.id}@${f.x},${f.z},${f.level}>${to.x},${to.z},${to.level}`, kind: 'pocket_exit', name: `${r.name} to ${to.x},${to.z}`,
+                from: at, to, lands: lands.filter(t => t !== to), coins: 0, needs: [], runes: [],
+                run: { how: 'loc', loc, op, option: null, id, at, unlisted: true }, cost: TELEPORT_COST,
             });
         }
     }
@@ -207,7 +251,7 @@ export const fareCrossingAt = (level: number, at: { x: number; z: number }, list
     list.find(c => c.level === level && c.x === at.x && c.z === at.z);
 
 // The stamps cover the data files only: change this name when a builder above changes its output.
-const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v3.json');
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v4.json');
 type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
 const fileStamp = (file: string): string => {
     try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }
@@ -245,12 +289,13 @@ export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
     const tele = JSON.parse(readFileSync(teleFile, 'utf8')) as { teleports: TeleRecord[]; staffs: { rune: string; staffs: string[] }[] };
     staffs = tele.staffs;
     const cuts = JSON.parse(readFileSync(cutsFile, 'utf8')) as { edges: ShortcutRecord[] };
-    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
+    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...pocketExitTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
     if (cacheFile) {
         const stamps: [string, string][] = [['npc', npcStamp], ['tele', teleStamp], ['cuts', cutsStamp]];
         const seenMap = new Set<string>();
-        for (const r of npc.records) {
-            const src = r.deck?.gangplank?.src;
+        const mapSrcs = [...npc.records.map(r => r.deck?.gangplank?.src),
+            ...tele.teleports.filter(r => r.kind === 'runecraft_portal').flatMap(r => (r.from ?? []).map(f => f.src))];
+        for (const src of mapSrcs) {
             const m = src?.match(/^(.*):(\d+)$/);
             const rel = m?.[1];
             if (rel && !seenMap.has(rel)) { seenMap.add(rel); stamps.push([rel, fileStamp(join(content, rel))]); }
