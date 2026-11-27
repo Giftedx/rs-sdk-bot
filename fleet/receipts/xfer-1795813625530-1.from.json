@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795813625530-1",
+ "account": "Shaftmaker",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "c4bf6369-d8c0-4850-ba54-e32f53647f70",
+ "count": 0,
+ "ok": false,
+ "at": 1795813894330,
+ "detail": "trade claimed"
+}

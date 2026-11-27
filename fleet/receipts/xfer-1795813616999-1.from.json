@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795813616999-1",
+ "account": "Hocuspokeus",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Limpwurt root",
+ "requested": 6,
+ "claim": "9634c3f6-c50e-4447-aac3-8d468c098290",
+ "count": 0,
+ "ok": false,
+ "at": 1795813934768,
+ "detail": "trade claimed"
+}
