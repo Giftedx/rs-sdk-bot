@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738850810-1",
  "account": "Billionaire",
  "partner": "SporranDip",
@@ -10,15 +10,33 @@
  "item": "Herb",
  "requested": 2,
  "claim": "862df976-00d5-4dc3-bc6b-5ee6bd3a85da",
- "count": 0,
- "ok": false,
- "at": 1795739118255,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795739251390,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Coins",
    "requested": 60,
-   "count": 0
+   "count": 60,
+   "inventory": {
+    "before": 7236,
+    "after": 7176
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795739177852
+ },
+ "logout": {
+  "attemptId": "1795739118263-0000026132-0000000001",
+  "at": 1795739251378,
+  "sha256": "7ba52c693c534574f54459364cca01dbc43cca04965a19697bb71895d2c1b9d8"
+ },
+ "screen": true
 }
