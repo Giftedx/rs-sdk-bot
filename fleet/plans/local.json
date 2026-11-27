@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780185688,
+ "at": 1795780304888,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -110,37 +110,34 @@
    "account": "mmsmk1232",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_tarromin_potion"
+    "herblore",
+    "potions"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:95",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67",
+    "STALL_TICKS": "200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:95",
+   "goal": "goal:supply_chain:2481",
    "role": "army"
   },
   {
    "account": "YewFirst",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
+    "herblore",
+    "potions"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67",
+    "STALL_TICKS": "200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:93",
+   "goal": "goal:supply_chain:2481",
    "role": "army"
   },
   {
@@ -157,25 +154,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
    "role": "army"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1022"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
   }
  ],
  "army": [
@@ -192,6 +170,7 @@
   "dipstick",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
