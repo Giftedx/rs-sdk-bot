@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795752563517-1",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 779,
+ "claim": "c2cebce9-74a8-464e-851d-1b4e78d37db5",
+ "count": 779,
+ "ok": true,
+ "at": 1795752662771,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 779,
+  "after": 0
+ },
+ "bank": {
+  "count": 776,
+  "at": 1795752650005
+ },
+ "logout": {
+  "attemptId": "1795752643597-0000030212-0000000001",
+  "at": 1795752662760,
+  "sha256": "c7c0ab7b059e53b0a2a5ae6b8754397fe207e16d7c004c474eadde186665f970"
+ },
+ "screen": true
+}
