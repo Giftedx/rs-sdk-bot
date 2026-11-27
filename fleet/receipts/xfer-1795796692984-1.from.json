@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796692984-1",
+ "account": "mmsmk1232",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 117,
+ "claim": "3a71783a-177d-4554-bb11-3e0e99ac3b0c",
+ "count": 0,
+ "ok": false,
+ "at": 1795796964702,
+ "detail": "trade claimed"
+}

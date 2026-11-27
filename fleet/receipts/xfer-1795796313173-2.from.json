@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795796313173-2",
+ "account": "PickpockDick",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "74c4bb2b-106e-4dd8-9a98-5d5318d1b6e1",
+ "count": 0,
+ "ok": false,
+ "at": 1795796957576,
+ "detail": "trade claimed"
+}
