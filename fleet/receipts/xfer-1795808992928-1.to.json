@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795808992928-1",
+ "account": "Woodenstaff",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "0edd7b7a-a606-40ca-98b1-297c0bf5eca0",
+ "count": 0,
+ "ok": false,
+ "at": 1795809653217,
+ "detail": "trade claimed"
+}

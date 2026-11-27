@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795808992928-2",
+ "account": "KnightRider",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 17,
+ "claim": "45cab396-5253-4a10-bc87-9db12bd39d32",
+ "count": 0,
+ "ok": false,
+ "at": 1795809629049,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 17,
+  "at": 1795809627674
+ },
+ "logout": {
+  "attemptId": "1795809616054-0000031708-0000000001",
+  "at": 1795809628864,
+  "sha256": "78d98431f1ac05801a77b9d85b87359ffa11de545f0f987e5004c4ba95800229"
+ },
+ "screen": false
+}
