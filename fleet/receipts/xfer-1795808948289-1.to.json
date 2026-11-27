@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795808948289-1",
+ "account": "Unsheathed",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "67362080-bfb5-49f3-b67f-6d7bd39725c8",
+ "count": 1,
+ "ok": true,
+ "at": 1795809591358,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795809589692
+ },
+ "logout": {
+  "attemptId": "1795809573080-0000002520-0000000001",
+  "at": 1795809590976,
+  "sha256": "1b2cd23acacc6a65df18573fdbc8f3d0f63aef29fb61b2a77cf06b89c0f6a127"
+ },
+ "screen": true
+}
