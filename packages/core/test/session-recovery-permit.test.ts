@@ -801,3 +801,16 @@ test('live recovery permit reads .practice/live/session-lifecycle and .practice/
   expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(true);
  }finally{rmSync(f.base,{recursive:true,force:true});}
 });
+
+test('a permit accepts every end that the recovery controller recovers',()=>{
+ // fleet session-recovery.ts starts a recovery for each RECOVERABLE_END. A permit that refused one spent an attempt.
+ for(const reason of ['release-paused after 1 runs','released: stopped after 1 runs','refused after 1 runs','gave-up after 3 runs','died after 1 runs']){
+  const f=fixture(),file=join(f.base,'.practice/swarm-deaths.json'),deaths=JSON.parse(readFileSync(file,'utf8'));
+  deaths.Rod={...deaths.Rod,reason};f.put('.practice/swarm-deaths.json',deaths);
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
+ }
+ // A swarm end that is no failure still refuses.
+ const f=fixture(),file=join(f.base,'.practice/swarm-deaths.json'),deaths=JSON.parse(readFileSync(file,'utf8'));
+ deaths.Rod={...deaths.Rod,reason:'paused by owner'};f.put('.practice/swarm-deaths.json',deaths);
+ expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('exact failure changed');
+});

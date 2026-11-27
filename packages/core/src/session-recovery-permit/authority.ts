@@ -6,7 +6,7 @@ import { ownerPlanPath } from '../plan-lock';
 import { fleetStateFile, liveRoot, statusReadDirs } from '../practice-paths';
 import { processMatchesRecent } from '../proc';
 import { listAttempts, readLogoutProof } from '../session-lifecycle';
-import { missionSignature, successfulEnd } from '../session-mission';
+import { missionSignature, RECOVERABLE_END, successfulEnd } from '../session-mission';
 import { savedProcessAlive } from '../session-takeover';
 import { cachedLaunchRevision, capabilityRevision } from '../worker-release';
 import { assertFleetResolved, evidence, verifyNativeRecoveryProof } from './qualification';
@@ -72,7 +72,7 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
     if (requestLease.pid !== taskOwner.pid || requestLease.runId !== r.runId || requestLease.nonce !== r.nonce) throw Error('recovery request lease changed');
     const end = Object.entries(json(join(base, '.practice/swarm-deaths.json'))).find(([a]) => same(a, r.account))?.[1] as any;
     const completed = successfulEnd(end?.reason ?? '');
-    if (end?.at !== r.endedAt || !completed && !/^(?:blocked|died|gave-up|exit|no-progress|stopped)(?:\b| )/.test(end.reason ?? '')) throw Error('recovery exact failure changed');
+    if (end?.at !== r.endedAt || !completed && !/^died\b/.test(end.reason ?? '') && !RECOVERABLE_END.test(end.reason ?? '')) throw Error('recovery exact failure changed');
     const planJobs = (json(ownerPlanPath(base)).jobs ?? []) as any[];
     const assignments = planJobs.filter((j: any) => (j.accounts ?? [j.account]).some((a: any) => same(a, r.account)));
     if (assignments.some((j: any) => j.enabled || !j.script || /fresh.clock|24 boards|main simultaneous/i.test(j.goal ?? ''))) throw Error('recovery assignment is active or reserved');

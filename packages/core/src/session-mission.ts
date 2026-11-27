@@ -8,3 +8,8 @@ export function missionSignature(job:{script:string;host?:boolean;orchestrate?:b
  return JSON.stringify(fields);
 }
 export function successfulEnd(reason:string):boolean{return /^done(?: after \d+ runs)?$/.test(reason);}
+// The ends after which a held session is recovered. The recovery only logs in, observes and logs out, so the end of the
+// latest run matters only to keep a death for diagnosis. A release-paused, released (a swarm stop, swarm.ts
+// brainStopEnd) or refused run stopped before or at login, and the held session is then an earlier run's. The
+// controller (fleet session-recovery.ts) and the permit (session-recovery-permit/authority.ts) both read this list.
+export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped|release-paused|released|refused)(?:\b| |:)/;
