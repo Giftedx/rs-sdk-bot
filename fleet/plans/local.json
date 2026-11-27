@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795738908713,
+ "at": 1795738933030,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,25 +59,18 @@
    "role": "pvp"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "jewellery-trip"
+    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 PRODUCT_TARGET=231 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=231 -- cooking food"
    ],
    "env": {
-    "RECIPE": "emerald_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1639",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1639",
+   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
@@ -232,18 +225,18 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=43 PRODUCT_TARGET=43 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=43 -- cooking food"
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "campaign:haggis:item:2552",
    "role": "army"
   }
  ],
