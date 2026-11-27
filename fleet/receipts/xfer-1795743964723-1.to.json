@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795743964723-1",
+ "account": "MeatNTwoVeg",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 73,
+ "claim": "9c733b65-0a15-4822-b93f-37a552af663b",
+ "count": 73,
+ "ok": true,
+ "at": 1795744369942,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 73
+ },
+ "bank": {
+  "count": 73,
+  "at": 1795744369201
+ },
+ "logout": {
+  "attemptId": "1795744357041-0000006756-0000000001",
+  "at": 1795744369931,
+  "sha256": "c714e20c25aa45b0ff90f06407a95d686b1b6aada2db0b8aa396844ca3bd9dce"
+ },
+ "screen": true
+}

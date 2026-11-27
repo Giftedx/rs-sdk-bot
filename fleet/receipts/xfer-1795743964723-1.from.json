@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795743964723-1",
  "account": "BowBeforeMe",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 73,
  "claim": "54c5f3d7-5fb8-4013-9bed-1b1b64eb8d41",
- "count": 0,
- "ok": false,
- "at": 1795744336976,
- "detail": "trade claimed"
+ "count": 73,
+ "ok": true,
+ "at": 1795744368343,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 73,
+  "after": 0
+ },
+ "bank": {
+  "count": 73,
+  "at": 1795744346397
+ },
+ "logout": {
+  "attemptId": "1795744336984-0000028912-0000000001",
+  "at": 1795744368333,
+  "sha256": "baad62805c4fc50e9d2480708ba09d1e0d58cc0f923aae4bf7a691eb757f90a0"
+ },
+ "screen": true
 }
