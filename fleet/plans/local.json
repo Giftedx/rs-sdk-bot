@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795742271622,
+ "at": 1795742288517,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -64,7 +64,20 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "21"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -77,7 +90,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "21"
    },
    "enabled": true,
    "repeat": false,
@@ -183,52 +196,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "jiminua",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "233",
-    "ITEMS": "Pestle and mortar",
-    "MAX_ITEMS": "1",
-    "STOCK_TARGET": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "100",
-    "STOP_AT_TARGET": "1",
-    "FILL_ORDER": "1",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
   },
   {
    "account": "YewFirst",
