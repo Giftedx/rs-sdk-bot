@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772870413-1",
+ "account": "SporranDip",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harralander",
+ "requested": 2,
+ "claim": "366d449e-6b5d-4cdd-a31f-880414d9a46f",
+ "count": 0,
+ "ok": false,
+ "at": 1795773321349,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795773302492,
+ "at": 1795773323121,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,31 +84,6 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -147,27 +122,6 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1515-10-p487",
-    "ITEM_ID": "1515",
-    "QUANTITY": "10",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "487",
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "10"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
@@ -197,11 +151,28 @@
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
     "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   },
   {
@@ -221,29 +192,12 @@
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
+    "DEMAND_ID": "campaign:haggis:item:892",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:gear_collection:892",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -283,6 +237,43 @@
    "resources": [
     "essence-mine"
    ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-3-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "3",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "3"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "arrows"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:53",
+    "BATCH_UNITS": "499"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
   }
  ],
  "army": [
@@ -299,11 +290,11 @@
   "fatstack",
   "fingersmith",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
