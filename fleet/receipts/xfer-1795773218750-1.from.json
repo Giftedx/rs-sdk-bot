@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795773218750-1",
+ "account": "BowBeforeMe",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 2,
+ "claim": "2bdd0355-7d15-4df2-8728-5386063e262d",
+ "count": 0,
+ "ok": false,
+ "at": 1795773375208,
+ "detail": "trade claimed"
+}

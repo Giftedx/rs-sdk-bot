@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772928239-2",
  "account": "Billionaire",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "14de36d9-9fba-45fe-bac7-aca960b3a98d",
- "count": 0,
- "ok": false,
- "at": 1795773178905,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795773336182,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795773319056
+ },
+ "logout": {
+  "attemptId": "1795773178914-0000023944-0000000001",
+  "at": 1795773335811,
+  "sha256": "11bd512d03f2288a9eb2e5eb0b1302e6410ee077d87613d308c86b10b5c4b5c5"
+ },
+ "screen": true
 }

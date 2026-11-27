@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772870413-1",
  "account": "SporranDip",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Harralander",
  "requested": 2,
  "claim": "366d449e-6b5d-4cdd-a31f-880414d9a46f",
- "count": 0,
- "ok": false,
- "at": 1795773321349,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795773383065,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795773382249
+ },
+ "logout": {
+  "attemptId": "1795773321360-0000006724-0000000001",
+  "at": 1795773383052,
+  "sha256": "04653dcb5ef1c02db7ad20d2028866d2a252ae88c5939ecde64f330b34a48354"
+ },
+ "screen": true
 }

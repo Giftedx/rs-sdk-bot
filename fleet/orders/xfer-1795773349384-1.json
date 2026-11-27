@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795773349384-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordinhand",
+  "to": "UnderMyKilt",
+  "item": "Herb",
+  "count": 4,
+  "itemId": 213,
+  "start": 1795773349384,
+  "end": 1795774249384,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
