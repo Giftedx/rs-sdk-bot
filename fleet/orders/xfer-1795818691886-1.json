@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795818691886-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "KnightRider",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795818691886,
+  "end": 1795819591886,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
