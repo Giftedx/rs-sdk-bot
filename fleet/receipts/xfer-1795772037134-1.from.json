@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772037134-1",
+ "account": "Hocuspokeus",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "3c857852-1cbf-4309-a1b5-7b6672b5abdb",
+ "count": 0,
+ "ok": false,
+ "at": 1795772452224,
+ "detail": "trade claimed"
+}

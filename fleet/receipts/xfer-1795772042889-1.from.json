@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772042889-1",
  "account": "SporranDip",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "9a248902-4046-4674-9676-80c21ebe21c0",
- "count": 0,
- "ok": false,
- "at": 1795772200364,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772461840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772389465
+ },
+ "logout": {
+  "attemptId": "1795772200379-0000000760-0000000001",
+  "at": 1795772461802,
+  "sha256": "80a5e50f45af9caa45f757cf7b6cb6ee864414d5bb49cf3c3584d251c6002fe0"
+ },
+ "screen": true
 }
