@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798043000-2",
  "account": "Quickhandjob",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 89,
  "claim": "2ceba367-9596-4de1-a088-12879bea92cf",
- "count": 0,
- "ok": false,
- "at": 1795798516174,
- "detail": "trade claimed"
+ "count": 89,
+ "ok": true,
+ "at": 1795798605373,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 89,
+  "after": 0
+ },
+ "bank": {
+  "count": 89,
+  "at": 1795798575418
+ },
+ "logout": {
+  "attemptId": "1795798516184-0000008880-0000000001",
+  "at": 1795798605358,
+  "sha256": "4a18af4ce084e90505ec1459e4fa7deca53c9f0c2f84c698a433024ce4331187"
+ },
+ "screen": true
 }
