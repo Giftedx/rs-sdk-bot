@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795793868396,
+ "at": 1795793884588,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,28 +185,6 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "41",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:41",
-   "role": "army"
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -247,6 +225,21 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "loot-trip"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
