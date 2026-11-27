@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795742541760-1",
  "account": "SporranDip",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 22,
  "claim": "34c049a0-21e6-40d9-b7cc-f2a607591292",
- "count": 0,
- "ok": false,
- "at": 1795742761500,
- "detail": "trade claimed"
+ "count": 22,
+ "ok": true,
+ "at": 1795742787747,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795742771678
+ },
+ "logout": {
+  "attemptId": "1795742761508-0000022904-0000000001",
+  "at": 1795742787660,
+  "sha256": "4df47f2e1d0fe675aa7091dfca7e11f4c68d1f0f8df76da51be2c7ed5c6c0d8f"
+ },
+ "screen": true
 }

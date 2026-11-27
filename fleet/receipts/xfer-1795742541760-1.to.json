@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795742541760-1",
+ "account": "Shaftsinker",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 22,
+ "claim": "58970ce6-53f3-421e-8e1f-99e2da2c72cb",
+ "count": 22,
+ "ok": true,
+ "at": 1795742789575,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 22
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795742788494
+ },
+ "logout": {
+  "attemptId": "1795742778656-0000020460-0000000001",
+  "at": 1795742789220,
+  "sha256": "8bc2e0bd88c8bb7ad8808962c8fbbdf5924c33b9e9026ebfe0042591db59a0dd"
+ },
+ "screen": true
+}
