@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795812275751-1",
  "account": "Hocuspokeus",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "e391e5a9-0b72-4f44-9e91-d82ed45750ca",
- "count": 0,
- "ok": false,
- "at": 1795812395369,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795812529887,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795812510385
+ },
+ "logout": {
+  "attemptId": "1795812395381-0000022264-0000000001",
+  "at": 1795812529865,
+  "sha256": "b3cf06cff3f3dd8e04c95b269d438a4874a4dcea429764b63d3f3e6b7beebbfc"
+ },
+ "screen": true
 }
