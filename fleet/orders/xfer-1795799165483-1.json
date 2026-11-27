@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795799165483-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Nockitoff",
+  "item": "Air rune",
+  "count": 15,
+  "itemId": 556,
+  "start": 1795799165483,
+  "end": 1795800065483,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
