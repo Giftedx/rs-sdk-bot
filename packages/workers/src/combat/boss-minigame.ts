@@ -871,6 +871,7 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
         wildDragonEscapeKeep,
         wildDragonPreflight,
         wildDragonRetreatReason,
+        wildDragonWalkHalt,
         wildernessLevel,
     } = loadSurvMod();
     const sess = s as Session;
@@ -909,7 +910,19 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
         });
         const over = () => ended || died || !!o.stop?.() || s.tick() - start >= o.cap;
         const walker = await sessionWalker(sess);
-        const walkSafe = async (target: { x: number; z: number }, maxTicks = 450) => walkPath(walker, [{ ...target, tol: 2 }], { maxTicks, stop: over });
+        const walkSafe = async (target: { x: number; z: number }, maxTicks = 450, halt: () => boolean = over) =>
+            walkPath(walker, [{ ...target, tol: 2 }], { maxTicks, stop: halt });
+        const baseHp = () => st()?.skills.find(k => k.name === 'Hitpoints')?.baseLevel ?? hp();
+        const inWild = () => wildernessLevel(st()?.player?.worldZ ?? 0) > 0;
+        const danger = () => { const cur = st(); return !!cur && wildDragonWalkHalt(cur, o, ours); };
+        // Eat to within one shark of full before the walk in. A shark heals 20.
+        const healBeforeWild = async () => {
+            for (let i = 0; i < 28 && !over() && !inWild() && hp() < baseHp() - 12; i++) {
+                const ate = await eatBetweenCasts(s, { food: [...DRAGON_FOOD_IDS], eatAt: baseHp() - 12, timeoutTicks: 4, attempts: 1 });
+                if (!ate) break;
+                eaten++;
+            }
+        };
         const retreatToSafety = async () => {
             for (let step = 0; step < 30 && !over(); step++) {
                 const cur = st();
@@ -997,14 +1010,31 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
                 const cur = st();
                 if (!cur?.player) break;
                 if (Math.max(Math.abs(cur.player.worldX - GREEN_DRAGON_SPOT.x), Math.abs(cur.player.worldZ - GREEN_DRAGON_SPOT.z)) > 25) {
-                    const res = await walkSafe(GREEN_DRAGON_SPOT, 600);
-                    if (!res.ok || over()) break;
+                    if (!inWild()) {
+                        await healBeforeWild();
+                        if (countDragonFood(st()!) < o.foodCount) {
+                            if (!(await bankAndRestock()) || over()) break;
+                            await healBeforeWild();
+                        }
+                        if (hp() < Math.ceil(baseHp() * 0.75)) {
+                            stop = 'low-hp-before-wild';
+                            break;
+                        }
+                    }
+                    const res = await walkSafe(GREEN_DRAGON_SPOT, 600, () => over() || danger());
+                    if (over()) break;
+                    if (!res.ok && !danger()) break;
                 }
                 const reason = wildDragonRetreatReason(st()!, o, ours);
                 if (reason) {
                     if (reason === 'pker-threat') escapes++;
                     if (!(await bankAndRestock())) {
                         stop = reason;
+                        break;
+                    }
+                    // A player who made the account leave twice still camps the route: the next walk in meets them.
+                    if (escapes >= 2) {
+                        stop = 'pker-threat';
                         break;
                     }
                     continue;
@@ -1052,7 +1082,8 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
             else if (died) stop = 'died';
             else if (o.stop?.()) stop = 'stop-file';
             else if (trips >= o.maxTrips) stop = 'max-trips';
-            return { ok: !died && !ended, kills, bonesBanked, hidesBanked, eaten, escapes, trips, hpMin, died, stop, ticks: s.tick() - start };
+            const refused = stop === 'pker-threat' || stop === 'low-hp-before-wild';
+            return { ok: !died && !ended && !refused, kills, bonesBanked, hidesBanked, eaten, escapes, trips, hpMin, died, stop, ticks: s.tick() - start };
         } finally {
             off();
         }
