@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819454582-unsheathed-mightyrod-5abf084fbde5283c",
  "account": "Unsheathed",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "Iron arrow",
  "requested": 300,
  "claim": "16f998b5-88e2-40f8-9f5e-10c147bc1d49",
- "count": 0,
- "ok": false,
- "at": 1795820073329,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795820098716,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795820081965
+ },
+ "logout": {
+  "attemptId": "1795820073360-0000009600-0000000001",
+  "at": 1795820098705,
+  "sha256": "b466e4792d04ad720c10ea5ca15d6c2403b0f6539b0c838cb5a670577de3117c"
+ },
+ "screen": true
 }

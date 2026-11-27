@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795819454582-unsheathed-mightyrod-5abf084fbde5283c",
+ "account": "Mightyrod",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 300,
+ "claim": "39acc3ee-28fa-42f1-8e6e-c1f6c64d8422",
+ "count": 300,
+ "ok": true,
+ "at": 1795820100326,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795820099574
+ },
+ "logout": {
+  "attemptId": "1795820088465-0000010916-0000000001",
+  "at": 1795820100299,
+  "sha256": "4860081e2139df81a0bf804d317523280acc9b0ba2e1f85ee8c8682bc39e1ad8"
+ },
+ "screen": true
+}

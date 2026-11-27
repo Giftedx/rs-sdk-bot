@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819451717-tossthecaber-knightstick-7d7a46f273affc31",
  "account": "TossTheCaber",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "450aa5b6-102a-4286-b4db-91f6aad49b8c",
- "count": 0,
- "ok": false,
- "at": 1795820067880,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795820092712,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795820074367
+ },
+ "logout": {
+  "attemptId": "1795820067913-0000014432-0000000001",
+  "at": 1795820092701,
+  "sha256": "4891254425a9ae4fa3ebf25bd7fb68c937986b23a9ae55d647a40be8f186532e"
+ },
+ "screen": true
 }
