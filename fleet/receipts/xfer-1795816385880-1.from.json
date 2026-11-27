@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795816385880-1",
+ "account": "BackdoorMan",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 15,
+ "claim": "4895eaa9-5495-44a5-a231-f7adaf6d66c7",
+ "count": 0,
+ "ok": false,
+ "at": 1795816503708,
+ "detail": "Error: route to 2618, 3333: precondition walk danger from 2654,3283,0: route danger to 2618,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "logout": {
+  "attemptId": "1795816498654-0000020108-0000000001",
+  "at": 1795816503696,
+  "sha256": "04a940d3e460d2bedbed7c5248103a6e414fdf6df35c96e2213b578f506ceb2e"
+ },
+ "screen": false
+}

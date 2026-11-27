@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795816403844-1",
+ "account": "KnightRider",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "39f2386f-4d12-45e5-a4a5-74fe66502fac",
+ "count": 0,
+ "ok": false,
+ "at": 1795816487264,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Steel bar",
+   "requested": 4,
+   "count": 0
+  }
+ ]
+}
