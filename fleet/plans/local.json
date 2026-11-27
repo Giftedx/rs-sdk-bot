@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821585630,
+ "at": 1795821606065,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -122,14 +122,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "187",
+    "MAX_ITEMS": "215",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "187"
+    "BATCH_UNITS": "215"
    },
    "enabled": true,
    "repeat": false,
@@ -154,7 +154,7 @@
    ]
   },
   {
-   "account": "Quickhandjob",
+   "account": "TheFullMonty",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -172,7 +172,7 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",

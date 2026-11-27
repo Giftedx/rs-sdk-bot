@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795819448328-spitroaster-masterbaiter-79a7a0662a274737",
  "account": "Spitroaster",
  "partner": "Masterbaiter",
@@ -12,6 +12,16 @@
  "claim": "6b2e7352-0bf2-4fe0-9d54-5799cf601a98",
  "count": 0,
  "ok": false,
- "at": 1795821541001,
- "detail": "trade claimed"
+ "at": 1795821597445,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795821581558
+ },
+ "logout": {
+  "attemptId": "1795821541029-0000011896-0000000001",
+  "at": 1795821597437,
+  "sha256": "439568de07cc28508872536341f22aa79e80211fa1f39862f57cfc4145359b5c"
+ },
+ "screen": false
 }
