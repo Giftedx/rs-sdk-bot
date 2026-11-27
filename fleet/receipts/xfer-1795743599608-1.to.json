@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795743599608-1",
+ "account": "Swordinhand",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 1,
+ "claim": "f17021af-cbf1-4f7a-8b6e-59926077d749",
+ "count": 1,
+ "ok": true,
+ "at": 1795743783579,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795743782938
+ },
+ "logout": {
+  "attemptId": "1795743772750-0000023148-0000000001",
+  "at": 1795743783568,
+  "sha256": "e3928d09ef93323aa119bf2dc6a82fe4660d9e1436b573ecae4fea32f64ac7c1"
+ },
+ "screen": true
+}
