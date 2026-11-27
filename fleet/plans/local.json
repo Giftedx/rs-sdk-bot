@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795802139187,
+ "at": 1795802154851,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -81,47 +81,37 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "iron"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "BAR_TYPE": "iron",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "8",
-    "STALL_TICKS": "280"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -265,16 +255,16 @@
    ],
    "env": {
     "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
+    "PRODUCT_ID": "40",
     "MAX_MAKE": "1",
     "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "2",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "1",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   },
   {
@@ -307,24 +297,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "jiminua",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "2349",
-    "ITEMS": "Bronze bar",
-    "MAX_ITEMS": "7",
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "30",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "7"
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "30"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
+   "goal": "campaign:haggis:item:39",
    "role": "army"
   },
   {
