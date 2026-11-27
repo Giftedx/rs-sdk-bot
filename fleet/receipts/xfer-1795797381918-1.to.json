@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797381918-1",
  "account": "Fatstack",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune axe",
  "requested": 1,
  "claim": "5106f59c-b5fe-4907-b9b3-0c641bfa9d4c",
- "count": 0,
- "ok": false,
- "at": 1795797723268,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795797736852,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797735853
+ },
+ "logout": {
+  "attemptId": "1795797723278-0000030908-0000000001",
+  "at": 1795797736595,
+  "sha256": "595dbc4205e53197ad895a46316ad3cb7ccbf447576ba4e92741ca8448a35a8e"
+ },
+ "screen": true
 }
