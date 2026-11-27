@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805714414,
+ "at": 1795805735545,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "397",
+    "MAX_ITEMS": "416",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "397"
+    "BATCH_UNITS": "416"
    },
    "enabled": true,
    "repeat": false,
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "278",
+    "MAX_ITEMS": "300",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "278"
+    "BATCH_UNITS": "300"
    },
    "enabled": true,
    "repeat": false,
@@ -117,7 +117,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1086"
+    "BATCH_UNITS": "1061"
    },
    "enabled": true,
    "repeat": false,
@@ -199,7 +199,7 @@
    "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=82600 TARGET_COUNT=8260 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=76100 TARGET_COUNT=7610 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
@@ -219,7 +219,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1086"
+    "BATCH_UNITS": "1061"
    },
    "enabled": true,
    "repeat": false,
