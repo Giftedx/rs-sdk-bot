@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795771435969-2",
+ "account": "OreElse",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze bar",
+ "requested": 1,
+ "claim": "0c6cc01c-6fde-4aca-8969-6dd65588e6d1",
+ "count": 1,
+ "ok": true,
+ "at": 1795772025054,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772024335
+ },
+ "logout": {
+  "attemptId": "1795772014625-0000017340-0000000001",
+  "at": 1795772025039,
+  "sha256": "d081d29f47925a425550360306eada00a4ede633818dc08890059f61be7a8f43"
+ },
+ "screen": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795771996447-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "BowBeforeMe",
+  "item": "Necklace mould",
+  "count": 1,
+  "itemId": 1597,
+  "start": 1795771996447,
+  "end": 1795772896447,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

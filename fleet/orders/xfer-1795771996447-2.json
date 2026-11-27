@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795771996447-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "BowBeforeMe",
+  "item": "Sapphire",
+  "count": 1,
+  "itemId": 1607,
+  "start": 1795771996447,
+  "end": 1795772896447,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

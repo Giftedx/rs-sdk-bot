@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795771612938-2",
+ "account": "PickpockDick",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "4b181966-fb98-445e-83ea-e119b8dae5fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795772024923,
+ "detail": "trade claimed"
+}
