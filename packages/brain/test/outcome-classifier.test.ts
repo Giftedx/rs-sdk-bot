@@ -10,6 +10,10 @@ import {
     loadWorldSnapshot,
     marketCooldownKey,
     OutcomeClassifier,
+    REPEAT_DEFECT_TTL_MS,
+    REPEAT_WINDOW_MS,
+    defectBlocksAccount,
+    isFleetWideDefect,
     validateDefectRecord,
     validateWorldSnapshot,
     type AccountState,
@@ -545,4 +549,50 @@ test('infra breaker: faults in one wait do not grow it, and a non-infra run end 
     c.applyOutcome({ kind: 'target_met', activityId: 'quest:x', account: 'HelperB', ticksElapsed: 10, durationMs: 10_000 }, { now: NOW + 100_000 });
     expect(c.canProceedInfra(NOW + 100_000).state).toEqual({ open: false, consecutiveFaults: 0 });
     expect(fault(NOW + 200_000).infraBreaker?.retryAt).toBe(NOW + 230_000);
+});
+
+describe('repeat faults', () => {
+    const TREE = 'RESULT fail quest-sweep tree missing 2434:2 (unsold; others in shops)';
+    const raw = (account: string, detail: string, durationMs: number, activityId = 'quest:tree') =>
+        ({ activityId, account, exitCode: 1, status: 'fail', reason: 'gave-up after 1 runs', detail, durationMs });
+
+    test('a fast missing-supply fault that repeats holds the activity for its account, then for every account', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const fail = (account: string, at: number, durationMs = 20_000) => c.classifyAndApplyRaw(raw(account, TREE, durationMs), { now: at });
+        expect(fail('Fatstack', NOW).defect).toBeUndefined();
+        // A long run worked for a while: it does not count.
+        expect(fail('Fatstack', NOW + 1_000, 600_000).defect).toBeUndefined();
+        const own = fail('Fatstack', NOW + 2_000).defect;
+        expect(own?.quarantined).toBe(true);
+        expect(isFleetWideDefect(own!)).toBe(false);
+        expect(defectBlocksAccount(own!, 'Fatstack', NOW + 3_000)).toBe(true);
+        expect(defectBlocksAccount(own!, 'Earlyshooter', NOW + 3_000)).toBe(false);
+        expect(own!.expiresAt).toBe(NOW + 2_000 + REPEAT_DEFECT_TTL_MS);
+
+        expect(fail('Earlyshooter', NOW + 4_000).defect).toBeUndefined();
+        const fleet = fail('Fingerblastr', NOW + 5_000).defect;
+        expect(isFleetWideDefect(fleet!)).toBe(true);
+        expect(defectBlocksAccount(fleet!, 'Billionaire', NOW + 6_000)).toBe(true);
+    });
+
+    test('a run that meets its target ends the count, and old faults leave the window', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const arena = 'RESULT fail quest-sweep arena missing 2434:3';
+        const fail = (at: number) => c.classifyAndApplyRaw(raw('Bigpackage', arena, 7_000, 'quest:arena'), { now: at });
+        expect(fail(NOW).defect).toBeUndefined();
+        c.applyOutcome({ kind: 'target_met', activityId: 'quest:arena', account: 'Fatstack', ticksElapsed: 900, durationMs: 400_000 }, { now: NOW + 1_000 });
+        expect(fail(NOW + 2_000).defect).toBeUndefined();
+        expect(fail(NOW + 2_000 + REPEAT_WINDOW_MS).defect).toBeUndefined();
+    });
+
+    test('repeat faults survive a classifier reload', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'repeat-faults-'));
+        const file = join(dir, 'outcome-state.json');
+        try {
+            new OutcomeClassifier({ filePath: file }).classifyAndApplyRaw(raw('Fatstack', TREE, 20_000), { now: NOW });
+            expect(new OutcomeClassifier({ filePath: file }).classifyAndApplyRaw(raw('Fatstack', TREE, 20_000), { now: NOW + 1_000 }).defect?.quarantined).toBe(true);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });

@@ -5,9 +5,12 @@ import { createActivityCatalog } from '../src/catalog';
 import type { AccountPlan, ActivityDefinition } from '../src/contracts';
 import {
     isSupportedWorkerFamily,
+    PLANNED_SHOP_NO_BUY_TICKS,
     resolveAccountWorkerPlan,
     resolveActivityWorkerRoute,
     resolvePlannedStepWorkerRoute,
+    shopNoBuyTicks,
+    SLOW_RESTOCK_NO_BUY_TICKS,
 } from '../src/worker-routing';
 
 const CATALOG_SAMPLE: ActivityDefinition[] = [
@@ -686,6 +689,18 @@ test('a planned shop step fills its order, waits for a restock and stops at the 
     expect(staff.env.STOCK_TARGET).toBe('1');
     expect(staff.env.MAX_ITEMS).toBe('1');
     expect(staff.env.FILL_ORDER).toBe('1');
+});
+
+test('a planned shop step at a slow-restock shelf polls the shelf briefly instead of the full stock wait', () => {
+    // The Ardougne gem stall restocks a ruby each 60000 ticks: a 100-tick wait at its empty shelf gives no ruby.
+    const ruby = resolvePlannedStepWorkerRoute('Fatstack', {
+        stepKind: 'acquire', source: 'npc_shop', itemId: 1603, itemName: 'Ruby', quantity: 1, stockTarget: 1,
+        estimatedTicks: 300, estimatedCoinCost: 1000, coinFloatPreserved: 1000, shopId: 'ardougnegemstall',
+    });
+    expect(ruby.env.NO_BUY_TICKS).toBe(String(SLOW_RESTOCK_NO_BUY_TICKS));
+    expect(shopNoBuyTicks(227, 'adventurershop', true)).toBe(PLANNED_SHOP_NO_BUY_TICKS);
+    expect(shopNoBuyTicks(1603, 'ardougnegemstall', false)).toBe(SLOW_RESTOCK_NO_BUY_TICKS);
+    expect(shopNoBuyTicks(1603, undefined, true)).toBe(PLANNED_SHOP_NO_BUY_TICKS);
 });
 
 test('a market work step keeps a partial purchase: no fill order, no stock target, the short stock wait', () => {

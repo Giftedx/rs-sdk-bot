@@ -723,6 +723,12 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             idleReason: !spotOk || !marketOk ? 'spot_capacity_full' : (rerouted.idleReason ?? 'demand_saturated'),
         };
     }
+    // The shop or GE venue of a running job stays taken until the run ends, also when its account re-plans to other
+    // work: the swarm keeps a finite brain run to its end (swarm.ts brainDropKeep), and a stopped run buys until it
+    // logs out. A second buyer sent to a one-unit shelf in that time finds it empty.
+    for (const { currentPlan } of evaluatedRunning) {
+        if (currentPlan) reserveMarketVenues(currentPlan);
+    }
 
     // 2. Unblock execution order: needs_logout_recovery first, then needs_location_recovery.
     for (const entry of recoveryQueue) {

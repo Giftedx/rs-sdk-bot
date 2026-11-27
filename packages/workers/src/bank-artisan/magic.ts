@@ -2247,12 +2247,13 @@ async function openEarthBankObservedLocal(s: Session) {
 
 export async function runEarthProduction(
     s: Session,
-    o: { mode: 'talismans' | 'craft'; cap: number; target: number; reserve: number; killsPerTarget?: number; stop: () => boolean },
+    o: { mode: 'talismans' | 'craft'; cap: number; target: number; batch?: number; reserve: number; killsPerTarget?: number; stop: () => boolean },
     deps?: ArtisanExternalDeps,
 ) {
-    if (!['talismans', 'craft'].includes(o.mode) || ![o.cap, o.target, o.reserve].every(n => Number.isSafeInteger(n) && n >= 0) || o.cap < 1 || o.cap > 20000 || o.target < 1) {
+    if (!['talismans', 'craft'].includes(o.mode) || ![o.cap, o.target, o.reserve, o.batch ?? 0].every(n => Number.isSafeInteger(n) && n >= 0) || o.cap < 1 || o.cap > 20000 || o.target < 1) {
         throw Error('invalid earth production bounds');
     }
+    let target = o.target;
     if (o.killsPerTarget !== undefined && (!Number.isSafeInteger(o.killsPerTarget) || o.killsPerTarget < 0 || o.killsPerTarget > 3)) {
         throw Error('invalid finite hunt pilot');
     }
@@ -2408,6 +2409,9 @@ export async function runEarthProduction(
         await open();
         await deposit();
         initial = owned();
+        // A brain batch asks for that many new runes. Against the default stock target alone, an account that holds
+        // more earth runes than the target met it at once: OreElse ended ok with crafted=0 in 39 runs in a row.
+        if (o.batch) target = Math.max(o.target, (initial.get(EARTH) ?? 0) + o.batch);
         if ((initial.get(995) ?? 0) < o.reserve) throw Error('earth production reserve unavailable');
         if (o.mode === 'talismans') {
             if (!Number.isSafeInteger(style) || typeof retaliate !== 'boolean') throw Error('earth production combat controls unknown');
@@ -2465,11 +2469,11 @@ export async function runEarthProduction(
                 }
             }
         } else {
-            while ((owned().get(EARTH) ?? 0) < o.target) {
+            while ((owned().get(EARTH) ?? 0) < target) {
                 check();
                 const level = s.sdk.getSkill('Runecraft')?.baseLevel ?? 0;
                 const xp = s.sdk.getSkillXp('Runecraft') ?? 0;
-                const batch = earthProductionBatch(level, xp, o.target - (owned().get(EARTH) ?? 0), banked(ESSENCE));
+                const batch = earthProductionBatch(level, xp, target - (owned().get(EARTH) ?? 0), banked(ESSENCE));
                 if (!batch.essence) throw Error('earth production essence exhausted before target');
                 await withdraw(batch.talisman, 1);
                 await withdraw(ESSENCE, batch.essence);
@@ -2551,7 +2555,7 @@ export async function runEarthProduction(
     const conserved = !!initial && productionConserved(initial, final, ledger);
     const equipmentRestored = JSON.stringify(eq().map(i => i.id).sort()) === JSON.stringify(originalEquipment.sort());
     const talismansReady = banked(1438) >= 1 && banked(1440) >= 1;
-    const targetMet = banked(EARTH) >= o.target;
+    const targetMet = banked(EARTH) >= target;
     const pilotReady = !!o.killsPerTarget && kills >= 2 * o.killsPerTarget;
     const ok = !failure && !terminal() && !stopped() && conserved && equipmentRestored && (o.mode === 'talismans' ? (o.killsPerTarget ? pilotReady : talismansReady) : targetMet);
     return {
@@ -2991,6 +2995,7 @@ export async function runMagicCli(
                     mode: restArgs[0] as 'talismans' | 'craft',
                     cap: Number(restArgs[1] ?? 4000),
                     target: Number(env.STOCK_TARGET ?? 100),
+                    ...(env.STOCK_TARGET ? {} : { batch: Number(env.BATCH_UNITS ?? 0) }),
                     reserve: Number(env.COIN_RESERVE ?? 0),
                     killsPerTarget: Number(env.HUNT_KILLS_PER_TARGET ?? 0),
                     stop: () => stopped,

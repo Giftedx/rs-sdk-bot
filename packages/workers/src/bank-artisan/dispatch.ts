@@ -425,6 +425,8 @@ export async function runArtisan(
                             mode: cfg.args[0] as 'talismans' | 'craft',
                             cap: Number(cfg.args[1] ?? 4000),
                             target: Number(setting('STOCK_TARGET', '100')),
+                            // A brain job names its batch, not a stock target (brain-runtime BATCH_UNITS).
+                            ...(setting('STOCK_TARGET') ? {} : { batch: Number(setting('BATCH_UNITS', '0')) }),
                             reserve: Number(setting('COIN_RESERVE', '0')),
                             killsPerTarget: Number(setting('HUNT_KILLS_PER_TARGET', '0')),
                             stop: halted,

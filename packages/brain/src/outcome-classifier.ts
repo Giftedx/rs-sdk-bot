@@ -60,6 +60,19 @@ export function shopRestockCooldownMs(itemId: number, venue: string): number {
 }
 export const DEFAULT_RECOVERY_HOLD_TTL_MS = 30 * 60_000;
 export const DEFAULT_DEFECT_TTL_MS = 24 * 3_600_000;
+// Repeat faults: an outcome kind that holds nothing by itself (missing_supply, location_stranded) can end the same
+// activity with the same text again and again, each a login that does no work. Live: "quest-sweep tree missing
+// 2434:2 (unsold; others in shops)" ended 17 runs of 10 accounts in 24 h, each under 25 s. A run shorter than
+// REPEAT_FAST_MS counts. The same account twice holds the activity for that account; REPEAT_FLEET_ACCOUNTS accounts
+// hold it for every account (planner.ts isFleetWideDefect). Such a hold lasts REPEAT_DEFECT_TTL_MS, and a run of the
+// activity that meets its target ends the count.
+export const REPEAT_FAST_MS = 120_000;
+export const REPEAT_WINDOW_MS = 24 * 3_600_000;
+export const REPEAT_ACCOUNT_RUNS = 2;
+export const REPEAT_FLEET_ACCOUNTS = 3;
+export const REPEAT_DEFECT_TTL_MS = 6 * 3_600_000;
+export type RepeatFault = { readonly account: string; readonly at: number };
+const REPEAT_KINDS: ReadonlySet<RunOutcome['kind']> = new Set(['missing_supply', 'location_stranded']);
 export const DEFAULT_INFRA_BASE_BACKOFF_MS = 30_000;
 export const DEFAULT_INFRA_MAX_BACKOFF_MS = 15 * 60_000;
 export const DEFAULT_INFRA_BACKOFF_FACTOR = 2;
@@ -126,6 +139,8 @@ export interface OutcomeClassifierState {
     readonly accountOverlays: Readonly<Record<string, AccountOutcomeOverlay>>;
     // Per account (lower case): the targets its own route search found no route to (no-route.ts).
     readonly noRoutes?: Readonly<Record<string, readonly NoRouteFact[]>>;
+    // Per activity and fault signature: the fast runs that ended with it in REPEAT_WINDOW_MS (REPEAT_KINDS).
+    readonly repeatFaults?: Readonly<Record<string, readonly RepeatFault[]>>;
 }
 
 export interface OutcomeClassificationResult {
@@ -454,6 +469,7 @@ export class OutcomeClassifier {
     private readonly defects = new Map<string, DefectRecord>();
     private readonly accountOverlays = new Map<string, AccountOutcomeOverlay>();
     private readonly noRoutes = new Map<string, NoRouteFact[]>();
+    private readonly repeatFaults = new Map<string, RepeatFault[]>();
 
     constructor(opts: OutcomeClassifierOptions = {}) {
         this.rateStore = opts.rateStore;
@@ -477,6 +493,7 @@ export class OutcomeClassifier {
         this.defects.clear();
         this.accountOverlays.clear();
         this.noRoutes.clear();
+        this.repeatFaults.clear();
         if (!existsSync(this.filePath)) return;
 
         let parsed: unknown;
@@ -540,6 +557,15 @@ export class OutcomeClassifier {
                     holds,
                     cooldowns,
                 });
+            }
+        }
+
+        if (isPlainRecord(parsed.repeatFaults)) {
+            for (const [key, faults] of Object.entries(parsed.repeatFaults)) {
+                const kept = Array.isArray(faults)
+                    ? faults.filter((f): f is RepeatFault => isPlainRecord(f) && nonEmpty(f.account) !== undefined && typeof f.at === 'number' && Number.isFinite(f.at))
+                    : [];
+                if (nonEmpty(key) && kept.length > 0) this.repeatFaults.set(key, kept.map(f => ({ account: f.account, at: f.at })));
             }
         }
 
@@ -607,6 +633,9 @@ export class OutcomeClassifier {
         readonly logPath?: string;
         readonly tickRecordPath?: string;
         readonly detail?: string;
+        // A repeat fault seen on REPEAT_FLEET_ACCOUNTS accounts holds the activity fleet-wide at once.
+        readonly minCount?: number;
+        readonly ttlMs?: number;
     }): DefectRecord {
         const key = defectKey(params.activityId, params.faultSignature);
         const existing = this.defects.get(key);
@@ -630,13 +659,13 @@ export class OutcomeClassifier {
             account: params.account,
             observedAt: params.now,
             quarantinedAt: params.now,
-            expiresAt: params.now + this.defaultDefectTtlMs,
+            expiresAt: params.now + (params.ttlMs ?? this.defaultDefectTtlMs),
             quarantined: true,
             ...(workerRelease ? { workerRelease } : {}),
             logPath,
             ...(tickRecordPath ? { tickRecordPath } : {}),
             detail,
-            count: (holding ? existing?.count ?? 0 : 0) + 1,
+            count: Math.max(params.minCount ?? 1, (holding ? existing?.count ?? 0 : 0) + 1),
         };
 
         const errors = validateDefectRecord(next);
@@ -645,6 +674,34 @@ export class OutcomeClassifier {
         }
         this.defects.set(key, next);
         return next;
+    }
+
+    // Counts a fast run that ended with a REPEAT_KINDS outcome, and returns the defect that the count reaches: the
+    // activity for this account at REPEAT_ACCOUNT_RUNS runs, for every account at REPEAT_FLEET_ACCOUNTS accounts.
+    private noteRepeatFault(outcome: RunOutcome, now: number, workerRelease?: string): DefectRecord | undefined {
+        if (!REPEAT_KINDS.has(outcome.kind) || outcome.durationMs === undefined || outcome.durationMs >= REPEAT_FAST_MS) return undefined;
+        const text = ('detail' in outcome ? outcome.detail : undefined) ?? outcome.summary;
+        if (!nonEmpty(text) || isGateHeldResult(text!)) return undefined;
+        const faultSignature = `repeat ${outcome.kind}: ${normalizeFaultSignature(text!)}`;
+        const key = defectKey(outcome.activityId, faultSignature);
+        const faults = [...(this.repeatFaults.get(key) ?? []).filter(f => now - f.at < REPEAT_WINDOW_MS), { account: outcome.account, at: now }];
+        this.repeatFaults.set(key, faults);
+        const lower = outcome.account.toLowerCase();
+        const own = faults.filter(f => f.account.toLowerCase() === lower).length;
+        const accounts = new Set(faults.map(f => f.account.toLowerCase())).size;
+        if (own < REPEAT_ACCOUNT_RUNS && accounts < REPEAT_FLEET_ACCOUNTS) return undefined;
+        return this.upsertDefect({
+            activityId: outcome.activityId,
+            faultSignature,
+            outcomeKind: 'worker_defect',
+            account: outcome.account,
+            now,
+            workerRelease,
+            detail: `${text} (${faults.length} fast runs, ${accounts} accounts in ${REPEAT_WINDOW_MS / 3_600_000} h)`,
+            // planner.ts FLEET_QUARANTINE_MIN_COUNT: the count that holds the activity for every account.
+            ...(accounts >= REPEAT_FLEET_ACCOUNTS ? { minCount: 2 } : {}),
+            ttlMs: REPEAT_DEFECT_TTL_MS,
+        });
     }
 
     private buildRateSample(
@@ -742,6 +799,9 @@ export class OutcomeClassifier {
 
         switch (outcome.kind) {
             case 'target_met': {
+                // A run that met its target shows the repeat faults of the activity are gone.
+                const prefix = `${outcome.activityId}::`;
+                for (const key of [...this.repeatFaults.keys()]) if (key.startsWith(prefix)) this.repeatFaults.delete(key);
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
                 const isDead = overlay.lifecycleOverride === 'dead';
                 const remainingHolds = overlay.holds.filter(
@@ -781,6 +841,7 @@ export class OutcomeClassifier {
 
             case 'missing_supply': {
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
+                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease);
                 this.saveIfEnabled(now);
                 return {
                     outcome,
@@ -788,10 +849,13 @@ export class OutcomeClassifier {
                     activityId: outcome.activityId,
                     accountLifecycle: overlay.lifecycleOverride === 'dead' ? 'dead' : 'idle',
                     missingSupplies: outcome.missing,
+                    ...(repeat ? { defect: repeat } : {}),
                     accountPenalized: false,
                     unlockFollowUp: false,
                     clearedTransientRecovery: false,
-                    summary: outcome.summary ?? `${outcome.activityId} missing_supply (${outcome.missing.length} item(s))`,
+                    summary: repeat
+                        ? `quarantined ${outcome.activityId} (${repeat.faultSignature})`
+                        : outcome.summary ?? `${outcome.activityId} missing_supply (${outcome.missing.length} item(s))`,
                 };
             }
 
@@ -813,6 +877,7 @@ export class OutcomeClassifier {
                     cooldowns: overlay.cooldowns,
                 };
                 this.accountOverlays.set(outcome.account.toLowerCase(), nextOverlay);
+                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease);
                 this.saveIfEnabled(now);
                 return {
                     outcome,
@@ -820,6 +885,7 @@ export class OutcomeClassifier {
                     activityId: outcome.activityId,
                     accountLifecycle: lifecycle,
                     addedHold: hold,
+                    ...(repeat ? { defect: repeat } : {}),
                     accountPenalized: true,
                     unlockFollowUp: false,
                     clearedTransientRecovery: false,
@@ -1284,6 +1350,11 @@ export class OutcomeClassifier {
             const kept = facts.filter(f => now < f.expiresAt);
             if (kept.length > 0) noRoutes[account] = kept;
         }
+        const repeatFaults: Record<string, RepeatFault[]> = {};
+        for (const [key, faults] of this.repeatFaults) {
+            const kept = faults.filter(f => now - f.at < REPEAT_WINDOW_MS);
+            if (kept.length > 0) repeatFaults[key] = kept;
+        }
         return {
             schemaVersion: OUTCOME_STATE_SCHEMA_VERSION,
             updatedAt: now,
@@ -1292,6 +1363,7 @@ export class OutcomeClassifier {
             defects: [...this.defects.values()],
             accountOverlays: overlays,
             noRoutes,
+            repeatFaults,
         };
     }
 }
