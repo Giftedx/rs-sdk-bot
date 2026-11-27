@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803099122-1",
  "account": "KnightRider",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "062463fe-bae1-44c0-9ce1-694af9ce73c9",
- "count": 0,
- "ok": false,
- "at": 1795803295740,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795803523999,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795803501178
+ },
+ "logout": {
+  "attemptId": "1795803295749-0000016716-0000000001",
+  "at": 1795803523951,
+  "sha256": "0cfcd709c3efc0a7f5c5d2920f675c4fd232493e0346e1546558727bca46d332"
+ },
+ "screen": true
 }
