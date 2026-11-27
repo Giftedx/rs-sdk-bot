@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795816172941,
+ "at": 1795816205308,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "69",
+    "MAX_ITEMS": "187",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "69"
+    "BATCH_UNITS": "187"
    },
    "enabled": true,
    "repeat": false,
@@ -85,21 +85,31 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "78",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "78"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -124,7 +134,7 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "Ballspinner",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -140,7 +150,7 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -165,7 +175,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -173,24 +183,49 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "41",
-    "ITEMS": "Steel arrowtips",
-    "MAX_ITEMS": "135",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "95",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "95"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "187",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "135"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "187"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:41",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "YewFirst",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -200,14 +235,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "26",
+    "MAX_ITEMS": "13",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "26"
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
@@ -215,7 +250,7 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -240,32 +275,7 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "4",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "4"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "Spitroaster",
+   "account": "PickpockDick",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -287,7 +297,24 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
-   "role": "auto"
+   "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Shaftmaker",
@@ -309,21 +336,6 @@
    "resources": [
     "chaos-druids"
    ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
   },
   {
    "account": "BowBeforeMe",
@@ -360,7 +372,24 @@
    ]
   },
   {
-   "account": "KnightRider",
+   "account": "Hocuspokeus",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "mmtha0205",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -394,23 +423,6 @@
    ]
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "DropMyLoad",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -419,7 +431,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "829"
+    "BATCH_UNITS": "708"
    },
    "enabled": true,
    "repeat": false,
@@ -430,25 +442,7 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
+   "account": "TheFullMonty",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -484,7 +478,7 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -520,6 +514,24 @@
    "role": "auto"
   },
   {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -542,55 +554,29 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "PocketPool",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "291",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "291"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
-   "role": "helper",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   }
  ],
  "army": [
@@ -602,10 +588,10 @@
   "mmsmk1232",
   "billionaire",
   "fingerblastr",
+  "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
-  "pocketpool",
   "pocketpython",
   "pocketrocket",
   "sausagefest",
