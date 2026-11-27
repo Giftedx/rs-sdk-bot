@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795739279980-1",
+ "account": "Fatstack",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "09de8f2a-d15b-4d49-8bf6-92b91213bcbc",
+ "count": 0,
+ "ok": false,
+ "at": 1795740000236,
+ "detail": "trade claimed"
+}
