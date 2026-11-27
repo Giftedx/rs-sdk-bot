@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795769074725-1",
+ "account": "Fatstack",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "939b2b61-15c0-498a-831d-7bf42e2cc518",
+ "count": 1,
+ "ok": true,
+ "at": 1795769234377,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795769218036
+ },
+ "logout": {
+  "attemptId": "1795769210973-0000025048-0000000001",
+  "at": 1795769234359,
+  "sha256": "c5e45d0ba1f478fdf1f5382b86590c11dca6394e9b3335ced10decd80eb42376"
+ },
+ "screen": true
+}
