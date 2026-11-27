@@ -306,7 +306,8 @@ function indexEligibleActivities(eligibleActivities: readonly ActivityDefinition
         if (act.family === 'quest' && act.questSlug) {
             pushMap(questsBySlug, act.questSlug.toLowerCase(), act);
         }
-        if (act.baselineRate.gpPerTick > 0) gpActivities.push(act);
+        // The coin candidates: no PvP work (activityMatchesDemand 'coins' says why).
+        if (act.family !== 'pvp' && act.baselineRate.gpPerTick > 0) gpActivities.push(act);
         if (act.family === 'pvp' || act.family === 'combat') combatOrPvpActivities.push(act);
     }
 
@@ -972,7 +973,9 @@ function activityMatchesDemand(
         }
         case 'coins': {
             if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
-            return activity.baselineRate.gpPerTick > 0;
+            // PvP gold is a model guess in the Wilderness, where each run risks the account's kit and life: the PK
+            // army goals (pk_army, squad_supply) send PvP work, never a coin demand.
+            return activity.family !== 'pvp' && activity.baselineRate.gpPerTick > 0;
         }
         case 'combat_readiness': {
             if (activity.family === 'quest') return false;
