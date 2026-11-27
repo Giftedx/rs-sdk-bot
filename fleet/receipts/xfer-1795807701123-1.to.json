@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795807701123-1",
+ "account": "UnderMyKilt",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "04efc7bd-fc1e-4993-93db-a8870d864c65",
+ "count": 0,
+ "ok": false,
+ "at": 1795808072974,
+ "detail": "trade claimed"
+}

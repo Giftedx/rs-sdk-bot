@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795808062944,
+ "at": 1795808094327,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "OreElse",
+   "account": "YewFirst",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -84,32 +84,7 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "38",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "38"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
+   "account": "PickpockDick",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -125,7 +100,7 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -133,24 +108,24 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "27",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:gear_collection:892",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "Ballspinner",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -175,23 +150,29 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "thieving",
-    "knights"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "632"
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "23",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "23"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
   },
   {
    "account": "Spitroaster",
@@ -202,7 +183,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "632"
+    "BATCH_UNITS": "796"
    },
    "enabled": true,
    "repeat": false,
@@ -234,28 +215,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:harralander"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:255",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:255",
-   "role": "army"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -263,7 +222,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:castmyload:item:564",
-    "BATCH_UNITS": "344",
+    "BATCH_UNITS": "337",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -283,7 +242,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "632"
+    "BATCH_UNITS": "796"
    },
    "enabled": true,
    "repeat": false,
@@ -302,7 +261,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "632"
+    "BATCH_UNITS": "796"
    },
    "enabled": true,
    "repeat": false,
@@ -456,12 +415,14 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "hocuspokeus",
   "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketpool",
   "pocketpython",
   "quickhandjob",
