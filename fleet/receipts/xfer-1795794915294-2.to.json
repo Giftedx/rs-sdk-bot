@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795794915294-2",
+ "account": "Fingerblastr",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "c25e82cc-1ea8-4c23-af5a-4aeb150f82ea",
+ "count": 0,
+ "ok": false,
+ "at": 1795795256959,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795795088012-1",
  "account": "TheFullMonty",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "9dfab433-41c1-434e-9681-94d8f3fa903f",
- "count": 0,
- "ok": false,
- "at": 1795795229419,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795795255135,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795795254386
+ },
+ "logout": {
+  "attemptId": "1795795229428-0000026832-0000000001",
+  "at": 1795795255122,
+  "sha256": "59162680ff71f3b0a4f17061869788480dc3b29fd17b41c0089ae6e0622dc109"
+ },
+ "screen": true
 }
