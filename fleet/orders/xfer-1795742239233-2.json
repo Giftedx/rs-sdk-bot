@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742239233-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "MeatNTwoVeg",
+  "item": "Sapphire ring",
+  "count": 1,
+  "itemId": 1637,
+  "start": 1795742239233,
+  "end": 1795743139233,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

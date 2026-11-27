@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795742225394,
+ "at": 1795742242076,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,61 +59,56 @@
    "role": "pvp"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "account": "Bigpackage",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/pk.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "account": "Unsheathed",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "mmsmk1232",
@@ -145,24 +140,6 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -234,21 +211,6 @@
    "role": "helper"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2552",
-   "role": "army"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -264,23 +226,25 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "TheFullMonty",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "crafting",
+    "inventory",
+    "grind:chocolate_bar"
    ],
    "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
+    "MAX_MAKE": "4",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:grindmyherb:item:1975",
+    "BATCH_UNITS": "4",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:grindmyherb:item:1975",
+   "role": "army"
   }
  ],
  "army": [
@@ -298,6 +262,7 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "pickpockdick",

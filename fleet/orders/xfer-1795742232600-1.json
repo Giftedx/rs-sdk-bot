@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742232600-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "BowBeforeMe",
+  "item": "Bronze bar",
+  "count": 19,
+  "itemId": 2349,
+  "start": 1795742232600,
+  "end": 1795743132600,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
