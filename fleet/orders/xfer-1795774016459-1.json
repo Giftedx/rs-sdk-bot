@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774016459-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Fatstack",
+  "item": "Harralander",
+  "count": 3,
+  "itemId": 255,
+  "start": 1795774016459,
+  "end": 1795774916459,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

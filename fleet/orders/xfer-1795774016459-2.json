@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795774016459-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "SporranBulge",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "start": 1795774016459,
+  "end": 1795774916459,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
