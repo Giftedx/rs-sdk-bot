@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { combatLevel, escapeTiles, routeHarmKeep } from '../src/danger';
 import { legCache, type LegCache } from '../src/leg-cache';
 import { loadPathfinding } from '../src/pathcache';
 import { createWorld, ROUTE_BUDGET_MS, rsPathLength, type Account, type PathLength, type Tile, type World } from '../src/world';
@@ -74,3 +75,30 @@ test('a 10 HP account\'s route out of the essence mine plans as one route when i
     expect(whole.ok).toBe(true);
     if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
 }, 180_000);
+
+// A ladder from 2909,3334 level 1 lands at 2908,3336 inside the square of a hunter that would kill this account. A walk
+// from the landing may leave through that square, as a walk from the route start may (danger/guard.ts escapeTiles), so
+// the route plans as one route as its two halves do.
+test('a 10 HP account\'s route through a ladder that lands in a hunter\'s square plans as one route as its halves do', () => {
+    const top: Tile = { x: 2909, z: 3334, level: 1 }, foot: Tile = { x: 2908, z: 3336, level: 0 }, falador: Tile = { x: 2965, z: 3380, level: 0 };
+    const deadline = () => ({ deadline: performance.now() + ROUTE_BUDGET_MS });
+    const first = w.route(top, foot, weak, deadline()), second = w.route(foot, falador, weak, deadline()), whole = w.route(top, falador, weak, deadline());
+    console.log('top->foot', first.ok ? first.cost : first.reason, 'foot->falador', second.ok ? second.cost : second.reason, 'top->falador', whole.ok ? whole.cost : whole.reason);
+    expect(first.ok && second.ok).toBe(true);
+    expect(whole.ok).toBe(true);
+    if (first.ok && second.ok && whole.ok) expect(whole.cost).toBeLessThanOrEqual(first.cost + second.cost);
+}, 180_000);
+
+// An account that avoids harm (walk/goto.ts) also has the squares of the hunters of its combat level closed for the
+// route (guard.ts guardRoute). A landing in such a square that no deadly hunter holds escapes it as well.
+test('an account that avoids harm escapes a landing that only a harm square holds', () => {
+    const careful: Account = { ...weak, avoidHarm: true };
+    const landing = w.navigationGraph!().transports.map(t => t.to).find(t => !escapeTiles(careful, t).length && routeHarmKeep(combatLevel(careful.skills), [t]).tiles.length);
+    expect(landing).toBeDefined();
+    const far: Tile = { x: 3222, z: 3218, level: 0 }, other: Tile = { x: 3224, z: 3218, level: 0 };
+    const opened = pl.withDanger!(careful, far, other, () => pl.escapeAt!(careful, landing!).length);
+    const plain = pl.withDanger!(weak, far, other, () => pl.escapeAt!(weak, landing!).length);
+    console.log('harm-only landing', JSON.stringify(landing), 'opened', opened, 'without avoidHarm', plain);
+    expect(opened).toBeGreaterThan(0);
+    expect(plain).toBe(0);
+}, 120_000);

@@ -32,10 +32,14 @@ export interface Transport extends TransportMeta {
 export type RouteOptions = { deadline?: number };
 export const ROUTE_BUDGET_MS = 45_000;
 
-export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null };
+export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null; escape(at: Tile, open: Int32Array): number[] };
 export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget) => number | null) & {
     withPolicy?<T>(blocked: DoorBlock[], query: () => T): T;
     withDanger?<T>(acct: Account, from: Tile, to: Tile, query: () => T): T;
+    // Inside withDanger: the packed tiles that the escape squares of `at` (the squares holding it) have closed, and a
+    // query with those tiles open again for a walk from `at`.
+    escapeAt?(acct: Account, at: Tile): Int32Array;
+    withOpened?<T>(open: Int32Array, at: Tile, query: () => T): T;
     walkable?(t: Tile): boolean;
     areaOf?(t: Tile): number;
     // The area labels of the active scope (shut doors and closed danger ground), or null while that scope has none.

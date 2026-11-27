@@ -8,6 +8,7 @@ const scope: ScopeAreas = {
     area: (l, x, z) => l !== 0 || z < 0 || z > 50 ? -1 : x === 500 && z === 0 ? -1 : x < 1000 ? 0 : x < 2000 ? 1 : -1,
     reach: () => [0],
     step: () => [0],
+    escape: () => [],
 };
 const t = (x: number, z = 0): Tile => ({ x, z, level: 0 });
 const ladder = (from: Tile, to: Tile) => ({ from, to } as unknown as Transport);
