@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795784473025,
+ "at": 1795784485650,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,18 +59,59 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
+    "ranged-camp"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   },
   {
@@ -178,20 +219,23 @@
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "essence"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "39",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
   },
   {
    "account": "SporranDip",
@@ -249,65 +293,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "240",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "240"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   }
  ],
