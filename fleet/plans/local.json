@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795755313721,
+ "at": 1795755395002,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -156,6 +156,22 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "magearena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
    "role": "auto"
   }
  ],
