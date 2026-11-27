@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795786564449-2",
+ "role": "to",
+ "account": "MeatNTwoVeg",
+ "partner": "mmtha0205",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795787356581,
+ "detail": "Error: account plan writer waits for its existing owner"
+}
