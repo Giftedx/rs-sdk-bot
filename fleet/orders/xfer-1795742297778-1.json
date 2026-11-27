@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742297778-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "Woodenstaff",
+  "item": "Dragon bones",
+  "count": 5,
+  "itemId": 536,
+  "start": 1795742297778,
+  "end": 1795743197778,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
