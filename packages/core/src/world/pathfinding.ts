@@ -232,6 +232,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 512, FLOOD_AFTER = 2;
     type Flood = { dist: Map<number, number>; complete: boolean; targets: number };
     const floods = new Map<string, Flood>(), floodMisses = new Map<string, number>();
+    let floodsBuilt = 0;
     const scopeIds = new WeakMap<object, number>(), noDanger = {};
     let nextScopeId = 0;
     const idOf = (o: object) => { let id = scopeIds.get(o); if (id === undefined) scopeIds.set(o, id = ++nextScopeId); return id; };
@@ -293,6 +294,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
             }
             floodMisses.delete(key);
             f = scoped(blocked, () => floodFrom(from));
+            floodsBuilt++;
             if (floods.size >= FLOOD_KEEP) floods.delete(floods.keys().next().value!);
             floods.set(key, f);
         }
@@ -421,6 +423,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     measure.walkable = t => { (pf as any).initPathfinding(); return (pf as any).isTileWalkable(t.level, t.x, t.z); };
     measure.areaOf = t => areas.area(t.level, t.x, t.z);
     measure.addTargets = addTargets;
+    measure.floodCount = () => floodsBuilt;
     // Labels that exist: the map labels of a plain scope, or the labels that SCOPE_LABEL_NULLS measured nulls built.
     // None are built here, so a search that can still finish does not pay a label flood inside its budget.
     measure.scopeAreas = blocked => {

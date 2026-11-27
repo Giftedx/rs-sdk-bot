@@ -40,3 +40,24 @@ test('walks from one start read from its flood have the findLongPath lengths and
     expect(withFlood).toEqual(withPath);
     expect(floodMs).toBeLessThan(pathMs);
 }, 120_000);
+
+// A walk with a tolerance of 1: findLongPath walks to the goal itself when it reaches it (its moveNear picks a near
+// tile only when the goal is out of reach), so the flood's distance to the goal is the findLongPath length. A goal the
+// flood does not reach (a blocked tile beside open ground here) goes to findLongPath, which ends beside it.
+test('tolerant walks, to open and to blocked goals, have the findLongPath lengths', () => {
+    const goals: Tile[] = [];
+    for (let x = LUMBRIDGE.x - 200; x <= LUMBRIDGE.x + 200 && goals.length < 80; x += 17) for (let z = LUMBRIDGE.z - 200; z <= LUMBRIDGE.z + 200 && goals.length < 80; z += 19) {
+        const t = { x, z, level: 0 }, beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => flood.walkable!({ x: x + dx!, z: z + dz!, level: 0 }));
+        if (flood.walkable!(t) || beside) goals.push(t);
+    }
+    expect(goals.filter(t => !flood.walkable!(t)).length).toBeGreaterThan(5);
+    // A start with no flood yet, so its flood holds these goals.
+    const START: Tile = { x: 3226, z: 3219, level: 0 }, floodsBefore = flood.floodCount!();
+    flood.addTargets!(goals);
+    const saved = process.env.ROUTE_FLOOD;
+    process.env.ROUTE_FLOOD = '0';
+    let withPath: (number | null)[];
+    try { withPath = goals.map(t => plain(START, t, [], 1)); } finally { if (saved === undefined) delete process.env.ROUTE_FLOOD; else process.env.ROUTE_FLOOD = saved; }
+    expect(goals.map(t => flood(START, t, [], 1))).toEqual(withPath);
+    expect(flood.floodCount!()).toBeGreaterThan(floodsBefore);
+}, 120_000);

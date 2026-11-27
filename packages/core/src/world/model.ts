@@ -49,6 +49,8 @@ export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: numb
     measurePrechecked?(from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null;
     // The tiles that walks end on (route graph nodes): a flood from a walk start keeps its distances to them.
     addTargets?(tiles: readonly Tile[]): void;
+    // The floods built so far (tests).
+    floodCount?(): number;
 };
 
 export interface World {
