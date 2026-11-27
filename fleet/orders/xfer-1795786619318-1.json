@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795786619318-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "Kiltlifter",
+  "item": "Unicorn horn",
+  "count": 2,
+  "itemId": 237,
+  "start": 1795786619318,
+  "end": 1795787519318,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

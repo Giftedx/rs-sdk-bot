@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795786564449-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Quickhandjob",
+  "item": "Air rune",
+  "count": 9,
+  "itemId": 556,
+  "start": 1795786564449,
+  "end": 1795787464449,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
