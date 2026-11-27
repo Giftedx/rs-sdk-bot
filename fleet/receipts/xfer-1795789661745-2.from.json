@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795789661745-2",
  "account": "mmtha0205",
  "partner": "BackdoorMan",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 875,
  "claim": "7f7a027b-e41e-43d8-8d66-cc4753df15e1",
- "count": 0,
- "ok": false,
- "at": 1795790263989,
- "detail": "trade claimed"
+ "count": 875,
+ "ok": true,
+ "at": 1795790320569,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 875,
+  "after": 0
+ },
+ "bank": {
+  "count": 875,
+  "at": 1795790269397
+ },
+ "logout": {
+  "attemptId": "1795790263999-0000027688-0000000001",
+  "at": 1795790320551,
+  "sha256": "57636ed287a12da8f8bb7507faf9cac7d58b07471f31825aa7b1f9db358c18fe"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795790314504-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "TossTheCaber",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795790314504,
+  "end": 1795791214504,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
