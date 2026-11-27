@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798097897,
+ "at": 1795798129671,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,79 +84,73 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Shaftsinker",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "druid"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto",
    "resources": [
-    "varrock-se-mine"
+    "chaos-druids"
    ]
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/aio-skiller.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:225",
+   "role": "army"
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:225",
+   "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "druid"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
    "resources": [
-    "varrock-se-mine"
+    "chaos-druids"
    ]
   },
   {
@@ -179,18 +173,18 @@
    ]
   },
   {
-   "account": "TossTheCaber",
+   "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
+    "scripts/aio-skiller.ts CAP=82000 TARGET_COUNT=8200 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
