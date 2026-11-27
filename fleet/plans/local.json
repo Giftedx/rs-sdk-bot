@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795743831441,
+ "at": 1795743987273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -220,34 +220,22 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
+   "account": "Wandwaver",
+   "script": "scripts/aio-boss.ts",
    "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+    "black-dragon"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:536",
+    "BATCH_UNITS": "476"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
+   "goal": "campaign:haggis:item:536",
+   "role": "army",
+   "resources": [
+    "taverley-black-dragons"
+   ]
   },
   {
    "account": "Spitroaster",
@@ -285,6 +273,27 @@
    "role": "auto"
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:shaftshooter:item:175",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
@@ -309,11 +318,13 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "oreelse",
@@ -323,7 +334,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "swordinhand",
   "undermykilt",
   "woodpecker"
  ],
