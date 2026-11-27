@@ -24,6 +24,9 @@ export interface PathDeps {
     plan(level: number, from: PathTile, to: PathTile, avoid?: readonly PathTile[]): PathTile[];
     // Visible monsters that hunt this account, each with the square the walk keeps out of (danger.ts liveHunters).
     hunters?(): readonly { x: number; z: number; r: number }[];
+    // The harm verdict of a planned path (danger/exposure.ts walkVerdict) and whether its first tile is already in a
+    // hunter's reach. walkPath does not start a `refuse` walk from outside a hunter's reach.
+    danger?(level: number, tiles: readonly PathTile[]): { verdict: 'clear' | 'eat' | 'refuse'; start: boolean; summary: { zone: string; damage: number; need: number; needHeal: number } };
     // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
     reach?(to: { x: number; z: number; level: number }, opts?: { adjacentOk?: boolean }): boolean | null;
     // A paid crossing at this door tile (travel.ts fareCrossings): its Open starts a dialogue that takes the fare.
@@ -318,6 +321,13 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
     seen(start);
     buildAround(start, 0);
     if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
+    // A walk whose hunters would take the Hitpoints under the retreat line with the pack food is not started (the
+    // caller stages food). A walk that starts in a hunter's reach goes on: standing still there costs more.
+    const harm = deps.danger?.(level, tiles);
+    if (harm && harm.verdict === 'refuse' && !harm.start) {
+        console.log(`WALK_DANGER ${JSON.stringify({ action: 'refuse', from: { ...start }, to: { x: goal.x, z: goal.z, level }, ...harm.summary })}`);
+        return Promise.resolve({ ...res, detail: `walk danger: ${harm.summary.zone} needs ${harm.summary.needHeal} heal of food (expected damage ${harm.summary.damage})` });
+    }
     const maxTicks = opts.maxTicks ?? tiles.length + 60;
 
     let idx = -1;          // path tile nearest the bot

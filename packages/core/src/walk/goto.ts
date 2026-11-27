@@ -6,6 +6,7 @@ import type { TripPlan } from '../trip';
 import { topUpFareFloat, unpaidFaresNear } from './fare-float';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
+import { routeHarm, stageFood } from './harm';
 import { walkRoute } from './legs';
 import { leaveMineJail } from './mine-jail';
 import { leaveDeck } from './travel';
@@ -130,6 +131,20 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         // What the failed search started from: a live "no route" names only its target otherwise.
         console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
         return { ok: false, reason: 'precondition', detail: `no route${why === 'budget' ? ` (search over ${budgetMs} ms)` : ''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    }
+    // Harm along the route (danger/exposure.ts): a route whose hunters would take the Hitpoints under the retreat line
+    // goes by a safe route inside its bound, or walks and eats the pack food, or takes food from a bank first, or is
+    // refused before it starts.
+    if (!opts.noHarmCheck) {
+        const harm = await routeHarm(s, from, to, acct, r, a => plan(a));
+        if (harm.action === 'detour') r = harm.plan;
+        else if (harm.action === 'refuse') {
+            if (hasBank && !opts.noFoodStage && rawStock) {
+                const staged = await stageFood(s, world, to, acct, rawStock, harm.needHeal, opts, goTo);
+                if (staged) return { ...staged, ticks: s.tick() - started };
+            }
+            return { ok: false, reason: 'precondition', detail: `walk danger: ${harm.zone} needs ${harm.needHeal} heal of food (expected damage ${harm.damage})`, ticks: s.tick() - started };
+        }
     }
     // A route that walks round a fare the pack cannot pay (the Al Kharid toll gate with no coins: 307 path tiles
     // against 111) is logged with the cost of the paid route. The second search runs only for a route much longer

@@ -16,7 +16,9 @@ export interface Walker extends TickSource {
 
 // planBudgetMs bounds the route search (world.ts ROUTE_BUDGET_MS when absent); a search over budget is 'no route (budget)'.
 // noFareFloat: the walk takes no fare float at its start bank (walk/fare-float.ts), for a worker that counts its pack.
-export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number; noJewelry?: boolean; noFareFloat?: boolean }
+// noHarmCheck: goTo does not price the route against the hunters along it (walk/harm.ts). noFoodStage: a walk that the
+// harm check refuses takes no food from a bank first.
+export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number; noJewelry?: boolean; noFareFloat?: boolean; noHarmCheck?: boolean; noFoodStage?: boolean }
 
 export const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
 

@@ -30,7 +30,7 @@ export async function sessionWalker(s: {
     direct(a: { type: string; [k: string]: unknown }): Promise<unknown>;
     ended?: Promise<unknown>;
 }, walkOpts: { noFareFloat?: boolean } = {}): Promise<PathDeps> {
-    const [pf, grid, { guardWalk, liveHunters, protectedFromMelee, withDanger }, { clientReach }] = await Promise.all([
+    const [pf, grid, { dangerSummary, guardWalk, liveHunters, npcReach, planAroundHarm, protectedFromMelee, stateWalkProfile, walkExposure, walkVerdict, withDanger }, { clientReach }] = await Promise.all([
         import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
         import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
         import('../danger'),
@@ -41,6 +41,9 @@ export async function sessionWalker(s: {
     const reach = clientReach(s.client, pos);
     // Skills do not change during one walk: the account is read once, on the first live-hunter check.
     let hunterActor: Account | undefined;
+    // Harm ground (danger/exposure.ts) is priced with the Hitpoints, food and run energy of each plan's moment.
+    const harmReach = npcReach(grid as any, pf.getDoorAt);
+    const profile = () => stateWalkProfile(accountForSdk(s.sdk), s.sdk.getState()?.player);
     return {
         tick: () => s.sdk.getState()?.tick,
         pos,
@@ -65,8 +68,14 @@ export async function sessionWalker(s: {
             pf.initPathfinding();
             const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
             const find = () => withDoorPolicy(grid, blocks, () => pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
-            // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes.
-            return guardWalk(grid, accountForSdk(s.sdk), { ...from, level }, { ...to, level }, 32, () => avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find());
+            // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes. Harm
+            // ground is the outer scope: the plan goes round it inside its bound (planAroundHarm).
+            const guarded = () => guardWalk(grid, accountForSdk(s.sdk), { ...from, level }, { ...to, level }, 32, () => avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find());
+            return planAroundHarm(grid, profile(), level, from, to, 32, guarded, { reach: harmReach });
+        },
+        danger: (level, tiles) => {
+            const p = profile(), exposure = walkExposure(p, level, tiles, { reach: harmReach }), verdict = walkVerdict(p, exposure);
+            return { verdict: verdict.verdict, start: walkExposure(p, level, tiles.slice(0, 1), { reach: harmReach }).tiles > 0, summary: dangerSummary(exposure, verdict) };
         },
         // Protect from Melee is read from the live state at each call: only then a melee-only hunter has no square.
         hunters: () => { const st = s.sdk.getState(); return st?.player ? liveHunters(st.nearbyNpcs ?? [], hunterActor ??= accountForSdk(s.sdk), 2, undefined, undefined, protectedFromMelee(st)) : []; },
