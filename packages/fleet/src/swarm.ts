@@ -110,6 +110,8 @@ type Run = {
     marketVenue?: string;
     demandId?: string;
     workerRelease?: string;
+    // The worker entry files whose release the run pinned (workerEntries): a repeat-fault hold is lifted when it changes.
+    workerEntries?: string[];
     baseline?: RunTelemetryBaseline;
     // The brain plan started this run. `finite` marks a brain job with a restart limit (quest, market, chain, walk).
     brain?: boolean;
@@ -1736,6 +1738,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             const outcomeRes = recordWorkerOutcome({
                                 root, catalog, rateStore, classifier, domain: 'live',
                                 ...(run.workerRelease ? { workerRelease: run.workerRelease } : {}),
+                                ...(run.workerEntries?.length ? { workerEntries: run.workerEntries } : {}),
                                 raw,
                             });
                             if (outcomeRes.outcome.kind === 'infra_fault' && !diedRun && !successfulEnd(own)) {
@@ -1800,8 +1803,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             : undefined;
         let child: ReturnType<typeof spawnChild>;
         let workRelease: string | undefined;
+        let workEntries: string[] = [];
         try {
             const entries = workerEntries(job.script, job.args ?? [], root);
+            workEntries = entries;
             workRelease = cachedReleaseFor(entries, root);
             assertLease();
             writeSync(out, jobLogStart(job));
@@ -1829,6 +1834,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             ...(job.marketVenue ? { marketVenue: job.marketVenue } : {}),
             ...(job.demandId ? { demandId: job.demandId } : {}),
             ...(workRelease ? { workerRelease: workRelease } : {}),
+            ...(workEntries.length ? { workerEntries: workEntries } : {}),
             ...(baseline ? { baseline } : {}),
             ...(brainDispatchedNow.has(accounts[0]!.toLowerCase())
                 ? { brain: true, ...(job.maxRestarts !== undefined ? { finite: true } : {}) }

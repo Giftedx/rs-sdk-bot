@@ -613,6 +613,49 @@ describe('repeat faults', () => {
         expect(fail(NOW + 2_000 + REPEAT_WINDOW_MS).defect).toBeUndefined();
     });
 
+    test('a repeat-fault hold lifts when the release of its worker entries changes', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const entries = ['scripts/aio-quester.ts'];
+        const ctx = (at: number) => ({ now: at, workerRelease: 'rel-a', workerEntries: entries });
+        for (const [i, a] of ['Fatstack', 'Earlyshooter', 'Fingerblastr'].entries()) c.classifyAndApplyRaw(raw(a, TREE, 20_000), ctx(NOW + i));
+        const held = c.quarantinedDefects(NOW + 10);
+        expect(held).toHaveLength(1);
+        expect(held[0]!.workerEntries).toEqual(entries);
+        expect(validateDefectRecord(held[0])).toEqual([]);
+        expect(validateDefectRecord({ ...held[0], workerEntries: [] })).toHaveLength(1);
+        expect(isFleetWideDefect(held[0]!)).toBe(true);
+
+        // The same release, a release that does not resolve, and a lookup that throws keep the hold.
+        expect(c.liftChangedReleaseHolds(() => 'rel-a', NOW + 20)).toEqual([]);
+        expect(c.liftChangedReleaseHolds(() => undefined, NOW + 20)).toEqual([]);
+        expect(c.liftChangedReleaseHolds(() => { throw new Error('missing file'); }, NOW + 20)).toEqual([]);
+        expect(c.quarantinedDefects(NOW + 20)).toHaveLength(1);
+
+        // A changed release lifts the hold at the next plan cycle.
+        const seen: (readonly string[])[] = [];
+        const lifted = c.liftChangedReleaseHolds((e) => { seen.push(e); return 'rel-b'; }, NOW + 30);
+        expect(lifted.map((d) => d.quarantined)).toEqual([false]);
+        expect(seen).toEqual([entries]);
+        expect(c.quarantinedDefects(NOW + 30)).toEqual([]);
+        // The lift is one probe: a change that did not repair the fault fails the same way, and that first run holds
+        // the activity fleet-wide again, bound to the new release, so the same release lifts nothing.
+        const again = c.classifyAndApplyRaw(raw('Billionaire', TREE, 20_000), { now: NOW + 40, workerRelease: 'rel-b', workerEntries: entries }).defect;
+        expect(isFleetWideDefect(again!)).toBe(true);
+        expect(again!.workerRelease).toBe('rel-b');
+        expect(c.liftChangedReleaseHolds(() => 'rel-b', NOW + 50)).toEqual([]);
+        // A run that meets its target is the repair evidence: after it, a lift starts the count from zero.
+        expect(c.liftChangedReleaseHolds(() => 'rel-c', NOW + 60)).toHaveLength(1);
+        c.applyOutcome({ kind: 'target_met', activityId: 'quest:tree', account: 'Billionaire', ticksElapsed: 900, durationMs: 400_000 }, { now: NOW + 70 });
+        expect(c.classifyAndApplyRaw(raw('Billionaire', TREE, 20_000), { now: NOW + 80, workerRelease: 'rel-c', workerEntries: entries }).defect).toBeUndefined();
+
+        // A hold without its entries (saved before this field) keeps its time limit.
+        const old = new OutcomeClassifier({ persist: false });
+        old.classifyAndApplyRaw(raw('Fatstack', TREE, 20_000), { now: NOW, workerRelease: 'rel-a' });
+        old.classifyAndApplyRaw(raw('Fatstack', TREE, 20_000), { now: NOW + 1, workerRelease: 'rel-a' });
+        expect(old.liftChangedReleaseHolds(() => 'rel-b', NOW + 2)).toEqual([]);
+        expect(old.quarantinedDefects(NOW + 2)).toHaveLength(1);
+    });
+
     test('repeat faults survive a classifier reload', () => {
         const dir = mkdtempSync(join(tmpdir(), 'repeat-faults-'));
         const file = join(dir, 'outcome-state.json');

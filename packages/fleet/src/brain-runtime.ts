@@ -18,7 +18,7 @@ import {
     stopFilePaths,
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
-import { isWorkerReleaseHold } from '../../core/src/worker-release';
+import { cachedReleaseFor, isWorkerReleaseHold } from '../../core/src/worker-release';
 import { isClaimHeldResult, isStopResult } from '../../brain/src/outcome-classifier';
 import { parseNoRoute, standsAt } from '../../brain/src/no-route';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
@@ -91,6 +91,9 @@ export interface OperatorCommandApplyResult {
 }
 
 export interface BrainCycleOptions {
+    // The release that a start of these worker entry files would pin (default: cachedReleaseFor in this root). A
+    // repeat-fault hold whose release differs is lifted (OutcomeClassifier.liftChangedReleaseHolds).
+    readonly releaseOf?: (entries: readonly string[]) => string | undefined;
     readonly root?: string;
     readonly now?: number;
     readonly side?: string;
@@ -885,6 +888,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const worldWithOutcomes = classifier.applyToSnapshot(diagnostics.snapshot, now);
     const world = applyAccountOverridesToWorld(worldWithOutcomes, overrides);
 
+    classifier.liftChangedReleaseHolds(opts.releaseOf ?? ((entries) => cachedReleaseFor(entries, root)), now);
     const defects = classifier.quarantinedDefects(now);
     const infraState = combineInfraState(classifier, infraBreaker, now);
     const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root, now);
@@ -1350,6 +1354,7 @@ export function recordWorkerOutcome(opts: {
     readonly now?: number;
     readonly domain?: 'practice' | 'live';
     readonly workerRelease?: string;
+    readonly workerEntries?: readonly string[];
     readonly persist?: boolean;
 }): OutcomeClassificationResult {
     const root = resolve(opts.root ?? repoRoot);
@@ -1362,6 +1367,7 @@ export function recordWorkerOutcome(opts: {
         now: opts.now ?? Date.now(),
         domain: opts.domain ?? 'live',
         ...(opts.workerRelease ? { workerRelease: opts.workerRelease } : {}),
+        ...(opts.workerEntries?.length ? { workerEntries: opts.workerEntries } : {}),
     });
 }
 

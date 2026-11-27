@@ -666,6 +666,7 @@ export class OutcomeClassifier {
         // A repeat fault sets its count from its distinct accounts, not from the worker-defect escalation.
         readonly count?: number;
         readonly ttlMs?: number;
+        readonly workerEntries?: readonly string[];
     }): DefectRecord {
         const key = defectKey(params.activityId, params.faultSignature);
         const existing = this.defects.get(key);
@@ -679,6 +680,7 @@ export class OutcomeClassifier {
         const detail = nonEmpty(params.detail) ?? existing?.detail ?? params.faultSignature;
         const tickRecordPath = nonEmpty(params.tickRecordPath) ?? existing?.tickRecordPath;
         const workerRelease = nonEmpty(params.workerRelease) ?? existing?.workerRelease;
+        const workerEntries = params.workerEntries?.length ? [...params.workerEntries] : existing?.workerEntries;
         const idSlug = params.faultSignature.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'defect';
 
         const next: DefectRecord = {
@@ -692,6 +694,7 @@ export class OutcomeClassifier {
             expiresAt: params.now + (params.ttlMs ?? (params.deathLevels ? Math.max(this.defaultDefectTtlMs, DEATH_CLASS_TTL_MS) : this.defaultDefectTtlMs)),
             quarantined: true,
             ...(workerRelease ? { workerRelease } : {}),
+            ...(workerEntries ? { workerEntries } : {}),
             logPath,
             ...(tickRecordPath ? { tickRecordPath } : {}),
             detail,
@@ -709,7 +712,7 @@ export class OutcomeClassifier {
 
     // Counts a fast run that ended with a REPEAT_KINDS outcome, and returns the defect that the count reaches: the
     // activity for this account at REPEAT_ACCOUNT_RUNS runs, for every account at REPEAT_FLEET_ACCOUNTS accounts.
-    private noteRepeatFault(outcome: RunOutcome, now: number, workerRelease?: string): DefectRecord | undefined {
+    private noteRepeatFault(outcome: RunOutcome, now: number, workerRelease?: string, workerEntries?: readonly string[]): DefectRecord | undefined {
         if (!REPEAT_KINDS.has(outcome.kind) || outcome.durationMs === undefined || outcome.durationMs >= REPEAT_FAST_MS) return undefined;
         // A missing_supply outcome keeps no detail: its summary is the supervisor end ("gave-up after 1 runs"), which
         // names no cause. Its missing item ids name the fault. The inferred coins row with no name says nothing.
@@ -743,7 +746,31 @@ export class OutcomeClassifier {
             // planner.ts FLEET_QUARANTINE_MIN_COUNT (2) holds the activity for every account; 1 holds only its account.
             count: fleet ? 2 : 1,
             ttlMs: REPEAT_DEFECT_TTL_MS,
+            ...(workerEntries?.length ? { workerEntries } : {}),
         });
+    }
+
+    // Lifts each repeat-fault hold whose worker code changed: the release of its entry files (releaseOf, swarm.ts
+    // cachedReleaseFor) is not the release of the runs that failed. A merged fix then runs at the next plan cycle, not
+    // after the 6 h hold. A hold without a release or entries, or entries that do not resolve, keeps its time limit.
+    // The release includes shared runtime files, so a change can be unrelated to the fault. The lift is one probe, as
+    // a held swarm end runs once more after its release changes (#1567): the fault count stays, so the first fast run
+    // that fails the same way on the new release holds the activity again at once, bound to that release. Only a run
+    // that meets its target clears the count.
+    liftChangedReleaseHolds(releaseOf: (entries: readonly string[]) => string | undefined, now = Date.now()): DefectRecord[] {
+        const lifted: DefectRecord[] = [];
+        for (const [key, d] of this.defects) {
+            if (!d.quarantined || !d.faultSignature.startsWith('repeat ') || !d.workerRelease || !d.workerEntries?.length) continue;
+            if (d.expiresAt !== undefined && now >= d.expiresAt) continue;
+            let release: string | undefined;
+            try { release = releaseOf(d.workerEntries); } catch { release = undefined; }
+            if (!release || release === d.workerRelease) continue;
+            const next = { ...d, quarantined: false };
+            this.defects.set(key, next);
+            lifted.push(next);
+        }
+        if (lifted.length) this.saveIfEnabled(now);
+        return lifted;
     }
 
     private buildRateSample(
@@ -788,6 +815,7 @@ export class OutcomeClassifier {
             readonly domain?: 'practice' | 'live';
             readonly accountState?: AccountState;
             readonly workerRelease?: string;
+            readonly workerEntries?: readonly string[];
             readonly skipRateSample?: boolean;
         },
     ): OutcomeClassificationResult {
@@ -814,6 +842,7 @@ export class OutcomeClassifier {
             readonly domain?: 'practice' | 'live';
             readonly accountState?: AccountState;
             readonly workerRelease?: string;
+            readonly workerEntries?: readonly string[];
             readonly skipRateSample?: boolean;
             // The "no route" in the run's failure text and where that search started (no-route.ts parseNoRoute).
             readonly noRoute?: { readonly from: WorkerTile; readonly to: WorkerTile };
@@ -885,7 +914,7 @@ export class OutcomeClassifier {
 
             case 'missing_supply': {
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
-                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease);
+                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease, ctx?.workerEntries);
                 this.saveIfEnabled(now);
                 return {
                     outcome,
@@ -921,7 +950,7 @@ export class OutcomeClassifier {
                     cooldowns: overlay.cooldowns,
                 };
                 this.accountOverlays.set(outcome.account.toLowerCase(), nextOverlay);
-                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease);
+                const repeat = this.noteRepeatFault(outcome, now, ctx?.workerRelease, ctx?.workerEntries);
                 this.saveIfEnabled(now);
                 return {
                     outcome,
