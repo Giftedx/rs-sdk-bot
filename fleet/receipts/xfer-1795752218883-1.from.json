@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795752218883-1",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chaos rune",
+ "requested": 220,
+ "claim": "b0b57562-dbcf-4e8d-868a-618c100e1763",
+ "count": 0,
+ "ok": false,
+ "at": 1795752326791,
+ "detail": "trade claimed"
+}
