@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819448068-knightrider-masterbaiter-69526bdff0b39b88",
+ "account": "KnightRider",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "a402d241-8acd-4149-876e-7da3918511a7",
+ "count": 0,
+ "ok": false,
+ "at": 1795819868611,
+ "detail": "trade claimed"
+}
