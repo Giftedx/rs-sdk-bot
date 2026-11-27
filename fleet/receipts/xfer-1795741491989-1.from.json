@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741491989-1",
+ "account": "BoneToPick",
+ "partner": "Bigpackage",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "01f8f775-49c3-48c0-8b2c-c0d6d0a90e9c",
+ "count": 0,
+ "ok": false,
+ "at": 1795741745169,
+ "detail": "trade claimed"
+}
