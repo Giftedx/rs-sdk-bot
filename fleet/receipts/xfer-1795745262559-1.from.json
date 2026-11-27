@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795745262559-1",
  "account": "Fatstack",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "c502f8ec-fb19-49e1-96a9-24d9b107283a",
- "count": 0,
- "ok": false,
- "at": 1795745334381,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795745429125,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795745340358
+ },
+ "logout": {
+  "attemptId": "1795745334390-0000024436-0000000001",
+  "at": 1795745429113,
+  "sha256": "ca46d073b5705ced6b0af9202081b8525dd30fefe3b6c387105b02547654a1a3"
+ },
+ "screen": true
 }

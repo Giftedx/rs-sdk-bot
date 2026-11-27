@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795745292010-1",
+ "account": "Billionaire",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "5430186c-da56-4d30-b1f4-1e347e0fa7c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795745426625,
+ "detail": "trade claimed"
+}

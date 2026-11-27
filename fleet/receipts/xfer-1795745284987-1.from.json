@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795745284987-1",
  "account": "Kiltlifter",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "12c493cd-763b-4a45-abe1-d5e56da380f8",
- "count": 0,
- "ok": false,
- "at": 1795745344306,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795745421092,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795745405145
+ },
+ "logout": {
+  "attemptId": "1795745344314-0000004820-0000000001",
+  "at": 1795745421083,
+  "sha256": "7888dc8fdc407ecdd75e35c88038b62587b8a81168573e89334149d27cc6a2e5"
+ },
+ "screen": true
 }
