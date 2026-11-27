@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795776260157-1",
  "account": "MeatNTwoVeg",
  "partner": "TheFullMonty",
@@ -10,15 +10,37 @@
  "item": "Nature rune",
  "requested": 67,
  "claim": "57a84c8e-b53e-4123-9b16-34656a3c3167",
- "count": 0,
- "ok": false,
- "at": 1795776750411,
- "detail": "trade claimed",
+ "count": 67,
+ "ok": true,
+ "at": 1795776765683,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Fire rune",
    "requested": 495,
-   "count": 0
+   "count": 495,
+   "inventory": {
+    "before": 0,
+    "after": 495
+   },
+   "bank": {
+    "count": 495,
+    "at": 1795776764861
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 132,
+  "after": 199
+ },
+ "bank": {
+  "count": 67,
+  "at": 1795776764492
+ },
+ "logout": {
+  "attemptId": "1795776750421-0000030356-0000000001",
+  "at": 1795776765617,
+  "sha256": "0e62c275f7c72db1f10801e9bd7c42c5e54032828f00238ac7a1fa9a0aa38954"
+ },
+ "screen": true
 }
