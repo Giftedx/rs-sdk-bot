@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795819226362-1",
+ "account": "ChaosInPants",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 14,
+ "claim": "1d46c1f9-35ee-40cf-921f-b8af8e028b3f",
+ "count": 14,
+ "ok": true,
+ "at": 1795819368749,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 14
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795819368000
+ },
+ "logout": {
+  "attemptId": "1795819355694-0000028948-0000000001",
+  "at": 1795819368740,
+  "sha256": "e622755cc41fe1d8b468889f95df978c1b2d775c7f9c2964a2913b00f47c8dd2"
+ },
+ "screen": true
+}
