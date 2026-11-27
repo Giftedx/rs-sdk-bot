@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795793153393-1",
  "account": "Fingerblastr",
  "partner": "BoneToPick",
@@ -12,6 +12,16 @@
  "claim": "7494b9cd-8b1e-4c76-aa45-1f02c9610764",
  "count": 0,
  "ok": false,
- "at": 1795793609395,
- "detail": "trade claimed"
+ "at": 1795793753177,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 12,
+  "at": 1795793616433
+ },
+ "logout": {
+  "attemptId": "1795793609404-0000029180-0000000001",
+  "at": 1795793753162,
+  "sha256": "1090459a4a727407ddde9359424cde66accb0caf7c645d559b6febdc1e8130d3"
+ },
+ "screen": false
 }

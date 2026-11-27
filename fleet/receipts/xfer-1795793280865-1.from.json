@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795793280865-1",
  "account": "Fingersmith",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Steel pickaxe",
  "requested": 1,
  "claim": "ca1198e6-11d2-48af-8d68-e3ac08e0f330",
- "count": 0,
- "ok": false,
- "at": 1795793628576,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795793760792,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795793637236
+ },
+ "logout": {
+  "attemptId": "1795793628590-0000019276-0000000001",
+  "at": 1795793760768,
+  "sha256": "ae7b6298872552b650be6b8234733b55fb444dee85c1b82463cd8b90b5cb14cd"
+ },
+ "screen": true
 }

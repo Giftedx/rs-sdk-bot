@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793280865-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel pickaxe",
+ "requested": 1,
+ "claim": "75e9c8fb-834d-4833-9752-1f8e714204a6",
+ "count": 1,
+ "ok": true,
+ "at": 1795793762746,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795793761637
+ },
+ "logout": {
+  "attemptId": "1795793748632-0000008024-0000000001",
+  "at": 1795793762433,
+  "sha256": "e7b60b8d47fd2a40b36c7aa82907b3d190ca6b028108f25a7c6ac513b3ecfcf7"
+ },
+ "screen": true
+}
