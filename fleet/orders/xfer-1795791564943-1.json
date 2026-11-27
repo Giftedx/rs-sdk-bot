@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795791564943-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "MeatNTwoVeg",
+  "item": "Nature rune",
+  "count": 99,
+  "itemId": 561,
+  "start": 1795791564943,
+  "end": 1795792464943,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

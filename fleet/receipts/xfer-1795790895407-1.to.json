@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790895407-1",
  "account": "TossTheCaber",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Bronze bar",
  "requested": 28,
  "claim": "269cf2bb-ed26-468f-a38a-dc8505b118c2",
- "count": 0,
- "ok": false,
- "at": 1795791500671,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795791612935,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795791612158
+ },
+ "logout": {
+  "attemptId": "1795791500681-0000028004-0000000001",
+  "at": 1795791612922,
+  "sha256": "683fe441403cffde7879b2378e05aeb8d671b01bade96e1c4a6f5051c0684b1b"
+ },
+ "screen": true
 }

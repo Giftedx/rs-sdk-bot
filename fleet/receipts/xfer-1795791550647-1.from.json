@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795791550647-1",
+ "account": "Shaftmaker",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "df33ad3f-1352-42aa-8501-a090d2a6b8a9",
+ "count": 0,
+ "ok": false,
+ "at": 1795791621944,
+ "detail": "trade claimed"
+}

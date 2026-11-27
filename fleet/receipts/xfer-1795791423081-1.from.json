@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795791423081-1",
+ "account": "Shaftsinker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "34205249-1738-41f5-a08e-15fc10cf1ece",
+ "count": 2,
+ "ok": true,
+ "at": 1795791669706,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795791616958
+ },
+ "logout": {
+  "attemptId": "1795791610826-0000025440-0000000001",
+  "at": 1795791669691,
+  "sha256": "370e44d882625c3e1b77ce1136859ab1469aad4011f1e63a499511a89b02d0a7"
+ },
+ "screen": true
+}
