@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795789484744-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "MeatNTwoVeg",
+  "item": "Rune pickaxe",
+  "count": 1,
+  "itemId": 1275,
+  "start": 1795789484744,
+  "end": 1795790384744,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
