@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795806290545,
+ "at": 1795806306484,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -85,22 +85,6 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -150,25 +134,20 @@
    "role": "army"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "druid"
+    "sweep",
+    "grandtree"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
   },
   {
    "account": "BoneToPick",
@@ -196,51 +175,23 @@
    "role": "auto"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army",
-   "resources": [
-    "khazard-troopers"
-   ]
-  },
-  {
    "account": "Spitroaster",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "thieving",
+    "knights"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "81",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "81"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "681"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "auto"
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Woodenstaff",
@@ -309,7 +260,41 @@
    ]
   },
   {
+   "account": "YewFirst",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Nockitoff",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "YewGotWood",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -362,50 +347,28 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:avantoe"
-   ],
-   "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:261",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:261",
-   "role": "army"
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "79",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "92",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "FLOAT": "20400",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "79"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "92"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:44",
    "role": "auto"
   },
   {
@@ -424,38 +387,45 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
-    "BATCH_UNITS": "28"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
+   "goal": "goal:pk_army:Pocketpython",
    "role": "army",
    "resources": [
-    "draynor-willows"
+    "khazard-troopers"
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "crafting",
-    "glass"
+    "druid"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
+    "DEMAND_ID": "campaign:castmyload:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "goal": "campaign:castmyload:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   }
  ],
  "army": [
@@ -467,16 +437,17 @@
   "mmsmk1232",
   "ballspinner",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fingerblastr",
   "hocuspokeus",
   "knightrider",
   "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
