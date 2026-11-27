@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740240906,
+ "at": 1795740253133,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,17 +60,23 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+    "smithing",
+    "smelt",
+    "1500",
+    "steel"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BAR_TYPE": "steel",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "6"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
