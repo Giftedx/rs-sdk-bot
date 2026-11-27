@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795738355175-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Unsheathed",
+  "item": "Vial of water",
+  "count": 6,
+  "itemId": 227,
+  "start": 1795738355175,
+  "end": 1795739255175,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
