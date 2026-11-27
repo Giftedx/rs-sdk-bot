@@ -111,6 +111,7 @@ function makeAccount(over: Partial<WorkerAccountView> = {}): WorkerAccountView {
                 567: 100, // Unpowered orb
                 1436: 100, // Rune essence
                 227: 100, // Vial of water
+                199: 50, // Grimy guam leaf
                 2136: 1, // Raw bear meat
                 1929: 20, // Bucket of water
                 1933: 20, // Pot of flour

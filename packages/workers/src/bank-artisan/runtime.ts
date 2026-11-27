@@ -26,13 +26,17 @@ export const COW_NORTH_BANK = { x: 2619, z: 3332 };
 export const atNorthBank = (p: { worldX: number; worldZ: number; level: number } | null | undefined) =>
     !!p && p.level === 0 && Math.max(Math.abs(p.worldX - COW_NORTH_BANK.x), Math.abs(p.worldZ - COW_NORTH_BANK.z)) <= 3;
 
+// A tile below the surface (z 6400 and up on level 0: dungeons and caves) ranks the banks from the surface tile
+// above it, where its ladder or exit comes out.
+export const UNDERGROUND_Z = 6400;
 export function nearestBank(at: { x: number; z: number; level: number }): BankSpot {
     let best: BankSpot | undefined;
     let bestDist = Infinity;
+    const z = at.level === 0 && at.z >= UNDERGROUND_Z ? at.z - UNDERGROUND_Z : at.z;
     for (let i = 0; i < BANKS.length; i++) {
         const b = BANKS[i]!;
         if (b.level !== at.level) continue;
-        const d = Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z));
+        const d = Math.max(Math.abs(b.x - at.x), Math.abs(b.z - z));
         if (d < bestDist) {
             bestDist = d;
             best = b;

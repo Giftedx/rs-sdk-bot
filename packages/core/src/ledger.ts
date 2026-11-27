@@ -270,6 +270,18 @@ const tile = (at: string): [number, number] | null => {
     const x = Number(at.slice(0, comma)), z = Number(at.slice(comma + 1));
     return Number.isInteger(x) && Number.isInteger(z) ? [x, z] : null;
 };
+// The stall window of a bank production run, from its expected rate in units a tick. Each unit or bank trip of such a
+// run changes the pack, so a run that changes nothing for STALL_PACKS packs of expected work is a loop. The window is
+// at least STALL_FLOOR ticks (a login, a bank walk under FAR_WALK tiles and a bank visit fit in it) and at most the
+// session default of 900 ticks. The stop check runs every 50 ticks, so a stalled run ends within window + 50 ticks.
+export const STALL_PACKS = 2;
+export const STALL_FLOOR = 150;
+export const STALL_CEILING = 900;
+export function stallTicksForRate(unitsPerTick: number | undefined): number | undefined {
+    if (unitsPerTick === undefined || !Number.isFinite(unitsPerTick) || unitsPerTick <= 0) return undefined;
+    return Math.min(STALL_CEILING, Math.max(STALL_FLOOR, Math.ceil((STALL_PACKS * 28) / unitsPerTick)));
+}
+
 export function stalled(rows: readonly TickRow[], window: number): boolean {
     if (window <= 0 || rows.length < window) return false;
     const start = tile(rows[rows.length - window]!.at);

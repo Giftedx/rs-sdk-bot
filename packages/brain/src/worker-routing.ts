@@ -12,6 +12,7 @@ import {
 } from './contracts';
 import { GE_LIMIT_BUFFER, SHOP_BUY_CAP_TICKS, shopRestockTicks } from './acquire';
 import { loadItemsMap } from './preflight';
+import { stallTicksForRate } from '../../core/src/ledger';
 
 export interface WorkerRoutingContext {
     readonly activities?: readonly ActivityDefinition[];
@@ -144,7 +145,7 @@ function explicitStandaloneScript(cfg: Record<string, unknown>): string | undefi
 }
 
 export function resolveActivityWorkerRoute(
-    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'> & Partial<Pick<ActivityDefinition, 'outputs'>>,
+    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'> & Partial<Pick<ActivityDefinition, 'outputs' | 'baselineRate'>>,
     extraEnv: Readonly<Record<string, string>> = {},
 ): Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'> {
     const cfg = (activity.config ?? {}) as Record<string, unknown>;
@@ -261,6 +262,12 @@ export function resolveActivityWorkerRoute(
                 }
             }
 
+            // A bank production run stops once it changes nothing for the window of its expected rate
+            // (ledger.ts stallTicksForRate), not after the 900-tick session default.
+            if (activity.family === 'bank-artisan' && env.STALL_TICKS === undefined) {
+                const stall = stallTicksForRate(activity.baselineRate?.unitsPerTick);
+                if (stall !== undefined) env.STALL_TICKS = String(stall);
+            }
             const routeKey = rawMethod ? `${skill}:${rawMethod}` : skill;
             return {
                 family: activity.family,

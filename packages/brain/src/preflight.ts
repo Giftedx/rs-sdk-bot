@@ -31,6 +31,7 @@ import {
     type WorkerWorldView,
 } from '../../workers/src/contracts';
 import { questSweepCoins, questSweepNeeds } from '../../workers/src/quest/bank-needs';
+import { BREW_STOCK_IDS, brewShortfall } from '../../workers/src/bank-artisan/herblore-recipes';
 import { loadTravel } from '../../core/src/travel';
 import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
@@ -1455,6 +1456,8 @@ export function evaluatePreflight(
 }
 
 interface StaticActivityPreflight {
+    // The recipe key of a herblore brew run (herblore:potions): the run needs herbs and a secondary for one recipe.
+    readonly brewRecipe?: string;
     readonly protectedAllowed: boolean;
     readonly skillRequirements: Readonly<Record<string, number>>;
     readonly trainingSkills: readonly string[];
@@ -1550,9 +1553,9 @@ function extractStaticActivityPreflight(activity: {
     if (Array.isArray(cfg.requiredItems)) {
         for (const r of cfg.requiredItems as unknown[]) {
             if (!r || typeof r !== 'object') continue;
-            const { itemId, count } = r as { itemId?: unknown; count?: unknown };
+            const { itemId, count, includeBank } = r as { itemId?: unknown; count?: unknown; includeBank?: unknown };
             if (Number.isSafeInteger(itemId) && (itemId as number) >= 0 && Number.isSafeInteger(count) && (count as number) >= 1) {
-                staticRequiredItems.push({ itemId: itemId as number, count: count as number });
+                staticRequiredItems.push({ itemId: itemId as number, count: count as number, ...(typeof includeBank === 'boolean' ? { includeBank } : {}) });
             }
         }
     }
@@ -1566,7 +1569,13 @@ function extractStaticActivityPreflight(activity: {
         ...(activity.skill ? [activity.skill] : []),
         ...(activity.skills ?? []),
     ];
+    const brewArgs = Array.isArray(cfg.defaultArgs) ? cfg.defaultArgs : Array.isArray(cfg.args) ? cfg.args : [];
+    const brewEnv = (cfg.defaultEnv && typeof cfg.defaultEnv === 'object' ? cfg.defaultEnv : {}) as Record<string, unknown>;
+    const brewRecipe = cfg.skill === 'herblore' && cfg.method === 'potions'
+        ? String(brewArgs[1] ?? brewEnv.RECIPE ?? 'auto').toLowerCase()
+        : undefined;
     const spec: StaticActivityPreflight = {
+        ...(brewRecipe ? { brewRecipe } : {}),
         protectedAllowed: activity.protectedAllowed ?? false,
         skillRequirements,
         trainingSkills,
@@ -1626,6 +1635,16 @@ export function activityPreflightFromConfig(
             mutableItems.push({ itemId: io.itemId, count });
         }
         requiredItems = mutableItems;
+    }
+    // A brew run refuses at its first bank visit without herbs and a secondary for one recipe at the account's
+    // level (workers/src/bank-artisan/herblore-recipes.ts), so the preflight requires the item that it lacks.
+    if (base.brewRecipe) {
+        const stock = Object.fromEntries(BREW_STOCK_IDS.map((id) => [id, reserveAdjustedStock(
+            accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }),
+            cachedEffectiveItemReserve(acct, world, id, opts?._acctCache),
+        )]));
+        const short = brewShortfall(cachedAccountSkillLevel(acct, 'Herblore', opts?._acctCache), stock, base.brewRecipe);
+        if (short) requiredItems = [...requiredItems, { itemId: short.itemId, count: 1 }];
     }
     let coinsRequired = base.coinsRequired;
     if (base.questSweep) {
