@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795744332003-1",
+ "account": "Swordinhand",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "dfa47514-b6d1-4070-a0d2-7a04c48fe0b1",
+ "count": 1,
+ "ok": true,
+ "at": 1795744493235,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795744480385
+ },
+ "logout": {
+  "attemptId": "1795744471802-0000022308-0000000001",
+  "at": 1795744493149,
+  "sha256": "0c1d424e66662d4518eb24b094f703dfecd9025e6deee2782bfb9ce627553873"
+ },
+ "screen": true
+}

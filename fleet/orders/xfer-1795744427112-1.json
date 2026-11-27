@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795744427112-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "SporranDip",
+  "item": "Guam leaf",
+  "count": 1,
+  "itemId": 249,
+  "extra": [
+    {
+      "item": "Vial of water",
+      "count": 1,
+      "itemId": 227
+    }
+  ],
+  "start": 1795744427112,
+  "end": 1795745327112,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
