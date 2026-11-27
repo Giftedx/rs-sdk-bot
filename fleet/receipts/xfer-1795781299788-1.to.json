@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781299788-1",
+ "account": "KnightRider",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 4,
+ "claim": "c472b9de-8cfe-4fef-ad92-a0e1cdb69f4f",
+ "count": 4,
+ "ok": true,
+ "at": 1795781924569,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795781923827
+ },
+ "logout": {
+  "attemptId": "1795781904968-0000005348-0000000001",
+  "at": 1795781924557,
+  "sha256": "e2f881ef87c42f5fb1638284103346e6dc6e15c0e173e67194a6e87c44f15ac9"
+ },
+ "screen": true
+}

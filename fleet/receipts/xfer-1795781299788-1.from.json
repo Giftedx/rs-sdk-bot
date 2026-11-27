@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795781299788-1",
  "account": "Billionaire",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 4,
  "claim": "f2ec1b88-a1f6-45b7-86f6-35b87e1a0b94",
- "count": 0,
- "ok": false,
- "at": 1795781887220,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795781922991,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795781910995
+ },
+ "logout": {
+  "attemptId": "1795781887229-0000007388-0000000001",
+  "at": 1795781922980,
+  "sha256": "f897b7f81540415d8031c6431cd982ecdcf855b89622c8ecb9c964c55d5b2ad9"
+ },
+ "screen": true
 }

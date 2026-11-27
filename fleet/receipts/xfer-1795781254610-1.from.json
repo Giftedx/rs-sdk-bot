@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795781254610-1",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 352,
+ "claim": "a13753b8-de6b-4fae-b41a-8b3246d33a53",
+ "count": 352,
+ "ok": true,
+ "at": 1795781913758,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 352,
+  "after": 0
+ },
+ "bank": {
+  "count": 352,
+  "at": 1795781905431
+ },
+ "logout": {
+  "attemptId": "1795781899450-0000011344-0000000001",
+  "at": 1795781913745,
+  "sha256": "deea80b1d8439752f9de33fa8800bd517aea7344d7dfe59346bce8f8bb3984e7"
+ },
+ "screen": true
+}
