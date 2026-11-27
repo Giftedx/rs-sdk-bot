@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777927321,
+ "at": 1795778014038,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,57 +60,22 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "imp"
+    "mining",
+    "essence"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "681"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
+   "goal": "campaign:haggis:item:1436",
    "role": "army",
    "resources": [
-    "ardougne-imps"
+    "essence-mine"
    ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "imp"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "army",
-   "resources": [
-    "ardougne-imps"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
   },
   {
    "account": "YewFirst",
@@ -195,18 +160,40 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "284",
+    "MAX_ITEMS": "301",
     "COIN_RESERVE": "1000",
-    "FLOAT": "115600",
+    "FLOAT": "122400",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "284"
+    "BATCH_UNITS": "301"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-13-o0-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "13",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -238,44 +225,25 @@
    "account": "Swordswallow",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-2-o0-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "1219",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "2"
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "1219"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "army"
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:kwuarm"
-   ],
-   "env": {
-    "MAX_MAKE": "6",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:263",
-    "BATCH_UNITS": "6",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "campaign:haggis:item:557",
    "role": "army"
   },
   {
@@ -283,7 +251,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magicshop",
     "3000"
    ],
    "env": {
@@ -304,59 +272,32 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "herblore",
-    "potions"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "67",
-    "STALL_TICKS": "200"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2481",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "herblore",
-    "potions"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "70",
-    "STALL_TICKS": "200"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:267",
-   "role": "army"
-  },
-  {
    "account": "MineYourBiz",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "imp"
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1472",
-    "BATCH_UNITS": "13"
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "237",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "237"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1472",
-   "role": "army",
-   "resources": [
-    "ardougne-imps"
-   ]
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
   },
   {
-   "account": "Swordinhand",
+   "account": "TheFullMonty",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "herblore",
@@ -391,20 +332,79 @@
    "account": "mmsmk1232",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "essence"
+    "herblore",
+    "potions"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "528"
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "65",
+    "STALL_TICKS": "200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "goal:supply_chain:265",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=65 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:265 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:cadantine"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:265",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "92",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "92"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "199",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
   }
  ],
  "army": [
@@ -418,6 +418,8 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
+  "fingersmith",
   "kiltlifter",
   "knightrider",
   "mmtha0205",
@@ -428,8 +430,9 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
-  "sausagefest"
+  "sausagefest",
+  "sporrandip",
+  "swordinhand"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
