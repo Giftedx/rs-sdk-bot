@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784679943-1",
+ "account": "Hocuspokeus",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 5,
+ "claim": "b4d1433e-e2a5-4579-87f2-3bb900815521",
+ "count": 0,
+ "ok": false,
+ "at": 1795785033137,
+ "detail": "trade claimed"
+}
