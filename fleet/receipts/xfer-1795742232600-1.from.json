@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795742232600-1",
  "account": "Wandwaver",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Bronze bar",
  "requested": 19,
  "claim": "6021c01b-098a-415c-aee8-b17034de048b",
- "count": 0,
- "ok": false,
- "at": 1795742551615,
- "detail": "trade claimed"
+ "count": 19,
+ "ok": true,
+ "at": 1795742705687,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 19,
+  "after": 0
+ },
+ "bank": {
+  "count": 19,
+  "at": 1795742686483
+ },
+ "logout": {
+  "attemptId": "1795742551968-0000030456-0000000001",
+  "at": 1795742705675,
+  "sha256": "be24893a5246e2bf8d0c3e357562c044c12770793db204124f29c0635de8baa3"
+ },
+ "screen": true
 }

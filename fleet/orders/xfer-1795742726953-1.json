@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795742726953-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Hocuspokeus",
+  "item": "Sapphire necklace",
+  "count": 1,
+  "itemId": 1656,
+  "start": 1795742726953,
+  "end": 1795743626953,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
