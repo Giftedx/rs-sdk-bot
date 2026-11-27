@@ -575,6 +575,34 @@ describe('repeat faults', () => {
         expect(defectBlocksAccount(fleet!, 'Billionaire', NOW + 6_000)).toBe(true);
     });
 
+    test('the missing item ids name the fault, not the supervisor end', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        // Each run has the same end reason; two different missing items are two faults.
+        c.classifyAndApplyRaw(raw('Fatstack', 'RESULT fail quest-sweep tree missing 2434:2', 20_000), { now: NOW });
+        expect(c.classifyAndApplyRaw(raw('Fatstack', 'RESULT fail quest-sweep tree missing 1925:1', 20_000), { now: NOW + 1_000 }).defect).toBeUndefined();
+        c.classifyAndApplyRaw(raw('Earlyshooter', 'RESULT fail quest-sweep tree missing 1925:1', 20_000), { now: NOW + 2_000 });
+        expect(c.classifyAndApplyRaw(raw('Fingerblastr', 'RESULT fail quest-sweep tree missing 2434:2', 20_000), { now: NOW + 3_000 }).defect).toBeUndefined();
+        // A count change of the same item is the same fault.
+        const same = c.classifyAndApplyRaw(raw('Fatstack', 'RESULT fail quest-sweep tree missing 2434:3', 20_000), { now: NOW + 4_000 }).defect;
+        expect(same?.faultSignature).toBe('repeat missing_supply: missing 2434 [fatstack]');
+        expect(same?.detail).toContain('gave-up after 1 runs: missing 2434');
+    });
+
+    test('two accounts that each fail twice hold the activity only for themselves', () => {
+        const c = new OutcomeClassifier({ persist: false });
+        const fail = (account: string, at: number) => c.classifyAndApplyRaw(raw(account, TREE, 20_000), { now: at }).defect;
+        fail('Fatstack', NOW);
+        const a = fail('Fatstack', NOW + 1_000)!;
+        fail('Earlyshooter', NOW + 2_000);
+        const b = fail('Earlyshooter', NOW + 3_000)!;
+        for (const d of [a, b]) expect(isFleetWideDefect(d)).toBe(false);
+        const held = c.quarantinedDefects(NOW + 4_000);
+        expect(held.some(d => defectBlocksAccount(d, 'Fatstack', NOW + 4_000))).toBe(true);
+        expect(held.some(d => defectBlocksAccount(d, 'Earlyshooter', NOW + 4_000))).toBe(true);
+        expect(held.some(d => defectBlocksAccount(d, 'Billionaire', NOW + 4_000))).toBe(false);
+        expect(isFleetWideDefect(fail('Fingerblastr', NOW + 5_000)!)).toBe(true);
+    });
+
     test('a run that meets its target ends the count, and old faults leave the window', () => {
         const c = new OutcomeClassifier({ persist: false });
         const arena = 'RESULT fail quest-sweep arena missing 2434:3';

@@ -633,8 +633,8 @@ export class OutcomeClassifier {
         readonly logPath?: string;
         readonly tickRecordPath?: string;
         readonly detail?: string;
-        // A repeat fault seen on REPEAT_FLEET_ACCOUNTS accounts holds the activity fleet-wide at once.
-        readonly minCount?: number;
+        // A repeat fault sets its count from its distinct accounts, not from the worker-defect escalation.
+        readonly count?: number;
         readonly ttlMs?: number;
     }): DefectRecord {
         const key = defectKey(params.activityId, params.faultSignature);
@@ -665,7 +665,7 @@ export class OutcomeClassifier {
             logPath,
             ...(tickRecordPath ? { tickRecordPath } : {}),
             detail,
-            count: Math.max(params.minCount ?? 1, (holding ? existing?.count ?? 0 : 0) + 1),
+            count: params.count ?? (holding ? existing?.count ?? 0 : 0) + 1,
         };
 
         const errors = validateDefectRecord(next);
@@ -680,26 +680,37 @@ export class OutcomeClassifier {
     // activity for this account at REPEAT_ACCOUNT_RUNS runs, for every account at REPEAT_FLEET_ACCOUNTS accounts.
     private noteRepeatFault(outcome: RunOutcome, now: number, workerRelease?: string): DefectRecord | undefined {
         if (!REPEAT_KINDS.has(outcome.kind) || outcome.durationMs === undefined || outcome.durationMs >= REPEAT_FAST_MS) return undefined;
-        const text = ('detail' in outcome ? outcome.detail : undefined) ?? outcome.summary;
-        if (!nonEmpty(text) || isGateHeldResult(text!)) return undefined;
-        const faultSignature = `repeat ${outcome.kind}: ${normalizeFaultSignature(text!)}`;
+        // A missing_supply outcome keeps no detail: its summary is the supervisor end ("gave-up after 1 runs"), which
+        // names no cause. Its missing item ids name the fault. The inferred coins row with no name says nothing.
+        let fault: string | undefined;
+        if (outcome.kind === 'missing_supply') {
+            const ids = [...new Set(outcome.missing.filter(m => !(m.itemId === 995 && m.itemName === undefined)).map(m => m.itemId))].sort((a, b) => a - b);
+            fault = ids.length ? `missing ${ids.join(',')}` : undefined;
+        } else if (outcome.kind === 'location_stranded' && nonEmpty(outcome.detail) && !isGateHeldResult(outcome.detail!)) {
+            fault = normalizeFaultSignature(outcome.detail!);
+        }
+        if (!fault) return undefined;
+        const faultSignature = `repeat ${outcome.kind}: ${fault}`;
         const key = defectKey(outcome.activityId, faultSignature);
         const faults = [...(this.repeatFaults.get(key) ?? []).filter(f => now - f.at < REPEAT_WINDOW_MS), { account: outcome.account, at: now }];
         this.repeatFaults.set(key, faults);
         const lower = outcome.account.toLowerCase();
         const own = faults.filter(f => f.account.toLowerCase() === lower).length;
         const accounts = new Set(faults.map(f => f.account.toLowerCase())).size;
-        if (own < REPEAT_ACCOUNT_RUNS && accounts < REPEAT_FLEET_ACCOUNTS) return undefined;
+        const fleet = accounts >= REPEAT_FLEET_ACCOUNTS;
+        if (own < REPEAT_ACCOUNT_RUNS && !fleet) return undefined;
+        // The distinct accounts set the scope. An account hold is its own record (its account in the signature), so a
+        // second account's hold neither raises the count of the first to fleet-wide nor replaces its account.
         return this.upsertDefect({
             activityId: outcome.activityId,
-            faultSignature,
+            faultSignature: fleet ? faultSignature : `${faultSignature} [${lower}]`,
             outcomeKind: 'worker_defect',
             account: outcome.account,
             now,
             workerRelease,
-            detail: `${text} (${faults.length} fast runs, ${accounts} accounts in ${REPEAT_WINDOW_MS / 3_600_000} h)`,
-            // planner.ts FLEET_QUARANTINE_MIN_COUNT: the count that holds the activity for every account.
-            ...(accounts >= REPEAT_FLEET_ACCOUNTS ? { minCount: 2 } : {}),
+            detail: `${outcome.summary ?? outcome.kind}: ${fault} (${faults.length} fast runs, ${accounts} accounts in ${REPEAT_WINDOW_MS / 3_600_000} h)`,
+            // planner.ts FLEET_QUARANTINE_MIN_COUNT (2) holds the activity for every account; 1 holds only its account.
+            count: fleet ? 2 : 1,
             ttlMs: REPEAT_DEFECT_TTL_MS,
         });
     }
