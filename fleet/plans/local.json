@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795751651491,
+ "at": 1795751731057,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,22 +60,6 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -205,6 +189,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
