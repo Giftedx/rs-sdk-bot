@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795795604522,
+ "at": 1795795620061,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -108,25 +108,6 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -205,22 +186,38 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "druid"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:563",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:563",
+   "goal": "campaign:haggis:item:440",
    "role": "army",
    "resources": [
-    "chaos-druids"
+    "varrock-se-mine"
    ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "928"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   }
  ],
  "army": [
