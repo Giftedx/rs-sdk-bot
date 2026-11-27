@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748085234,
+ "at": 1795748142226,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,189 +59,18 @@
    "role": "pvp"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "desertrescue"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:desertrescue",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "auto"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:lochnessrod:item:314",
-    "BATCH_UNITS": "1460"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:lochnessrod:item:314",
-   "role": "army"
-  },
-  {
-   "account": "MeatNTwoVeg",
+   "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:385 BATCH_UNITS=26 -- fishing shark"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "auto"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "magearena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
-   ],
-   "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
+   "goal": "campaign:fullblooded:item:385",
    "role": "auto"
   }
  ],
@@ -262,8 +91,11 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
+  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpool",
@@ -273,7 +105,9 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {

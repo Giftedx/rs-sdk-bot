@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795748092240-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "SporranBulge",
+  "item": "Chocolate bar",
+  "count": 5,
+  "itemId": 1973,
+  "start": 1795748092240,
+  "end": 1795748992240,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

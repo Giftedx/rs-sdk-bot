@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795747838371-2",
+ "account": "Swordinhand",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "89212a8a-703c-4f1e-bf77-bdf0d6b20884",
+ "count": 1,
+ "ok": true,
+ "at": 1795748096987,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795748096252
+ },
+ "logout": {
+  "attemptId": "1795748086233-0000001708-0000000001",
+  "at": 1795748096972,
+  "sha256": "ff0dc4a1d2ecc1bb54c114694c616417b2747f0eecb5b168f8916f8b41ee681a"
+ },
+ "screen": true
+}

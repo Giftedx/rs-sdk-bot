@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795747838371-2",
  "account": "OreElse",
  "partner": "Swordinhand",
@@ -10,8 +10,18 @@
  "item": "Sapphire necklace",
  "requested": 1,
  "claim": "349bbd82-c1e3-48de-815a-f54a65986c5e",
- "count": 0,
- "ok": false,
- "at": 1795747927814,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795748095437,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795747927822-0000004804-0000000001",
+  "at": 1795748095380,
+  "sha256": "51e8c28e9a8785b3640a2899b880b75800bdd20fcf7de81d4a8a29689b04cfdf"
+ },
+ "screen": true
 }
