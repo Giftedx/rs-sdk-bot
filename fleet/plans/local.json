@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795797391484,
+ "at": 1795797414350,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,43 +84,6 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2040 TARGET_COUNT=204 PRODUCT_TARGET=204 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=204 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -131,18 +94,33 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "73",
+    "MAX_ITEMS": "78",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "73"
+    "BATCH_UNITS": "78"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:tarromin",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_tarromin_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
    "role": "army"
   },
   {
@@ -161,25 +139,6 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1432"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
    "account": "YewGotWood",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -188,7 +147,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1432"
+    "BATCH_UNITS": "1422"
    },
    "enabled": true,
    "repeat": false,
@@ -197,6 +156,21 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "loot-trip"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "Unsheathed",
@@ -221,31 +195,6 @@
    "role": "army"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "5",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -267,25 +216,29 @@
    ]
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
+   "account": "BoneToPick",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_necklace",
-    "-",
-    "1",
-    "1200"
+    "shop-buy",
+    "gemshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:grindmyherb:item:3853",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "224"
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1623",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:3853",
-   "role": "army"
+   "goal": "campaign:haggis:item:1623",
+   "role": "auto"
   }
  ],
  "army": [
@@ -305,6 +258,7 @@
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "oreelse",
@@ -313,6 +267,7 @@
   "pocketrocket",
   "sausagefest",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"
