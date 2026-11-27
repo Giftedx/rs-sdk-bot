@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795753039500,
+ "at": 1795753051355,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,34 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "biohazard"
-   ],
-   "env": {
-    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -141,21 +113,6 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-59-o0-p61 ITEM_ID=1436 QUANTITY=59 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=59 -- magic earth-production craft 2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto"
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -187,6 +144,7 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
