@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795771612938-2",
  "account": "YewFirst",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 1,
  "claim": "02f93ef9-c214-4727-acff-7dcf386dfc62",
- "count": 0,
- "ok": false,
- "at": 1795772008355,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772033840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772018668
+ },
+ "logout": {
+  "attemptId": "1795772008365-0000003096-0000000001",
+  "at": 1795772033828,
+  "sha256": "86a9b994b1d9d72dd6e7c46f4b8479d123e61b70a0f25e7894c4e14208545aa9"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795772042889-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Swordinhand",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 207,
+  "start": 1795772042889,
+  "end": 1795772942889,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
