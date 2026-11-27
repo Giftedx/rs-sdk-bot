@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798650105-2",
+ "account": "MeatNTwoVeg",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "db86bcc4-fa7c-4ae9-a7ab-92481a8fe52a",
+ "count": 1,
+ "ok": true,
+ "at": 1795799393736,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795799393000
+ },
+ "logout": {
+  "attemptId": "1795799383843-0000033180-0000000001",
+  "at": 1795799393723,
+  "sha256": "d7055726dd808198bc98eb9c3daaca1ffcb750b97d558fa4db1c30704e8f02c6"
+ },
+ "screen": true
+}

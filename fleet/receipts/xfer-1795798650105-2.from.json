@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798650105-2",
  "account": "UnderMyKilt",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "6f8957ed-e859-46f6-b852-505cab03f08c",
- "count": 0,
- "ok": false,
- "at": 1795799302383,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795799392100,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795799311777
+ },
+ "logout": {
+  "attemptId": "1795799302392-0000033372-0000000001",
+  "at": 1795799392086,
+  "sha256": "95e3ea0a71621d8f7999874acc4cd13efd54d301ab4f2702c00b43752a28b48b"
+ },
+ "screen": true
 }

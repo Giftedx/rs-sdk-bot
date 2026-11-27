@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799034809-2",
+ "account": "YewFirst",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ccb38392-b89e-4c6d-9271-91051a128090",
+ "count": 1,
+ "ok": true,
+ "at": 1795799375332,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795799374568
+ },
+ "logout": {
+  "attemptId": "1795799365138-0000005376-0000000001",
+  "at": 1795799375316,
+  "sha256": "d5853ed18a3dc10f230216fd631fe4d862be4eb9bba98e77ddb6387407015fbb"
+ },
+ "screen": true
+}
