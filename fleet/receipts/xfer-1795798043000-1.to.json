@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798043000-1",
  "account": "ChaosInPants",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 89,
  "claim": "2085ba5e-2a00-4116-aeea-53b7504b7e39",
- "count": 0,
- "ok": false,
- "at": 1795798280171,
- "detail": "trade claimed"
+ "count": 89,
+ "ok": true,
+ "at": 1795798304979,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 89
+ },
+ "bank": {
+  "count": 89,
+  "at": 1795798304230
+ },
+ "logout": {
+  "attemptId": "1795798280180-0000012212-0000000001",
+  "at": 1795798304962,
+  "sha256": "a107f48c300b2512a7a9a79c049a1c1dd7d2ef4196b02328334f2af517531a1b"
+ },
+ "screen": true
 }
