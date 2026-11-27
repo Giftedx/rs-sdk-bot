@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795789078263,
+ "at": 1795789091110,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "116",
+    "MAX_ITEMS": "117",
     "COIN_RESERVE": "1000",
-    "FLOAT": "25200",
+    "FLOAT": "25400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "116"
+    "BATCH_UNITS": "117"
    },
    "enabled": true,
    "repeat": false,
@@ -87,23 +87,8 @@
    "account": "Quickhandjob",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1250 TARGET_COUNT=125 PRODUCT_TARGET=127 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=127 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1270 TARGET_COUNT=127 PRODUCT_TARGET=127 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=127 -- runecraft air"
+    "scripts/aio-skiller.ts CAP=2950 TARGET_COUNT=295 PRODUCT_TARGET=303 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=303 -- runecraft air"
    ],
    "env": {
     "ROUNDS": "1"
@@ -117,8 +102,8 @@
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1270 TARGET_COUNT=127 PRODUCT_TARGET=127 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=127 -- runecraft air"
+    "scripts/aio-skiller.ts CAP=3030 TARGET_COUNT=303 PRODUCT_TARGET=303 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=303 -- runecraft air"
    ],
    "env": {
     "ROUNDS": "1"
@@ -127,6 +112,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   },
   {
    "account": "UnderMyKilt",
@@ -225,19 +229,27 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "ranged-gather"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "837",
+    "ITEMS": "Crossbow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:837",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "campaign:haggis:item:837",
    "role": "army"
   },
   {
