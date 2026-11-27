@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795803918687-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "TossTheCaber",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "extra": [
+    {
+      "item": "Unicorn horn",
+      "count": 3,
+      "itemId": 237
+    }
+  ],
+  "start": 1795803918687,
+  "end": 1795804818687,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795803565155-1",
+ "account": "KnightRider",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 2,
+ "claim": "292e7ff3-206a-438c-9a46-1e6a70ad3b88",
+ "count": 0,
+ "ok": false,
+ "at": 1795803877204,
+ "detail": "trade claimed"
+}

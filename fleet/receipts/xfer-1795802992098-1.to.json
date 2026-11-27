@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795802992098-1",
+ "account": "Pocketrocket",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 23,
+ "claim": "15754875-4c77-4072-a959-ced93973aade",
+ "count": 0,
+ "ok": false,
+ "at": 1795803892312,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795803836975-0000028116-0000000001",
+  "at": 1795803892300,
+  "sha256": "6e282fb575c8c23b455be5e3a3b2ad29389e4c59163852ed439e93702ee75a68"
+ },
+ "screen": false
+}

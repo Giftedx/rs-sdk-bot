@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795803529353-1",
+ "account": "SporranDip",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "0ef965d1-b299-4f70-8f61-039d452804ff",
+ "count": 1,
+ "ok": true,
+ "at": 1795803919108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795803899573
+ },
+ "logout": {
+  "attemptId": "1795803891235-0000003048-0000000001",
+  "at": 1795803919095,
+  "sha256": "baf8dcfe415368ce373f7b859105a4b7d96b1725bad5c9ebf010cf4e36bcd291"
+ },
+ "screen": true
+}

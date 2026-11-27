@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795802980730-1",
+ "account": "TossTheCaber",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze bar",
+ "requested": 3,
+ "claim": "9a59b6c8-434e-4f76-b52a-9ccd18a231a4",
+ "count": 0,
+ "ok": false,
+ "at": 1795803881130,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795803823986-0000032096-0000000001",
+  "at": 1795803881116,
+  "sha256": "2c54352695f7017b5ee0d75bd31fbc0e287b59f122fdd4db0e839c6972ad4e10"
+ },
+ "screen": false
+}
