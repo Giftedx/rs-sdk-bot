@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741163210-1",
  "account": "SporranDip",
  "partner": "Wandwaver",
@@ -10,15 +10,37 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "b10635ee-2f84-4c19-bad3-b422717bba87",
- "count": 0,
- "ok": false,
- "at": 1795741977014,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795742015318,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Chocolate bar",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795742014558
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795742014122
+ },
+ "logout": {
+  "attemptId": "1795741977046-0000008644-0000000001",
+  "at": 1795742015306,
+  "sha256": "cc3cfcc74f0458533b1edbf1bdc912fc157791059debe9ef1b37645ecaba8bf7"
+ },
+ "screen": true
 }

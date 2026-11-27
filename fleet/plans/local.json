@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795742001439,
+ "at": 1795742029137,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2260 TARGET_COUNT=226 PRODUCT_TARGET=226 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1640 TARGET_COUNT=164 PRODUCT_TARGET=164 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=164 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -74,82 +74,52 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "feathers"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:lochnessrod:item:314",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
   },
   {
    "account": "Billionaire",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=6 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "14"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -267,6 +237,42 @@
    "role": "army"
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "39",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
+  },
+  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -294,8 +300,10 @@
   "bowbeforeme",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "pickpockdick",
@@ -304,7 +312,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "undermykilt",
   "woodpecker",
