@@ -1,11 +1,13 @@
 // Pure shared preflight evaluator for AccountPlanner and WorkerModules.
 // Evaluates tile reachability, ferry fares, wearable skill/quest gates, reserve-adjusted stock,
 // GE escrow + operating coin float math, max-level caps, cooldowns, spot capacity, and combat survivability.
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
 import {
+    foodTotalHeal,
     questFoodDefinitions,
     totalAvailableHeal,
 } from '../../core/src/sustain';
@@ -58,6 +60,38 @@ export const STANDARD_FOOD_IDS: readonly number[] = [
     1897, // Chocolate cake (15)
     2309, // Bread (5)
 ];
+
+// A route-danger food blocker (route danger fact, no-route.ts) starts its message with this; `required` is the heal short.
+export const ROUTE_DANGER_PREFIX = 'route danger:';
+// Pieces over the heal short, for a hit above the expected damage.
+export const ROUTE_DANGER_FOOD_MARGIN = 2;
+// The most food pieces the walker takes from the bank for a walk (core/src/walk/harm.ts foodToTake carryMax).
+export const ROUTE_DANGER_CARRY_MAX = 20;
+
+let stackableIds: ReadonlySet<number> | undefined;
+const isStackable = (id: number): boolean => (stackableIds ??= new Set(
+    (JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge', 'items.json'), 'utf8')) as { id: number; stackable?: boolean }[]).filter(i => i.stackable).map(i => i.id),
+)).has(id);
+
+// Pack slots the account has free. The status rows (AccountState.packSlots: the slots of each base id, one for each
+// row, so a stack or a noted stack is one) give it exactly. Without them each stackable item (knowledge/items.json)
+// takes one slot and each other item one slot a piece.
+export function freePackSlots(acct: { readonly inventory: Readonly<Record<number, number>>; readonly packSlots?: Readonly<Record<number, number>> }): number {
+    let used = 0;
+    if (acct.packSlots) for (const n of Object.values(acct.packSlots)) used += Math.max(0, n);
+    else for (const [key, n] of Object.entries(acct.inventory)) { const id = Number(key); if (n > 0) used += isStackable(id) ? 1 : n; }
+    return Math.max(0, 28 - Math.min(28, used));
+}
+
+// The pieces of food `foodId` to buy for a route-danger heal short: ceil(heal / heal per piece) + the margin, within
+// the free pack slots and ROUTE_DANGER_CARRY_MAX, since the walker carries them all at once. Null when the most it can
+// carry does not cover the heal, or the food heals nothing.
+export function routeDangerFoodCount(needHeal: number, foodId: number, freeSlots: number): number | null {
+    const heal = foodTotalHeal(foodId) ?? 0, room = Math.min(freeSlots, ROUTE_DANGER_CARRY_MAX);
+    if (heal <= 0 || room <= 0) return null;
+    const pieces = Math.ceil(Math.max(1, needHeal) / heal);
+    return pieces > room ? null : Math.min(room, pieces + ROUTE_DANGER_FOOD_MARGIN);
+}
 
 // The STANDARD_FOOD_IDS that the eat guard eats (PLAIN_FOOD, packages/core/src/eat-guard.ts), in STANDARD_FOOD_IDS order (shark first). A
 // worker with the eat guard never eats a cake or bread, so a fight floor of such a worker counts only these.
@@ -1407,7 +1441,7 @@ export function evaluatePreflight(
     const danger = routeDangerFor(accountNoRoutes(acct), acct.pos, spec.targetTile ?? undefined, spec.activityId, world.at);
     if (danger && !blockers.some(b => b.kind === 'unreachable_tile')) {
         blockers.push((danger.needHeal ?? 1) > 0
-            ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `route danger: ${noRouteMessage(acct.name, danger)}` }
+            ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `${ROUTE_DANGER_PREFIX} ${noRouteMessage(acct.name, danger)}` }
             : { kind: 'unreachable_tile', target: danger.to, from: acct.pos, reason: 'no_route', message: noRouteMessage(acct.name, danger) });
     }
 
