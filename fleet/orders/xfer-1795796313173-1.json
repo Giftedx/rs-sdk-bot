@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795796313173-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "TheFullMonty",
+  "item": "Unicorn horn dust",
+  "count": 2,
+  "itemId": 235,
+  "start": 1795796313173,
+  "end": 1795797213173,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
