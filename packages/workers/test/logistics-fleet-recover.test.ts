@@ -1380,6 +1380,22 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
         } finally {
             stuck.s.dispose();
         }
+        // With no exit given, no walk starts: the account is stranded and names the quest that exits.
+        const bare = makeRecoverySession({ worldX: 2546, worldZ: 3325, level: 0 });
+        try {
+            let walks = 0;
+            const res = await recoverSessionToHub(bare.s, {
+                capTicks: 200,
+                labels,
+                hubAreas,
+                walkToHub: async () => { walks++; return { ok: false, reason: 'no route' }; },
+            });
+            expect(walks).toBe(0);
+            expect(res.ok).toBe(false);
+            expect(res.detail).toBe('location stranded in West Ardougne: exit by quest:biohazard');
+        } finally {
+            bare.s.dispose();
+        }
     });
 
     test('loads cached route-areas.bin with exact or initializer-shifted compatible source hashes', async () => {
