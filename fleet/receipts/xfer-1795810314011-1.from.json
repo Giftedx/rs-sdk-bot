@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795810314011-1",
  "account": "Fatstack",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Unfinished potion",
  "requested": 1,
  "claim": "e85e5179-9e57-4bfe-acd7-db98463e37b8",
- "count": 0,
- "ok": false,
- "at": 1795810830036,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795810970246,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795810876163
+ },
+ "logout": {
+  "attemptId": "1795810830075-0000027632-0000000001",
+  "at": 1795810969953,
+  "sha256": "3ceb141691abac8b03bca8b687d0a32a5d0ce69deb02d76b0fe523bc90db5537"
+ },
+ "screen": true
 }
