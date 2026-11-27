@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795821087273,
+ "at": 1795821168919,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -97,43 +97,18 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "277",
+    "MAX_ITEMS": "360",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "277"
+    "BATCH_UNITS": "360"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "40",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "40"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -176,6 +151,23 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Quickhandjob",
