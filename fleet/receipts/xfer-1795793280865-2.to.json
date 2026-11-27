@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793280865-2",
+ "account": "SporranDip",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 300,
+ "claim": "1dcab760-d81a-4731-a84b-0d4f709301aa",
+ "count": 300,
+ "ok": true,
+ "at": 1795793730378,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Feather",
+   "requested": 273,
+   "count": 273,
+   "inventory": {
+    "before": 0,
+    "after": 273
+   },
+   "bank": {
+    "count": 273,
+    "at": 1795793729721
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795793729242
+ },
+ "logout": {
+  "attemptId": "1795793718893-0000004000-0000000001",
+  "at": 1795793730364,
+  "sha256": "d8b8a3c2031aabba09043a34579f157efa747511eb17dc1ba0d6a863eeca0599"
+ },
+ "screen": true
+}

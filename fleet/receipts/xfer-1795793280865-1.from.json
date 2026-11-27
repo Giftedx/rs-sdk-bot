@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795793280865-1",
+ "account": "Fingersmith",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel pickaxe",
+ "requested": 1,
+ "claim": "ca1198e6-11d2-48af-8d68-e3ac08e0f330",
+ "count": 0,
+ "ok": false,
+ "at": 1795793628576,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795793661481-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "PickpockDick",
+  "item": "Vial of water",
+  "count": 3,
+  "itemId": 227,
+  "start": 1795793661481,
+  "end": 1795794561481,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

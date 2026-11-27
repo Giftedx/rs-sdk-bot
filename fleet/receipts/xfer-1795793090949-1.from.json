@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793090949-1",
+ "account": "Shaftsinker",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "05acc0a1-54cf-4a94-8d09-7465c7f5caac",
+ "count": 10,
+ "ok": true,
+ "at": 1795793620031,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795793570848
+ },
+ "logout": {
+  "attemptId": "1795793562233-0000026608-0000000001",
+  "at": 1795793620014,
+  "sha256": "b1c639a4b43c57431433a5c7da87a20e795c0f0c67e016982a1fc446000aa4ff"
+ },
+ "screen": true
+}

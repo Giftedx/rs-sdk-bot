@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795793059111-1",
+ "account": "Wandwaver",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Kwuarm",
+ "requested": 2,
+ "claim": "901851b4-fd77-49e1-acaf-963e80f4b576",
+ "count": 2,
+ "ok": true,
+ "at": 1795793668404,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795793667311
+ },
+ "logout": {
+  "attemptId": "1795793655997-0000022736-0000000001",
+  "at": 1795793668371,
+  "sha256": "b08eecd3d07539fe2b9a194124b1a779d7a50eabab868d172a87faa11f1ee197"
+ },
+ "screen": true
+}
