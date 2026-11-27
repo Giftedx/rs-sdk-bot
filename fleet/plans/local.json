@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777567658,
+ "at": 1795777604210,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,26 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
    "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -87,26 +67,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "279"
    },
    "enabled": true,
    "repeat": false,
@@ -136,6 +97,24 @@
   },
   {
    "account": "YewFirst",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -189,28 +168,6 @@
    "role": "auto"
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-12-o0-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "12",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "12"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "army"
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -219,20 +176,42 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "603",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "284",
     "COIN_RESERVE": "1000",
-    "FLOAT": "122600",
-    "NO_BUY_TICKS": "25",
+    "FLOAT": "115600",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "603"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "284"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-7-o0-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "7",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -246,14 +225,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "72",
+    "MAX_ITEMS": "66",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "72"
+    "BATCH_UNITS": "66"
    },
    "enabled": true,
    "repeat": false,
@@ -286,7 +265,7 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -296,18 +275,43 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "366",
+    "MAX_ITEMS": "469",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "366"
+    "BATCH_UNITS": "469"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
+   "role": "auto"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "366",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "366"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:554",
    "role": "army"
   },
   {
@@ -340,24 +344,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magic_guild_elemental",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
     "MAX_ITEMS": "337",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
+    "DEMAND_ID": "campaign:haggis:item:557",
     "BATCH_UNITS": "337"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "campaign:haggis:item:557",
    "role": "army"
   },
   {
@@ -383,25 +387,23 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "ge-buy"
+    "cow"
    ],
    "env": {
-    "ORDER_KEY": "brain-557-228-o4-p81",
-    "ITEM_ID": "557",
-    "QUANTITY": "228",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "81",
-    "EXPECTED_OWNED": "4",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "228"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "Billionaire",
@@ -432,25 +434,22 @@
    "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "clotheshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "1129",
-    "ITEMS": "Leather body",
-    "MAX_ITEMS": "1",
+    "ORDER_KEY": "brain-557-3-o494-p81",
+    "ITEM_ID": "557",
+    "QUANTITY": "3",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:shaftshooter:item:1129",
-    "BATCH_UNITS": "1"
+    "LIMIT_PRICE": "81",
+    "EXPECTED_OWNED": "494",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "3"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:shaftshooter:item:1129",
+   "goal": "campaign:haggis:item:557",
    "role": "army"
   },
   {
@@ -470,17 +469,27 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=2330 TARGET_COUNT=233 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 -- magic alch-train 90 3000"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
+   "goal": "campaign:haggis:item:44",
    "role": "auto"
   },
   {
