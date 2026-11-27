@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795780979089,
+ "at": 1795780992806,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -114,31 +114,6 @@
    "role": "army"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "fishingshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "309",
-    "ITEMS": "Fly fishing rod",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:309",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:309",
-   "role": "army"
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -170,6 +145,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "helper"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "395"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   },
   {
    "account": "Woodpecker",
