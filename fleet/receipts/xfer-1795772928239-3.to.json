@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795772928239-3",
+ "account": "Swordswallow",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "555ca8e7-ecc4-4d45-a789-064fab819356",
+ "count": 10,
+ "ok": true,
+ "at": 1795773193869,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795773193016
+ },
+ "logout": {
+  "attemptId": "1795773182450-0000016796-0000000001",
+  "at": 1795773193836,
+  "sha256": "7637dc75ac37dfd50969821f73970b467e432cee0ef624a4b159e04b68b64658"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795772632935-2",
+ "account": "BowBeforeMe",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 2,
+ "claim": "2513b759-d859-46bd-9c35-4b7adc942968",
+ "count": 0,
+ "ok": false,
+ "at": 1795773066699,
+ "detail": "trade claimed"
+}
