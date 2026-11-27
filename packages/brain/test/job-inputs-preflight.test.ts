@@ -5,7 +5,7 @@ import { xpForLevel } from '../src/planner';
 import { activityPreflightFromConfig } from '../src/preflight';
 import { resolveActivityWorkerRoute } from '../src/worker-routing';
 import { STALL_CEILING, STALL_FLOOR, stallTicksForRate, stalled, type TickRow } from '../../core/src/ledger';
-import { stopReasonOf } from '../../core/src/bot/rules';
+import { stopReasonOf } from '../../core/src/bot';
 
 // A job that its worker refuses at the first bank visit (no herb secondary, no arrow inputs) is refused by the brain
 // preflight before login, and a bank production run that stalls stops within its rate window.
@@ -72,6 +72,12 @@ describe('the arrows route makes headless arrows and needs its inputs', () => {
 
     test('the route runs the headless mode, not the rune-tip assembler', () => {
         expect(resolveActivityWorkerRoute(arrows()).env.MODE).toBe('headless');
+    });
+
+    test('the planned count sets MAX_MAKE in whole sets of 15', () => {
+        expect(resolveActivityWorkerRoute(arrows(), { BATCH_UNITS: '499' }).env.MAX_MAKE).toBe('510');
+        expect(resolveActivityWorkerRoute(arrows(), { TARGET_COUNT: '150' }).env.MAX_MAKE).toBe('150');
+        expect(resolveActivityWorkerRoute(arrows()).env.MAX_MAKE).toBeUndefined();
     });
 
     test('a bank without shafts and feathers is refused', () => {

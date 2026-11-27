@@ -1849,7 +1849,7 @@ return [
   // iron ore fails at the furnace (smelting.rs2:202), and 8 ore can make fewer than 2 bars, so the bank holds 16. chain.ts
   // prints each child line after "  | ".
   {key: 'extra:chain-squire-smelt-bars', script: 'scripts/chain.ts', preset: 'quest_squire', timeoutMs: 600_000,
-    scriptArgs: ['scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=2 ORE_RESERVE=0 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 -- smithing smelt 1000 iron',
+    scriptArgs: ['scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=2 ORE_RESERVE=0 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 STALL_TICKS=280 -- smithing smelt 1000 iron',
       'scripts/aio-quester.ts DEMAND_ID=goal:quest_board:squire BATCH_UNITS=1 -- sweep squire'],
     presetConfig: {...PRESETS.quest_squire!, position: {x: 2946, z: 3368, level: 0}, inventory: [],
       bank: [...(PRESETS.quest_squire!.inventory ?? []).filter(i => i.id !== 2351), {id: 440, count: 16}]},

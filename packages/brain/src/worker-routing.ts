@@ -247,6 +247,13 @@ export function resolveActivityWorkerRoute(
                             if (env.ORDER_MODE === undefined) env.ORDER_MODE = 'best-effort';
                         }
                     }
+                } else if (skill === 'fletching' && rawMethod === 'arrows' && env.MODE === 'headless') {
+                    // The headless run makes MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless): the planned
+                    // count rounded up to a whole set, not the worker default.
+                    const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
+                    if (extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.MAX_MAKE = String(Math.ceil(units / 15) * 15);
+                    }
                 } else if (skill === 'crafting' && rawMethod === 'jewellery-trip') {
                     if (extraEnv.TARGET_COUNT) {
                         env.TARGET = extraEnv.TARGET ?? extraEnv.TARGET_COUNT;
