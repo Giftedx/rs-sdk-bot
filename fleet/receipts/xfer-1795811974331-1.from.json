@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795811974331-1",
  "account": "KnightRider",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn dust",
  "requested": 1,
  "claim": "602fde52-56f4-4974-a3c6-765f006f072f",
- "count": 0,
- "ok": false,
- "at": 1795812184063,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795812351115,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795812331989
+ },
+ "logout": {
+  "attemptId": "1795812184073-0000026920-0000000001",
+  "at": 1795812351094,
+  "sha256": "17c1380918a249cff5211579d567fc68d2adc698014037f9d69455ee591edb47"
+ },
+ "screen": true
 }
