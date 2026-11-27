@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795814519488-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "BoneToPick",
+  "item": "Bones",
+  "count": 31,
+  "itemId": 526,
+  "start": 1795814519488,
+  "end": 1795815419488,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
