@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795794344477-1",
+ "account": "UnderMyKilt",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "b237839e-4ad4-4b95-8a84-1d46b32a87c4",
+ "count": 0,
+ "ok": false,
+ "at": 1795794958103,
+ "detail": "trade claimed"
+}

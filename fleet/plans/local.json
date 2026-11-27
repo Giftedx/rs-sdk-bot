@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795794954044,
+ "at": 1795794990517,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,53 @@
    "role": "pvp"
   },
   {
+   "account": "Sausagefest",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "151",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "151"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -84,6 +131,36 @@
    "role": "army"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 PRODUCT_TARGET=229 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=229 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 PRODUCT_TARGET=229 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=229 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -104,28 +181,25 @@
    ]
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio-market.ts",
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "crafting",
+    "inventory",
+    "identify:tarromin"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "74",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "74"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:253",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "goal:supply_chain:253",
    "role": "army"
   },
   {
@@ -141,7 +215,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "232",
+    "BATCH_UNITS": "216",
     "STALL_TICKS": "280"
    },
    "enabled": true,
@@ -150,26 +224,11 @@
    "role": "auto"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
    "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magicshop",
     "3000"
    ],
    "env": {
@@ -188,44 +247,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
-   ],
-   "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftmaker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
-   "role": "auto"
   },
   {
    "account": "BowBeforeMe",
@@ -251,7 +272,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1430"
+    "BATCH_UNITS": "1445"
    },
    "enabled": true,
    "repeat": false,
@@ -281,62 +302,18 @@
    ]
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_kwuarm_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:105",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:105",
-   "role": "army"
-  },
-  {
    "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_ranarr_potion"
+    "loot-trip"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:99",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:93",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -383,6 +360,7 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sporrandip",
   "swordinhand",
   "undermykilt",
