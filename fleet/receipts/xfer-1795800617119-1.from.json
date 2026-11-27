@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795800617119-1",
  "account": "PickpockDick",
  "partner": "YewGotWood",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "1c8f0da3-4a74-41b4-ab15-85b853a27c1d",
- "count": 0,
- "ok": false,
- "at": 1795801092085,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795801276848,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795801100493
+ },
+ "logout": {
+  "attemptId": "1795801092094-0000033056-0000000001",
+  "at": 1795801276826,
+  "sha256": "480c7f6c03f166e656e68dec45cb0b73a143bdbb66358e1f6bf13c14f4388542"
+ },
+ "screen": true
 }
