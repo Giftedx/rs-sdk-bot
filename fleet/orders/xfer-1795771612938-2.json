@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795771612938-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "PickpockDick",
+  "item": "Chocolate bar",
+  "count": 1,
+  "itemId": 1973,
+  "start": 1795771612938,
+  "end": 1795772512938,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

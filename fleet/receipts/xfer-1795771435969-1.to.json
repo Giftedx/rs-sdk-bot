@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795771435969-1",
+ "account": "OreElse",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "287f0ab5-cca7-4219-be0d-2ac46d00d037",
+ "count": 1,
+ "ok": true,
+ "at": 1795771659854,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795771659158
+ },
+ "logout": {
+  "attemptId": "1795771650602-0000018220-0000000001",
+  "at": 1795771659842,
+  "sha256": "fcb3acde46a26ba5a0f980586b5aadaf5cd8b62bfae882496e133b1c50c25118"
+ },
+ "screen": true
+}
