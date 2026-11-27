@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795791550647-2",
+ "account": "PickpockDick",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "62672663-b5c3-4c66-912d-c01d8c2e3ce8",
+ "count": 0,
+ "ok": false,
+ "at": 1795792156106,
+ "detail": "trade claimed"
+}
