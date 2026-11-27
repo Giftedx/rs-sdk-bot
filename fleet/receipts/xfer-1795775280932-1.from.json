@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795775280932-1",
+ "account": "Swordinhand",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "aab1a911-316f-4716-ad0a-768ad2b5eb98",
+ "count": 0,
+ "ok": false,
+ "at": 1795775409415,
+ "detail": "trade claimed"
+}
