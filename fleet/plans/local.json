@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799131345,
+ "at": 1795799146881,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,31 +59,6 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -130,21 +105,6 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -179,6 +139,23 @@
    ]
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -197,6 +174,31 @@
    "role": "army"
   },
   {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -207,14 +209,14 @@
    "env": {
     "ITEM_ID": "556",
     "ITEMS": "Air rune",
-    "MAX_ITEMS": "247",
+    "MAX_ITEMS": "210",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "247"
+    "BATCH_UNITS": "210"
    },
    "enabled": true,
    "repeat": false,
@@ -303,6 +305,27 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1937",
    "role": "army"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pullmybow",
+   "role": "auto",
+   "resources": [
+    "chaos-druids"
+   ]
   }
  ],
  "army": [
