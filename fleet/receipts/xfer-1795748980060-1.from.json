@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795748980060-1",
+ "account": "Unsheathed",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 250,
+ "claim": "9fdf6059-bfa9-4634-bff2-74a61b8ea403",
+ "count": 0,
+ "ok": false,
+ "at": 1795749033095,
+ "detail": "trade claimed"
+}
