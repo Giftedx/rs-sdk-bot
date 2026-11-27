@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742239233-2",
+ "account": "MeatNTwoVeg",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 1,
+ "claim": "b3fb158e-af05-44f0-83ab-f721ca4fc01c",
+ "count": 0,
+ "ok": false,
+ "at": 1795742843125,
+ "detail": "trade claimed"
+}
