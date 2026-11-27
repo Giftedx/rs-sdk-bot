@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795787041951-1",
  "account": "Billionaire",
  "partner": "BoneToPick",
@@ -12,6 +12,16 @@
  "claim": "0913c522-98a1-4a5d-a828-d424ee0b2237",
  "count": 0,
  "ok": false,
- "at": 1795787590254,
- "detail": "trade claimed"
+ "at": 1795787643494,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795787597529
+ },
+ "logout": {
+  "attemptId": "1795787590267-0000015284-0000000001",
+  "at": 1795787643482,
+  "sha256": "d986bda17173f6ab279002ca87f4d078179681866e0303ceb084184d1ec44c1e"
+ },
+ "screen": false
 }
