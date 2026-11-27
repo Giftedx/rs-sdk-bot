@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795807154254-1",
+ "account": "BackdoorMan",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 25,
+ "claim": "fe86996d-7e3a-40be-a529-476fe5bfcb05",
+ "count": 0,
+ "ok": false,
+ "at": 1795807510960,
+ "detail": "Error: route to 2618, 3333: precondition walk danger from 2655,3283,0: route danger to 2618,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "logout": {
+  "attemptId": "1795807502576-0000019904-0000000001",
+  "at": 1795807510925,
+  "sha256": "4a76dcdc116f3038ef417c752258d9efc045cccdf6b0901351102e57814d32a9"
+ },
+ "screen": false
+}
