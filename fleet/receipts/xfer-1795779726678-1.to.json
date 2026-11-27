@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779726678-1",
+ "account": "mmsmk1232",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "50bf47bd-7013-4019-8d0f-5ccc5751a869",
+ "count": 1,
+ "ok": true,
+ "at": 1795780080670,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795780079485
+ },
+ "logout": {
+  "attemptId": "1795780069070-0000021416-0000000001",
+  "at": 1795780080653,
+  "sha256": "e990ec8f44f2e61f74f4e8b0cd10020607c78caa85ae213db4454e0fe9f1ebde"
+ },
+ "screen": true
+}
