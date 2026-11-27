@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { npcTravel, shortcutTravel, travelAllowed } from '../src/travel';
+import { npcTravel, ROLLED_QUEST_PASSAGES, shortcutTravel, travelAllowed, UNGATED_QUEST_PASSAGES } from '../src/travel';
 import { createWorld, rsPathLength, type Account } from '../src/world';
 
 const npcRecords = JSON.parse(readFileSync('knowledge/npc-travel.json', 'utf8')).records as any[];
@@ -28,7 +28,8 @@ test('the lumber yard fence is a walker edge, and quest-kind trap rows stay out'
     expect(fence.length).toBeGreaterThan(0);
     const edges = shortcutTravel(fence);
     expect(edges.some(e => e.from?.x === 3305 && e.from?.z === 3494 && e.to.x === 3305 && e.to.z === 3492 && e.to.level === 0)).toBe(true);
-    const others = cutRows.filter(e => e.kind === 'quest' && e.locName !== 'gertrudefence');
+    // The pocket exits listed in travel.ts are the other quest rows that go in (pocket-exits.test.ts).
+    const others = cutRows.filter(e => e.kind === 'quest' && !UNGATED_QUEST_PASSAGES.has(e.locName) && !ROLLED_QUEST_PASSAGES[e.locName]);
     expect(shortcutTravel(others)).toEqual([]);
 });
 
