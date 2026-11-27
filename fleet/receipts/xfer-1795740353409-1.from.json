@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795740353409-1",
  "account": "BoneToPick",
  "partner": "Hocuspokeus",
@@ -12,6 +12,12 @@
  "claim": "ddeafc6f-0906-4dec-98fb-158939d25e10",
  "count": 0,
  "ok": false,
- "at": 1795740534814,
- "detail": "trade claimed"
+ "at": 1795740564240,
+ "detail": "fled at low hitpoints: flee_guard id=99 at=2640,3335 ticks=5",
+ "logout": {
+  "attemptId": "1795740534824-0000029160-0000000001",
+  "at": 1795740564138,
+  "sha256": "6039cb4afa53f81419405d57ac1bf48e56362f28d6805244dc5eb58047792259"
+ },
+ "screen": false
 }
