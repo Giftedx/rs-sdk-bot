@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795796425484-1",
  "account": "Unsheathed",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "428f5260-444f-49c6-b750-b44440a30cbf",
- "count": 0,
- "ok": false,
- "at": 1795796914667,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795796986247,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795796985515
+ },
+ "logout": {
+  "attemptId": "1795796914676-0000029972-0000000001",
+  "at": 1795796986235,
+  "sha256": "2f3677e5bd3d381c45eff977e7ecb63b108f1e0ce75b885d7a5a9366c6341038"
+ },
+ "screen": true
 }
