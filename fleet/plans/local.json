@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795781626234,
+ "at": 1795781690918,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,7 +66,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "27",
+    "BATCH_UNITS": "20",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -76,31 +76,6 @@
    "resources": [
     "hill-giants"
    ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "266",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "266"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -235,6 +210,23 @@
    "repeat": false,
    "goal": "goal:supply_chain:257",
    "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
   }
  ],
  "army": [
@@ -253,12 +245,12 @@
   "fingersmith",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
