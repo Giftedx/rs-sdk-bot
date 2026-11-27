@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795782384638,
+ "at": 1795782411257,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -352,49 +352,18 @@
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magic_guild",
-    "3000"
+    "scripts/aio-skiller.ts MODE=shafts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 STALL_TICKS=150 -- fletching shafts",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "35",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "35"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "199",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
+   "goal": "campaign:haggis:item:53",
    "role": "auto"
   }
  ],
@@ -412,6 +381,7 @@
   "fingersmith",
   "hocuspokeus",
   "knightrider",
+  "mineyourbiz",
   "mmthv2350",
   "moneyshot",
   "pocketpool",
