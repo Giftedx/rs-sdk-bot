@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741817066-1",
  "account": "YewFirst",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "31cfdeaf-50e9-4fd4-8965-b1d9c15c3d76",
- "count": 0,
- "ok": false,
- "at": 1795741997863,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795742094881,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795742057758
+ },
+ "logout": {
+  "attemptId": "1795741997872-0000029956-0000000001",
+  "at": 1795742094866,
+  "sha256": "66b6c19f055951abb4131cd2074af46057c7c45ec994b9bcb0db35f91b59ae7f"
+ },
+ "screen": true
 }
