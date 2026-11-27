@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795753693166-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Woodenstaff",
+  "item": "Coins",
+  "count": 10498,
+  "itemId": 995,
+  "start": 1795753693166,
+  "end": 1795754593166,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
