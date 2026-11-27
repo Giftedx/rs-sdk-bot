@@ -605,7 +605,7 @@ test('a worker that spins with no output and no status write is ended, and the j
     const { runWorker, STALL_RESULT } = await import('../src/supervise');
     const root = mkdtempSync(join(tmpdir(), 'supervise-stall-'));
     try {
-        // A busy loop like Woodpecker's aio-fighter: one CPU core, no output, no status write.
+        // A busy loop: one CPU core, no output, no status write.
         const started = Date.now();
         const r = await runWorker(['bun', '-e', 'while (true) {}'], {
             accounts: ['Spinner'], root, stallMs: 1500, checkMs: 100,

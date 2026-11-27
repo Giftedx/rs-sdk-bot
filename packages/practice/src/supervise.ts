@@ -15,9 +15,9 @@ import {existsSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 
 // A worker whose event loop is blocked (a synchronous loop) prints nothing and writes no status, but its process
-// stays up: Woodpecker's aio-fighter held one CPU core and 3.5 GB for 70 minutes, and its old status row held every
-// live start of a new release ("release peer state unknown"). A healthy run writes its status file about once a
-// game tick. With no output and no status write for STALL_MS the run's whole process tree ends.
+// stays up, and its stale status row holds every live start of a new release ("release peer state unknown"). A
+// healthy run writes its status file about once a game tick. With no output and no status write for STALL_MS the
+// run's whole process tree ends.
 export const STALL_MS = 15 * 60_000;
 export const STALL_RESULT = 'RESULT fail no worker progress: stalled with no output and no status write';
 
