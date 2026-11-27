@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795812679791-1",
+ "account": "NabTheKnob",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "b7a11cae-0124-426f-90f5-abdd351874dd",
+ "count": 10,
+ "ok": true,
+ "at": 1795812965891,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795812965154
+ },
+ "logout": {
+  "attemptId": "1795812951349-0000025860-0000000001",
+  "at": 1795812965866,
+  "sha256": "81ad48e9b6809206f67df58bc2d8522a9fd3bdc5f46f953be612e95e9af7bae3"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795812679791-1",
  "account": "Woodenstaff",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "0cf6111a-9f93-47a6-bd32-65413ac2c7a0",
- "count": 0,
- "ok": false,
- "at": 1795812860797,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795812964289,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795812933120
+ },
+ "logout": {
+  "attemptId": "1795812860810-0000027004-0000000001",
+  "at": 1795812964265,
+  "sha256": "c5a3a01fef529932d3e6c2fba2153e461161e991c6568f9b49d1b65716172ab9"
+ },
+ "screen": true
 }
