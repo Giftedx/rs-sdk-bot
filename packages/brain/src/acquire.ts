@@ -45,7 +45,7 @@ import {
 import { ferryFallbackFare } from './ferry-fare';
 import { noRouteTo, type NoRouteFact } from './no-route';
 import { readJsonStatCached } from './json-cache';
-import { RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
+import { hubRouteCooldownKey, RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 const GE_TILE = { x: 3164, z: 3487, level: 0 } as const;
@@ -709,6 +709,16 @@ export function resolveAcquireItem(
                 const hub = nearestHub(acct.pos, donor.pos ? nearestHub(donor.pos) : 'varrock_west');
                 if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `hub:${hub}:${donorLower}`, `hub:${hub}`)) {
                     if (!skipDiag) rejectReason = `hub:${hub}:${donorLower} on cooldown`;
+                    continue;
+                }
+                // A party whose own walk to this hub's meet failed in a recent trade, with any item (transfer-memory.ts).
+                const routeKey = hubRouteCooldownKey(hub);
+                if (isCooldownActive(acct.cooldowns, routeKey, world.at)) {
+                    if (!skipDiag) rejectReason = `recipient walk to ${hub} failed in a recent trade`;
+                    continue;
+                }
+                if (isCooldownActive(donor.cooldowns, routeKey, world.at)) {
+                    if (!skipDiag) rejectReason = `donor ${donor.name} walk to ${hub} failed in a recent trade`;
                     continue;
                 }
                 const hubTile = HUB_BANKER_LOCATIONS[hub].bankTile;

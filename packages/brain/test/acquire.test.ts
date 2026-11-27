@@ -18,6 +18,7 @@ import {
     loadShopCatalogByItem,
     resolveAcquireItem,
 } from '../src/acquire';
+import { hubRouteCooldownKey } from '../src/transfer-memory';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
 import { resolveShopProfile } from '../../workers/src/market/preflight';
 
@@ -151,6 +152,23 @@ test('AcquireItem preserves operating coin float (~1,000 gp) and falls through w
     expect(res.step?.donorAccount).toBe('Bigpackage');
     expect(res.step?.coinFloatPreserved).toBe(1000);
     expect(res.candidates.map((c) => c.source)).toEqual(['hub_banker', 'craft_gather']);
+});
+
+test('hub_banker skips a party whose walk to the hub failed in a recent trade, whatever the item', () => {
+    // Live: Quickhandjob failed four Varrock orders in a row, each for another item, with "route to 3182, 3440:
+    // precondition no route to 3182,3440,0"; each new order came 4 s after the last one failed.
+    const recip = makeAcct({ inventory: { 995: 1050 }, bank: { items: { 311: 1 }, observedAt: NOW - 10_000, trusted: true } });
+    const donor = makeAcct({ name: 'Bigpackage', pos: { x: 3185, z: 3436, level: 0 }, bank: { items: { 383: 300, 995: 5000 }, observedAt: NOW - 10_000, trusted: true } });
+    const ask = (r: AccountState, d: AccountState) => resolveAcquireItem(r, { itemId: 383, quantity: 50, operatingCoinFloat: 1000 }, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: r, Bigpackage: d } },
+        activities: [CATCH_RAW_SHARK], marketQuotes: { 383: { ask: 400, sell: 380, trades: 20 } },
+    });
+    expect(ask(recip, donor).step?.source).toBe('hub_banker');
+    const blocked = { [hubRouteCooldownKey('varrock_west')]: NOW + 60_000 };
+    expect(ask({ ...recip, cooldowns: blocked }, donor).candidates.map((c) => c.source)).not.toContain('hub_banker');
+    expect(ask(recip, { ...donor, cooldowns: blocked }).candidates.map((c) => c.source)).not.toContain('hub_banker');
+    // An expired backoff holds nothing.
+    expect(ask({ ...recip, cooldowns: { [hubRouteCooldownKey('varrock_west')]: NOW - 1 } }, donor).step?.source).toBe('hub_banker');
 });
 
 test('hub_banker never picks a party that cannot pay the two boat fares to the hub', () => {
