@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795738801235-1",
+ "account": "Woodenstaff",
+ "partner": "Pullmybow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "0dfe29c9-2c07-48ea-84ac-cc9e2e9b7037",
+ "count": 6,
+ "ok": true,
+ "at": 1795739158595,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795739157450
+ },
+ "logout": {
+  "attemptId": "1795739148377-0000021932-0000000001",
+  "at": 1795739158581,
+  "sha256": "dc072c734a1c4b6c5b9ed9d8b43aa9b967724023f50653a2cb297fabcaab5611"
+ },
+ "screen": true
+}

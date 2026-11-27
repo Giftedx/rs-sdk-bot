@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795738316907-1",
+ "account": "ChaosInPants",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 179,
+ "claim": "fc87423d-6d2e-4a2c-9ff0-61f019799217",
+ "count": 179,
+ "ok": true,
+ "at": 1795739152610,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 179
+ },
+ "bank": {
+  "count": 179,
+  "at": 1795739151841
+ },
+ "logout": {
+  "attemptId": "1795739138917-0000019972-0000000001",
+  "at": 1795739152601,
+  "sha256": "0da175252e3f4650f213287e0cb6e95699ce35869f7fd02269e0aad40a628be7"
+ },
+ "screen": true
+}

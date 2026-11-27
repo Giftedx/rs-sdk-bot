@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738801235-1",
  "account": "Pullmybow",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 6,
  "claim": "258b4072-c1b6-4293-b98f-c908bec2fc46",
- "count": 0,
- "ok": false,
- "at": 1795739129308,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795739156615,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795739137511
+ },
+ "logout": {
+  "attemptId": "1795739129317-0000028064-0000000001",
+  "at": 1795739156603,
+  "sha256": "9826171ea93831d5266921b2118c6e3741e80058af9d1e7f2bfc07c648499ee2"
+ },
+ "screen": true
 }

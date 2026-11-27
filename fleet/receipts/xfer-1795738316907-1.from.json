@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795738316907-1",
  "account": "Shaftsinker",
  "partner": "ChaosInPants",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 179,
  "claim": "5f08bb1e-fdb0-45fb-a506-2e440686aa1a",
- "count": 0,
- "ok": false,
- "at": 1795739019744,
- "detail": "trade claimed"
+ "count": 179,
+ "ok": true,
+ "at": 1795739151018,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 19552,
+  "after": 19373
+ },
+ "logout": {
+  "attemptId": "1795739019753-0000025132-0000000001",
+  "at": 1795739151006,
+  "sha256": "f04669b057dc9e68728f9d5f6d3c7362866115f1e7a349c66a7fa990cebffcc7"
+ },
+ "screen": true
 }
