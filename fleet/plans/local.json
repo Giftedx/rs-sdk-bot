@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741276124,
+ "at": 1795741287745,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,7 +79,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +92,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -105,7 +105,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -118,7 +118,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +131,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "4"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -273,42 +273,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
   },
   {
    "account": "Woodenstaff",
