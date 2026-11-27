@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795816003766-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PocketPool",
+  "to": "Fingerblastr",
+  "item": "Iron ore",
+  "count": 2,
+  "itemId": 440,
+  "start": 1795816003766,
+  "end": 1795816903766,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
