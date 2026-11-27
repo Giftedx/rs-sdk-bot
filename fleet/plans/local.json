@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795814762561,
+ "at": 1795814780344,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -222,14 +222,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "21",
+    "MAX_ITEMS": "22",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "22"
    },
    "enabled": true,
    "repeat": false,
@@ -295,7 +295,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "269"
+    "BATCH_UNITS": "432"
    },
    "enabled": true,
    "repeat": false,
@@ -417,23 +417,19 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "knights-stable"
+    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=432 -- thieving knights"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "252"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "role": "auto"
   },
   {
    "account": "BowBeforeMe",
@@ -545,21 +541,6 @@
    "repeat": false,
    "goal": "goal:supply_chain:263",
    "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:FishAndChips BATCH_UNITS=250 -- cannon"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
-   "role": "auto"
   }
  ],
  "army": [
@@ -580,7 +561,8 @@
   "pocketrocket",
   "sausagefest",
   "swordinhand",
-  "undermykilt"
+  "undermykilt",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
