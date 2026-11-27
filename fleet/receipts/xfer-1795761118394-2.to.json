@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795761118394-2",
+ "account": "Fatstack",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 39979,
+ "claim": "11c7c392-6cf4-4e38-97e8-0f9aff5c8f5d",
+ "count": 39979,
+ "ok": true,
+ "at": 1795761700737,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5121,
+  "after": 45100
+ },
+ "bank": {
+  "count": 39979,
+  "at": 1795761700034
+ },
+ "logout": {
+  "attemptId": "1795761687497-0000025740-0000000001",
+  "at": 1795761700715,
+  "sha256": "10fc45b53e81e3717908ba82f6994d4905e6aa348d0cebd1fd36c4bedbc47358"
+ },
+ "screen": true
+}

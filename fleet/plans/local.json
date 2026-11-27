@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795761516036,
+ "at": 1795761711847,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -157,6 +157,22 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "magearena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
+   "role": "army"
   }
  ],
  "army": [
@@ -170,7 +186,6 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",

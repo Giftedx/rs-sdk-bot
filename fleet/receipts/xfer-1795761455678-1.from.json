@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795761455678-1",
+ "account": "OreElse",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 2,
+ "claim": "b7b760dd-aa63-4f31-86c2-48a2a48b23ab",
+ "count": 0,
+ "ok": false,
+ "at": 1795761709149,
+ "detail": "trade claimed"
+}
