@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795801622105-2",
+ "account": "Quickhandjob",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "8d522151-ec6d-44fc-ae2d-d7191f386156",
+ "count": 1,
+ "ok": true,
+ "at": 1795802048009,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795802047283
+ },
+ "logout": {
+  "attemptId": "1795802035803-0000027548-0000000001",
+  "at": 1795802047970,
+  "sha256": "5d7e5cc830043c6d09cfe68f4412f1ebb95abc96643250e96b6624c823600bdf"
+ },
+ "screen": true
+}

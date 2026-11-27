@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795801622105-1",
+ "account": "YewGotWood",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "39f4c6a9-e0cd-428a-920f-f43fdfbd2ea6",
+ "count": 0,
+ "ok": false,
+ "at": 1795802065395,
+ "detail": "trade claimed"
+}

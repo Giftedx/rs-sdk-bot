@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801698245-1",
  "account": "Woodenstaff",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "ff1ef603-433c-42a3-b964-b98e8f7eb5c6",
- "count": 0,
- "ok": false,
- "at": 1795801882657,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795801961617,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801960823
+ },
+ "logout": {
+  "attemptId": "1795801882689-0000034972-0000000001",
+  "at": 1795801961602,
+  "sha256": "24455aa57ef002092784525ee6e66c5c5756d4d12cd22238e7d78a52126462f1"
+ },
+ "screen": true
 }
