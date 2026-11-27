@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772425410-1",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Emerald",
  "requested": 1,
  "claim": "1296c675-1b30-4ea4-a8d5-787ce0e542c9",
- "count": 0,
- "ok": false,
- "at": 1795772801516,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772864976,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772864250
+ },
+ "logout": {
+  "attemptId": "1795772801525-0000006348-0000000001",
+  "at": 1795772864967,
+  "sha256": "c449e6fcda4cea1fe483cc8ee5c1d73b48e9196597d89735b4f70d0a1d0acd65"
+ },
+ "screen": true
 }
