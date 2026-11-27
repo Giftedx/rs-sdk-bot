@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795776260157-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "MeatNTwoVeg",
+  "item": "Nature rune",
+  "count": 67,
+  "itemId": 561,
+  "extra": [
+    {
+      "item": "Fire rune",
+      "count": 495,
+      "itemId": 554
+    }
+  ],
+  "start": 1795776260157,
+  "end": 1795777160157,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
