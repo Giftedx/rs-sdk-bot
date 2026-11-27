@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795745570860,
+ "at": 1795745588304,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -209,6 +209,42 @@
    "role": "auto"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:3doseantipoison"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:shaftshooter:item:175",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:shaftshooter:item:175",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p845 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=845 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:grindmyherb:item:3853 BATCH_UNITS=1 -- magic items enchant:sapphire_necklace - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:3853",
+   "role": "army"
+  },
+  {
    "account": "MeatNTwoVeg",
    "script": "scripts/chain.ts",
    "args": [
@@ -267,7 +303,6 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -275,7 +310,6 @@
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
