@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795754190272-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Shaftsinker",
+  "item": "Lobster",
+  "count": 4,
+  "itemId": 379,
+  "start": 1795754190272,
+  "end": 1795755090272,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
