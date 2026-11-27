@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795800236620,
+ "at": 1795800250339,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -85,23 +85,19 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
+   "goal": "campaign:haggis:item:1519",
    "role": "auto",
    "resources": [
-    "chaos-druids"
+    "draynor-willows"
    ]
   },
   {
