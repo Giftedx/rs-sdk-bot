@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795780009618-1",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 1264,
+ "claim": "c0c48642-314d-4306-823e-dc29b7f63f1d",
+ "count": 1264,
+ "ok": true,
+ "at": 1795780610529,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1264,
+  "after": 0
+ },
+ "bank": {
+  "count": 1264,
+  "at": 1795780511899
+ },
+ "logout": {
+  "attemptId": "1795780500162-0000029588-0000000001",
+  "at": 1795780610459,
+  "sha256": "f2765bfc0abbe2ddacc2b2184495464ce8ea4f8815a0535275d4ef04c2eb2a19"
+ },
+ "screen": true
+}

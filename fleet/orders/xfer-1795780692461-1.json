@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780692461-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Pocketpython",
+  "item": "Prayer potion(3)",
+  "count": 2,
+  "itemId": 139,
+  "start": 1795780692461,
+  "end": 1795781592461,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

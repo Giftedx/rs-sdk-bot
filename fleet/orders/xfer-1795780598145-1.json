@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780598145-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "UnderMyKilt",
+  "item": "Gold bar",
+  "count": 1,
+  "itemId": 2357,
+  "start": 1795780598145,
+  "end": 1795781498145,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

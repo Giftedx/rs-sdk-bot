@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795780137074-1",
+ "account": "PickpockDick",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Avantoe",
+ "requested": 3,
+ "claim": "fbbd49f1-4503-4b8a-8e28-c0948e9e9bee",
+ "count": 3,
+ "ok": true,
+ "at": 1795780686637,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795780596285
+ },
+ "logout": {
+  "attemptId": "1795780584325-0000026484-0000000001",
+  "at": 1795780686617,
+  "sha256": "f943144f9ed48e10cb2196c1a0b041a2aea04f0ca8c6f4b664e37d2e23e7d25a"
+ },
+ "screen": true
+}

@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795779741689-1",
+ "account": "Pocketpython",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "579bca04-29da-4612-bd02-9d2a63571526",
+ "count": 0,
+ "ok": false,
+ "at": 1795780642654,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795780552334
+ },
+ "logout": {
+  "attemptId": "1795780544959-0000012048-0000000001",
+  "at": 1795780642620,
+  "sha256": "aec6e1628afebdcf5dcc2c14448d06e9e4cf4fc699527a9a0eaee37601d2ac73"
+ },
+ "screen": false
+}

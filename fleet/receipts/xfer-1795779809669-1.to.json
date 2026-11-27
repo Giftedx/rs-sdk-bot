@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779809669-1",
+ "account": "TossTheCaber",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "734ee45e-c3e0-4123-aa9d-4b5eb03de895",
+ "count": 1,
+ "ok": true,
+ "at": 1795780676257,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795780675473
+ },
+ "logout": {
+  "attemptId": "1795780513358-0000009796-0000000001",
+  "at": 1795780676244,
+  "sha256": "9a525225e6e3daf1da0cb9c810d0c1557809e55e6519361a3454ac0ff63c476e"
+ },
+ "screen": true
+}

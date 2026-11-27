@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795780706265-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordswallow",
+  "to": "Fatstack",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795780706265,
+  "end": 1795781606265,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795780085128-1",
+ "account": "Swordinhand",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "f634f2b9-fb9e-44fb-8c23-530d3cf12548",
+ "count": 0,
+ "ok": false,
+ "at": 1795780720993,
+ "detail": "trade claimed"
+}

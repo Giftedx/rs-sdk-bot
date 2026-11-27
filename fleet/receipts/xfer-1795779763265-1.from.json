@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795779763265-1",
+ "account": "TheFullMonty",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 219,
+ "claim": "8a4e5668-a936-48a8-9584-b328755cff6d",
+ "count": 219,
+ "ok": true,
+ "at": 1795780579824,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 219,
+  "after": 0
+ },
+ "bank": {
+  "count": 219,
+  "at": 1795780560707
+ },
+ "logout": {
+  "attemptId": "1795780549411-0000023956-0000000001",
+  "at": 1795780579811,
+  "sha256": "5c8c8d2c451740a57842baa748b53f91581b9ad3a5c3438bf9c845c8a713a9d3"
+ },
+ "screen": true
+}
