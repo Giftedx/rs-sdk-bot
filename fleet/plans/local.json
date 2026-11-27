@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795794534271,
+ "at": 1795794547989,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,24 +63,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1315",
-    "ITEMS": "Mithril 2h sword",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "239",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1315",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "239"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1315",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
