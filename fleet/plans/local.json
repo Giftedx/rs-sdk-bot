@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795749890759,
+ "at": 1795749923809,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -83,24 +83,6 @@
    ],
    "env": {
     "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -197,6 +179,7 @@
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
