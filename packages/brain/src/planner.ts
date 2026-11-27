@@ -46,7 +46,10 @@ import { campaignShortfalls } from './campaigns';
 import { walledInAt } from './snapshot';
 import { walledRecoveryReason } from './worker-routing';
 import {
+    ROUTE_DANGER_PREFIX,
     STANDARD_FOOD_IDS,
+    freePackSlots,
+    routeDangerFoodCount,
     accountSkillLevel,
     activityPreflightFromConfig,
     availableStockAfterReserves,
@@ -1490,6 +1493,18 @@ function planAccountCore(
         committed: number,
     ): PlannedStep | null => {
         const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
+        // A route-danger blocker names the heal short (`required`): buy the pieces of the first food that covers it in
+        // one carry (preflight.ts routeDangerFoodCount), so one stage is enough for the walk.
+        if ((blocker.message ?? '').startsWith(ROUTE_DANGER_PREFIX) && blocker.required !== undefined) {
+            const free = freePackSlots(acct.inventory);
+            for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
+                const count = routeDangerFoodCount(blocker.required, fid, free);
+                if (count === null) continue;
+                const acq = resolveAcquireCached({ itemId: fid, quantity: count, operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT, committedCoinSpend: committed });
+                if (acq.ok && acq.step) return acq.step;
+            }
+            return null;
+        }
         const countNeed = Math.max(10, floor?.minFoodCount ?? 15, (blocker.message ?? '').startsWith('admission:') ? blocker.required ?? 0 : 0);
         for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
             const acq = resolveAcquireCached({

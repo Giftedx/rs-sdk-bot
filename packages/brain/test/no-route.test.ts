@@ -7,7 +7,20 @@ import type { AccountState, ActivityDefinition, GoalDemand, NoRouteFact, WorldSn
 import { planAccount } from '../src/planner';
 import { enclosedAt, NO_ROUTE_TTL_MS, noRouteState, noRouteTo, parseNoRoute } from '../src/no-route';
 import { OutcomeClassifier } from '../src/outcome-classifier';
-import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability } from '../src/preflight';
+import { activityPreflightFromConfig, evaluatePreflight, evaluateTileReachability, freePackSlots, routeDangerFoodCount } from '../src/preflight';
+
+test('route-danger food: ceil(heal short / heal per piece) + 2, within the free pack slots and a carry of 20', () => {
+    expect(routeDangerFoodCount(42, 385, 28)).toBe(5); // sharks heal 20
+    expect(routeDangerFoodCount(42, 379, 28)).toBe(6); // lobsters heal 12
+    expect(routeDangerFoodCount(42, 1891, 28)).toBe(6); // cake: three bites, 12 in all
+    expect(routeDangerFoodCount(400, 385, 28)).toBe(20); // 20 pieces: the margin does not pass the carry
+    expect(routeDangerFoodCount(401, 385, 28)).toBeNull();
+    expect(routeDangerFoodCount(42, 385, 3)).toBe(3);
+    expect(routeDangerFoodCount(42, 385, 2)).toBeNull();
+    expect(routeDangerFoodCount(42, 995, 28)).toBeNull(); // coins heal nothing
+    expect(freePackSlots({ 995: 20_000, 1351: 1, 590: 1 })).toBe(26);
+    expect(freePackSlots({ 1511: 40 })).toBe(0);
+});
 
 const NOW = 1_800_000_000_000;
 const MEAT = { x: 2793, z: 3516, level: 0 };
@@ -355,6 +368,15 @@ test('the planner stages food before the refused walk, and gives no job whose ro
     const staged = plan(rich([fact]));
     expect(staged.steps[0]?.stepKind).toBe('acquire');
     expect(staged.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(true);
+    // The purchase covers the heal short in one carry: 42 heal of sharks (20 each) is 3 pieces + 2 margin.
+    expect(staged.steps[0]).toMatchObject({ itemId: 385, quantity: 5 });
+    // Spitroaster over White Wolf Mountain (233 heal short): 12 sharks + 2, one stage, not two rounds of 15.
+    const big = plan(rich([{ ...fact, needHeal: 233 }]));
+    expect(big.steps.filter(s => s.stepKind === 'acquire')).toHaveLength(1);
+    expect(big.steps[0]).toMatchObject({ itemId: 385, quantity: 14 });
+    // More than a carry of the best food covers: no purchase, and no job there.
+    const huge = plan(rich([{ ...fact, needHeal: 401 }]));
+    expect(huge.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(false);
     const hopeless = plan(rich([{ ...fact, needHeal: 0 }]));
     expect(hopeless.steps.some(s => 'activityId' in s && s.activityId === taverley.id)).toBe(false);
 });

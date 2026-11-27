@@ -6,6 +6,7 @@ import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import { carryableFood, combatAdmission, MIN_HITS_ABOVE_RETREAT, type CombatThreat } from '../../core/src/combat-admission';
 import {
+    foodTotalHeal,
     questFoodDefinitions,
     totalAvailableHeal,
 } from '../../core/src/sustain';
@@ -58,6 +59,31 @@ export const STANDARD_FOOD_IDS: readonly number[] = [
     1897, // Chocolate cake (15)
     2309, // Bread (5)
 ];
+
+// A route-danger food blocker (route danger fact, no-route.ts) starts its message with this; `required` is the heal short.
+export const ROUTE_DANGER_PREFIX = 'route danger:';
+// Pieces over the heal short, for a hit above the expected damage.
+export const ROUTE_DANGER_FOOD_MARGIN = 2;
+// The most food pieces the walker takes from the bank for a walk (core/src/walk/harm.ts foodToTake carryMax).
+export const ROUTE_DANGER_CARRY_MAX = 20;
+
+// Pack slots the account has free: every held item but coins takes a slot for each piece (a stack is counted as its
+// pieces, up to the pack), so the count errs low.
+export function freePackSlots(inventory: Readonly<Record<number, number>>): number {
+    let used = 0;
+    for (const [id, n] of Object.entries(inventory)) if (n > 0 && Number(id) !== COINS_ITEM_ID) used += Math.min(n, 28);
+    return Math.max(0, 28 - Math.min(28, used));
+}
+
+// The pieces of food `foodId` to buy for a route-danger heal short: ceil(heal / heal per piece) + the margin, within
+// the free pack slots and ROUTE_DANGER_CARRY_MAX, since the walker carries them all at once. Null when the most it can
+// carry does not cover the heal, or the food heals nothing.
+export function routeDangerFoodCount(needHeal: number, foodId: number, freeSlots: number): number | null {
+    const heal = foodTotalHeal(foodId) ?? 0, room = Math.min(freeSlots, ROUTE_DANGER_CARRY_MAX);
+    if (heal <= 0 || room <= 0) return null;
+    const pieces = Math.ceil(Math.max(1, needHeal) / heal);
+    return pieces > room ? null : Math.min(room, pieces + ROUTE_DANGER_FOOD_MARGIN);
+}
 
 // The STANDARD_FOOD_IDS that the eat guard eats (PLAIN_FOOD, packages/core/src/eat-guard.ts), in STANDARD_FOOD_IDS order (shark first). A
 // worker with the eat guard never eats a cake or bread, so a fight floor of such a worker counts only these.
@@ -1407,7 +1433,7 @@ export function evaluatePreflight(
     const danger = routeDangerFor(accountNoRoutes(acct), acct.pos, spec.targetTile ?? undefined, spec.activityId, world.at);
     if (danger && !blockers.some(b => b.kind === 'unreachable_tile')) {
         blockers.push((danger.needHeal ?? 1) > 0
-            ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `route danger: ${noRouteMessage(acct.name, danger)}` }
+            ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `${ROUTE_DANGER_PREFIX} ${noRouteMessage(acct.name, danger)}` }
             : { kind: 'unreachable_tile', target: danger.to, from: acct.pos, reason: 'no_route', message: noRouteMessage(acct.name, danger) });
     }
 
