@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801585744-1",
  "account": "SporranDip",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 4,
  "claim": "36707e50-7c5a-457d-a431-ac74ec8d1c74",
- "count": 0,
- "ok": false,
- "at": 1795801847338,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795801874053,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795801852866
+ },
+ "logout": {
+  "attemptId": "1795801847349-0000032788-0000000001",
+  "at": 1795801874024,
+  "sha256": "594126ac06c27edad3f26622a94cb909eeaa8c35ec6e867a1122e5cfcf5fd637"
+ },
+ "screen": true
 }
