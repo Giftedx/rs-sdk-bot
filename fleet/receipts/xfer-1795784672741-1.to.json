@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784672741-1",
+ "account": "BoneToPick",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 3,
+ "claim": "b78f0f1c-00af-47f2-a83a-5b91e4d5a0b0",
+ "count": 0,
+ "ok": false,
+ "at": 1795784853681,
+ "detail": "trade claimed"
+}
