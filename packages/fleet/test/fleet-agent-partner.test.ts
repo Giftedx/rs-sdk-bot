@@ -188,3 +188,12 @@ test('the partner check reads a stop file without removing it', () => {
         expect(tradeStop(base, 'Knightstick', 1_000_000)).toEqual({ cleared: true });
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
+
+test('while its reload is due the agent starts only the second party of a running order', async () => {
+    const { reloadStarts } = await import('../src/fleet-agent');
+    const starts = [{ account: 'B', order: { id: 'xfer-1-1' } }, { account: 'C', order: { id: 'xfer-2-1' } }];
+    const running = new Map([['a', 'xfer-1-1']]);
+    expect(reloadStarts(starts, running, false).map(s => s.account)).toEqual(['B', 'C']);
+    expect(reloadStarts(starts, running, true).map(s => s.account)).toEqual(['B']);
+    expect(reloadStarts(starts, new Map(), true)).toEqual([]);
+});
