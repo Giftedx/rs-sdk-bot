@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795743964723-2",
  "account": "Fatstack",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "52d2bace-c121-47fa-bfb8-16c67c4fa392",
- "count": 0,
- "ok": false,
- "at": 1795744346311,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795744507136,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795744492810
+ },
+ "logout": {
+  "attemptId": "1795744346320-0000015700-0000000001",
+  "at": 1795744507127,
+  "sha256": "afdc30390525c11e0f148577d290e00d9c210bc1a4bd188efc0caf1501f10adc"
+ },
+ "screen": true
 }
