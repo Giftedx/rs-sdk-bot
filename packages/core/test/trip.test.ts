@@ -12,7 +12,10 @@ const poor = { skills: {}, varps: {}, items: [], coins: 0 };
 test('an account with coins only in the bank stops at the bank, then sails', () => {
     const p = planTrip(world, from, to, poor, { coins: 5000 }, [bank])!;
     expect(p.bank?.at).toEqual(bank);
-    expect(p.bank?.coins).toBe(60);
+    // The standing fare float (trip.ts FARE_FLOAT): the bank holds FARE_FLOAT_AFFORD or more. The 30-coin fare twice
+    // is the floor for a poorer bank.
+    expect(p.bank?.coins).toBe(300);
+    expect(planTrip(world, from, to, poor, { coins: 100 }, [bank])!.bank?.coins).toBe(60);
     expect(p.bank?.then.map(l => l.kind)).toEqual(['walk', 'travel', 'walk']);
 });
 

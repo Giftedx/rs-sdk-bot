@@ -70,7 +70,8 @@ function farWalk(s: Walker, to: Tile): boolean {
 async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number): Promise<Outcome> {
     const start = s.tick(), p = s.sdk.getState()?.player, budget = Math.max(opts.legTimeoutTicks ?? 0, p ? cheb(to, p) * 3 + 60 : 600);
     const { sessionWalker } = await import('./session');
-    const deps = await sessionWalker(s as unknown as Parameters<typeof sessionWalker>[0]);
+    // goTo took the fare float before it planned; a leg of its route takes none.
+    const deps = await sessionWalker(s as unknown as Parameters<typeof sessionWalker>[0], { noFareFloat: true });
     const r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
     return r.ok ? { ok: true, ticks: s.tick() - start }
         : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${to.x},${to.z},${to.level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start };

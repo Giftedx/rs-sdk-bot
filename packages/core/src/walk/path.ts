@@ -32,6 +32,8 @@ export interface PathDeps {
     coins?(): number | null;
     dialog?(): { isOpen: boolean; isWaiting?: boolean; text?: string; options: { index: number; text: string }[] } | null;
     answer?(index: number): unknown;
+    // Runs once before the walk plans (sessionWalker: the fare float at the start bank, fare-float.ts).
+    prepare?(goal: { x: number; z: number; level: number }): Promise<unknown>;
 }
 export interface PathOptions {
     signal?: AbortSignal;
@@ -253,6 +255,12 @@ function selectClickIndex(
 
 /** Walks through waypoints the way a player clicks ahead on the minimap. */
 export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions = {}): Promise<PathResult> {
+    const goal = points[points.length - 1], at = deps.pos();
+    if (!deps.prepare || !goal || !at) return walkPathFrom(deps, points, opts);
+    return deps.prepare({ x: goal.x, z: goal.z, level: at.level }).then(() => walkPathFrom(deps, points, opts), () => walkPathFrom(deps, points, opts));
+}
+
+function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): Promise<PathResult> {
     const look = opts.look ?? 20;
     const reclickAt = opts.reclickAt ?? 6;
     const log = opts.log ?? (() => {});

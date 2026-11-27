@@ -2415,6 +2415,14 @@ return [
       pass: (s: string) => ok(s) && Number(s.match(/walk-to \{.*\} at=\S+ ticks=(\d+)/)?.[1] ?? Infinity) < 160 && !/WALK_FARE_FAIL|WALK_DETOUR/.test(s),
       presetConfig: {position: {...at, level: 0}, inventory: [{id: 995, count: 100}]}};
   })),
+  // The same gate with no coins in the pack and 5000 in the bank: the walk takes the fare float (300 coins) at its start
+  // bank (core walk/fare-float.ts) and pays the gate. Al Kharid bank to Lumbridge: the gate route 124 ticks, the bank
+  // stop and the walk round 307. Draynor bank to the Al Kharid bank: 244 through the gate, 382 round.
+  ...([['west', {x: 3269, z: 3167}, ['3222', '3218', '0'], 190], ['east', {x: 3092, z: 3243}, ['3269', '3167', '0'], 320]] as const).flatMap(([way, at, to, cap]) =>
+    (['', '-ground'] as const).map(mode => ({key: `extra:walk-toll-float-${way}${mode}`, script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge',
+      scriptArgs: ['walk-to', ...to, ...(mode ? ['--ground'] : [])], timeoutMs: 300_000,
+      pass: (s: string) => ok(s) && /WALK_FARE_FLOAT \{[^\n]*"ok":true/.test(s) && Number(s.match(/walk-to \{.*\} at=\S+ ticks=(\d+)/)?.[1] ?? Infinity) < cap && !/WALK_FARE_FAIL|WALK_DETOUR/.test(s),
+      presetConfig: {position: {...at, level: 0}, bank: [{id: 995, count: 5000}]}}))),
   // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
   // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
   {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
