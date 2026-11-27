@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740688170-1",
  "account": "Billionaire",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Chocolate bar",
  "requested": 5,
  "claim": "6a745793-98a0-438c-a463-dfca559e663f",
- "count": 0,
- "ok": false,
- "at": 1795741090421,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795741140501,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795741099770
+ },
+ "logout": {
+  "attemptId": "1795741090438-0000007500-0000000001",
+  "at": 1795741140488,
+  "sha256": "7e072bad1131ae96e1d896bf292e0cb06f0e9ca53fdf913dcd1188be9bf4e900"
+ },
+ "screen": true
 }
