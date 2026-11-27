@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784337404-1",
+ "account": "Fingerblastr",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 3,
+ "claim": "77807ec5-49b9-4d4d-b282-a939658e26e0",
+ "count": 0,
+ "ok": false,
+ "at": 1795784823095,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795784365170-1",
+ "account": "Billionaire",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "df8c1fd6-465b-4e4b-abca-564bde89c0b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795784835428,
+ "detail": "trade claimed"
+}
