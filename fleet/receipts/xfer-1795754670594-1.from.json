@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795754670594-1",
+ "account": "Spitroaster",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 5,
+ "claim": "480d84bc-3f0e-4266-b8eb-3aad8685d28f",
+ "count": 0,
+ "ok": false,
+ "at": 1795754741381,
+ "detail": "trade claimed"
+}
