@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795743072303-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Quickhandjob",
+  "item": "Lobster",
+  "count": 1,
+  "itemId": 379,
+  "start": 1795743072303,
+  "end": 1795743972303,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

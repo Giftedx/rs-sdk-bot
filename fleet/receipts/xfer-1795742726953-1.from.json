@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742726953-1",
+ "account": "OreElse",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "d86dbb76-3b57-40f6-81cd-f4db8fb69074",
+ "count": 0,
+ "ok": false,
+ "at": 1795743064114,
+ "detail": "trade claimed"
+}

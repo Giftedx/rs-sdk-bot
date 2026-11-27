@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795742816386-1",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "f42f925b-147a-4041-a31d-cd48b58e0619",
+ "count": 0,
+ "ok": false,
+ "at": 1795743067999,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795743036905
+ },
+ "logout": {
+  "attemptId": "1795743030938-0000004628-0000000001",
+  "at": 1795743067989,
+  "sha256": "a033931134261a8c9e4aef9cdb7b49215ccf410b7bc581be210238e249488f51"
+ },
+ "screen": false
+}

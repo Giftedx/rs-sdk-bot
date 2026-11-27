@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795742816386-1",
+ "account": "Quickhandjob",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "51f4137c-efe3-4d34-82e2-96e79a066e22",
+ "count": 0,
+ "ok": false,
+ "at": 1795743059244,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795743054115-0000019480-0000000001",
+  "at": 1795743059188,
+  "sha256": "372cbd018e51461ba7f04bb9185ab47837fe4455fae554b66ca731ef6a9eb0c9"
+ },
+ "screen": false
+}

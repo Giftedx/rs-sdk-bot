@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795742707352-1",
+ "account": "Wandwaver",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Guam leaf",
+ "requested": 1,
+ "claim": "1df72b87-75f8-4e74-8b4e-e3664c6f61b9",
+ "count": 0,
+ "ok": false,
+ "at": 1795743075011,
+ "detail": "trade claimed"
+}
