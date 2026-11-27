@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795777859605-2",
+ "account": "Billionaire",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "bd0b51a4-f20c-48fb-8758-69cda92f7341",
+ "count": 3,
+ "ok": true,
+ "at": 1795778746704,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795778737984
+ },
+ "logout": {
+  "attemptId": "1795778732149-0000004952-0000000001",
+  "at": 1795778746693,
+  "sha256": "ef666580007e2c0557ae64b603e71a4afaeafb0e85e329c92838e00a35be8b6e"
+ },
+ "screen": true
+}
