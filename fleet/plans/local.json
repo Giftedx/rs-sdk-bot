@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740339791,
+ "at": 1795740350928,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,28 @@
    "role": "pvp"
   },
   {
-   "account": "KnightRider",
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "steel"
+   ],
+   "env": {
+    "BAR_TYPE": "steel",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "9"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -75,7 +96,7 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Bigpackage",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -91,19 +112,31 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=4 STOCK_TARGET=4 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy shantayshop 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=39 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:39 BATCH_UNITS=4 -- smithing anvil 1500"
+    "sweep",
+    "biohazard"
    ],
    "env": {
-    "ROUNDS": "1"
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "biohazard"
+   ],
+   "env": {
+    "RECOVERY_REASON": "walled in west-ardougne; exit by quest:biohazard"
+   },
+   "enabled": true,
+   "repeat": false,
    "role": "army"
   },
   {
@@ -176,6 +209,21 @@
    "role": "army"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 ORDER_MODE=best-effort -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -204,9 +252,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -225,8 +271,7 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
