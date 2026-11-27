@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795798784986,
+ "at": 1795798937923,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -109,7 +109,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- giant"
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
    ],
    "env": {
     "ROUNDS": "1"
@@ -120,10 +120,26 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "Fingersmith",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "ikov"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=73110 TARGET_COUNT=7311 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=82000 TARGET_COUNT=8200 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
    ],
    "env": {
@@ -135,37 +151,21 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "thieving",
-    "knights"
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1387"
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "loot-trip"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -347,6 +347,25 @@
    "role": "army"
   },
   {
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1335"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
@@ -360,31 +379,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "shantayshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1937",
-    "ITEMS": "Jug of water",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1937",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1937",
-   "role": "army"
   }
  ],
  "army": [
@@ -401,6 +395,7 @@
   "fatstack",
   "fingerblastr",
   "hocuspokeus",
+  "kiltlifter",
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",

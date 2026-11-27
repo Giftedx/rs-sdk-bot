@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798309963-2",
+ "account": "Nockitoff",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 33,
+ "claim": "eecdcd3a-f995-4e40-ae14-b2b85553e6e9",
+ "count": 33,
+ "ok": true,
+ "at": 1795798870139,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 33
+ },
+ "bank": {
+  "count": 33,
+  "at": 1795798869402
+ },
+ "logout": {
+  "attemptId": "1795798859159-0000029588-0000000001",
+  "at": 1795798870126,
+  "sha256": "d79ee7556efa2fac65b6d9dfc4e31bee88d61646d80841b6ec89e6f75dd91ef4"
+ },
+ "screen": true
+}
