@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795781728624-1",
+ "account": "OreElse",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "7594495b-1db0-4314-a0d3-09ac9c14825e",
+ "count": 0,
+ "ok": false,
+ "at": 1795782148623,
+ "detail": "trade claimed"
+}

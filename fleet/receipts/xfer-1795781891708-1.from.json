@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795781891708-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "ef3c3141-9710-423a-b43a-6e8424d38f9e",
+ "count": 0,
+ "ok": false,
+ "at": 1795782152271,
+ "detail": "trade claimed"
+}
