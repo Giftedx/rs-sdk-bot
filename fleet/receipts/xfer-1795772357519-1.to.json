@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795772357519-1",
  "account": "Wandwaver",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "19a1e57e-fa73-4d90-aa05-81c5bbba2da4",
- "count": 0,
- "ok": false,
- "at": 1795772642993,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795772707784,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795772707062
+ },
+ "logout": {
+  "attemptId": "1795772643001-0000009816-0000000001",
+  "at": 1795772707772,
+  "sha256": "f80b9f91daaaf82ec98b11c3efe746558c056940c5dda675e143b5ee4f1db122"
+ },
+ "screen": true
 }
