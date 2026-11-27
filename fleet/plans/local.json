@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795738258458,
+ "at": 1795738348186,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=32 PRODUCT_TARGET=32 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=32 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=43 PRODUCT_TARGET=43 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=43 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -71,22 +71,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p863 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=863 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -106,7 +90,7 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -119,6 +103,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=3 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
   },
   {
@@ -176,20 +176,40 @@
    "role": "auto"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "smithing",
-    "smelt"
+    "crafting",
+    "jewellery-trip"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "20",
-    "ORE_RESERVE": "0"
+    "RECIPE": "diamond_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1643",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=10 STOCK_TARGET=10 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=10 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {
@@ -197,7 +217,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=3 STOCK_TARGET=5 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
+    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 ORDER_MODE=best-effort -- crafting inventory brew:unf_irit_potion"
    ],
    "env": {
     "ROUNDS": "1"
@@ -205,21 +225,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:101",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=6 STOCK_TARGET=6 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:103 BATCH_UNITS=6 -- crafting inventory brew:unf_avantoe_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:103",
    "role": "army"
   },
   {
@@ -235,7 +240,8 @@
     "CAP": "1200",
     "MEMBERS": "1",
     "DEMAND_ID": "campaign:haggis:item:97",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
@@ -252,31 +258,16 @@
    ],
    "env": {
     "MAX_MAKE": "1",
-    "CAP": "600",
+    "CAP": "1000",
     "MEMBERS": "1",
     "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:235",
    "role": "helper"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=3 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
   },
   {
    "account": "BoneToPick",
@@ -364,6 +355,7 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "moneyshot",

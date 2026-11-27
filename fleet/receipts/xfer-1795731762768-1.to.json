@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795731762768-1",
  "account": "ChaosInPants",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "883a9edc-37b4-4aa8-a784-e276eb9d02a5",
- "count": 0,
- "ok": false,
- "at": 1795732088636,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795732101006,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795732100206
+ },
+ "logout": {
+  "attemptId": "1795732088645-0000029284-0000000001",
+  "at": 1795732100995,
+  "sha256": "509e5f2b6c20d1a4c07efc90cb41f2cf1def9cb93592d57eaa9664e52307560b"
+ },
+ "screen": true
 }
