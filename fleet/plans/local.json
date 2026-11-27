@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795774957953,
+ "at": 1795774974620,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "666",
+    "MAX_ITEMS": "625",
     "COIN_RESERVE": "1000",
-    "FLOAT": "135200",
+    "FLOAT": "127000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "666"
+    "BATCH_UNITS": "625"
    },
    "enabled": true,
    "repeat": false,
@@ -107,6 +107,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
   },
   {
    "account": "Bigpackage",
@@ -172,53 +191,28 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "gemshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:gear_collection:892",
+    "DEMAND_ID": "campaign:haggis:item:1623",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:gear_collection:892",
-   "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:1623",
    "role": "army"
   },
   {
@@ -266,6 +260,56 @@
    "role": "army"
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "365",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "365"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -291,31 +335,12 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1918"
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "helper",
-   "resources": [
-    "essence-mine"
-   ]
   },
   {
    "account": "Swordinhand",
@@ -354,25 +379,6 @@
    "resources": [
     "essence-mine"
    ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army",
-   "resources": [
-    "edgeville-yews"
-   ]
   }
  ],
  "army": [
@@ -388,7 +394,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
