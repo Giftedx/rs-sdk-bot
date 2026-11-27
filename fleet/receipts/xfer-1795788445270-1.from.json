@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795788445270-1",
  "account": "PickpockDick",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Avantoe",
  "requested": 2,
  "claim": "1883c17b-3c9f-42e1-8bd3-6583ea3aef46",
- "count": 0,
- "ok": false,
- "at": 1795788751452,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795788810274,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795788761894
+ },
+ "logout": {
+  "attemptId": "1795788751653-0000008708-0000000001",
+  "at": 1795788810224,
+  "sha256": "961b9a2cd94ba44f081e22ef5128f751028ef59929b5017a782582247b9cd11f"
+ },
+ "screen": true
 }

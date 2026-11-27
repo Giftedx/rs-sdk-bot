@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795788399566-1",
+ "account": "UnderMyKilt",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 5,
+ "claim": "4707db85-405d-40a9-8b9b-894003d3f261",
+ "count": 0,
+ "ok": false,
+ "at": 1795788832367,
+ "detail": "trade claimed"
+}
