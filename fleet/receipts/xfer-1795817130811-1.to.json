@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795817130811-1",
  "account": "Unsheathed",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "ed24921c-5d34-4ea8-a8d4-bbe55976ee6d",
- "count": 0,
- "ok": false,
- "at": 1795817432443,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795817448060,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795817447319
+ },
+ "logout": {
+  "attemptId": "1795817432474-0000031780-0000000001",
+  "at": 1795817448044,
+  "sha256": "23711f628a8713d861085be6f67a47f96b2778ca1093a3d6cac25156d288e0ad"
+ },
+ "screen": true
 }
