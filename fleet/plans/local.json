@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741761308,
+ "at": 1795741785217,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,7 +79,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -92,7 +92,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -105,7 +105,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -118,7 +118,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -131,7 +131,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -144,7 +144,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -157,7 +157,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -170,7 +170,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -183,7 +183,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -196,7 +196,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -209,20 +209,7 @@
    "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -328,6 +315,21 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1639",
+   "role": "army"
   }
  ],
  "army": [
@@ -345,7 +347,6 @@
   "hocuspokeus",
   "mineyourbiz",
   "mmtha0205",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",

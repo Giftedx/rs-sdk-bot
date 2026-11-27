@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741359373-1",
+ "account": "Hocuspokeus",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 500,
+ "claim": "0c0302ac-bb03-47a9-9140-3d2a14b0de12",
+ "count": 0,
+ "ok": false,
+ "at": 1795741779022,
+ "detail": "trade claimed"
+}
