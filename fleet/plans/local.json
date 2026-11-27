@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777114266,
+ "at": 1795777125722,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1470 TARGET_COUNT=147 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts CAP=1750 TARGET_COUNT=175 PRODUCT_TARGET=175 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
    ],
    "env": {
@@ -77,7 +77,7 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1480 TARGET_COUNT=148 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts CAP=1750 TARGET_COUNT=175 PRODUCT_TARGET=175 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
    ],
    "env": {
@@ -104,24 +104,6 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -138,6 +120,24 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "TossTheCaber",
