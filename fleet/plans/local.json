@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795747452166,
+ "at": 1795747470243,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -302,6 +302,37 @@
    "repeat": false,
    "goal": "goal:quest_board:desertrescue",
    "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1205 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "desertrescue"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:desertrescue",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
   }
  ],
  "army": [
@@ -322,7 +353,6 @@
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
-  "moneyshot",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -330,8 +360,7 @@
   "quickhandjob",
   "sausagefest",
   "swordinhand",
-  "undermykilt",
-  "yewfirst"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
