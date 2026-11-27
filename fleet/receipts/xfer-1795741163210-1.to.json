@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741163210-1",
+ "account": "SporranDip",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "b10635ee-2f84-4c19-bad3-b422717bba87",
+ "count": 0,
+ "ok": false,
+ "at": 1795741977014,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Chocolate bar",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}

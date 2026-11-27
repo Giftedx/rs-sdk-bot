@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741817066-1",
+ "account": "YewFirst",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "31cfdeaf-50e9-4fd4-8965-b1d9c15c3d76",
+ "count": 0,
+ "ok": false,
+ "at": 1795741997863,
+ "detail": "trade claimed"
+}
