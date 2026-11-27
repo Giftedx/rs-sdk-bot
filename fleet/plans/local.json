@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795811340272,
+ "at": 1795811377492,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,24 +59,24 @@
    "role": "pvp"
   },
   {
-   "account": "TossTheCaber",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "495",
+    "MAX_ITEMS": "385",
     "COIN_RESERVE": "1000",
-    "FLOAT": "21800",
+    "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "495"
+    "BATCH_UNITS": "385"
    },
    "enabled": true,
    "repeat": false,
@@ -109,11 +109,27 @@
    "role": "army"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -134,23 +150,32 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-quester.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "sweep",
-    "grandtree"
+    "shop-buy",
+    "2handedshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "campaign:haggis:item:1313",
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -175,7 +200,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -225,7 +250,7 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -273,23 +298,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1623",
    "role": "auto"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "BowBeforeMe",
@@ -405,7 +413,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1797",
+    "BATCH_UNITS": "1794",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -469,6 +477,23 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
