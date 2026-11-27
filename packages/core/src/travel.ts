@@ -20,7 +20,9 @@ export type TravelNeed =
     | { held: string; count: number }            // item debugname held in the pack
     | { worn: string };
 export type TravelRun =
-    | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean; button?: { component: string } }
+    // npcId: the config id. Two NPCs can share a name across a fence (borderguard1 925 and borderguard2 926 are both
+    // "Border Guard", one tile apart on the two sides of the Al Kharid toll gate).
+    | { how: 'npc'; npc: string; npcId?: number; op: number; options: string[]; deck?: boolean; button?: { component: string } }
     | { how: 'spell'; component: string }
     | { how: 'rub'; items: string[]; option: string | null }
     // unlisted: the state's loc list never shows this loc, so the walker sends the op by id and tile.
@@ -71,7 +73,7 @@ function mapAngle(src: string): number | null {
     try { return Number(readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/)[Number(m[2]) - 1]!.trim().split(/\s+/)[5]); } catch { return null; }
 }
 
-type NpcRecord = { id: string; kind: string; destination: string; npc: { name: string; debugname: string }; op: { index: number }; options: { text: string }[]; button?: { component: string; src?: string };
+type NpcRecord = { id: string; kind: string; destination: string; npc: { name: string; debugname: string; id?: number }; op: { index: number }; options: { text: string }[]; button?: { component: string; src?: string };
     from: (Tile & { src: string })[]; to: (Tile & { src: string }) | null; fare?: { coins: number | null; rule?: string }; items?: { item: string; use: string }[];
     requires: { varp: string; op: string; value: number }[]; deck?: { onDeck: boolean; gangplank?: Tile & { src: string } } };
 export function npcTravel(records: NpcRecord[]): Travel[] {
@@ -91,7 +93,7 @@ export function npcTravel(records: NpcRecord[]): Travel[] {
         for (const f of r.from) out.push({
             id: `npc:${r.id}@${f.x},${f.z}`, kind: r.kind, name: `${r.npc.name} to ${r.destination}`, from: { x: f.x, z: f.z, level: f.level }, to, coins,
             needs: [...r.requires.map(q => ({ varp: q.varp, op: q.op, value: q.value })), ...held], runes: [],
-            run: { how: 'npc', npc: r.npc.name, op: r.op.index, options: r.options.map(o => o.text), ...(r.button ? { button: { component: r.button.component } } : {}), ...(deck ? { deck } : {}) },
+            run: { how: 'npc', npc: r.npc.name, ...(Number.isInteger(r.npc.id) ? { npcId: r.npc.id } : {}), op: r.op.index, options: r.options.map(o => o.text), ...(r.button ? { button: { component: r.button.component } } : {}), ...(deck ? { deck } : {}) },
             cost: r.kind === 'boat' ? BOAT_COST : NPC_COST,
         });
     }
@@ -166,7 +168,7 @@ export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
 // each becomes two edges between the walkable tiles nearest the gate on its two sides: tiles within 3 of the
 // gate that lie in different connected areas (components.ts). A gate with one area or more than two is skipped.
 type CrossingRecord = { x: number; z: number; level: number; locName: string; action: string; choices: string[]; coins: number;
-    item?: { item: string; count: number }; skill?: { name: string; level: number }; label: string };
+    item?: { item: string; count: number }; skill?: { name: string; level: number }; label: string; questWaives?: string };
 export function crossingTravel(records: CrossingRecord[], areaOf: (t: Tile) => number): Travel[] {
     const out: Travel[] = [];
     for (const c of records) {
@@ -187,12 +189,25 @@ export function crossingTravel(records: CrossingRecord[], areaOf: (t: Tile) => n
     }
     return out;
 }
+let crossings: CrossingRecord[] | undefined;
 export function loadCrossings(): CrossingRecord[] {
-    return (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'special-crossings.json'), 'utf8')) as { crossings: CrossingRecord[] }).crossings;
+    return crossings ??= (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'special-crossings.json'), 'utf8')) as { crossings: CrossingRecord[] }).crossings;
 }
 
+// A paid crossing: a scripted gate that takes coins in its dialogue and needs no item (the Al Kharid toll gate,
+// border_gate.rs2: 10 coins, free with Prince Ali Rescue). The rs-sdk pathfinder unmasks such a gate as a door
+// (collision-data.json lists 3268,3227 and 3268,3228), and knowledge/doors.json gives it kind 'unknown', which
+// blocks it for every account. A walk crosses it when the account holds the fare and answers its choices.
+export type FareCrossing = Tile & { coins: number; choices: readonly string[]; label: string; waived: boolean };
+export function fareCrossings(records: readonly CrossingRecord[] = loadCrossings()): FareCrossing[] {
+    return records.filter(c => c.coins > 0 && !c.item && !c.skill && c.choices.length > 0)
+        .map(c => ({ x: c.x, z: c.z, level: c.level, coins: c.coins, choices: c.choices, label: c.label, waived: !!c.questWaives }));
+}
+export const fareCrossingAt = (level: number, at: { x: number; z: number }, list: readonly FareCrossing[] = fareCrossings()): FareCrossing | undefined =>
+    list.find(c => c.level === level && c.x === at.x && c.z === at.z);
+
 // The stamps cover the data files only: change this name when a builder above changes its output.
-const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v2.json');
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v3.json');
 type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
 const fileStamp = (file: string): string => {
     try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }

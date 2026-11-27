@@ -67,6 +67,33 @@ export function tickWaste(dir = '.practice/swarm-logs', opts: { latest?: boolean
   return new Map([...byRelease].map(([key, fam]) => [key, fam.get(newest.get(key)!)!]));
 }
 
+// Walks that went round a fare (packages/core/src/walk: WALK_DETOUR) and paid crossings that failed (WALK_FARE_FAIL),
+// by account. `extra` sums the planner's extra ticks (cost - paidCost) and walkPath's extra path tiles
+// (roundTiles - throughTiles); a tile costs about one tick on foot.
+export type FareWaste = { detours: number; extra: number; fareFails: number };
+export function fareWaste(dir = '.practice/swarm-logs'): Map<string, FareWaste> {
+  const out = new Map<string, FareWaste>();
+  if (!existsSync(dir)) return out;
+  for (const f of readdirSync(dir)) {
+    const text = readFileSync(`${dir}/${f}`, 'latin1');
+    if (!text.includes('WALK_DETOUR') && !text.includes('WALK_FARE_FAIL')) continue;
+    const bot = f.replace(/^host-/, '').replace(/\.log(\.\d+)?$/, '');
+    const e = out.get(bot) ?? { detours: 0, extra: 0, fareFails: 0 };
+    for (const line of text.split(/\r?\n/)) {
+      const body = workerLine(line);
+      if (body.startsWith('WALK_FARE_FAIL ')) e.fareFails++;
+      if (!body.startsWith('WALK_DETOUR ')) continue;
+      e.detours++;
+      try {
+        const d = JSON.parse(body.slice('WALK_DETOUR '.length)) as { extra?: number; throughTiles?: number; roundTiles?: number };
+        e.extra += Math.max(0, d.extra ?? ((d.roundTiles ?? 0) - (d.throughTiles ?? 0)));
+      } catch { /* a cut line counts as a detour with no extra */ }
+    }
+    out.set(bot, e);
+  }
+  return out;
+}
+
 // Idle+move share per family with at least `minTicks` measured ticks.
 export const wasteShare = (agg: Map<string, Waste>, minTicks = 2000): Record<string, number> =>
   Object.fromEntries([...agg].filter(([, e]) => e.ticks >= minTicks).map(([k, e]) => [k, (e.idle + e.move) / e.ticks]));
@@ -80,5 +107,11 @@ if (import.meta.main) {
     const named = Object.values(e.idleBy).reduce((n, v) => n + v, 0);
     const why = named ? Object.entries(e.idleBy).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w, n]) => `${w} ${(100 * n / named).toFixed(0)}%`).join(', ') : '-';
     console.log(k.padEnd(26), String(e.runs).padStart(4), String(e.ticks).padStart(8), (100 * e.idle / e.ticks).toFixed(0).padStart(5), (100 * e.move / e.ticks).toFixed(0).padStart(5), (100 * e.anim / e.ticks).toFixed(0).padStart(5), String(e.idle + e.move).padStart(9), ' ' + why + (e.release ? `  [release ${e.release}]` : ''));
+  }
+  const fares = [...fareWaste()].sort((a, b) => b[1].extra - a[1].extra);
+  if (fares.length) {
+    console.log('\nfare detours (WALK_DETOUR, WALK_FARE_FAIL)');
+    console.log('account'.padEnd(26), 'detours', 'extraTicks', 'fareFails');
+    for (const [bot, e] of fares.slice(0, 20)) console.log(bot.padEnd(26), String(e.detours).padStart(7), String(e.extra).padStart(10), String(e.fareFails).padStart(9));
   }
 }

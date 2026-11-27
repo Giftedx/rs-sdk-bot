@@ -1,12 +1,24 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
+import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
 import type { PathDeps, PathTile } from './path';
 
-export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[]): DoorBlock[] {
+// The door blocks of a plan. A paid crossing (travel.ts fareCrossings) stays open when the account holds its fare:
+// walkPath pays it (PathDeps.fare). Kept shut, it sends every ground walk between Lumbridge and Al Kharid round the
+// fence by Varrock, 307 path tiles against 111 through the toll gate.
+export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[], fares: readonly FareCrossing[] = fareCrossings()): DoorBlock[] {
     const account = accountForSdk(sdk);
-    return blockedDoorsNear({ ...from, level }, { ...to, level }, account, doors);
+    const coins = account.coins ?? 0;
+    return blockedDoorsNear({ ...from, level }, { ...to, level }, account, doors)
+        .filter(b => { const f = fareCrossingAt(b.level, b, fares); return !f || f.coins > coins; });
 }
+
+// The coins in the pack, or null when the state has no inventory.
+const packCoins = (sdk: any): number | null => {
+    const inv = sdk.getState()?.inventory;
+    return Array.isArray(inv) ? inv.filter((i: { id: number }) => i.id === 995).reduce((n: number, i: { count?: number }) => n + (i.count ?? 0), 0) : null;
+};
 
 // PathDeps for an in-process session (packages/core/src/inprocess.ts). Inputs go straight to the client, not
 // through the SDK action queue, so a click leaves on the tick it is decided.
@@ -39,6 +51,10 @@ export async function sessionWalker(s: {
         runOn: () => s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' }),
         locs: () => s.sdk.getState()?.nearbyLocs ?? [],
         messages: () => s.sdk.getState()?.gameMessages ?? [],
+        fare: (level, loc) => fareCrossingAt(level, loc) ?? null,
+        coins: () => packCoins(s.sdk),
+        dialog: () => s.sdk.getDialog?.() ?? null,
+        answer: index => s.direct({ type: 'clickDialogOption', optionIndex: index, reason: 'SDK' }),
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
         doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
