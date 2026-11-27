@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795739299280-1",
+ "account": "Swordinhand",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 560,
+ "claim": "7c20cafe-8a84-4979-bb67-59eec4be6fe1",
+ "count": 0,
+ "ok": false,
+ "at": 1795739405324,
+ "detail": "trade claimed"
+}
