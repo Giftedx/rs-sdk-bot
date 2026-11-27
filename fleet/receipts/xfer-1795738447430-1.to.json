@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795738447430-1",
+ "account": "Dipstick",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 356,
+ "claim": "6213944f-f752-4cee-8805-8e388905b80c",
+ "count": 0,
+ "ok": false,
+ "at": 1795738793829,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795738785480-0000023300-0000000001",
+  "at": 1795738793815,
+  "sha256": "61ab30a8eb93fc607e35bc5cf2dd13c8b48918c80636faf1ffdfec182cda8977"
+ },
+ "screen": false
+}

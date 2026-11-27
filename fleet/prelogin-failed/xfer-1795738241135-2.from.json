@@ -5,6 +5,6 @@
  "account": "Quickhandjob",
  "partner": "CoinCock",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795738479504,
+ "at": 1795738707696,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

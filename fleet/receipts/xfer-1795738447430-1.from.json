@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795738447430-1",
+ "account": "Woodenstaff",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 356,
+ "claim": "5a337346-cfba-4aa2-8c8d-be56a5dc9750",
+ "count": 0,
+ "ok": false,
+ "at": 1795738795506,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795738772781-0000025848-0000000001",
+  "at": 1795738795418,
+  "sha256": "2e836ebec471136ea128329e20339e50ceea2682327e8064f91d948c2510c07e"
+ },
+ "screen": false
+}
