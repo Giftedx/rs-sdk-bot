@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795789287780-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Woodenstaff",
+  "item": "Ring of dueling(8)",
+  "count": 1,
+  "itemId": 2552,
+  "start": 1795789287780,
+  "end": 1795790187780,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
