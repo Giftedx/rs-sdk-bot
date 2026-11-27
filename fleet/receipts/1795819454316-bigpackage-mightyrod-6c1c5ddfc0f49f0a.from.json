@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795819454316-bigpackage-mightyrod-6c1c5ddfc0f49f0a",
  "account": "Bigpackage",
  "partner": "Mightyrod",
@@ -12,6 +12,16 @@
  "claim": "0f307a8f-6599-4db1-a6f8-b75457bcdf2a",
  "count": 0,
  "ok": false,
- "at": 1795819874717,
- "detail": "trade claimed"
+ "at": 1795819914715,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795819898780
+ },
+ "logout": {
+  "attemptId": "1795819874748-0000019608-0000000001",
+  "at": 1795819914707,
+  "sha256": "19f79713ebe47cd0bc196c8e88b352034a6a2ae2b6480db638e2eb1fbc4da1da"
+ },
+ "screen": false
 }
