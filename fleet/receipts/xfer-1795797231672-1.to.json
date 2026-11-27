@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795797231672-1",
+ "account": "Swordswallow",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "5a8ad0eb-73d3-4871-9053-2d9003850e1e",
+ "count": 10,
+ "ok": true,
+ "at": 1795797534627,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795797533866
+ },
+ "logout": {
+  "attemptId": "1795797521437-0000009516-0000000001",
+  "at": 1795797534602,
+  "sha256": "a76961dda492e123aaaf691b19b0c572fc30395796c979b08a99424762b781b6"
+ },
+ "screen": true
+}

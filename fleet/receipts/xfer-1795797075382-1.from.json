@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797075382-1",
  "account": "Fingerblastr",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "69b153b0-8315-4a2e-ad10-98aff32c5cdb",
- "count": 0,
- "ok": false,
- "at": 1795797300469,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795797474659,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795797454254
+ },
+ "logout": {
+  "attemptId": "1795797300477-0000009248-0000000001",
+  "at": 1795797474635,
+  "sha256": "48f83f35cd48fca9a367dacfef226c19abe8229e9d762de3e26f6be24e5dfdef"
+ },
+ "screen": true
 }

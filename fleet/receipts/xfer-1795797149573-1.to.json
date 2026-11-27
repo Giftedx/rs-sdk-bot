@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797149573-1",
+ "account": "Woodenstaff",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron bar",
+ "requested": 28,
+ "claim": "ca167ece-093e-496a-a8d9-ba9de8842c0c",
+ "count": 0,
+ "ok": false,
+ "at": 1795797578918,
+ "detail": "trade claimed"
+}

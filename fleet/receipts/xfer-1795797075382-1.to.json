@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795797075382-1",
+ "account": "Pullmybow",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "5e91cced-c19b-47e5-ada5-be04d0b311bd",
+ "count": 10,
+ "ok": true,
+ "at": 1795797476243,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795797475459
+ },
+ "logout": {
+  "attemptId": "1795797466089-0000005604-0000000001",
+  "at": 1795797476202,
+  "sha256": "b05e5f122e85380994fa83fd379349850b7cc9708952c933a4c60ce21c687f9e"
+ },
+ "screen": true
+}

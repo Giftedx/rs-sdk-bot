@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795797381918-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune axe",
+ "requested": 1,
+ "claim": "296693b0-7e61-41e1-aeda-a4a2ed4f6575",
+ "count": 0,
+ "ok": false,
+ "at": 1795797563994,
+ "detail": "trade claimed"
+}
