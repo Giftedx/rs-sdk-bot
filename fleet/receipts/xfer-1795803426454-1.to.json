@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795803426454-1",
+ "account": "BowBeforeMe",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "f5928e59-a14a-4ea3-a045-27bb62ee4c00",
+ "count": 2,
+ "ok": true,
+ "at": 1795803745921,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795803745175
+ },
+ "logout": {
+  "attemptId": "1795803733524-0000034072-0000000001",
+  "at": 1795803745910,
+  "sha256": "f5865d900f26bbc103a44652e941d59bf0b14d113631c843bdc0cf5c987535c6"
+ },
+ "screen": true
+}

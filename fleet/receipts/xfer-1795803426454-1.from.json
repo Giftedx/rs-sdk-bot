@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795803426454-1",
  "account": "YewGotWood",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "1cd29ffb-2951-458d-bac3-95ba24e7a467",
- "count": 0,
- "ok": false,
- "at": 1795803701930,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795803744326,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795803727563
+ },
+ "logout": {
+  "attemptId": "1795803701941-0000031920-0000000001",
+  "at": 1795803744312,
+  "sha256": "56871959b64be0e0eceff1f450778ae759446eb74748d7f6bbd41ea864fa4043"
+ },
+ "screen": true
 }
