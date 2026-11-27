@@ -1848,7 +1848,7 @@ export async function runSmithBatch(
         if (!io && !staged()) {
             const ac = new AbortController();
             const stopTravel = s.onTick(() => {
-                if (over()) ac.abort('smith travel deadline/stop');
+                if (over()) ac.abort(ended ? 'smith travel session end' : died ? 'smith travel death' : hpMin < 7 ? 'smith travel low hp' : o.stop?.() ? 'smith travel stop' : 'smith travel cap');
             });
             try {
                 const there = await goTo(s, await getWorld(), { x: SMITH_BANK.x, z: SMITH_BANK.z, level: 0 }, accountOf(s), { legTimeoutTicks: 100, signal: ac.signal });

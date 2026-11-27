@@ -299,3 +299,32 @@ test('consecutive openQuest calls on one session route burst page text to the ac
   clearInterval(timer);
  }
 });
+
+import {RETREAT_TELEPORTS,retreatTeleport,retreatTeleportsFor,retreatTiles,retreatFailure,fightRefusal} from './quest-lib';
+test('a retreat casts the first teleport it can, and none while a quest item would be destroyed', () => {
+ expect(retreatTeleport(RETREAT_TELEPORTS,c=>c==='magic:ardougne_teleport')).toBe('magic:ardougne_teleport');
+ expect(retreatTeleport(RETREAT_TELEPORTS,()=>false)).toBeUndefined();
+ expect(retreatTeleportsFor('magic:ardougne_teleport',false)[0]).toBe('magic:ardougne_teleport');
+ expect(retreatTeleportsFor('magic:ardougne_teleport',false).filter(c=>c==='magic:ardougne_teleport')).toHaveLength(1);
+ expect(retreatTeleportsFor('magic:ardougne_teleport',true)).toEqual([]);
+ expect(retreatTeleportsFor(undefined,false)).toBe(RETREAT_TELEPORTS);
+});
+test('retreat walk tiles go straight away first, then every other direction and nearer', () => {
+ // Biohazard: the bot at 2550,3327 level 1, the mourner at 2551,3327.
+ const tiles=retreatTiles({x:2550,z:3327},{x:2551,z:3327},30);
+ expect(tiles[0]).toEqual({x:2520,z:3327});
+ expect(tiles).toHaveLength(24);
+ expect(new Set(tiles.map(t=>`${t.x},${t.z}`)).size).toBe(24);
+ expect(tiles.slice(0,8).every(t=>Math.max(Math.abs(t.x-2550),Math.abs(t.z-3327))===30)).toBe(true);
+ expect(tiles.at(-1)).toEqual({x:2558,z:3327});
+ expect(retreatTiles({x:10,z:10},undefined,30)[0]).toEqual({x:40,z:10});
+});
+test('a retreat that ends in a death says died, with the hitpoints the retreat started at', () => {
+ expect(retreatFailure('wait condition',true,7,31,'no walk tile accepted, fought back')).toBe('died during wait condition (retreat from hp 7 of 31, no walk tile accepted, fought back)');
+ expect(retreatFailure('wait condition',false,7,31,'walked to 2520,3327')).toBe('retreat during wait condition: hp 7 of 31, no food, walked to 2520,3327');
+});
+test('a quest fight does not start under half the base hitpoints with no food', () => {
+ expect(fightRefusal(9,31,false)).toBe('hp 9 of 31, no food');
+ expect(fightRefusal(9,31,true)).toBeUndefined();
+ expect(fightRefusal(16,31,false)).toBeUndefined();
+});

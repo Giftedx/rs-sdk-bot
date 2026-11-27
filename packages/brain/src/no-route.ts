@@ -102,6 +102,23 @@ export function noRouteTo(facts: readonly NoRouteFact[] | undefined, pos: Worker
         && cheb(target, f.to) <= NO_ROUTE_TARGET_TILES && cheb(target, f.to) < cheb(target, pos));
 }
 
+// A fact that shows the account cannot leave where it stands, if one does: two holding facts whose targets lie on
+// other floors or more than 2 * NO_ROUTE_TARGET_TILES apart. The obstacle is then at the start, not near a target,
+// so noRouteTo passes every other target and each job there fails the same way (an account shut in the West
+// Ardougne Mourner HQ at 2546,3325 had no route to Varrock, Karamja or the Ardougne market).
+export function enclosedAt(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, now: number): NoRouteFact | undefined {
+    if (!facts || facts.length < 2 || !pos) return undefined;
+    const held = facts.filter(f => noRouteHolds(f, pos, now));
+    for (let i = 0; i < held.length; i++) {
+        for (let j = i + 1; j < held.length; j++) {
+            const a = held[i]!.to;
+            const b = held[j]!.to;
+            if (a.level !== b.level || cheb(a, b) > 2 * NO_ROUTE_TARGET_TILES) return held[j];
+        }
+    }
+    return undefined;
+}
+
 // The fact that refuses `activityId` for an account at `pos`, if one does.
 export function noRouteForActivity(facts: readonly NoRouteFact[] | undefined, pos: WorkerTile | null, activityId: string, now: number): NoRouteFact | undefined {
     return facts?.find(f => f.activityId === activityId && noRouteHolds(f, pos, now));

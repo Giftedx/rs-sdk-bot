@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-    failClass, goalKey, progressLine, progressLines, readAttempts, readProgress, readResultsSince, runStats, sessionStats, snapshotDiff, workStats,
+    campaignGates, failClass, goalKey, progressLine, progressLines, readAttempts, readProgress, readResultsSince, runStats, sessionStats, snapshotDiff, workStats,
     HOUR_MS, type Attempt, type ProgressReport, type Snapshot,
 } from './progress';
 
@@ -102,6 +102,26 @@ test('workStats counts the accounts with an active chain and tallies the idle re
     expect(workStats({ emittedAt: NOW, activeChains: { A: {}, B: {} }, idleReasons: { C: 'paused_owner', D: 'in_trade', E: 'paused_owner', F: 7 } }))
         .toEqual({ at: NOW, withWork: 2, idle: [['paused_owner', 2], ['in_trade', 1], ['unknown', 1]] });
     expect(workStats({})).toEqual({ at: null, withWork: 0, idle: [] });
+});
+
+test('campaignGates names the staging campaigns that only an old hiscore snapshot holds', () => {
+    const old = NOW - 31 * HOUR_MS;
+    const margin = (meetsMargin: boolean, checkedAt: number) => ({ board: 'Mining', rivalTicks: 100, ourTicks: 90, marginTicks: 10, marginRatio: 0.1, checkedAt, meetsMargin });
+    const g = campaignGates([
+        { id: 'campaign:rocksolid', account: 'rocksolid', state: 'staging', rehearsalProof: { verified: true }, hiscoreMargin: margin(true, old) },
+        { id: 'campaign:bigswinger', account: 'bigswinger', state: 'staging', rehearsalProof: { verified: true }, hiscoreMargin: margin(true, old) },
+        { id: 'campaign:haggis', account: 'haggis', state: 'staging', rehearsalProof: { verified: false }, hiscoreMargin: margin(true, old) },
+        { id: 'campaign:hiltsdeep', account: 'hiltsdeep', state: 'staging', rehearsalProof: null, hiscoreMargin: margin(false, NOW - MIN) },
+        { id: 'campaign:steelrod', account: 'steelrod', state: 'staging', rehearsalProof: null, hiscoreMargin: null },
+        { id: 'campaign:done', account: 'done', state: 'ready', rehearsalProof: { verified: true }, hiscoreMargin: margin(true, NOW - MIN) },
+    ], NOW);
+    expect(g).toEqual({ staging: 5, noProof: 3, marginShort: 2, hiscoreStale: 3, onlyStale: ['bigswinger', 'rocksolid'], oldestHiscoreMs: 31 * HOUR_MS });
+    expect(campaignGates(undefined, NOW)).toEqual({ staging: 0, noProof: 0, marginShort: 0, hiscoreStale: 0, onlyStale: [], oldestHiscoreMs: null });
+    const r = report({ campaigns: g });
+    expect(progressLine(r)).toContain('; 2 campaigns held only by an old hiscore snapshot (bun tools/progress.ts)');
+    const lines = progressLines(r);
+    expect(lines).toContain('staging 5 campaigns: 3 no verified rehearsal, 2 margin short or not known, 3 hiscore older than 60 min, oldest 31.0 h');
+    expect(lines.some(l => l.includes('only the old hiscore holds bigswinger, rocksolid'))).toBe(true);
 });
 
 const writeAttempt = (root: string, account: string, createdAt: number, events: [string, number][], script = 'scripts/aio-logistics.ts') => {

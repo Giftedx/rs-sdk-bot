@@ -2,6 +2,7 @@
 // Evaluates tile reachability, ferry fares, wearable skill/quest gates, reserve-adjusted stock,
 // GE escrow + operating coin float math, max-level caps, cooldowns, spot capacity, and combat survivability.
 import { resolve } from 'node:path';
+import { PLAIN_FOOD } from '../../core/src/eat-guard';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import {
     totalAvailableHeal,
@@ -53,6 +54,10 @@ export const STANDARD_FOOD_IDS: readonly number[] = [
     1897, // Chocolate cake (15)
     2309, // Bread (5)
 ];
+
+// The STANDARD_FOOD_IDS that the eat guard eats (PLAIN_FOOD, packages/core/src/eat-guard.ts), in STANDARD_FOOD_IDS order (shark first). A
+// worker with the eat guard never eats a cake or bread, so a fight floor of such a worker counts only these.
+export const GUARD_FOOD_IDS: readonly number[] = STANDARD_FOOD_IDS.filter((id) => PLAIN_FOOD.includes(id));
 
 const ANTIPOISON_IDS = new Set<number>([
     175, 177, 179, 2446, // Antipoison (1..4)
@@ -863,6 +868,9 @@ export interface CombatSurvivabilityFloor {
     readonly minDefence?: number;
     readonly minHitpoints?: number;
     readonly minPrayer?: number;
+    // The combat level below which the site's monsters attack the account (an aggressive NPC skips a player of more
+    // than twice its own level).
+    readonly minCombatLevel?: number;
     readonly minFoodHeal?: number;
     readonly minFoodCount?: number;
     readonly foodIds?: readonly number[];
@@ -874,6 +882,16 @@ export interface CombatSurvivabilityFloor {
 }
 
 export type CombatSurvivabilityBlocker = Extract<PreflightBlocker, { kind: 'combat_survivability' }>;
+
+// The account's combat level from its base levels (the same formula as packages/core/src/danger/catalog.ts combatLevel).
+export function accountCombatLevel(acct: WorkerAccountView, cache?: AccountLookupCache): number {
+    const lv = (skill: string) => cachedAccountSkillLevel(acct, skill, cache);
+    const base = (lv('Defence') + lv('Hitpoints') + Math.floor(lv('Prayer') / 2)) / 4;
+    const melee = (lv('Attack') + lv('Strength')) * 0.325;
+    const range = Math.floor(lv('Ranged') * 1.5) * 0.325;
+    const mage = Math.floor(lv('Magic') * 1.5) * 0.325;
+    return Math.floor(base + Math.max(melee, range, mage));
+}
 
 export function evaluateCombatSurvivability(
     acct: WorkerAccountView,
@@ -912,6 +930,18 @@ export function evaluateCombatSurvivability(
             current: prayer,
             message: `Prayer ${prayer}/${floor.minPrayer} below floor`,
         });
+    }
+    if (floor.minCombatLevel !== undefined) {
+        const combat = accountCombatLevel(acct, _acctCache);
+        if (combat < floor.minCombatLevel) {
+            blockers.push({
+                kind: 'combat_survivability',
+                reason: 'protection',
+                required: floor.minCombatLevel,
+                current: combat,
+                message: `Combat level ${combat}/${floor.minCombatLevel} below floor`,
+            });
+        }
     }
     if (floor.requireProtectionPrayer) {
         const reqPrayer = floor.requiredProtectionLevel ?? 43;
@@ -1039,7 +1069,32 @@ export interface PreflightSpec {
     readonly activityId?: string;
     // The worker takes the boats east from Kandarin (quest sweep, evaluateTileReachability).
     readonly boatEastFromKandarin?: boolean;
+    // The worker runs only from a start in this area and refuses any other start (a route that cannot walk to its
+    // start). The account runs in place, so the target tile is not checked.
+    readonly startArea?: StartArea;
+    // The worker runs only while the account's xp in the skill is at most this much (a fresh-account route).
+    readonly maxSkillXp?: Readonly<Record<string, number>>;
 }
+
+// A half-open box of world tiles on one level: x0 <= x < x1, z0 <= z < z1.
+export interface StartArea {
+    readonly level: number;
+    readonly x0: number;
+    readonly x1: number;
+    readonly z0: number;
+    readonly z1: number;
+}
+
+export const inStartArea = (pos: WorkerTile | null | undefined, area: StartArea): boolean =>
+    !!pos && pos.level === area.level && pos.x >= area.x0 && pos.x < area.x1 && pos.z >= area.z0 && pos.z < area.z1;
+
+const parseStartArea = (raw: unknown): StartArea | undefined => {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const r = raw as Record<string, unknown>;
+    const keys = ['level', 'x0', 'x1', 'z0', 'z1'] as const;
+    if (!keys.every((k) => typeof r[k] === 'number' && Number.isSafeInteger(r[k]))) return undefined;
+    return { level: r.level as number, x0: r.x0 as number, x1: r.x1 as number, z0: r.z0 as number, z1: r.z1 as number };
+};
 
 export function evaluatePreflight(
     acct: WorkerAccountView,
@@ -1155,6 +1210,27 @@ export function evaluatePreflight(
         }
     }
 
+    if (spec.maxSkillXp) {
+        for (const [skill, max] of Object.entries(spec.maxSkillXp)) {
+            const xp = cachedAccountSkillXp(acct, skill, _acctCache);
+            if (xp > max) {
+                blockers.push({
+                    kind: 'invalid_config',
+                    message: `${skill} xp ${xp} above ${max}: the route runs only for a fresh account`,
+                });
+            }
+        }
+    }
+
+    const startsInPlace = spec.startArea !== undefined && inStartArea(acct.pos, spec.startArea);
+    if (spec.startArea && !startsInPlace) {
+        const p = acct.pos;
+        blockers.push({
+            kind: 'invalid_config',
+            message: `start ${p ? `${p.x},${p.z},${p.level}` : 'unknown'} is outside the route's start area`,
+        });
+    }
+
     if (spec.startedQuestRefused && cachedAccountQuestState(acct, spec.startedQuestRefused, _acctCache) === 'started') {
         blockers.push({
             kind: 'invalid_config',
@@ -1239,7 +1315,7 @@ export function evaluatePreflight(
     let travelCoins = Math.max(0, spec.ferryFareHint ?? 0);
     let travelTicks = 0;
 
-    if (spec.targetTile) {
+    if (spec.targetTile && !spec.startArea) {
         const reach = evaluateTileReachability(acct, spec.targetTile, world, {
             ...(world.world ? { spendableCoins: getCoinBalance().totalUnreserved } : {}),
             deadlineMs: spec.routeBudgetMs,
@@ -1343,6 +1419,8 @@ interface StaticActivityPreflight {
     readonly maxConcurrentAccounts: number | undefined;
     readonly boatEastFromKandarin: boolean;
     readonly questSweep: { readonly slug: string; readonly name: string } | undefined;
+    readonly startArea: StartArea | undefined;
+    readonly maxSkillXp: Readonly<Record<string, number>> | undefined;
 }
 
 // The items and coins that the quest sweep takes from the bank for an account (packages/workers/src/quest/bank-needs.ts):
@@ -1416,6 +1494,12 @@ function extractStaticActivityPreflight(activity: {
             }
         }
     }
+    let maxSkillXp: Record<string, number> | undefined;
+    if (cfg.maxSkillXp && typeof cfg.maxSkillXp === 'object') {
+        for (const [k, v] of Object.entries(cfg.maxSkillXp as Record<string, unknown>)) {
+            if (typeof v === 'number' && Number.isFinite(v) && v >= 0) (maxSkillXp ??= {})[k] = v;
+        }
+    }
     const trainingSkills = [
         ...(activity.skill ? [activity.skill] : []),
         ...(activity.skills ?? []),
@@ -1444,6 +1528,8 @@ function extractStaticActivityPreflight(activity: {
         questSweep: cfg.mode === 'sweep' && typeof cfg.questSlug === 'string'
             ? { slug: cfg.questSlug, name: typeof cfg.questName === 'string' ? cfg.questName : cfg.questSlug }
             : undefined,
+        startArea: parseStartArea(cfg.startArea),
+        maxSkillXp,
     };
     staticPreflightCache.set(activity, spec);
     return spec;
@@ -1506,6 +1592,8 @@ export function activityPreflightFromConfig(
             maxConcurrentAccounts: base.maxConcurrentAccounts,
             ...(activity.id ? { activityId: activity.id } : {}),
             ...(base.boatEastFromKandarin ? { boatEastFromKandarin: true } : {}),
+            ...(base.startArea ? { startArea: base.startArea } : {}),
+            ...(base.maxSkillXp ? { maxSkillXp: base.maxSkillXp } : {}),
         },
         world,
         opts?._acctCache,

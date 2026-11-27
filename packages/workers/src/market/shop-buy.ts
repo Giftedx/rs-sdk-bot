@@ -187,6 +187,18 @@ export function shopOrderShortText(bought: number, orderUnits: number, stop: str
     return `order short${itemId !== undefined ? ` itemId=${itemId}` : ''}${need} bought=${bought}/${units}: missing supply after stop=${stop || 'none'}`;
 }
 
+// The walker's route search found no route from where the account stands. Every retry searches the same route
+// table and fails the same way, so the run ends now and names the start and target in the words the brain reads
+// (no-route.ts parseNoRoute "position=" and "no route to"): the outcome classifier records a no-route fact, and the
+// planner sends no more jobs from this tile to that place. Null for any other walk failure.
+export function shopNoRouteError(
+    r: { reason?: string; detail?: string },
+    p: { worldX: number; worldZ: number; level: number } | null | undefined,
+): Error | null {
+    if (r.reason !== 'precondition' || !/^no route to -?\d+,-?\d+,\d+\b/.test(r.detail ?? '')) return null;
+    return Error(`shop travel failed: position=${p ? `${p.worldX},${p.worldZ},${p.level}` : 'unknown'}; ${r.detail}`);
+}
+
 export function maximumUnitCost(
     item: { baseCost: number },
     config: { sellMultiplier: number; haggle?: number } | undefined,
@@ -480,7 +492,11 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         }
         if (p0 && off(pos()) > 60) {
             const r = await walkTargetPersist(s, { x, z, level });
-            if (!r.ok) console.log(`WALK route fail ${r.reason} ${r.detail}`);
+            if (!r.ok) {
+                console.log(`WALK route fail ${r.reason} ${r.detail}`);
+                const noRoute = shopNoRouteError(r, pos());
+                if (noRoute) throw noRoute;
+            }
         }
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
@@ -496,6 +512,8 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                 const g = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), { legTimeoutTicks: 100 });
                 if (!g.ok) {
                     console.log(`WALK route fail ${g.reason} ${g.detail}`);
+                    const noRoute = shopNoRouteError(g, pos());
+                    if (noRoute) throw noRoute;
                     await waitTicks(s, 1);
                 }
             }

@@ -486,3 +486,33 @@ test('a short planned shop order cools its venue only when the shelf was empty',
     if (capped.kind === 'missing_supply') expect(capped.missing).toEqual([{ itemId: 314, required: 1565, available: 0 }]);
     expect(kind('RESULT fail order short bought=0/1: insufficient coins ticks=99 boughtTotal=0 stop=coin-reserve')).toBe('missing_supply');
 });
+
+test('an empty shop shelf cools the shop until it restocks, never for less than the default cooldown', () => {
+    const root = mkdtempSync(join(tmpdir(), 'brain-outcome-restock-'));
+    try {
+        const classifier = new OutcomeClassifier({ root });
+        const stall = classifier.classifyAndApplyRaw(
+            {
+                activityId: 'market:shop-buy',
+                account: 'OreElse',
+                exitCode: 1,
+                status: 'fail',
+                marketItemId: 1607,
+                marketVenue: 'shop:ardougnegemstall',
+                detail: 'RESULT fail order short bought=0/10: shop out of stock ticks=162 boughtTotal=0 stop=stock-wait chain rounds=1 ok=0 failed=1',
+            },
+            { now: NOW },
+        );
+        expect(stall.outcome.kind).toBe('market_unavailable');
+        expect(stall.addedCooldownKey).toBe('1607:shop:ardougnegemstall');
+        // knowledge/shops.json: the Ardougne gem stall restocks its sapphires each 15000 ticks of 400 ms.
+        expect(stall.cooldownExpiresAt).toBe(NOW + 15_000 * 400);
+        const unknown = classifier.classifyAndApplyRaw(
+            { activityId: 'market:shop-buy', account: 'OreElse', exitCode: 1, status: 'fail', marketItemId: 383, marketVenue: 'shop:no_such_shop', detail: 'RESULT fail order short bought=0/1: shop out of stock stop=stock-wait' },
+            { now: NOW },
+        );
+        expect(unknown.cooldownExpiresAt).toBe(NOW + 10 * 60_000);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});

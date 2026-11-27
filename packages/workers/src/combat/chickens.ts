@@ -1,11 +1,11 @@
 // One-time qualification for the mixed ore mine. Rat6 ignores players above combat12 outside the Wilderness
 // (engine/entity/Npc.ts checkNotTooStrong). Train on Lumbridge chickens, then return the owned kit to its bank.
 import { existsSync } from 'node:fs';
-import { finish, openBot, randomEventsOf } from '../../../core/src/bot';
+import { accountOf, finish, getWorld, openBot, randomEventsOf } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { questFlags } from '../../../core/src/quest-status';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
-import { expandPath, sessionWalker, walkPath, type PathDeps, type PathTile } from '../../../core/src/walk';
+import { expandPath, goTo, sessionWalker, walkPath, type PathDeps, type PathTile } from '../../../core/src/walk';
 import type { GearSkillLevels, QuestInput } from './gear';
 import type { CombatSession } from './types';
 import { levelForXp, xpForLevel } from './xp';
@@ -290,6 +290,7 @@ export async function trainChickens(
         targetLevel?: number;
         entry?: ChickenEntry;
         walk?: (points: typeof ROUTE, homeward?: boolean) => Promise<void>;
+        travel?: (to: { x: number; z: number; level: number }, stop: () => boolean) => Promise<{ ok: boolean; detail?: string }>;
     } = {},
 ) {
     chickenTrainingTarget(target);
@@ -308,9 +309,35 @@ export async function trainChickens(
     const pos = () => state()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const combat = () => pos()?.combatLevel ?? 0;
+    const awayFromHome = (p: { worldX: number; worldZ: number; level: number } | null | undefined) =>
+        !p || p.level !== 0 || Math.max(Math.abs(p.worldX - home.x), Math.abs(p.worldZ - home.z)) > 6;
+    // A start away from the profile bank (for example the Ardougne north trade hub) walks the world route to the bank
+    // first. A stop during that walk ends the run as a stop, not as a refusal.
+    if (pos() && awayFromHome(pos())) {
+        // The health rule is checked before the walk too: an account that the bank would refuse does not cross the map.
+        chickenTrainingHealth(bank, hp(), s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0, entry);
+        const travelStop = () => !!options.stop?.() || existsSync(`.practice/stop-${s.name}`);
+        const to = { x: home.x, z: home.z, level: 0 };
+        let moved: { ok: boolean; detail?: string };
+        if (options.travel) moved = await options.travel(to, travelStop);
+        else {
+            const ac = new AbortController();
+            const offTravel = s.onTick(() => {
+                if (travelStop()) ac.abort('training travel stop');
+            });
+            try {
+                moved = await goTo(s as Session, await getWorld(), to, accountOf(s as Session), { legTimeoutTicks: 100, signal: ac.signal });
+            } finally {
+                offTravel();
+            }
+        }
+        if (travelStop()) throw Error(`training stopped during the walk to the ${bank} bank`);
+        if (!moved.ok) throw Error(`training travel to the ${bank} bank failed: ${moved.detail ?? 'no detail'}`);
+        await waitTicks(s, 1);
+    }
     const first = pos();
     const start = s.tick();
-    if (!first || first.level !== 0 || Math.max(Math.abs(first.worldX - home.x), Math.abs(first.worldZ - home.z)) > 6) {
+    if (awayFromHome(first)) {
         throw Error(`training requires ${bank} bank start`);
     }
     chickenTrainingHealth(bank, hp(), s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0, entry);

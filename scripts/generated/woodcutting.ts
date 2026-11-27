@@ -45,6 +45,7 @@ import { openBot, finish, countItems, releasePrayerGuard, sessionDied } from '..
 import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { waitTicks } from '../../packages/core/src/ticks';
 import {runWoodSupply} from '../../packages/workers/src/gather';
+import { approach } from '../../packages/workers/src/logistics';
 import {runShafts,runHeadless} from '../../packages/workers/src/bank-artisan';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
@@ -73,6 +74,9 @@ const SITES: Record<string, Site> = {
 };
 const siteName = process.env.WC_SITE ?? 'lumbridge';
 const SITE = SITES[siteName];
+// A start farther than this from both Lumbridge and the site moves there with the shared danger-aware walker first. The
+// plain client walk has no danger map: from Ardougne it crossed White Wolf Mountain, where wolves killed a level-3 account.
+const FAR_START = 150;
 
 // Axes, weakest first: the server picks the best one held (woodcut.rs2:220-240).
 const AXES = ['bronze', 'iron', 'steel', 'black', 'mithril', 'adamant', 'rune'] as const;
@@ -132,6 +136,10 @@ try {
         .find(b => b.op !== undefined) as { slot: number; op: number } | undefined;
     const boneCount = () => (s.sdk.getInventory() ?? []).filter((i: any) => i.optionsWithIndex?.some((o: any) => /^bury$/i.test(o.text))).length;
     const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
+    // The site's combat floor is checked before any step: the Lumbridge steps would otherwise walk a weak account to a
+    // site it cannot use.
+    const combat0 = pos()?.combatLevel ?? 0;
+    if (combat0 < site.minCombat) await finish([s], false, `site ${siteName} needs combat ${site.minCombat}, the account has ${combat0}`);
     const xp0 = xp(), pxp0 = pxp();
     const t0 = s.tick();
     const now = () => s.tick() - t0;
@@ -214,6 +222,16 @@ try {
         return true;
     };
 
+    const start = pos();
+    if (start && cheb(LUMBRIDGE, start) > FAR_START && cheb(site.anchor, start) > FAR_START) {
+        const to = site.bank ?? LUMBRIDGE;
+        const a0 = now();
+        const r = await approach(s, { ...to, level: 0 }, () => died || left() <= 0);
+        walkTicks += now() - a0;
+        if (!r.ok) await end(false, `far start ${start.worldX},${start.worldZ}: walk to ${to.x},${to.z}: ${r.reason} ${r.detail}`);
+        await check('on the walk from a far start');
+    }
+
     // ---- Step 0: at a site with a bank, a knife and a better axe that the bank holds come into the pack first. A fleet
     // trade banks what it brings (scripts/fleet-trade.ts), so a staged account holds its tools in the bank: live,
     // the worker saw no axe in the pack, pickpocketed and walked to the Lumbridge knife spawn for 313 ticks.
@@ -252,7 +270,7 @@ try {
         if (await closeDialog()) continue;
         const p = pos();
         const man = (st()?.nearbyNpcs ?? [])
-            .filter((n: any) => /^(man|woman)$/i.test(n.name) && n.optionsWithIndex?.some((o: any) => /pickpocket/i.test(o.text))
+            .filter((n: any) => /^(man|woman)$/i.test(n.name) && n.reachable !== false && n.optionsWithIndex?.some((o: any) => /pickpocket/i.test(o.text))
                 && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= 15))
             .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
         if (!man) {

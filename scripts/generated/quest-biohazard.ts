@@ -8,7 +8,7 @@
 // areas/area_ardougne_west/scripts/{omart,kilron,doors,mourner}.rs2, areas/area_ardougne_east/scripts/king_lathas.rs2.
 // Untradeable (quest_biohazard.obj): birdfeed, pigeons, key, distillator, the three vials, sample, touch paper,
 // doctors' gown, so the bot collects them itself.
-import { openQuest } from './quest-lib';
+import { openQuest, retreatTeleportsFor } from './quest-lib';
 
 const ELENA = { x: 2592, z: 3336 };
 const JERICO = { x: 2612, z: 3324 };
@@ -37,7 +37,9 @@ const CASTLE_STAIRS = { id: 1722, x: 2571, z: 3295 };      // stairs -> stairsto
 const ITEM = { gown: 426, robe: 428, doctor: 430, feed: 422, pigeons: 424, apple: 1984, key: 423, distillator: 420,
     ethenea: 415, honey: 416, broline: 417, sample: 418, paper: 419 };
 
-const q = await openQuest({ cap: 5000, burst: true });
+// A teleport destroys the plague sample (skill_magic/scripts/spells/teleport.rs2:94-97), so a retreat with the sample
+// walks; before it, the Ardougne teleport (the quest's own exit from the HQ) comes first.
+const q = await openQuest({ cap: 5000, burst: true, retreatTeleports: (): readonly string[] => retreatTeleportsFor('magic:ardougne_teleport', q.has(ITEM.sample)) });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -142,12 +144,19 @@ try {
         await q.climb('hq stairs', () => q.findLoc(l => l.id === HQ_STAIRS.id && l.distance <= 15) ?? HQ_STAIRS, /climb-up|^climb$/i, () => q.lvl() === 1);
         await q.walk('to up door', [{ x: UP_DOOR.x - 1, z: UP_DOOR.z, tol: 0 }]);
         await cross('up door', UP_DOOR, /^open$/i, () => x() >= UP_DOOR.x);
+        // The fight uses the account's kit (q.attackNpc): the sweep brings the strike spell's staff and runes for a
+        // Magic-over-Attack account (QUEST_CASTS biohazard), or the bow and arrows for a Ranged one. A Strength 1 melee
+        // account hit for about 1 and took 54 damage over 280 ticks to its death. A cast does not repeat, so the loop
+        // calls again every 5 ticks.
         for (let i = 0; i < 6 && !q.has(ITEM.key); i++) {
-            await q.guard('sick mourner');
+            await q.fightReady('sick mourner');
             const m = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^mourner$/i.test(n.name) && n.combatLevel === 13).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (!m) { await q.waitTicks(2); continue; }
-            await q.attack(m);
-            await q.waitUntil(() => q.has(ITEM.key) || !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === m.index), 60);
+            const here = (): any => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.index === m.index);
+            for (let k = 0; k < 12 && !q.has(ITEM.key) && here(); k++) {
+                await q.attackNpc(here());
+                await q.waitUntil(() => q.has(ITEM.key) || !here(), 5);
+            }
             await q.waitUntil(() => q.has(ITEM.key), 4);
         }
         if (!q.has(ITEM.key)) await q.fail('no mourner key');
@@ -162,30 +171,34 @@ try {
     // With no runes for it: the city doors stay shut until the quest is complete (doors.rs2:25-27) and no walk crosses
     // the wall, so q.teleport's far walk has no route. The bot leaves the HQ on foot and Kilron's rope ladder puts it
     // at 2559,3267 (kilron.rs2:1-12, "Yes I do.").
+    // A failure on this exit leaves the account inside the shut West Ardougne wall with no walker route out, so each
+    // label names the stranding: the brain classifies the failure as location_stranded and holds the account for
+    // recovery instead of sending it on jobs it cannot reach.
+    const STRANDED = ' (location stranded in West Ardougne)';
     const outByKilron = async (): Promise<void> => {
         if (q.lvl() === 1) {
             // From the inside the key gate opens with no key (quest_biohazard.rs2:134-145); the worn doctors' gown
             // passes the up door (doors.rs2:1-6).
             if (x() > GATE.x) {
-                await q.walk('to gate out', [{ x: GATE.x + 1, z: GATE.z, tol: 0 }]);
-                await cross('gate out', GATE, /^open$/i, () => x() <= GATE.x);
+                await q.walk(`to gate out${STRANDED}`, [{ x: GATE.x + 1, z: GATE.z, tol: 0 }]);
+                await cross(`gate out${STRANDED}`, GATE, /^open$/i, () => x() <= GATE.x);
             }
-            await q.walk('to up door out', [{ x: UP_DOOR.x, z: UP_DOOR.z, tol: 0 }]);
-            await cross('up door out', UP_DOOR, /^open$/i, () => x() < UP_DOOR.x);
-            await q.climb('hq stairs down', () => q.findLoc(l => l.id === STAIRS_TOP.id && l.distance <= 15) ?? STAIRS_TOP, /climb-down|^climb$/i, () => q.lvl() === 0);
+            await q.walk(`to up door out${STRANDED}`, [{ x: UP_DOOR.x, z: UP_DOOR.z, tol: 0 }]);
+            await cross(`up door out${STRANDED}`, UP_DOOR, /^open$/i, () => x() < UP_DOOR.x);
+            await q.climb(`hq stairs down${STRANDED}`, () => q.findLoc(l => l.id === STAIRS_TOP.id && l.distance <= 15) ?? STAIRS_TOP, /climb-down|^climb$/i, () => q.lvl() === 0);
         }
         // The stairs room door (loc_1530 at 2546,3325, east edge), then the HQ door from the inside, which opens with
         // no condition (doors.rs2:8-10).
         if (x() <= 2546) {
-            await q.walk('to stairs door out', [{ x: 2546, z: 3325, tol: 0 }]);
-            await q.openDoor('stairs door out', 2546, 3325);
+            await q.walk(`to stairs door out${STRANDED}`, [{ x: 2546, z: 3325, tol: 0 }]);
+            await q.openDoor(`stairs door out${STRANDED}`, 2546, 3325);
         }
-        await q.walk('to hq door out', [{ x: HQ_DOOR.x, z: HQ_DOOR.z + 1, tol: 0 }]);
-        await cross('hq door out', HQ_DOOR, /^open$/i, () => z() <= HQ_DOOR.z);
-        await q.walk('to kilron', [{ x: KILRON.x, z: KILRON.z + 2, tol: 2 }]);
-        await q.talk('kilron', /^kilron$/i, [/yes i do/i], () => x() >= 2559, KILRON, 60);
+        await q.walk(`to hq door out${STRANDED}`, [{ x: HQ_DOOR.x, z: HQ_DOOR.z + 1, tol: 0 }]);
+        await cross(`hq door out${STRANDED}`, HQ_DOOR, /^open$/i, () => z() <= HQ_DOOR.z);
+        await q.walk(`to kilron${STRANDED}`, [{ x: KILRON.x, z: KILRON.z + 2, tol: 2 }]);
+        await q.talk(`kilron${STRANDED}`, /^kilron$/i, [/yes i do/i], () => x() >= 2559, KILRON, 60);
         await q.waitUntil(() => x() >= 2559, 10);
-        if (x() < 2559) await q.fail('kilron ladder');
+        if (x() < 2559) await q.fail(`kilron ladder${STRANDED}`);
         await q.converse([], () => !q.dialogOpen(), 6);
         console.log(`QUEST_EXIT ${JSON.stringify({ label: 'kilron ladder', at: { x: x(), z: z(), level: q.lvl() } })}`);
     };

@@ -10,7 +10,7 @@ import {
     type ActivityDefinition,
     type PlannedStep,
 } from './contracts';
-import { GE_LIMIT_BUFFER } from './acquire';
+import { GE_LIMIT_BUFFER, SHOP_BUY_CAP_TICKS } from './acquire';
 import { loadItemsMap } from './preflight';
 
 export interface WorkerRoutingContext {
@@ -144,7 +144,7 @@ function explicitStandaloneScript(cfg: Record<string, unknown>): string | undefi
 }
 
 export function resolveActivityWorkerRoute(
-    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'>,
+    activity: Pick<ActivityDefinition, 'id' | 'family' | 'kind' | 'skill' | 'questSlug' | 'config'> & Partial<Pick<ActivityDefinition, 'outputs'>>,
     extraEnv: Readonly<Record<string, string>> = {},
 ): Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'> {
     const cfg = (activity.config ?? {}) as Record<string, unknown>;
@@ -234,6 +234,17 @@ export function resolveActivityWorkerRoute(
                 } else if (skill === 'crafting' && rawMethod === 'inventory') {
                     if (extraEnv.TARGET_COUNT) {
                         env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    } else if (extraEnv.BATCH_UNITS && extraEnv.MAX_MAKE === undefined) {
+                        // A work step makes the units the planner sized to the shortfall and staged inputs for. The
+                        // catalog MAX_MAKE '1' made one herb a login. A bank short of the staged inputs ends the run
+                        // after what it holds (best-effort); a run that makes nothing still fails.
+                        const units = Number(extraEnv.BATCH_UNITS);
+                        const productUnits = activity.outputs?.[0]?.countPerUnit ?? 1;
+                        if (Number.isSafeInteger(units) && units > 0 && Number.isSafeInteger(productUnits) && productUnits > 0) {
+                            env.MAX_MAKE = String(units * productUnits);
+                            if (extraEnv.CAP === undefined) env.CAP = String(Math.max(Number(env.CAP) || 0, unlockTickCap(units)));
+                            if (env.ORDER_MODE === undefined) env.ORDER_MODE = 'best-effort';
+                        }
                     }
                 } else if (skill === 'crafting' && rawMethod === 'jewellery-trip') {
                     if (extraEnv.TARGET_COUNT) {
@@ -532,7 +543,7 @@ function resolveAcquireOrGearSource(
                 family: 'market',
                 workerId: 'market',
                 routeKey: 'shop-buy',
-                args: ['shop-buy', profile, '3000'],
+                args: ['shop-buy', profile, String(SHOP_BUY_CAP_TICKS)],
                 env: {
                     ITEM_ID: String(params.itemId),
                     ...(escapedItemName ? { ITEMS: escapedItemName } : {}),
@@ -548,7 +559,7 @@ function resolveAcquireOrGearSource(
                 config: {
                     mode: 'shop-buy',
                     profile,
-                    cap: 3000,
+                    cap: SHOP_BUY_CAP_TICKS,
                     items,
                     maxItems: params.quantity,
                     ...(stockTarget !== undefined ? { stockTarget } : {}),
@@ -700,6 +711,18 @@ function applyTargetLevelArg(
     return resolved;
 }
 
+// The reason of a location recovery for an account inside a walled place (snapshot.ts WALLED_REGIONS). The
+// recovery runs the quest that opens the place instead of the walk to a hub.
+export function walledRecoveryReason(region: { readonly id: string; readonly openedByQuest: string }): string {
+    return `walled in ${region.id}; exit by quest:${region.openedByQuest}`;
+}
+
+function walledRecoveryQuest(reason: string): string | undefined {
+    // openedByQuest is a quest-journal name (snapshot.ts questComplete ignores case and a "quest_" prefix); the
+    // catalog quest id is lower case without the prefix.
+    return /^walled in \S+; exit by quest:([a-z0-9_-]+)$/i.exec(reason)?.[1]?.toLowerCase().replace(/^quest_/, '');
+}
+
 export function resolvePlannedStepWorkerRoute(
     account: string,
     planned: PlannedStep,
@@ -719,6 +742,31 @@ export function resolvePlannedStepWorkerRoute(
                     env: { RECOVERY_REASON: planned.reason },
                     config: { recoveryKind: 'logout', reason: planned.reason },
                     warnings: [],
+                };
+            }
+            const walledQuest = walledRecoveryQuest(planned.reason);
+            if (walledQuest) {
+                // No walk crosses the wall of a walled place, so the walk to a hub has no route. The quest that opens
+                // the place has its own exit (quest-biohazard.ts outByKilron or its Ardougne teleport).
+                const act = lookupActivity(`quest:${walledQuest}`, ctx);
+                const resolved = act
+                    ? resolveActivityWorkerRoute(act)
+                    : {
+                        family: 'quest' as const,
+                        workerId: 'quest',
+                        activityId: `quest:${walledQuest}`,
+                        routeKey: `quest:${walledQuest}`,
+                        args: ['sweep', walledQuest],
+                        env: {},
+                        config: { mode: 'sweep', questSlug: walledQuest },
+                        warnings: [],
+                    };
+                return {
+                    account,
+                    stepKind: 'recover',
+                    executionMode: 'worker',
+                    ...resolved,
+                    env: { ...resolved.env, RECOVERY_REASON: planned.reason },
                 };
             }
             const hub = planned.targetHub ?? 'varrock_west';

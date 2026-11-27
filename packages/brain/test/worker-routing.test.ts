@@ -700,3 +700,58 @@ test('a production acquire names its owned total, so its inventory run makes onl
     }, { catalog });
     expect(noTarget.env.PRODUCT_TARGET).toBeUndefined();
 });
+
+test('an inventory work step makes its planned batch, not the catalog default of one', () => {
+    const ctx = { catalog: createActivityCatalog() };
+    const work = resolvePlannedStepWorkerRoute('Unsheathed', {
+        stepKind: 'work',
+        activityId: 'bank-artisan:identify-avantoe',
+        demandId: 'campaign:haggis:item:261',
+        workerId: 'bank-artisan',
+        batchUnits: 5,
+        estimatedTicks: 60,
+        expectedValuePerHour: 100,
+        config: { batchUnits: 5 },
+    }, ctx);
+    expect(work.routeKey).toBe('crafting:inventory');
+    expect(work.env.MAX_MAKE).toBe('5');
+    // A bank short of the staged herbs ends the run after the herbs it holds.
+    expect(work.env.ORDER_MODE).toBe('best-effort');
+    expect(Number(work.env.CAP)).toBeGreaterThanOrEqual(600);
+});
+
+test('a planned shop buy and its worker share one tick cap', async () => {
+    const { SHOP_BUY_CAP_TICKS } = await import('../src/acquire');
+    const work = resolvePlannedStepWorkerRoute('Packhorse', {
+        stepKind: 'work',
+        activityId: 'market:shop-buy',
+        demandId: 'campaign:haggis:item:44',
+        workerId: 'market',
+        batchUnits: 10,
+        estimatedTicks: 600,
+        expectedValuePerHour: 100,
+        config: { mode: 'shop-buy', itemId: 44, itemName: 'Rune arrowtips', quantity: 10, shopId: 'archeryshop2', estimatedCoinCost: 1000, coinFloatPreserved: 1000 },
+    });
+    expect(work.args).toEqual(['shop-buy', 'archeryshop2', String(SHOP_BUY_CAP_TICKS)]);
+    expect(work.config.cap).toBe(SHOP_BUY_CAP_TICKS);
+});
+
+test('a location recovery inside a walled place runs the quest exit, not the walk to a hub', async () => {
+    const { walledRecoveryReason } = await import('../src/worker-routing');
+    const step = resolvePlannedStepWorkerRoute('KnightRider', {
+        stepKind: 'recover',
+        recoveryKind: 'location',
+        targetHub: 'ardougne',
+        estimatedTicks: 60,
+        reason: walledRecoveryReason({ id: 'west-ardougne', openedByQuest: 'biohazard' }),
+    });
+    expect(step.stepKind).toBe('recover');
+    expect(step.family).toBe('quest');
+    expect(step.routeKey).toBe('quest:biohazard');
+    expect(step.args).toEqual(['sweep', 'biohazard']);
+
+    const walk = resolvePlannedStepWorkerRoute('KnightRider', {
+        stepKind: 'recover', recoveryKind: 'location', targetHub: 'varrock_west', estimatedTicks: 60, reason: 'stranded off-hub or non-ground plane',
+    });
+    expect(walk.routeKey).toBe('walk-to');
+});

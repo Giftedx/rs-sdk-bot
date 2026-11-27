@@ -76,6 +76,10 @@ export interface FleetSchedulerInput {
     // job, the standalone session recovery queue), or undefined when it will. Such a plan keeps its steps, so the
     // controller keeps the same job, but takes no slot, spot, market venue or demand share.
     readonly heldPlan?: (account: string, plan: AccountPlan) => string | undefined;
+    // The controller's reason to keep one account out of any hub trade (for example, the swarm stopped its run in
+    // this or the previous cycle and the stop was not a planned handoff), or undefined when the account can trade.
+    // Such an account is neither a donor nor a hub-trade recipient in this plan.
+    readonly transferPartyHold?: (account: string) => string | undefined;
 }
 
 let cachedBaseItemPrices: Readonly<Record<number, number>> | undefined;
@@ -444,6 +448,17 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
     }
     const busyAccounts = new Set<string>(activeTransferParties);
+    // An account with a job, or one the controller holds out of trades, is never a hub-trade donor.
+    for (const acct of runningAccounts) busyAccounts.add(acct.name.toLowerCase());
+    const tradeHeldAccounts = new Set<string>();
+    if (input.transferPartyHold) {
+        for (const acct of idleAccounts) {
+            if (input.transferPartyHold(acct.name) === undefined) continue;
+            const lower = acct.name.toLowerCase();
+            tradeHeldAccounts.add(lower);
+            busyAccounts.add(lower);
+        }
+    }
 
     // A plan whose job the controller will not start keeps its steps and takes nothing, so the slot, spot, market venue
     // and demand share go to the next account (FleetSchedulerInput.heldPlan).
@@ -485,10 +500,19 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
     // Enforce 1-per-venue concurrency for market shop-buy (itemId + shopId) and GE-buy (itemId + ge)
     // within a single scheduling cycle so accounts do not dogpile shared NPC shop stock or GE asks.
+    // A chain buys its inputs through acquire and gear_upgrade steps, so those venues count as well.
     const allocatedMarketVenues = new Set<string>();
     const planMarketVenues = (plan: AccountPlan): string[] => {
         const venues: string[] = [];
         for (const st of plan.steps) {
+            if (st.stepKind === 'acquire' || st.stepKind === 'gear_upgrade') {
+                if (st.source === 'npc_shop' && typeof st.shopId === 'string' && st.shopId.length > 0) {
+                    venues.push(marketCooldownKey(st.itemId, `shop:${st.shopId}`));
+                } else if (st.source === 'ge') {
+                    venues.push(marketCooldownKey(st.itemId, 'ge'));
+                }
+                continue;
+            }
             if (st.stepKind !== 'work' || !st.config) continue;
             const itemId = st.config.itemId;
             if (typeof itemId !== 'number' || !Number.isFinite(itemId)) continue;
@@ -557,41 +581,45 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         ...basePlannerOpts,
         excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),
     };
-    const evaluatedRunning: { acct: AccountState; plan: AccountPlan }[] = [];
+    const evaluatedRunning: { acct: AccountState; plan: AccountPlan; currentPlan: AccountPlan | null }[] = [];
+    const startsWithHubTrade = (p: AccountPlan): boolean => {
+        const first = p.steps[0];
+        return (first?.stepKind === 'acquire' || first?.stepKind === 'gear_upgrade') && first.source === 'hub_banker';
+    };
     for (const acct of runningAccounts) {
         const job = acct.activeJob;
         const activeAct = job ? activityById.get(job.activityId) : undefined;
         const activeDem = job ? demandById.get(job.demandId) : undefined;
         const acctReuse = getAccountReuse(acct);
 
+        // The running job's own plan is derived with every acquire source, as at launch: a chain launched as the
+        // prefix before a hub trade comes out the same, so the swarm keeps the run. Only a plan whose first step is
+        // a hub trade falls back to the plan without hub_banker, because that dispatch would stop the run.
         let currentPlan: AccountPlan | null = null;
         if (activeAct && activeDem) {
-            const p = planAccount(acct, {
-                ...runningPlannerOpts,
+            const currentOpts = {
+                ...basePlannerOpts,
                 activities: [activeAct],
                 demands: [activeDem],
                 _sharedIndex: undefined,
                 _reuse: acctReuse,
-            });
-            if (p.steps.length > 0) currentPlan = p;
+            };
+            let p = planAccount(acct, currentOpts);
+            if (startsWithHubTrade(p)) {
+                p = planAccount(acct, { ...currentOpts, excludedAcquireSources: runningPlannerOpts.excludedAcquireSources });
+            }
+            if (p.steps.length > 0) currentPlan = { ...p, retentionMarginApplied: true };
         }
 
         const bestAlt = planAccount(acct, { ...runningPlannerOpts, _reuse: acctReuse });
         let chosen: AccountPlan;
-        if (currentPlan && currentPlan.steps.length > 0) {
+        if (currentPlan) {
             const threshold = currentPlan.scorePerHour * (1 + retentionMarginRatio);
-            if (bestAlt.steps.length === 0 || bestAlt.scorePerHour <= threshold) {
-                chosen = {
-                    ...currentPlan,
-                    retentionMarginApplied: true,
-                };
-            } else {
-                chosen = bestAlt;
-            }
+            chosen = bestAlt.steps.length === 0 || bestAlt.scorePerHour <= threshold ? currentPlan : bestAlt;
         } else {
             chosen = bestAlt;
         }
-        evaluatedRunning.push({ acct, plan: chosen });
+        evaluatedRunning.push({ acct, plan: chosen, currentPlan });
     }
 
     evaluatedRunning.sort((a, b) => b.plan.scorePerHour - a.plan.scorePerHour || a.acct.name.localeCompare(b.acct.name));
@@ -604,7 +632,26 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         return (remainingByDemand.get(dem.id) ?? 0) > 0;
     };
 
-    for (const { acct, plan } of evaluatedRunning) {
+    const workActivityOf = (p: AccountPlan): ActivityDefinition | undefined => {
+        const work = p.steps.at(-1);
+        return work?.stepKind === 'work' ? activityById.get(work.activityId) : undefined;
+    };
+    const spotOkFor = (p: AccountPlan): boolean => {
+        const act = workActivityOf(p);
+        return !act || spotHasCapacity(act.spotId, act.maxConcurrentAccounts);
+    };
+    const acceptRunning = (acct: AccountState, p: AccountPlan) => {
+        reserveSpot(acct.name, workActivityOf(p)?.spotId);
+        reserveMarketVenues(p);
+        consumeDemandAllocation(p);
+        accountPlans[acct.name] = p;
+        busyAccounts.add(acct.name.toLowerCase());
+        remainingSlots -= 1;
+    };
+
+    // A running account keeps its slot: when its running job still plans (currentPlan), a slot cap, a full spot or
+    // a saturated demand keeps that job instead of an empty plan, because an empty plan makes the swarm stop the run.
+    for (const { acct, plan, currentPlan } of evaluatedRunning) {
         if (sideStopped) {
             accountPlans[acct.name] = {
                 account: acct.name,
@@ -619,6 +666,10 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             continue;
         }
         if (remainingSlots <= 0) {
+            if (currentPlan) {
+                acceptRunning(acct, currentPlan);
+                continue;
+            }
             accountPlans[acct.name] = {
                 account: acct.name,
                 steps: [],
@@ -627,50 +678,45 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             };
             continue;
         }
-        const workStep = plan.steps.at(-1);
-        const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
-        const spotOk = !workAct || spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts);
+        const spotOk = spotOkFor(plan);
         const marketOk = marketVenueHasCapacity(plan);
         const demandOk = demandHasCapacity(plan);
-        if (!spotOk || !marketOk || !demandOk) {
-            const excludedSpots = currentFullSpots(!spotOk ? workAct?.spotId : undefined);
-            const rerouted = planAccount(acct, {
-                ...runningPlannerOpts,
-                ...(demandOk ? {} : { demands: currentUnallocatedDemands() }),
-                excludedSpotIds: excludedSpots,
-                excludedMarketVenues: allocatedMarketVenues,
-                _reuse: getAccountReuse(acct),
-            });
-            const altWork = rerouted.steps.at(-1);
-            const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
-            if (
-                rerouted.steps.length === 0
-                || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))
-                || !marketVenueHasCapacity(rerouted)
-                || !demandHasCapacity(rerouted)
-            ) {
-                accountPlans[acct.name] = {
-                    account: acct.name,
-                    steps: [],
-                    scorePerHour: 0,
-                    idleReason: !spotOk || !marketOk ? 'spot_capacity_full' : (rerouted.idleReason ?? 'demand_saturated'),
-                };
-                continue;
-            }
-            reserveSpot(acct.name, altAct?.spotId);
-            reserveMarketVenues(rerouted);
-            consumeDemandAllocation(rerouted);
-            accountPlans[acct.name] = rerouted;
-            busyAccounts.add(acct.name.toLowerCase());
-            remainingSlots -= 1;
+        if (spotOk && marketOk && demandOk) {
+            acceptRunning(acct, plan);
             continue;
         }
-        reserveSpot(acct.name, workAct?.spotId);
-        reserveMarketVenues(plan);
-        consumeDemandAllocation(plan);
-        accountPlans[acct.name] = plan;
-        busyAccounts.add(acct.name.toLowerCase());
-        remainingSlots -= 1;
+        if (currentPlan && plan !== currentPlan
+            && spotOkFor(currentPlan) && marketVenueHasCapacity(currentPlan) && demandHasCapacity(currentPlan)) {
+            acceptRunning(acct, currentPlan);
+            continue;
+        }
+        const excludedSpots = currentFullSpots(!spotOk ? workActivityOf(plan)?.spotId : undefined);
+        const rerouted = planAccount(acct, {
+            ...runningPlannerOpts,
+            ...(demandOk ? {} : { demands: currentUnallocatedDemands() }),
+            excludedSpotIds: excludedSpots,
+            excludedMarketVenues: allocatedMarketVenues,
+            _reuse: getAccountReuse(acct),
+        });
+        if (
+            rerouted.steps.length > 0
+            && spotOkFor(rerouted)
+            && marketVenueHasCapacity(rerouted)
+            && demandHasCapacity(rerouted)
+        ) {
+            acceptRunning(acct, rerouted);
+            continue;
+        }
+        if (currentPlan) {
+            acceptRunning(acct, currentPlan);
+            continue;
+        }
+        accountPlans[acct.name] = {
+            account: acct.name,
+            steps: [],
+            scorePerHour: 0,
+            idleReason: !spotOk || !marketOk ? 'spot_capacity_full' : (rerouted.idleReason ?? 'demand_saturated'),
+        };
     }
 
     // 2. Unblock execution order: needs_logout_recovery first, then needs_location_recovery.
@@ -897,11 +943,11 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker',
             );
             if (hubSteps.length > 0) {
-                let transfersOk = true;
+                let transfersOk = !tradeHeldAccounts.has(acct.name.toLowerCase());
                 const stagedOrders: TransferOrder[] = [];
                 const updatedSteps = [...plan.steps];
 
-                for (let i = 0; i < updatedSteps.length; i++) {
+                for (let i = 0; transfersOk && i < updatedSteps.length; i++) {
                     const step = updatedSteps[i]!;
                     if ((step.stepKind !== 'acquire' && step.stepKind !== 'gear_upgrade') || step.source !== 'hub_banker') continue;
                     const quantity = step.stepKind === 'acquire' ? step.quantity : 1;

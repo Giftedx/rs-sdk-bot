@@ -77,6 +77,32 @@ export const SAFE_HUB_REGIONS: readonly SafeHubRegion[] = [
     { id: 'gnome-bank-upper', name: 'Gnome Stronghold Tree Bank', xMin: 2442, xMax: 2452, zMin: 3478, zMax: 3488, level: 1 },
 ];
 
+export interface WalledRegion extends SafeHubRegion {
+    // The quest whose completion opens the walk out (a quest-journal name, case and "quest_" prefix ignored).
+    readonly openedByQuest: string;
+}
+
+// Walled places inside a safe hub box. An account there has no walk out until its quest opens the way: the West
+// Ardougne city doors stay shut until Biohazard is complete (scripts/generated/quest-biohazard.ts outByKilron), and
+// an account left in the Mourner HQ at 2546,3325 got only jobs elsewhere, each with no route. The box is the one of
+// packages/workers/src/quest/sweep-plan.ts inWestArdougne: the wall is at x 2558, and the Underground Pass entrance
+// west of the city (x 2431-2454) is outside it.
+export const WALLED_REGIONS: readonly WalledRegion[] = [
+    { id: 'west-ardougne', name: 'West Ardougne (walled city)', xMin: 2496, xMax: 2557, zMin: 3264, zMax: 3335, level: 0, openedByQuest: 'biohazard' },
+];
+
+function questComplete(quests: Readonly<Record<string, WorkerQuestState>> | undefined, quest: string): boolean {
+    if (!quests) return false;
+    const want = quest.toLowerCase();
+    return Object.entries(quests).some(([k, v]) => v === 'complete' && k.trim().toLowerCase().replace(/^quest_/, '') === want);
+}
+
+export function walledInAt(pos: WorkerTile | null, quests: Readonly<Record<string, WorkerQuestState>> | undefined): WalledRegion | undefined {
+    if (!pos) return undefined;
+    return WALLED_REGIONS.find((r) => pos.level === r.level && pos.x >= r.xMin && pos.x <= r.xMax && pos.z >= r.zMin && pos.z <= r.zMax
+        && !questComplete(quests, r.openedByQuest));
+}
+
 const STALE_AUTO_STOP_TEXT =
     /^(?:fleet-health auto-paused:|swarm stopped\b|swarm plan removed or stopped\b|swarm recovery stopped\b|inherited recovery stopped\b|fleet controller lease unavailable\b|swarm:\s)/i;
 const ACCOUNT_NAME_RE = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -133,6 +159,8 @@ export interface AccountLifecycleInput {
     readonly pos?: WorkerTile | null;
     readonly strandedHold?: boolean;
     readonly activeLaunchAuthorized?: boolean;
+    // The account's quests: a walled place (WALLED_REGIONS) strands an account whose quest has not opened it.
+    readonly quests?: Readonly<Record<string, WorkerQuestState>>;
 }
 
 function safeReadJson<T = unknown>(file: string): T | null {
@@ -293,7 +321,7 @@ export function classifyAccountLifecycle(input: AccountLifecycleInput): AccountL
     ) {
         return 'needs_logout_recovery';
     }
-    if (input.strandedHold || isStrandedPosition(input.pos ?? null)) {
+    if (input.strandedHold || isStrandedPosition(input.pos ?? null) || walledInAt(input.pos ?? null, input.quests)) {
         return 'needs_location_recovery';
     }
     return 'idle';
@@ -1074,6 +1102,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
             pos,
             strandedHold,
             activeLaunchAuthorized,
+            quests,
         });
 
         const accountReserves = opts.reserves?.[lower] ?? opts.reserves?.[name];

@@ -40,3 +40,25 @@ test('monitor reads .practice/live/status with fallback to .practice/status and 
         rmSync(tempRoot, { recursive: true, force: true });
     }
 });
+
+test('monitor raises no second died alert for a session whose bot wrote its own death alert', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'monitor-test-'));
+    const now = 1_700_000_000_000;
+    try {
+        mkdirSync(join(tempRoot, '.practice', 'live', 'status'), { recursive: true });
+        const status = (name: string) => writeFileSync(join(tempRoot, '.practice', 'live', 'status', `${name}.json`), JSON.stringify({
+            name, server: 'rs-sdk-demo.fly.dev', at: now - 5_000, started: now - 600_000, result: 'fail died=true', timeline: 'a',
+        }));
+        status('DeadSelf');
+        status('DeadQuiet');
+        writeFileSync(join(tempRoot, '.practice', 'alerts.jsonl'), JSON.stringify({ at: now - 60_000, level: 'error', key: `died-DeadSelf-${now - 60_000}`, bot: 'DeadSelf', text: 'DeadSelf died: DEATH' }) + '\n');
+        const snap = cycle(tempRoot, { now, list: [] });
+        // Only the died- keys: a low-RAM test machine also writes a ram alert.
+        const keys = readFileSync(join(tempRoot, '.practice', 'alerts.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l).key).filter(k => k.startsWith('died-'));
+        expect(keys).toEqual([`died-DeadSelf-${now - 60_000}`, `died-DeadQuiet-${now - 600_000}`]);
+        // The bot's own alert still shows in monitor.json.
+        expect((snap.alerts as any[]).map(a => a.key).filter(k => k.startsWith('died-')).sort()).toEqual([`died-DeadQuiet-${now - 600_000}`, `died-DeadSelf-${now - 60_000}`]);
+    } finally {
+        rmSync(tempRoot, { recursive: true, force: true });
+    }
+});

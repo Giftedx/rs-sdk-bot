@@ -6,6 +6,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileS
 import { join, resolve } from 'node:path';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
+import { readHeldFleetTradeClaims } from '../../core/src/fleet-trade-claim';
 import { validOrder, type Order, type Receipt, type TradeRole } from '../../core/src/fleet-trade-settlement';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
@@ -13,6 +14,8 @@ import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '
 import { pidStartedAfter, spawnSyncTimed } from '../../core/src/proc';
 import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
+import type { RawWorkerExitInput } from '../../brain/src/index';
+import { queueWorkerOutcome, tradeNoRouteOutcome } from './brain-runtime';
 import { brainPlannedJobs } from './fleet-sync';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 import { drainedFiles, readPendingUpdate } from './live-update/pending';
@@ -178,6 +181,18 @@ export function tradePartnerWait(
     return wait ? `partner ${partner} waits: ${wait}` : null;
 }
 
+// The held trade claims of the given accounts, lower-case account to order id. An unreadable claim authority gives no
+// claims: the login refuses a held claim in any case (acquireFleetTradeClaim). A claim with a pre-network marker of this
+// checkout (.practice/fleet-account-pending/<nonce>.json) is left out: acquireFleetTradeClaim takes over such a claim
+// when its process is gone, so a wait on it would hold the account for good.
+export function heldTradeClaims(base: string, accounts: readonly string[], read = readHeldFleetTradeClaims): ReadonlyMap<string, string> {
+    try {
+        return new Map(read(base, accounts)
+            .filter(c => !existsSync(join(base, '.practice', 'fleet-account-pending', `${c.nonce}.json`)))
+            .map(c => [c.account.toLowerCase(), c.orderId]));
+    } catch { return new Map(); }
+}
+
 export type TradeWait = { account: string; order: Order; kind: 'held' | 'busy'; why: string };
 export type TradeEnd = { account: string; order: string; why: string };
 
@@ -188,6 +203,9 @@ export type TradeEnd = { account: string; order: string; why: string };
 // While a live update waits on trades alone, a running trade whose partner on this side cannot join it (the partner is
 // held, busy, or on another order) ends early: it logs out through its stop file instead of waiting out the order
 // window, and its receipt follows the usual rules.
+// `claimHeld` returns the held trade claims (lower-case account to order id) of the given accounts. A party whose own
+// claim, or whose partner's claim, names another order waits: acquireFleetTradeClaim refuses that party at login, and
+// the other party would stand at the meet until the order window ends.
 export function planTradePass(o: {
     orders: readonly Order[];
     receipts: readonly Receipt[];
@@ -202,18 +220,33 @@ export function planTradePass(o: {
     drain?: { drained: readonly string[]; target: string; others?: readonly string[] } | null;
     stopHeld?: (account: string) => string | undefined;
     wrote?: (id: string, role: TradeRole) => boolean;
+    claimHeld?: (accounts: readonly string[]) => ReadonlyMap<string, string>;
 }): { starts: { account: string; order: Order }[]; waits: TradeWait[]; ends: TradeEnd[] } {
     const due = dueTrades(o.orders, o.receipts, o.side, o.owners, o.busy, new Set(o.running.keys()), o.now, o.lead);
+    const claimed = !o.halt && due.length && o.claimHeld ? o.claimHeld([...new Set(due.flatMap(t => [t.order.from, t.order.to]))]) : new Map<string, string>();
     const drained = o.drain?.drained ?? [];
     const wrote = (id: string, role: TradeRole) => o.receipts.some(r => r?.id === id && r.role === role) || (o.wrote?.(id, role) ?? false);
+    // A partner that wrote its receipt of this order is done with it: its claim for a later order holds nothing here.
+    const claimWait = (order: Order, account: string) => {
+        const me = account.toLowerCase(), mine = order.from.toLowerCase() === me, partner = mine ? order.to : order.from;
+        const parties: [string, string][] = [[me, account]];
+        if (!wrote(order.id, mine ? 'to' : 'from')) parties.push([partner.toLowerCase(), partner]);
+        for (const [who, name] of parties) {
+            const held = claimed.get(who);
+            if (held !== undefined && held !== order.id) return who === me ? `trade claim held for order ${held}` : `partner ${name} trade claim held for order ${held}`;
+        }
+        return undefined;
+    };
     const own = new Map<string, Omit<TradeWait, 'account' | 'order'>>();
     for (const t of due) {
         const drainHold = o.drain ? tradeDrainHold(t.order, t.account, drained, o.drain.target, o.runningOrders, o.receipts, o.drain.others) : null;
         const stopHeld = o.halt || t.busy || drainHold ? undefined : o.stopHeld?.(t.account);
+        const claimHeld = o.halt || t.busy || drainHold || stopHeld ? undefined : claimWait(t.order, t.account);
         const wait = o.halt ? { kind: 'held' as const, why: o.halt }
             : t.busy ? { kind: 'busy' as const, why: 'enabled swarm job' }
                 : drainHold ? { kind: 'held' as const, why: drainHold }
-                    : stopHeld ? { kind: 'held' as const, why: stopHeld } : null;
+                    : stopHeld ? { kind: 'held' as const, why: stopHeld }
+                        : claimHeld ? { kind: 'held' as const, why: claimHeld } : null;
         if (wait) own.set(t.account.toLowerCase(), wait);
     }
     const dueBy = new Map(due.map(t => [t.account.toLowerCase(), t]));
@@ -288,6 +321,26 @@ export function recordAgentInfraResult(breaker: InfraCircuitBreaker, output: str
     }
     if (exitCode === 0) breaker.recordSuccess('remote_git_claim');
     return false;
+}
+
+// A failed trade whose route search found no route from where the account stands goes to the swarm's outcome
+// inbox, so the planner records a no-route fact and stops sending the account to that hub. Returns the queued file.
+export function queueTradeNoRoute(o: {
+    base: string;
+    account: string;
+    result: string | undefined;
+    startedAt: number;
+    logPath: string;
+    now?: number;
+    queue?: (root: string, raw: RawWorkerExitInput) => string;
+}): string | null {
+    if (!o.result?.startsWith('RESULT fail')) return null;
+    try {
+        const raw = tradeNoRouteOutcome({ root: o.base, account: o.account, resultLine: o.result, startedAt: o.startedAt, finishedAt: o.now ?? Date.now(), logPath: o.logPath });
+        return raw ? (o.queue ?? queueWorkerOutcome)(o.base, raw) : null;
+    } catch {
+        return null;
+    }
 }
 
 export function syncResult(out: string, exitCode: number | null): string {
@@ -427,6 +480,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             drain: pending ? { drained: tradeDrained, target: pending.target, others: pending.others } : null,
             stopHeld: account => tradeStop(base, account, now, false).held,
             wrote: (id, role) => existsSync(join(dir, 'receipts', `${id}.${role}.json`)),
+            claimHeld: accounts => heldTradeClaims(base, accounts),
         });
         for (const w of pass.waits) log(`FLEET_AGENT ${w.kind} ${w.account}: order ${w.order.id} waits (${w.why})`);
         for (const e of pass.ends) {
@@ -446,6 +500,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             askedToStop.delete(accountKey);
             endAsked.delete(accountKey);
             log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
+            const tradeStartedAt = Date.now();
             try {
                 const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
                     cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: tradeEnvironment(dir),
@@ -460,7 +515,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                         if (errOut.trim()) log(errOut.trimEnd(), 'err');
                         const combined = `${out}\n${errOut}`;
                         if (exitCode !== 0) recordAgentInfraResult(infraBreaker, combined, exitCode);
-                        log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
+                        const result = out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1);
+                        log(`FLEET_AGENT done ${t.account} ${result ?? 'no result'}`);
+                        const noRoute = queueTradeNoRoute({ base, account: t.account, result, startedAt: tradeStartedAt, logPath: logFile });
+                        if (noRoute) log(`FLEET_AGENT no-route ${t.account}: queued for the swarm's outcome record (${noRoute})`);
                     } catch (err) {
                         log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
                     } finally {

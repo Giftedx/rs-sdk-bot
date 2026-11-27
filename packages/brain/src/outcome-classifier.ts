@@ -22,6 +22,7 @@ import {
 } from '../../workers/src/contracts';
 import {
     createExpiringHold,
+    HUB_BANKER_LOCATIONS,
     isHoldActive,
     marketCooldownKey,
     pruneExpiredCooldowns,
@@ -41,10 +42,22 @@ import {
     type SystemHold,
     type WorldSnapshot,
 } from './contracts';
-import { addNoRoute, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, noRouteState, parseNoRoute, standsAt } from './no-route';
+import { shopRestockTicks } from './acquire';
+import { addNoRoute, enclosedAt, isNoRouteFact, NO_ROUTE_TTL_MS, noRouteHolds, noRouteMessage, noRouteState, parseNoRoute, standsAt } from './no-route';
 import type { RateStore } from './rate-store';
 
 export const DEFAULT_MARKET_COOLDOWN_MS = 10 * 60_000;
+// The live server tick (demand.ts TICK_MS).
+const SERVER_TICK_MS = 400;
+
+// An empty shelf stays empty until the shop restocks the item: the Ardougne gem stall restocks its sapphires each
+// 15000 ticks (100 min), so a shorter cooldown sends the next buyer to the same empty stall.
+export function shopRestockCooldownMs(itemId: number, venue: string): number {
+    const shop = /^shop:(.+)$/.exec(venue)?.[1];
+    if (!shop || !(itemId > 0)) return 0;
+    const ticks = shopRestockTicks(itemId, shop);
+    return ticks !== undefined && Number.isFinite(ticks) && ticks > 0 ? ticks * SERVER_TICK_MS : 0;
+}
 export const DEFAULT_RECOVERY_HOLD_TTL_MS = 30 * 60_000;
 export const DEFAULT_DEFECT_TTL_MS = 24 * 3_600_000;
 export const DEFAULT_INFRA_BASE_BACKOFF_MS = 30_000;
@@ -804,7 +817,7 @@ export class OutcomeClassifier {
 
             case 'market_unavailable': {
                 const overlay = this.pruneAccountOverlay(outcome.account, now);
-                const ttlMs = outcome.cooldownMs ?? this.defaultMarketCooldownMs;
+                const ttlMs = outcome.cooldownMs ?? Math.max(this.defaultMarketCooldownMs, shopRestockCooldownMs(outcome.itemId, outcome.venue));
                 const key = marketCooldownKey(outcome.itemId, outcome.venue);
                 this.marketCooldowns = setCooldown(this.marketCooldowns, key, now, ttlMs);
                 const accountCooldowns = setCooldown(overlay.cooldowns, key, now, ttlMs);
@@ -1084,6 +1097,13 @@ export class OutcomeClassifier {
         if (noRoutes !== acct.noRoutes) {
             const { noRoutes: _old, ...without } = acct;
             acct = noRoutes ? { ...without, noRoutes } : without;
+        }
+        // An account that cannot leave where it stands takes no job elsewhere: it needs location recovery. At a hub
+        // bank the recovery walk (to the nearest hub) ends where it starts, so the facts would hold and the recovery
+        // would repeat; there the account stays idle and noRouteTo refuses the places it cannot reach.
+        if (acct.lifecycle === 'idle' && enclosedAt(noRoutes, acct.pos, now)
+            && !Object.values(HUB_BANKER_LOCATIONS).some(h => standsAt(acct.pos, h.bankTile))) {
+            acct = { ...acct, lifecycle: 'needs_location_recovery' };
         }
         const hasOverlay = this.accountOverlays.has(key);
         if (!hasOverlay) {

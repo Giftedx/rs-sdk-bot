@@ -20,6 +20,11 @@ const MARKET = { x: 2654, z: 3304 };
 const BAKER = { x: 2654, z: 3311 };
 const MUSA_DECK = { x: 2956, z: 3143 };
 const ARDY_DECK = { x: 2683, z: 3268 };
+const BRIMHAVEN_DOCK = { x: 2774, z: 3228 };
+// Karamja (Musa Point to Brimhaven), ground floor or a ship deck. Port Sarim (x >= 3000) and Ardougne (x < 2740) are outside.
+// North of z 3195 only Brimhaven (x <= 2830) is Karamja: Rimmington (2957,3214) is on the mainland.
+const onKaramja = (p: { worldX: number; worldZ: number; level: number } | null | undefined) =>
+    !!p && p.level <= 1 && p.worldX >= 2740 && p.worldX <= 2990 && p.worldZ >= 2880 && (p.worldZ <= 3195 || (p.worldX <= 2830 && p.worldZ <= 3240));
 // TARGET and CAP (game ticks) come from the environment so the same script runs a short proof or a live run to 99.
 const TARGET = Number(process.env.TARGET ?? 60);
 const CAP = Number(process.env.CAP ?? 2500);
@@ -176,8 +181,11 @@ try {
         if (!npc) {
             if (p && cheb(t.spot, p) > t.range) {
                 const w0 = now();
-                await s.bot.walkTo(t.spot.x, t.spot.z, 3);
+                const moved = await s.bot.walkTo(t.spot.x, t.spot.z, 3);
                 walkTicks += now() - w0;
+                // A spot with no path (for example Lumbridge from Karamja) ends the run at once: a retry loop only stands
+                // still where aggressive NPCs can attack. Other walk failures (a stun blocks walking) retry.
+                if (!moved.success && /^no path to/i.test(moved.message ?? '')) await end(false, `walk to the ${t.name} spot ${t.spot.x},${t.spot.z}: ${moved.message}`);
             } else { idleTicks++; await waitTicks(s, 1); }
             return false;
         }
@@ -217,6 +225,8 @@ try {
     const p1 = pos();
     const inArdougne = !!p1 && cheb(MARKET, p1) <= 80;
     if (inArdougne) mark('ardougne');
+    // A run that ended on Karamja (a failed Brimhaven walk) resumes there: no Lumbridge men are in reach.
+    const karamjaStart = !inArdougne && onKaramja(p1);
     // The walks of steps 3 and 4 stay on the ground floor. A start in Ardougne on another floor (level 1 of a house at
     // 2575,3269) goes to the market with the shared walker first, by the stairs.
     if (inArdougne && p1.level !== 0) {
@@ -226,12 +236,13 @@ try {
     }
     // ---- Step 1: Lumbridge men until 60 coins (the two boat fares, 30 each).
     const LUMB_MEN: Target = { name: 'man', re: /^man$/i, dmg: 1, spot: LUMBRIDGE, range: 15 };
-    for (let i = 0; i < 600 && !inArdougne && coins() < 60 && !died && left() > 0; i++) {
+    for (let i = 0; i < 600 && !inArdougne && !karamjaStart && coins() < 60 && !died && left() > 0; i++) {
         if (!canSteal(LUMB_MEN)) { await rest(); continue; }
         await steal(LUMB_MEN);
     }
     if (died) await end(false, 'died in Lumbridge');
-    if (!inArdougne && coins() < 60) await end(false, `only ${coins()} coins`);
+    if (!inArdougne && !karamjaStart && coins() < 60) await end(false, `only ${coins()} coins`);
+    if (karamjaStart && coins() < 30) await end(false, `on Karamja with only ${coins()} coins for the Brimhaven fare`);
     mark('coins60');
     checkLevels();
 
@@ -286,9 +297,29 @@ try {
         return landed();
     };
 
+    // The boat route carries no food, and Karamja has aggressive NPCs (scorpions). The bot leaves the mainland only with
+    // Hitpoints near full, so that it can walk out of reach of an attack. A Karamja start does not rest there: it leaves
+    // at once.
+    const boatHp = () => (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10) - 2;
+    if (!inArdougne && !karamjaStart) {
+        while (hp() < boatHp() && !died && left() > 0) await rest();
+        if (hp() < boatHp()) await end(false, `hitpoints ${hp()} too low for the boat route`);
+    }
     // Route from research/route-danger.ts: 357 tiles, clear of the jail guards (26), brown bear (21) and dark wizards;
     // the old route (3105,3250) passed 2 tiles from a jail guard, and two fresh runs died there.
-    if (!inArdougne) {
+    // The Brimhaven leg uses the shared danger-aware walker: the client rejects the fixed waypoint 2850,3175 from Musa
+    // Point (2854,3178).
+    const toBrimhaven = async (): Promise<void> => {
+        const r = await approach(s, { ...BRIMHAVEN_DOCK, level: 0 }, () => died || left() <= 0);
+        if (!r.ok) await end(false, `walk to Brimhaven: ${r.reason} ${r.detail}`);
+    };
+    if (karamjaStart) {
+        if (pos()?.level === 1 && !(await disembark())) await end(false, 'Karamja gangplank');
+        await toBrimhaven();
+        if (!(await sail(/^customs officer$/i, [/journey on this ship/i, /search away/i, /^ok\.?$/i], ARDY_DECK))) await end(false, 'sail to Ardougne');
+        if (!(await disembark())) await end(false, 'Ardougne gangplank');
+        if (!(await walk([[MARKET.x, MARKET.z, 3]]))) await end(false, 'walk to market');
+    } else if (!inArdougne) {
     // Same ordinary Draynor corridor already used by foodcourier; a receiver
     // resumed at its bank must not travel back east to Lumbridge first.
     const draynorStart = pos();
@@ -298,7 +329,7 @@ try {
     if (!(await walk(sarimRoute))) await end(false, 'walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, [/^yes please/i], MUSA_DECK))) await end(false, 'sail to Karamja');
     if (!(await disembark())) await end(false, 'Musa Point gangplank');
-    if (!(await walk([[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]]))) await end(false, 'walk to Brimhaven');
+    await toBrimhaven();
     if (!(await sail(/^customs officer$/i, [/journey on this ship/i, /search away/i, /^ok\.?$/i], ARDY_DECK))) await end(false, 'sail to Ardougne');
     if (!(await disembark())) await end(false, 'Ardougne gangplank');
     if (!(await walk([[MARKET.x, MARKET.z, 3]]))) await end(false, 'walk to market');

@@ -11,6 +11,7 @@ import { spawn as spawnChild } from 'node:child_process';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type AccountPlan, type PlannedStep } from '../../brain/src/index';
+import { DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs } from '../../brain/src/outcome-classifier';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
@@ -41,6 +42,7 @@ import { assertWorkerRelease, cachedLaunchRevision, cachedReleaseFor, workerEntr
 import { DRAIN_STOP_MS, DRAIN_STOP_TEXT, drainedFiles, pendingUpdateReader, type PendingUpdate } from './live-update/pending';
 import {
     captureRunBaseline,
+    drainWorkerOutcomeInbox,
     extractWorkerOutcomeInput,
     recordWorkerOutcome,
     gateHeldRunEnd,
@@ -108,6 +110,9 @@ type Run = {
     demandId?: string;
     workerRelease?: string;
     baseline?: RunTelemetryBaseline;
+    // The brain plan started this run. `finite` marks a brain job with a restart limit (quest, market, chain, walk).
+    brain?: boolean;
+    finite?: boolean;
 };
 
 export type SavedRun = Run & { key: string };
@@ -263,19 +268,66 @@ export const BRAIN_RECOVERY_WAIT = 'waiting: standalone session recovery';
 // The reason the swarm will not start the job of a brain plan, or undefined when it will. startable() rules on the
 // job that the tick builds from the plan, against the account's end record: the same job as an ended run stays
 // ended, and a changed job starts. The standalone recovery queue starts no swarm job. The planner gives such a plan
-// no slot (FleetSchedulerInput.heldPlan).
+// no slot (FleetSchedulerInput.heldPlan). The planner recomputes a market order's quantity each pass, so a changed
+// signature alone does not start a buy at the venue whose empty stock ended the last run: that plan waits until the
+// venue's stock-out hold passes.
 export function brainPlanHold(
     built: { selected: SelectedBrainDispatch; job?: Job },
     ended: Map<string, EndRecord>,
     statusAge: (a: string) => number,
     statusStarted?: (a: string) => number | undefined,
+    now = Date.now(),
 ): string | undefined {
     if (built.selected.mode === 'session_recovery') return BRAIN_RECOVERY_WAIT;
     if (!built.job) return undefined;
     const p = parseJob(built.job);
     if ('error' in p || p.accounts.length !== 1) return undefined;
     const why = startable(p.accounts, p.job.repeat, ended, statusAge, statusStarted, missionSignature(p.job), undefined, () => true).blocked[p.accounts[0]!];
-    return why?.startsWith('ended: ') ? why : undefined;
+    if (why?.startsWith('ended: ')) return why;
+    const { selected } = built;
+    if (selected.mode !== 'worker' || selected.marketItemId === undefined || !selected.marketVenue) return undefined;
+    const end = endedMapByLower(ended).get(p.accounts[0]!.toLowerCase())?.[1];
+    if (!end || end.marketItemId !== selected.marketItemId || end.marketVenue !== selected.marketVenue) return undefined;
+    const until = end.at + stockOutHoldMs(selected.marketItemId, selected.marketVenue);
+    return now < until ? `ended: ${selected.marketVenue} out of stock for item ${selected.marketItemId} until ${new Date(until).toISOString()}` : undefined;
+}
+
+// A campaign is ready only with a hiscore margin under 1 h old (brain/src/contracts.ts MAX_CAMPAIGN_HISCORE_AGE_MS).
+// The swarm starts a board refresh at most each 10 min, and the refresh fetches only when the snapshot is 50 min old.
+// It writes the live path, not the one that tools/specialist-launch.ts writes per account.
+export const HISCORE_REFRESH_INTERVAL_MS = 10 * 60_000;
+export const HISCORE_SNAPSHOT_MAX_AGE_MS = 50 * 60_000;
+
+export function hiscoreRefreshDue(o: { now: number; lastAt: number; running: boolean }): boolean {
+    return !o.running && o.now - o.lastAt >= HISCORE_REFRESH_INTERVAL_MS;
+}
+
+export function hiscoreRefreshCommand(root: string): { cmd: string[]; out: string; log: string } {
+    const dir = join(liveRoot(root), 'specialist-launch');
+    const out = join(dir, 'hiscores.json');
+    return {
+        cmd: [process.execPath, join(root, 'packages', 'planner', 'src', 'scout-cli.ts'), `--out=${out}`, `--max-age-ms=${HISCORE_SNAPSHOT_MAX_AGE_MS}`],
+        out,
+        log: join(dir, 'scout-refresh.log'),
+    };
+}
+
+// Starts the refresh child and does not wait for it. onEnd runs once when the child exits or fails to start.
+export function startHiscoreRefresh(root: string, onEnd: () => void, spawnFn: typeof spawnChild = spawnChild): void {
+    const { cmd, log } = hiscoreRefreshCommand(root);
+    mkdirSync(join(log, '..'), { recursive: true });
+    rotateLog(log);
+    const fd = openSync(log, 'a');
+    let ended = false;
+    const end = () => { if (!ended) { ended = true; onEnd(); } };
+    try {
+        const child = spawnFn(cmd[0]!, cmd.slice(1), { cwd: root, windowsHide: true, stdio: ['ignore', fd, fd] });
+        child.on('exit', end);
+        child.on('error', end);
+    } catch (error) {
+        end();
+        throw error;
+    } finally { closeSync(fd); }
 }
 
 export { PID_START_SLACK_MS };
@@ -594,7 +646,27 @@ export function overlappingRun<T extends { accounts: readonly string[] }>(runs: 
     return undefined;
 }
 
-export type EndRecord = { at: number; reason: string; revision?: string };
+// marketItemId and marketVenue name the shop or GE item of a run that ended because the venue had no stock.
+export type EndRecord = { at: number; reason: string; revision?: string; marketItemId?: number; marketVenue?: string };
+
+// The same out-of-stock text that sets a venue cooldown (brain/src/outcome-classifier.ts MARKET_UNAVAILABLE_RE and
+// SHOP_STOCK_WAIT_RE, brain-runtime.ts extractWorkerOutcomeInput).
+const STOCK_OUT_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here|\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
+
+// The market venue of a failed run that the venue's empty stock ended, for its end record.
+export function stockOutEnd(
+    run: { marketItemId?: number; marketVenue?: string },
+    reason: string,
+    lastResultLine: string | undefined,
+): { marketItemId: number; marketVenue: string } | undefined {
+    if (run.marketItemId === undefined || !run.marketVenue || successfulEnd(reason) || /^died\b/.test(reason)) return undefined;
+    return STOCK_OUT_RE.test(`${reason}\n${lastResultLine ?? ''}`) ? { marketItemId: run.marketItemId, marketVenue: run.marketVenue } : undefined;
+}
+
+// How long a venue stays empty after a stock-out end: the venue cooldown, or the shop's restock time when longer.
+export function stockOutHoldMs(itemId: number, venue: string): number {
+    return Math.max(DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs(itemId, venue));
+}
 
 export function persistentEnd(reason: string): boolean {
     return /^(?:died|blocked|gave-up)(?:\b|$)/.test(reason);
@@ -609,6 +681,64 @@ export const SWARM_STOP = {
     lease: 'fleet controller lease unavailable',
     drain: DRAIN_STOP_TEXT,
 } as const;
+
+export const BRAIN_RUN_MIN_MS = 10 * 60_000;
+export const BRAIN_DROP_CYCLES = 2;
+
+// The reason the swarm keeps a brain-started run that the current brain plan gives no worker job, or undefined when
+// the swarm stops it. A brain cycle can empty a running account's plan for one cycle (slot pressure, saturated demand,
+// a spot cap, a re-plan with other acquire sources); a stop then throws away the work done. A finite job runs to its
+// end. A repeating job is stopped only after it ran BRAIN_RUN_MIN_MS and BRAIN_DROP_CYCLES brain cycles in a row
+// dropped it. A stop of all runs, a disabled brain, a hand job, an open hold, an end record, a session recovery or a
+// fleet trade for the account, or an idle reason that brainSoftIdle refuses (death, owner pause, trade, protection, a
+// system hold) stops the run as before.
+export const BRAIN_SOFT_IDLE: ReadonlySet<string> = new Set([
+    'max_bots_limit', 'spot_capacity_full', 'demand_saturated', 'idle', 'no_matching_demand_or_activity', 'missing_food_supply',
+]);
+// Planner blocker reasons: the re-plan of a running account excludes hub_banker supply, so it can fail to rebuild the
+// plan that started the run. These reasons say nothing about the safety of the running worker.
+const BRAIN_SOFT_IDLE_PREFIXES = ['unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:'] as const;
+export function brainSoftIdle(reason: string | undefined): boolean {
+    return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || BRAIN_SOFT_IDLE_PREFIXES.some(p => reason.startsWith(p));
+}
+export function brainDropKeep(o: {
+    run: Pick<Run, 'accounts' | 'started' | 'brain' | 'finite'>;
+    now: number;
+    dropCycles: number;
+    stopAll: boolean;
+    brainActive: boolean;
+    handAccount: (account: string) => boolean;
+    held: (account: string) => boolean;
+    ended: (account: string) => boolean;
+    replacement: (account: string) => SelectedBrainDispatch['mode'] | undefined;
+    idleReason: (account: string) => string | undefined;
+}): string | undefined {
+    if (!o.run.brain || o.stopAll || !o.brainActive) return undefined;
+    for (const a of o.run.accounts) {
+        if (o.handAccount(a) || o.held(a) || o.ended(a)) return undefined;
+        const mode = o.replacement(a);
+        if (mode === 'session_recovery' || mode === 'fleet_trade') return undefined;
+        if (!brainSoftIdle(o.idleReason(a))) return undefined;
+    }
+    if (o.run.finite) return 'finite job runs to its end';
+    if (o.now - o.run.started < BRAIN_RUN_MIN_MS) return `run younger than ${BRAIN_RUN_MIN_MS / 60_000} min`;
+    if (o.dropCycles < BRAIN_DROP_CYCLES) return `dropped for ${o.dropCycles} of ${BRAIN_DROP_CYCLES} brain cycles`;
+    return undefined;
+}
+
+// Counts the brain cycles in a row that dropped each run. A run that the plan holds again, or that ended, leaves the map.
+export function countBrainDrops(
+    drops: Map<string, { cycles: number; cycleAt: number }>,
+    droppedKeys: ReadonlySet<string>,
+    cycleAt: number,
+): void {
+    for (const key of [...drops.keys()]) if (!droppedKeys.has(key)) drops.delete(key);
+    for (const key of droppedKeys) {
+        const d = drops.get(key);
+        if (!d) drops.set(key, { cycles: 1, cycleAt });
+        else if (d.cycleAt !== cycleAt) { d.cycles++; d.cycleAt = cycleAt; }
+    }
+}
 
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
@@ -1434,6 +1564,18 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const brainCycleMs = Number.isFinite(brainCycleMsRaw) && brainCycleMsRaw >= 1000 ? brainCycleMsRaw : DEFAULT_BRAIN_CYCLE_MS;
     let lastBrainResult: BrainCycleResult | null = null;
     let lastBrainAt = 0;
+    // Accounts whose brain run this swarm stopped, and when. For two brain cycles such an account is no hub-trade
+    // party, unless the stop was the planned fleet_trade handoff: a trade that names a just-stopped account is the
+    // plan flapping, and its partner then waits the whole trade window for "partner failed: no trade".
+    const brainDropAt = new Map<string, number>();
+    const transferPartyHold = (account: string): string | undefined => {
+        const at = brainDropAt.get(account.toLowerCase());
+        return at !== undefined && Date.now() - at < 2 * brainCycleMs ? `swarm stopped its run ${Math.round((Date.now() - at) / 1000)}s ago` : undefined;
+    };
+    let hiscoreRefreshAt = 0, hiscoreRefreshRunning = false;
+    // The accounts of the current tick's brain jobs (start() marks their runs) and the drop count of each brain run.
+    let brainDispatchedNow: ReadonlySet<string> = new Set();
+    const brainDrops = new Map<string, { cycles: number; cycleAt: number }>();
     let lastBrainPlanMtime = -1;
     let brainDirty = true;
 
@@ -1579,7 +1721,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         } catch { /* outcome persistence errors never stop controller */ }
                     }
                     if (keepEnded) {
-                        ended.set(account, { at: Date.now(), reason: own, revision: run.revision });
+                        ended.set(account, { at: Date.now(), reason: own, revision: run.revision, ...stockOutEnd(run, own, lastResultLine) });
                         console.log(`SWARM end ${account} ${own}`);
                     } else {
                         const existingKey = [...ended.keys()].find(n => n.toLowerCase() === account.toLowerCase());
@@ -1662,6 +1804,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             ...(job.demandId ? { demandId: job.demandId } : {}),
             ...(workRelease ? { workerRelease: workRelease } : {}),
             ...(baseline ? { baseline } : {}),
+            ...(brainDispatchedNow.has(accounts[0]!.toLowerCase())
+                ? { brain: true, ...(job.maxRestarts !== undefined ? { finite: true } : {}) }
+                : {}),
         };
         runs.set(p.key, run); saveRuns();
         console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
@@ -1726,10 +1871,29 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const combinedJobs: Job[] = [...plan.jobs];
         const brainRecoveryRows: Record<string, unknown>[] = [];
         const brainDispatchedAccounts = new Set<string>();
+        brainDispatchedNow = brainDispatchedAccounts;
+        const brainModes = new Map<string, SelectedBrainDispatch['mode']>();
         const brainEnabled = !plan.boundedRecovery && !plan.boundedInspection;
+        if (brainEnabled && hiscoreRefreshDue({ now: Date.now(), lastAt: hiscoreRefreshAt, running: hiscoreRefreshRunning })) {
+            hiscoreRefreshAt = Date.now();
+            hiscoreRefreshRunning = true;
+            try {
+                startHiscoreRefresh(root, () => { hiscoreRefreshRunning = false; });
+            } catch (error) {
+                // A log or spawn error before the child exists gives no exit event; the next interval tries again.
+                hiscoreRefreshRunning = false;
+                console.log(`SWARM hiscore refresh did not start: ${String(error).slice(0, 160)}`);
+            }
+        }
         if (brainEnabled) {
             try {
                 const nowMs = Date.now();
+                // Outcomes that the fleet agent queued (a trade with no route) go into this controller's classifier,
+                // which owns outcome-state.json.
+                const queued = drainWorkerOutcomeInbox(root, raw => {
+                    recordWorkerOutcome({ root, catalog, rateStore, classifier, domain: 'live', raw });
+                });
+                if (queued > 0) brainDirty = true;
                 const cmdDir = operatorCommandsDir(root);
                 let hasPendingCommands = false;
                 try {
@@ -1769,7 +1933,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
                             catalog, rateStore, classifier, infraBreaker,
                             activeAccounts: activeMap, persist: true, consumeCommands: true,
-                            heldPlan, clearDeath,
+                            heldPlan, clearDeath, transferPartyHold,
                         });
                         lastBrainAt = nowMs;
                         lastBrainPlanMtime = planMtime;
@@ -1789,6 +1953,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         const acctState = brainResult.world.accounts[acctName.toLowerCase()];
                         const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
                         const { selected, job: brainJob } = brainJobFor(acctName, dispatched, accountSteps, acctState?.role);
+                        brainModes.set(acctName.toLowerCase(), selected.mode);
                         if (selected.mode === 'session_recovery') {
                             brainRecoveryRows.push({
                                 account: acctName,
@@ -1908,9 +2073,40 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             if (resolved.length) persistEnded(deathsFile, ended);
         }
 
-        for (const r of runs.values()) {
+        const droppedRuns = new Set<string>();
+        for (const [key, r] of runs) if (r.brain && !overlappingRun(planned, r.accounts)) droppedRuns.add(key);
+        countBrainDrops(brainDrops, droppedRuns, lastBrainAt);
+        const handAccounts = new Set(plan.jobs.flatMap(j => j.accounts ?? (j.account ? [j.account] : [])).map(a => a.toLowerCase()));
+        const brainIdle = (a: string): string | undefined => {
+            const plans = lastBrainResult?.fleetPlan.accountPlans ?? {}, lower = a.toLowerCase();
+            return (plans[a] ?? Object.entries(plans).find(([n]) => n.toLowerCase() === lower)?.[1])?.idleReason;
+        };
+        for (const [key, r] of runs) {
             if (!overlappingRun(planned, r.accounts) || stopAll) {
+                const kept = stopAll ? undefined : brainDropKeep({
+                    run: r, now: Date.now(), dropCycles: brainDrops.get(key)?.cycles ?? 0, stopAll,
+                    brainActive: brainEnabled && lastBrainResult !== null,
+                    handAccount: a => handAccounts.has(a.toLowerCase()),
+                    held: a => holds.some(h => h.account.toLowerCase() === a.toLowerCase() && !h.restored),
+                    ended: a => { const end = endedMapByLower(ended).get(a.toLowerCase())?.[1]; return !!end && end.at >= r.started; },
+                    replacement: a => brainModes.get(a.toLowerCase()),
+                    idleReason: brainIdle,
+                });
+                if (kept) {
+                    for (const a of r.accounts) {
+                        brainRecoveryRows.push({
+                            account: a, script: '', goal: r.demandId ?? r.activityId, enabled: true, repeat: !r.finite,
+                            state: `running; brain plan dropped it, kept: ${kept}`, since: r.started,
+                        });
+                    }
+                    continue;
+                }
                 for (const a of r.accounts) {
+                    if (r.brain && !stopAll && !existsSync(stopFile(a))) {
+                        const mode = brainModes.get(a.toLowerCase());
+                        console.log(`SWARM drop ${a} ${mode && mode !== 'none' ? mode : brainIdle(a) ?? 'no brain plan'} after ${Math.round((Date.now() - r.started) / 1000)}s`);
+                        if (mode !== 'fleet_trade') brainDropAt.set(a.toLowerCase(), Date.now());
+                    }
                     writeSwarmStop(stopFile(a), SWARM_STOP.removed);
                     stopFlagsPresent.add(a.toLowerCase());
                 }

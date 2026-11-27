@@ -79,7 +79,7 @@ try {
     };
     const kill = async (label: string, pick: () => any, done: () => boolean, ticks = 80): Promise<void> => {
         for (let i = 0; i < 6 && !done(); i++) {
-            await q.guard(label);
+            await q.fightReady(label);
             const n = pick();
             if (!n) { await q.waitTicks(2); continue; }
             await q.s.bot.attack(n as any);

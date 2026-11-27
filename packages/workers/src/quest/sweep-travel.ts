@@ -840,6 +840,19 @@ export async function prayBefore(s: Session, world: World, quest: string): Promi
     return prayerShort(points(), level, wanted) ? `prayer points ${points()} of ${level} after the Seers' Village altar` : null;
 }
 
+// Whether the straight line between two surface tiles enters the Wilderness (x 2944-3391, z 3520-3967 on the
+// surface). The corridor walk follows that line, and a dungeon goal walked as a surface tile from Lumbridge went into
+// Wilderness level 56; such a goal goes to the world router, which keeps to its danger rule.
+export const WILDERNESS = { minX: 2944, maxX: 3391, minZ: 3520, maxZ: 3967 };
+export function crossesWilderness(a: { x: number; z: number }, b: { x: number; z: number }): boolean {
+    const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.z - a.z), 1);
+    for (let i = 0; i <= n; i++) {
+        const x = Math.round(a.x + ((b.x - a.x) * i) / n), z = Math.round(a.z + ((b.z - a.z) * i) / n);
+        if (x >= WILDERNESS.minX && x <= WILDERNESS.maxX && z >= WILDERNESS.minZ && z <= WILDERNESS.maxZ) return true;
+    }
+    return false;
+}
+
 export async function walkFar(
     s: Session,
     world: World,
@@ -866,7 +879,7 @@ async function walkFarLegs(s: Session, world: World, to: Tile, legTimeoutTicks: 
     }
     const ground = async (t: Tile): Promise<Walked> => {
         if (stopped()) return STOPPED;
-        if (t.z >= UNDERGROUND) return router(t);
+        if (t.z >= UNDERGROUND || crossesWilderness(atTile(s), t)) return router(t);
         const r = atTile(s).level === 0 && t.level === 0 ? await walkCorridor(await sessionWalker(s), [[t.x, t.z, 3]], (d, pts) => walkPath(d, pts, { signal })) : { ok: false };
         return r.ok && (cheb(atTile(s), t) <= 1 || (await sameArea(atTile(s), t))) ? { ok: true } : router(t);
     };

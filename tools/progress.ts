@@ -6,7 +6,8 @@
 // - use: average bots online divided by `maxBots` in swarm.json;
 // - runs: .practice/results.jsonl;
 // - gains: fleet/snapshots/<side>.json in the fleet-data worktree, the file now against its git version at the window start;
-// - work: `activeChains` and `idleReasons` in .practice/live/fleet-state.json.
+// - work: `activeChains` and `idleReasons` in .practice/live/fleet-state.json;
+// - campaigns: the launch gates that hold each `staging` campaign in .practice/live/fleet-state.json.
 // Usage: bun tools/progress.ts [hours]
 // tools/now.ts prints the one-line form (progressLine).
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -14,6 +15,7 @@ import { join, resolve } from 'node:path';
 import { errorKey, readRecentResults, type ResultRow } from '../packages/core/src/fail-loops';
 import { mySide } from '../packages/core/src/fleet';
 import { fleetStateFile, lifecycleReadRoots, resolveFleetDataDir } from '../packages/core/src/practice-paths';
+import { isHiscoreMarginFresh, MAX_CAMPAIGN_HISCORE_AGE_MS } from '../packages/brain/src/contracts';
 
 export const HOUR_MS = 3600_000;
 export const SHORT_LOGIN_MS = 5 * 60_000;
@@ -67,6 +69,18 @@ export type Gains = {
 
 export type Work = { at: number | null; withWork: number; idle: [string, number][] };
 
+// The `staging` campaigns and the launch gates that hold them (packages/brain/src/campaigns.ts: `ready` needs a verified
+// rehearsal, a met margin and a hiscore margin under MAX_CAMPAIGN_HISCORE_AGE_MS old). `onlyStale` names the campaigns
+// that only an old hiscore snapshot holds: a hiscore refresh moves them to `ready`.
+export type CampaignGates = {
+    staging: number;
+    noProof: number;
+    marginShort: number;
+    hiscoreStale: number;
+    onlyStale: string[];
+    oldestHiscoreMs: number | null;
+};
+
 export type ProgressReport = {
     hours: number;
     since: number;
@@ -76,6 +90,7 @@ export type ProgressReport = {
     runs: Runs | null;
     gains: Gains | null;
     work: Work | null;
+    campaigns?: CampaignGates | null;
     // One entry for each source that could not be read: "<part>: <reason>".
     errors: string[];
 };
@@ -216,6 +231,25 @@ export function workStats(state: { emittedAt?: unknown; activeChains?: unknown; 
     return { at: finite(state.emittedAt) ? state.emittedAt : null, withWork: chains, idle: sortDesc(idle) };
 }
 
+export function campaignGates(campaigns: unknown, now: number): CampaignGates {
+    let staging = 0, noProof = 0, marginShort = 0, hiscoreStale = 0, oldest: number | null = null;
+    const onlyStale: string[] = [];
+    for (const c of Array.isArray(campaigns) ? campaigns : []) {
+        if (!c || typeof c !== 'object' || c.state !== 'staging') continue;
+        staging++;
+        const proof = c.rehearsalProof?.verified === true;
+        const margin = c.hiscoreMargin && typeof c.hiscoreMargin === 'object' ? c.hiscoreMargin : null;
+        const meets = margin?.meetsMargin === true;
+        const fresh = isHiscoreMarginFresh(margin, now);
+        if (!proof) noProof++;
+        if (!meets) marginShort++;
+        if (margin && !fresh) hiscoreStale++;
+        if (margin && finite(margin.checkedAt)) oldest = Math.max(oldest ?? -Infinity, now - margin.checkedAt);
+        if (proof && meets && !fresh) onlyStale.push(typeof c.account === 'string' ? c.account : String(c.id));
+    }
+    return { staging, noProof, marginShort, hiscoreStale, onlyStale: onlyStale.sort(), oldestHiscoreMs: oldest };
+}
+
 const safeList = (dir: string): string[] => { try { return readdirSync(dir); } catch { return []; } };
 
 // The live-domain attempts that can overlap the window: for each account, the attempts created in it and the newest one
@@ -301,9 +335,11 @@ export async function readProgress(main: string, hours: number, now = Date.now()
     });
     const sessions = part('online', () => sessionStats(readAttempts(lifecycleReadRoots(main), w.since), w));
     const runs = part('runs', () => runStats(readResultsSince(join(main, '.practice', 'results.jsonl'), w.since), w));
-    const work = part('work', () => workStats(JSON.parse(readFileSync(fleetStateFile(main), 'utf8'))));
+    const state = part('work', () => JSON.parse(readFileSync(fleetStateFile(main), 'utf8')));
+    const work = state == null ? null : part('work', () => workStats(state));
+    const campaigns = state == null ? null : part('campaigns', () => campaignGates(state.campaigns, now));
     const gains = await gainsPromise;
-    return { hours, since: w.since, now, maxBots, sessions, runs, gains, work, errors };
+    return { hours, since: w.since, now, maxBots, sessions, runs, gains, work, campaigns, errors };
 }
 
 const h1 = (ms: number) => (ms / HOUR_MS).toFixed(1);
@@ -336,6 +372,7 @@ export function progressLine(r: ProgressReport): string {
     } else parts.push('gains not known');
     if (r.work) parts.push(`${int(r.work.withWork)} accounts with work${r.work.idle.length ? ` (idle: ${top(r.work.idle, 2)})` : ''}`);
     else parts.push('work not known');
+    if (r.campaigns?.onlyStale.length) parts.push(`${r.campaigns.onlyStale.length} campaigns held only by an old hiscore snapshot`);
     return `progress ${r.hours} h: ${parts.join('; ')} (bun tools/progress.ts)`;
 }
 
@@ -366,6 +403,13 @@ export function progressLines(r: ProgressReport): string[] {
     }
     const k = r.work;
     if (k) out.push(`work    ${k.withWork} accounts with work${k.idle.length ? `; idle: ${top(k.idle, 6)}` : ''}${k.at != null ? `; fleet state ${Math.round((r.now - k.at) / 1000)} s old` : ''}`);
+    const c = r.campaigns;
+    if (c?.staging) {
+        const age = c.oldestHiscoreMs != null ? `, oldest ${h1(c.oldestHiscoreMs)} h` : '';
+        out.push(`staging ${c.staging} campaigns: ${c.noProof} no verified rehearsal, ${c.marginShort} margin short or not known, `
+            + `${c.hiscoreStale} hiscore older than ${Math.round(MAX_CAMPAIGN_HISCORE_AGE_MS / 60_000)} min${age}`);
+        if (c.onlyStale.length) out.push(`        only the old hiscore holds ${c.onlyStale.join(', ')} (bun packages/planner/src/scout-cli.ts --out=.practice/live/specialist-launch/hiscores.json)`);
+    }
     for (const e of r.errors) out.push(`missing ${e}`);
     return out;
 }

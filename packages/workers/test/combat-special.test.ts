@@ -86,6 +86,19 @@ test('actual cow consumer stop after credited paid kill still banks all owned lo
 
 test('explicit stopped cleanup permits owned movement but refuses new attack/potion and never a new life',async()=>{const a=actor();let stopped=false;const view=combatPotionSession(a.s,()=>stopped,100);stopped=true;expect(()=>view.direct({type:'walk',x:1,z:1,reason:'outside cleanup'})).toThrow();await view.withCombatPotionCleanup(async()=>{expect(()=>view.direct({type:'interactNpc',npcIndex:7,optionIndex:2,reason:'new attack'})).toThrow('new paid');expect(()=>view.direct({type:'useInventoryItem',slot:0,optionIndex:1,reason:'new potion'})).toThrow('new paid');await view.direct({type:'walk',x:1,z:1,reason:'owned cleanup'});a.player.lifeId++;expect(()=>view.direct({type:'walk',x:1,z:1,reason:'new life'})).toThrow('original owner');});});
 
+test('stopped cleanup lets the bank-return route talk to a ship NPC but still refuses an Attack option and a player action',async()=>{
+ // Live: a cleanup bank walk on the Ardougne-Brimhaven ship route ended "combat cleanup refuses new paid combat/potion".
+ const a=actor();const view=combatPotionSession(a.s,()=>true,100);
+ a.npcs.push({index:9,id:380,distance:2,optionsWithIndex:[{text:'Talk-to',opIndex:1},{text:'Pay-fare',opIndex:3}]},{index:10,id:41,distance:1,optionsWithIndex:[{text:'Attack',opIndex:2}]});
+ await view.withCombatPotionCleanup(async()=>{
+  await view.direct({type:'interactNpc',npcIndex:9,optionIndex:3,reason:'pay fare'});
+  await view.direct({type:'interactNpc',npcIndex:9,optionIndex:1,reason:'talk to the captain'});
+  expect(()=>view.direct({type:'interactNpc',npcIndex:10,optionIndex:2,reason:'new attack'})).toThrow('"option":"Attack"');
+  expect(()=>view.direct({type:'interactPlayer',playerIndex:3,optionIndex:2,reason:'new attack'})).toThrow('new paid');
+  expect(()=>view.direct({type:'spellOnNpc',npcIndex:10,spellComponent:1,reason:'new cast'})).toThrow('new paid');
+ });
+});
+
 test('generic recovery callback banks once after stop, parks unknown consumption, and never retries failed recovery',async()=>{for(const mode of ['known','unknown','foreign']){const a=actor();let stopped=false,banks=0,recovering=false;const scope=combatPotionSession(a.s,()=>stopped,100),recover=combatPotionRecovery(scope,()=>mode==='unknown',async()=>{banks++;if(mode==='foreign')a.player.lifeId++;await scope.direct({type:'walk',x:1,z:1,reason:'bounded bank recovery'});},active=>{recovering=active;});stopped=true;if(mode==='known'){await recover();await recover();expect(banks).toBe(1);}else{await expect(recover()).rejects.toThrow();if(mode==='foreign')await recover();expect(banks).toBe(mode==='unknown'?0:1);}expect(recovering).toBe(false);}});
 
 test('generic recovery makes no bank walk after a death or a skip reason, and names why',async()=>{

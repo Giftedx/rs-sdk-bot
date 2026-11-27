@@ -1337,6 +1337,67 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
         }
     });
 
+    test('leaves walled West Ardougne by the quest exit before any walk, and reports a failed exit as location stranded', async () => {
+        // The Mourner HQ tile where Biohazard exits left accounts with no walker route out; a healthy hub class there.
+        const hubAreas = new Set([21]);
+        const labels = mockLabelsForOffHub(() => 21);
+        const { s } = makeRecoverySession({ worldX: 2546, worldZ: 3325, level: 0 });
+        try {
+            let walks = 0;
+            let exits = 0;
+            const res = await recoverSessionToHub(s, {
+                capTicks: 200,
+                labels,
+                hubAreas,
+                leaveWestArdougne: async () => {
+                    exits++;
+                    s.setPos(2559, 3267, 0);
+                    return { ok: true };
+                },
+                walkToHub: async () => {
+                    walks++;
+                    return { ok: false, reason: 'no route' };
+                },
+            });
+            expect(exits).toBe(1);
+            expect(walks).toBe(0);
+            expect(res.ok).toBe(true);
+            expect(res.from).toBe('2546,3325,0');
+            expect(res.to).toBe('2559,3267,0');
+        } finally {
+            s.dispose();
+        }
+        const stuck = makeRecoverySession({ worldX: 2546, worldZ: 3325, level: 0 });
+        try {
+            const res = await recoverSessionToHub(stuck.s, {
+                capTicks: 200,
+                labels,
+                hubAreas,
+                leaveWestArdougne: async () => ({ ok: false, detail: 'west ardougne exit: hq door unobserved at 2546,3325,0' }),
+            });
+            expect(res.ok).toBe(false);
+            expect(res.detail).toMatch(/^location stranded in West Ardougne: /);
+        } finally {
+            stuck.s.dispose();
+        }
+        // With no exit given, no walk starts: the account is stranded and names the quest that exits.
+        const bare = makeRecoverySession({ worldX: 2546, worldZ: 3325, level: 0 });
+        try {
+            let walks = 0;
+            const res = await recoverSessionToHub(bare.s, {
+                capTicks: 200,
+                labels,
+                hubAreas,
+                walkToHub: async () => { walks++; return { ok: false, reason: 'no route' }; },
+            });
+            expect(walks).toBe(0);
+            expect(res.ok).toBe(false);
+            expect(res.detail).toBe('location stranded in West Ardougne: exit by quest:biohazard');
+        } finally {
+            bare.s.dispose();
+        }
+    });
+
     test('loads cached route-areas.bin with exact or initializer-shifted compatible source hashes', async () => {
         const dir = makeTempDir('recover-trapped-');
         mkdirSync(join(dir, '.practice', 'cache'), { recursive: true });

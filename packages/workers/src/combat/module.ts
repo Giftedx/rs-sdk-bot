@@ -229,7 +229,7 @@ function normalizePos(s: CombatSession) {
     return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null;
 }
 
-function parseModeResult(
+export function parseModeResult(
     mode: CombatMode,
     account: string,
     ticksElapsed: number,
@@ -465,14 +465,18 @@ export async function runCombatModuleSession(
                         ...(hooks.walk ? { walk: hooks.walk } : {}),
                     });
                 } else {
-                    result = await runGenericCombatSession(session, {
+                    const generic = await runGenericCombatSession(session, {
                         target: mode,
                         cap,
                         maximum: cfg.maxKills ?? (env.MAX_KILLS !== undefined ? Number(env.MAX_KILLS) : undefined),
                         untilItemName: env.UNTIL_ITEM,
                         env,
                         stop: isStopped,
+                        // A death puts died=true in the result, so the supervisor and the planner see it.
+                        stopReason: () => (sessionDied() ? 'died' : undefined),
                     });
+                    // A `no food` refusal (melee-gather.ts combatNoFood) is a missing supply, not a worker defect.
+                    result = !generic.ok && generic.detail.startsWith('no food:') ? { ...generic, failure: generic.detail } : generic;
                 }
                 break;
             }

@@ -50,7 +50,7 @@ import {
 import { FIGHTER_PROFILES, resolveFighterStep } from '../../../scripts/aio-fighter';
 import * as owner from '../../../packages/core/src/bot';
 import { type Session } from '../../../packages/core/src/inprocess';
-import { supervise } from '../../../packages/practice/src/supervise';
+import { isNoProgressFailure, supervise } from '../../../packages/practice/src/supervise';
 import { leaveRuneStarter } from '../../../scripts/rune-starter';
 import { type NearbyNpc } from '../../../vendor/rs-sdk/sdk/types';
 import { resolve } from 'node:path';
@@ -140,6 +140,22 @@ async function rangedTutorial(mode:'waiting'|'unknown'|'stop'|'delayed-grant'|'m
 
 for(const mode of ['waiting','unknown','stop','delayed-grant','missing-grant'] as const)
     test(`Ranged caller bounds tutorial ${mode} before any earning or training`,()=>rangedTutorial(mode));
+test('a start that is not a fresh tutorial account settles as no progress before any action',async()=>{
+    // Live: "START 2618 3332 0" then "Error: fresh tutorial start required" and "RESULT fail fresh Ranged starter route".
+    const actions:string[]=[];
+    const s:any={name:'starter',tick:()=>0,onTick:()=>()=>{},ended:new Promise(()=>{}),
+        sdk:{getState:()=>({player:{worldX:2618,worldZ:3332,level:0,lifeId:1}}),getInventory:()=>[],
+            getSkill:(name:string)=>({level:name==='Hitpoints'?10:20,baseLevel:name==='Hitpoints'?10:20}),getSkillXp:()=>5000},
+        bot:{skipTutorial:async()=>{actions.push('skip');}}};
+    const settle=spyOn(owner,'settle').mockResolvedValue(true),error=spyOn(console,'error').mockImplementation(()=>{});
+    try{
+        expect(await runRangedStarter(s,()=>false,async()=>{actions.push('leave');})).toBe(false);
+        expect(actions).toEqual([]);
+        const detail=String(settle.mock.calls[0]?.[2]);
+        expect(detail).toMatch(/^no ranged-starter progress: fresh tutorial start required, not 2618,3332,0/);
+        expect(isNoProgressFailure(`RESULT fail ${detail}`)).toBe(true);
+    }finally{settle.mockRestore();error.mockRestore();}
+});
 });
 
 describe('microbot-a-ranged-camp', () => {

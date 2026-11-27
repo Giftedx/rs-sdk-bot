@@ -58,6 +58,8 @@ import {
     eatAtFor,
     eastOfPass,
     fares,
+    fightMeals,
+    fightMealsShort,
     fluffsKittenGiven,
     foodShort,
     groundShopNeeds,
@@ -81,6 +83,9 @@ import {
     questSkillTraining,
     reservedEdible,
     returnToAmik,
+    withFightMeals,
+    withExitRunes,
+    QUEST_EXIT_RUNES,
     scorpionAntipoisonNeeds,
     scorpionBarcrawlNeeds,
     scorpionEntryRefusal,
@@ -574,6 +579,19 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             if (meal !== undefined && BUILD_MEALS[quest] !== undefined) food.set(meal, BUILD_MEALS[quest]!);
             console.log(`QUEST_SWEEP_BUILD_PACK ${JSON.stringify({ quest, pack: build, meals: BUILD_MEALS[quest] })}`);
         }
+        // A quest script's own fight: meals for the live account's hitpoints, not the all-99 preset's (QUEST_FIGHT_DAMAGE).
+        const fight = fightMeals(quest, baseLevel('Hitpoints'));
+        if (fight) {
+            for (const [id, n] of withFightMeals(food, quest, baseLevel('Hitpoints'))) food.set(id, n);
+            console.log(`QUEST_SWEEP_FIGHT_MEALS ${JSON.stringify({ quest, hitpoints: baseLevel('Hitpoints'), meals: fight })}`);
+        }
+        // The teleport exit from a walled area is required, not optional (QUEST_EXIT_RUNES).
+        if (QUEST_EXIT_RUNES[quest]) {
+            const exit = withExitRunes(base, food, quest, baseLevel('Magic'));
+            base = exit.base;
+            food.clear();
+            for (const [id, n] of exit.food) food.set(id, n);
+        }
         if (quest === 'scorpion') base = scorpionAntipoisonNeeds(base, st()?.inventory ?? [], []);
         let wornKit = wornKitPlan(quest, base, st()?.inventory ?? [], [], s.sdk.getEquipment());
         let need = wornKit.need;
@@ -844,6 +862,12 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             const p = plan(need, pack(), rows());
             const meal = mealPlan(food, pack(), rows(), p.withdraw, need);
             p.withdraw.push(...meal);
+            const fightShort = fightMealsShort(fight, pack(), p.withdraw, need);
+            if (fightShort) {
+                console.log(`QUEST_SWEEP_FOOD_SHORT ${JSON.stringify({ quest, meals: fight, short: fightShort })}`);
+                await s.bot.closeBank();
+                return fail(`food short: ${fight} meals for the fight, ${fightShort} short`);
+            }
             for (const id of QUEST_KEEP[quest] ?? []) if (countItems(pack(), id) === 0 && countItems(rows(), id) > 0) p.withdraw.push({ id, count: 1 });
             for (const id of heldMissing()) {
                 if (countItems(rows(), id) > 0 && !p.withdraw.some((w) => w.id === id)) p.withdraw.push({ id, count: 1 });

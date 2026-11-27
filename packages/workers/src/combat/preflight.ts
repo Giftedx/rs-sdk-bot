@@ -14,6 +14,7 @@ import {
 } from '../contracts';
 import {
     COMBAT_MODE_SET,
+    GENERIC_COMBAT_MODES,
     type CombatConfig,
     type CombatMode,
     type CombatSiteMeta,
@@ -26,6 +27,8 @@ let cachedSurvivabilityMod: typeof import('./survivability') | undefined;
 const loadCannonMod = (): typeof import('./cannon') => (cachedCannonMod ??= require('./cannon'));
 const loadSpecialMobsMod = (): typeof import('./special-mobs') => (cachedSpecialMobsMod ??= require('./special-mobs'));
 const loadSurvivabilityMod = (): typeof import('./survivability') => (cachedSurvivabilityMod ??= require('./survivability'));
+let cachedEatGuardMod: typeof import('../../../core/src/eat-guard') | undefined;
+const loadEatGuardMod = (): typeof import('../../../core/src/eat-guard') => (cachedEatGuardMod ??= require('../../../core/src/eat-guard'));
 
 export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
     chicken: {
@@ -65,6 +68,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         anchor: { x: 3087, z: 3452, level: 0 },
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
+        minFood: 5,
         defaultCapTicks: 1500,
     },
     wizard: {
@@ -75,6 +79,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         anchor: { x: 3110, z: 3170, level: 0 },
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
+        minFood: 5,
         defaultCapTicks: 10000,
     },
     giant: {
@@ -535,8 +540,11 @@ function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): Supply
     }
 }
 
-function foodIdsForMode(mode: CombatMode): readonly number[] {
+// The generic combat loop withdraws and the eat guard eats only PLAIN_FOOD (melee-gather.ts withdrawCombatFood), so a
+// cake, bread or a cooked chicken in the bank does not admit such a job. A trooper job runs runGiants, which eats more.
+export function foodIdsForMode(mode: CombatMode): readonly number[] {
     if (mode === 'kbd' || mode === 'green-dragon' || mode === 'black-dragon' || mode === 'blue-dragon') return loadSurvivabilityMod().DRAGON_FOOD_IDS;
+    if (GENERIC_COMBAT_MODES.has(mode) && mode !== 'trooper') return loadEatGuardMod().PLAIN_FOOD;
     if (mode === 'fire-giant' || mode === 'fire-combat') return [329];
     if (mode === 'shade') return [379];
     if (mode === 'imp') return [333];
@@ -716,7 +724,7 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
                 current: availableFood,
                 message: `food stock ${availableFood} is below floor ${site.minFood}`,
             });
-            missingItems.push({ itemId: foodIds[0]!, count: site.minFood - availableFood });
+            missingItems.push({ itemId: foodIds.includes(385) ? 385 : foodIds[0]!, count: site.minFood - availableFood });
         }
     }
 

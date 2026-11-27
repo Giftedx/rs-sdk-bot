@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Owner } from '../../core/src/fleet';
 import type { Order, Receipt } from '../../core/src/fleet-trade-settlement';
-import { planTradePass, tradeStop } from '../src/fleet-agent';
+import { heldTradeClaims, planTradePass, tradeStop } from '../src/fleet-agent';
 import { SWARM_STOP } from '../src/swarm';
 
 // Five orders that share accounts, with order ids and start times from .practice/fleet-agent.log. Each window is
@@ -93,6 +93,57 @@ describe('fleet agent: both parties of an order start in the same pass', () => {
         expect(starts(pass({ receipts: mk }))).toEqual([`Moneyshot ${MB.id}`, `Knightstick ${PK.id}`, `Bigchopper ${MB.id}`, `PocketPool ${PK.id}`]);
         const pk = [...mk, { id: MB.id, role: 'from' }, { id: MB.id, role: 'to' }, { id: PK.id, role: 'from' }, { id: PK.id, role: 'to' }] as Receipt[];
         expect(starts(pass({ receipts: pk }))).toEqual([`PocketPool ${PD.id}`, `Deeppockets ${PD.id}`]);
+    });
+});
+
+describe('fleet agent: a trade claim held for another order holds both parties', () => {
+    // Order xfer-1795731762768-1 settled, but the trade claims of Moneyshot stayed held: the agent started Moneyshot and
+    // its partner on the next order, the login of Moneyshot refused the held claim, and the partner waited out the window.
+    const OLD = 'xfer-1795731762768-1';
+    test('neither party starts while one of them holds a claim for another order', () => {
+        let asked: readonly string[] = [];
+        const p = pass({ claimHeld: accounts => { asked = accounts; return new Map([['moneyshot', OLD]]); } });
+        expect(asked).toContain('Moneyshot');
+        expect(asked).toContain('Knightstick');
+        expect(starts(p)).not.toContain(`Moneyshot ${MK.id}`);
+        expect(starts(p)).not.toContain(`Knightstick ${MK.id}`);
+        expect(waits(p).Moneyshot).toBe(`held: trade claim held for order ${OLD}`);
+        expect(waits(p).Knightstick).toBe(`held: partner Moneyshot trade claim held for order ${OLD}`);
+    });
+
+    test('a claim held for the same order does not hold it', () => {
+        const p = pass({ claimHeld: () => new Map([['moneyshot', MK.id]]) });
+        expect(starts(p)).toEqual([`Moneyshot ${MK.id}`, `Knightstick ${MK.id}`]);
+    });
+
+    test('a partner on another side that holds a claim for another order holds this side', () => {
+        const p = pass({ owners: knightstickOnCloud(), claimHeld: () => new Map([['knightstick', OLD]]) });
+        expect(starts(p)).not.toContain(`Moneyshot ${MK.id}`);
+        expect(waits(p).Moneyshot).toBe(`held: partner Knightstick trade claim held for order ${OLD}`);
+    });
+
+    test('a partner that wrote its receipt of this order does not hold it with a claim for a later order', () => {
+        const p = pass({ owners: knightstickOnCloud(), receipts: [{ id: MK.id, role: 'to' } as Receipt], claimHeld: () => new Map([['knightstick', OLD]]) });
+        expect(starts(p)).toContain(`Moneyshot ${MK.id}`);
+    });
+
+    test('a claim with a pre-network marker of this checkout holds nothing: the login takes it over', () => {
+        const base = mkdtempSync(join(tmpdir(), 'fleet-claim-pending-'));
+        try {
+            const claim = (account: string, nonce: string) => ({ account, server: 's', side: 'local', orderId: OLD, role: 'from' as const, nonce, phase: 'held' as const, at: 1 });
+            const abandoned = '11111111-1111-4111-8111-111111111111', live = '22222222-2222-4222-8222-222222222222';
+            mkdirSync(join(base, '.practice', 'fleet-account-pending'), { recursive: true });
+            writeFileSync(join(base, '.practice', 'fleet-account-pending', `${abandoned}.json`), '{}');
+            const held = heldTradeClaims(base, ['Moneyshot', 'Knightstick'], () => [claim('Moneyshot', abandoned), claim('Knightstick', live)]);
+            expect([...held]).toEqual([['knightstick', OLD]]);
+            expect([...heldTradeClaims(base, ['Moneyshot'], () => { throw Error('unreadable'); })]).toEqual([]);
+        } finally { rmSync(base, { recursive: true, force: true }); }
+    });
+
+    test('an owner halt reads no claims', () => {
+        let read = false;
+        pass({ halt: 'owner stop', claimHeld: () => { read = true; return new Map(); } });
+        expect(read).toBe(false);
     });
 });
 

@@ -98,6 +98,18 @@ export function cycle(
     const freeGB = freemem() / 2 ** 30;
     if (freeGB < 3) raise({ level: 'error', key: 'ram', text: `only ${freeGB.toFixed(1)} GB RAM free` });
 
+    // openBot writes a live death to alerts.jsonl itself (death-recovery.ts deathAlert): such a session gets no
+    // second died- alert here; the bot's own alert goes into the active list of monitor.json instead.
+    let logged: Alert[] | undefined;
+    const botAlert = (name: string, since: number): Alert | undefined => {
+        if (!logged) {
+            try {
+                logged = readFileSync(join(prac, 'alerts.jsonl'), 'utf8').split(/\r?\n/).slice(-2000)
+                    .flatMap(l => { try { return [JSON.parse(l)]; } catch { return []; } });
+            } catch { logged = []; }
+        }
+        return logged.filter(a => a?.bot === name && String(a.key ?? '').startsWith('died-') && typeof a.at === 'number' && a.at >= since).at(-1);
+    };
     let practiceBots = 0;
     const bots: Record<string, unknown>[] = [];
     for (const s of readStatusSnapshots(root)) {
@@ -108,7 +120,10 @@ export function cycle(
         const tail = String(s.timeline ?? '').slice(-40);
         const idleRun = tail.length - tail.replace(/i+$/, '').length;
         bots.push({ name: s.name, ageSec: Math.round(age / 1000), idleRun, result: s.result ?? '', phase: s.phase ?? '' });
-        if (/died=true|fail died/.test(s.result ?? '')) raise({ level: 'error', key: `died-${s.name}-${s.started}`, bot: s.name, text: `${s.name} died: ${String(s.result).slice(0, 120)}` });
+        if (/died=true|fail died/.test(s.result ?? '')) {
+            const own = botAlert(s.name, Number(s.started) || 0);
+            if (own) { seen.add(own.key); if (!active.has(own.key) && !retired.has(own.key)) active.set(own.key, own); }
+            else raise({ level: 'error', key: `died-${s.name}-${s.started}`, bot: s.name, text: `${s.name} died: ${String(s.result).slice(0, 120)}` }); }
         else if (!s.result && age > 120_000 && age < 3600_000) raise({ level: 'error', key: `stalled-${s.name}-${s.started}`, bot: s.name, text: `${s.name}: no status for ${Math.round(age / 60_000)} min and no RESULT (crashed or frozen)` });
         if (age < 30_000 && idleRun >= 20) raise({ level: 'warn', key: `idle-${s.name}-${s.tick - idleRun}`, bot: s.name, text: `${s.name} idle ${idleRun} ticks in a row at ${s.pos?.x},${s.pos?.z} (${s.phase})` });
     }

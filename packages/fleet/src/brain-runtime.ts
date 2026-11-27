@@ -20,6 +20,7 @@ import {
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import { isWorkerReleaseHold } from '../../core/src/worker-release';
 import { isClaimHeldResult, isStopResult } from '../../brain/src/outcome-classifier';
+import { parseNoRoute, standsAt } from '../../brain/src/no-route';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
@@ -111,6 +112,8 @@ export interface BrainCycleOptions {
     readonly marketQuotes?: MarketQuotesMap;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
     readonly heldPlan?: FleetSchedulerInput['heldPlan'];
+    /** A reason to keep an account out of hub trades as donor and recipient (scheduler.ts), or undefined. */
+    readonly transferPartyHold?: FleetSchedulerInput['transferPartyHold'];
     /** Removes an account's death end record from the caller's in-memory map. The swarm holds that map and
      * writes all of it back on each persist, so a file-only clear of swarm-deaths.json does not last. */
     readonly clearDeath?: (account: string) => number;
@@ -910,6 +913,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         minTrust,
         allowExperimentalFallback,
         heldPlan: opts.heldPlan,
+        transferPartyHold: opts.transferPartyHold,
     });
 
     const fleetPlan = applyActivityOverridesToPlan(scheduledPlan, {
@@ -1343,4 +1347,73 @@ export function recordWorkerOutcome(opts: {
         domain: opts.domain ?? 'live',
         ...(opts.workerRelease ? { workerRelease: opts.workerRelease } : {}),
     });
+}
+
+// Outcomes of runs that the swarm does not start (fleet agent trades) wait here for the swarm's classifier. The swarm
+// holds outcome-state.json in memory and writes all of it at each save, so a second writer would lose its record.
+export const workerOutcomeInboxDir = (root: string): string => join(liveRoot(root), 'outcome-inbox');
+
+export function queueWorkerOutcome(root: string, raw: RawWorkerExitInput, now = Date.now()): string {
+    const dir = workerOutcomeInboxDir(root);
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, `${now}-${raw.account.toLowerCase().replace(/[^a-z0-9_-]+/g, '_')}-${Math.random().toString(36).slice(2, 8)}.json`);
+    atomicJson(file, raw);
+    return file;
+}
+
+// Applies each queued outcome once and removes its file, also when the record is bad or apply throws, so one file
+// never repeats. Returns the count of outcomes applied.
+export function drainWorkerOutcomeInbox(root: string, apply: (raw: RawWorkerExitInput) => void): number {
+    const dir = workerOutcomeInboxDir(root);
+    let files: string[];
+    try {
+        files = existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).sort() : [];
+    } catch {
+        return 0;
+    }
+    let applied = 0;
+    for (const f of files) {
+        const file = join(dir, f);
+        try {
+            const raw = readJsonSafe(file);
+            if (isPlainRecord(raw) && typeof raw.activityId === 'string' && raw.activityId.trim() && typeof raw.account === 'string' && raw.account.trim()
+                && (raw.status === 'ok' || raw.status === 'fail')) {
+                apply(raw as unknown as RawWorkerExitInput);
+                applied++;
+            }
+        } catch { /* a bad outcome is dropped */ }
+        try { rmSync(file, { force: true }); } catch { /* the next drain retries the remove */ }
+    }
+    return applied;
+}
+
+// The outcome of a failed fleet trade whose route search found no route from where the account stands, or null.
+// Only such a failure is queued: it records a no-route fact for the account. Any other trade failure as a worker
+// defect would hold logistics:trade for every account.
+export function tradeNoRouteOutcome(params: {
+    readonly root: string;
+    readonly account: string;
+    readonly resultLine: string;
+    readonly startedAt: number;
+    readonly finishedAt: number;
+    readonly logPath: string;
+    readonly server?: string;
+}): RawWorkerExitInput | null {
+    if (!/\bno route to\b/.test(params.resultLine)) return null;
+    const raw = extractWorkerOutcomeInput({
+        root: params.root,
+        account: params.account,
+        activityId: 'logistics:trade',
+        server: params.server ?? DEFAULT_LIVE_SERVER,
+        startedAt: params.startedAt,
+        finishedAt: params.finishedAt,
+        endReason: 'fail',
+        successful: false,
+        lastResultLine: params.resultLine,
+        logPath: params.logPath,
+        skipRateSample: true,
+    });
+    if (!raw.pos) return null;
+    const searched = parseNoRoute(params.resultLine, raw.pos);
+    return searched && standsAt(raw.pos, searched.from) ? raw : null;
 }

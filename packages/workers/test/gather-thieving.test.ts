@@ -2270,3 +2270,21 @@ test('new incoming hit during early food cannot be rebased even when food restor
         expect(f.s.sdk.getSkill('Hitpoints').level).toBe(99);
     }
 });
+
+test('a stable knights farm started outside the market walks the world route to the market bank; a stop on it is a stop', async () => {
+    // Live: "no goldfarm progress: start in Ardougne market, not ..." at ticks=0.
+    const { goldfarmEntryTravel } = await import('../src/gather/thieving');
+    const at = (worldX: number, worldZ: number, thieving = 60) => ({
+        onTick: () => () => {},
+        sdk: { getState: () => ({ player: atTile(worldX, worldZ) }), getSkill: () => ({ level: thieving, baseLevel: thieving }) },
+    }) as any;
+    const asked: unknown[] = [];
+    const cfg = { deps: { walkTargetPersist: async (_s: unknown, to: unknown) => { asked.push(to); return { ok: false, reason: 'precondition', detail: 'test route end' }; } } } as any;
+    const far = await goldfarmEntryTravel(at(3185, 3436), cfg, () => false);
+    expect(asked).toEqual([{ x: BANK_SPOT.x, z: BANK_SPOT.z, level: 0 }]);
+    expect(far).toEqual({ ok: false, stopped: false, detail: 'precondition test route end' });
+    expect(await goldfarmEntryTravel(at(BANK_SPOT.x, BANK_SPOT.z), cfg, () => false)).toMatchObject({ ok: true });
+    expect(await goldfarmEntryTravel(at(3185, 3436, 40), cfg, () => false)).toMatchObject({ ok: true });
+    expect(asked).toHaveLength(1);
+    expect(await goldfarmEntryTravel(at(3185, 3436), cfg, () => true)).toMatchObject({ ok: false, stopped: true });
+});

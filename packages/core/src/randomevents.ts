@@ -16,7 +16,7 @@ export type {
     RandomEventWatch,
 } from './randomevents/model';
 
-export { outOfReach } from './randomevents/model';
+export { outOfReach, targetsMe } from './randomevents/model';
 export { loadDanger, mazeDoorId, mazeWalls } from './randomevents/data';
 export { solveCube } from './randomevents/puzzles';
 export { watchRandomEvents } from './randomevents/watcher';

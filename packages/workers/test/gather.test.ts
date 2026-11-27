@@ -197,6 +197,12 @@ test('gatherPreflight enforces invalid_config, protected_clock, level cap, plane
     });
     expect(gatherPreflight(noFoodKnights, { skill: 'thieving', method: 'knights-stable' }, makeWorld(noFoodKnights)).blockers.map(b => b.kind)).toContain('combat_survivability');
 
+    // The stable farm walks to the market bank itself, so a start in Varrock or upstairs is no unreachable tile.
+    for (const pos of [{ x: 3185, z: 3436, level: 0 }, { x: 2654, z: 3283, level: 1 }]) {
+        const away = makeAccount({ pos, bank: { observedAt: 1, trusted: true, items: { 379: 10 } } });
+        expect(gatherPreflight(away, { skill: 'thieving', method: 'knights-stable' }, makeWorld(away)).blockers.map(b => b.kind)).not.toContain('unreachable_tile');
+    }
+
     const noKeyChest = makeAccount({ bank: { observedAt: 1, trusted: true, items: { 985: 1 } } });
     expect(gatherPreflight(noKeyChest, { skill: 'foraging', method: 'crystal-chest' }, makeWorld(noKeyChest)).blockers.map(b => b.kind)).toContain('missing_supply');
 

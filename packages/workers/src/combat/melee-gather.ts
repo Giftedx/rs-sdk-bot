@@ -8,7 +8,7 @@ import { depositObserved, depositPack } from '../../../core/src/deposit';
 import { PLAIN_FOOD } from '../../../core/src/eat-guard';
 import type { Session } from '../../../core/src/inprocess';
 import { questFlags } from '../../../core/src/quest-status';
-import { startQuestSustain } from '../../../core/src/sustain';
+import { defaultEatAt, startQuestSustain } from '../../../core/src/sustain';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath, type PathDeps, type PathPoint, type PathTile } from '../../../core/src/walk';
 import { COW_BEAR_BOXES, guardCowWalker } from '../logistics/walk-helpers';
@@ -115,6 +115,20 @@ export function combatStopEnd(reason: string | undefined): 'died' | 'fled' | und
     return undefined;
 }
 
+// True from the first tick of a death of the account in a generic combat run. The loop ends there: the session stop
+// for the death comes only after the death recovery, and until then the loop would walk the new life back to the spot.
+// The potion session has its own life check (lifeEnded); without it the life fields of the first state are the baseline.
+export function combatLifeWatch(s: Pick<CombatSession, 'sdk'>, scope?: { lifeEnded(): boolean }): () => boolean {
+    // A copy: the state can keep one player object and change its fields.
+    const p = s.sdk.getState()?.player;
+    const born = p ? { lifeId: p.lifeId, respawnCount: p.respawnCount } : undefined;
+    return () => {
+        if (scope?.lifeEnded()) return true;
+        const now = s.sdk.getState()?.player;
+        return born ? sessionDied(born, now) : now?.isDead === true;
+    };
+}
+
 // The words that a failed generic combat run adds for the openBot stall stop (`no progress: <n> ticks without ...`).
 // The supervisor blocks a RESULT fail line with these words (packages/practice/src/supervise.ts isNoProgressFailure),
 // so a stalled job does not log in again to stall the same way.
@@ -165,6 +179,81 @@ const COMBAT_KIT_IDS: ReadonlySet<number> = new Set([
 ]);
 
 export const combatKit = (item: { id: number }): boolean => COMBAT_KIT_IDS.has(item.id);
+
+// The food of a generic combat run is PLAIN_FOOD, because the eat guard (eat-guard.ts) eats only those items. The guard
+// eats in the fight at its eat level (sustain.ts defaultEatAt) and sends the attack again. The run sends no eat of its
+// own: after one script eat the guard sends nothing more in that session. The run carries `food` pieces (default
+// COMBAT_FOOD) from the bank. A Telekinetic Grab run stays out of melee range and carries no food.
+export const COMBAT_FOOD = 5;
+
+export function combatFoodWanted(conf: { requireTelegrab?: boolean; food?: number }): number {
+    return conf.requireTelegrab ? 0 : (conf.food ?? COMBAT_FOOD);
+}
+
+export const combatFoodHeld = (inventory: readonly { id: number; count: number }[]): number =>
+    inventory.reduce((n, i) => n + (PLAIN_FOOD.includes(i.id) ? i.count : 0), 0);
+
+// PLAIN_FOOD ids, the highest heal first: the order in which a bank trip withdraws them.
+let combatFoodOrder: number[] | undefined;
+export function combatFoodByHeal(): readonly number[] {
+    const defs = questFoodDefinitions();
+    return (combatFoodOrder ??= [...PLAIN_FOOD].sort((a, b) => (defs.get(b)?.heal ?? 0) - (defs.get(a)?.heal ?? 0)));
+}
+
+// True when the account holds no food and its Hitpoints are at the eat level or below. The run then leaves the fight
+// for the bank: one more fight can kill it.
+export function combatOutOfFood(hp: number, maxHp: number, held: number): boolean {
+    return held === 0 && hp > 0 && hp <= defaultEatAt(maxHp);
+}
+
+// The refusal when a bank trip leaves the pack with no food. The supervisor ends the job on `RESULT fail no food`
+// (packages/practice/src/supervise.ts), so a restart does not walk the account back into the fight with no food.
+export const combatNoFood = (target: string, want: number): string => `no food: ${target} needs ${want} pieces of PLAIN_FOOD and the bank and pack hold none`;
+
+// The refusal at the start of a fight run, before any walk, bank trip or attack, when the account is at its eat level
+// or below and holds no food. The `no food` words make the supervisor end the job, so a later planner pass does not
+// send a low-Hitpoints account with no food back to the same fight. A run that carries no food (Telekinetic Grab) has
+// no such refusal. An account at full Hitpoints (a 10-Hitpoints account, whose eat level is its maximum) goes on to the
+// bank for food: waiting does not raise its Hitpoints.
+export function combatEntryNoFood(target: string, hp: number, maxHp: number, held: number, want: number): string | undefined {
+    if (want === 0 || hp >= maxHp || !combatOutOfFood(hp, maxHp, held)) return undefined;
+    return `no food: ${target} start at ${hp}/${maxHp} Hitpoints (eat level ${defaultEatAt(maxHp)}) with no PLAIN_FOOD in the pack ticks=0`;
+}
+
+// The RESULT detail of a thrown error. A `no food` refusal keeps its words at the start of the detail.
+export const combatFailDetail = (e: unknown): string => (e instanceof Error && e.message.startsWith('no food:') ? e.message : String(e));
+
+// A run whose survival depends on Protect from Melee (prayer-guard.ts) enters the fight only with `enter` Prayer
+// points, and leaves the fight for the bank below `leave` points. The worker cannot restore Prayer points, so the next
+// walk to the spot refuses with a named no-progress failure: the supervisor blocks the job.
+export type CombatPrayerFloor = { enter: number; leave: number };
+
+export function combatPrayerShort(target: string, points: number, floor: CombatPrayerFloor | undefined, at: 'enter' | 'leave'): string | undefined {
+    if (!floor) return undefined;
+    const need = at === 'enter' ? floor.enter : floor.leave;
+    return points < need ? `no combat progress: ${target} Prayer points ${points} below ${need} for Protect from Melee` : undefined;
+}
+
+// A bank trip withdraws PLAIN_FOOD, the highest heal first, until the pack holds `want` pieces. It keeps two slots free
+// for loot. It returns the food that the pack then holds.
+export async function withdrawCombatFood(s: CombatSession, want: number): Promise<number> {
+    const held = () => combatFoodHeld(s.sdk.getInventory());
+    // The SDK bank rows carry the slot. An observation row has no slot: the SDK then finds the row by its id.
+    const rows = (): readonly { id: number; name: string; count: number; slot: number }[] => {
+        const state: { id: number; name: string; count: number; slot: number }[] = s.sdk.getState()?.bank?.items ?? [];
+        return state.length ? state : (s.bankObservation?.()?.items ?? []).map(i => ({ ...i, slot: -1 }));
+    };
+    for (const id of combatFoodByHeal()) {
+        const before = held();
+        const need = Math.min(want - before, 28 - s.sdk.getInventory().length - 2);
+        if (need <= 0) break;
+        const row = rows().find(i => i.id === id && i.count > 0);
+        if (!row) continue;
+        if (!(await s.bot.withdrawItem(row, Math.min(need, row.count), { asNote: false })).success) continue;
+        await waitUntil(s, () => held() > before, { timeoutTicks: 6 });
+    }
+    return held();
+}
 
 export async function bankCombatLoot(s: CombatSession, drops: RegExp, extraIds: readonly number[] = []) {
     // openBank on an open interface answers "Bank already open" with no new observation
@@ -1823,6 +1912,9 @@ export const CONFIGS: Record<
         taverley?: boolean;
         dustyKey?: boolean;
         dragonShield?: boolean;
+        // PLAIN_FOOD pieces that the run carries from the bank (combatFoodWanted).
+        food?: number;
+        prayer?: CombatPrayerFloor;
     }
 > = {
     druid: {
@@ -1854,6 +1946,8 @@ export const CONFIGS: Record<
         spot: { x: 2545, z: 3144 },
         bankSpot: { x: 2655, z: 3283 },
         drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|death rune|chaos rune|uncut |herb|half of a key)/i,
+        // The brain's giant row asks for 8 food (packages/brain/src/catalog.ts combatSurvivability).
+        food: 8,
     },
     taverley_druid: {
         npc: /^chaos druid$/i,
@@ -1868,6 +1962,11 @@ export const CONFIGS: Record<
         bankSpot: { x: 2946, z: 3368 },
         drops: /(cosmic rune|death rune|chaos rune|law rune|steel bar|mithril arrow|herb|half of a key)/i,
         taverley: true,
+        // preflight.ts taverley_black_knight minFood.
+        food: 10,
+        // Black Knights kill an account of 74-84 Hitpoints when Protect from Melee is off. The prayer guard spends about
+        // 40 points in 3000 ticks of fighting here.
+        prayer: { enter: 25, leave: 10 },
     },
     taverley_scales: {
         npc: /$^/,
@@ -2006,7 +2105,9 @@ export async function runGenericCombatSession(
     const s = cleanupScope ?? ownedSession;
     const stopEnd = () => combatStopEnd(opts.stopReason?.());
     const stallWords = () => combatStallWords(opts.stopReason?.());
-    const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
+    const lifeDied = combatLifeWatch(ownedSession, cleanupScope);
+    const runEnd = () => (lifeDied() ? 'died' : undefined) ?? stopEnd();
+    const foodWant = combatFoodWanted(targetConf);
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     let kills = 0;
     let itemsLooted = 0;
@@ -2016,6 +2117,8 @@ export async function runGenericCombatSession(
     try {
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
+        const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0;
+        const prayer = () => s.sdk.getSkill('Prayer')?.level ?? 0;
         const t0 = s.tick();
         const used = () => s.tick() - t0;
         let recoveringPotions = false;
@@ -2102,16 +2205,23 @@ export async function runGenericCombatSession(
                 const hasAir = hasAirStaff || s.sdk.getInventory().some(i => i.id === 556);
                 if (!hasLaw || !hasAir) throw Error('Law and Air runes required for Telekinetic Grab');
             }
-            if (!targetConf.requireTelegrab && countItems(s as Session, /shark|lobster|swordfish|trout/i) < 3) {
-                const w = await s.bot.withdrawItem(/shark/i, 5);
-                if (!w.success) await s.bot.withdrawItem(/lobster/i, 5);
-            }
+            // A trip that leaves no food in the pack ends the run: the run does not fight with no food. The final bank
+            // return of the potion cleanup takes no food, because the run ends there.
+            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, foodWant)) > 0;
             bankTrips++;
             await s.bot.closeInterface();
             await waitTicks(s, 1);
+            if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
             return true;
         };
+        // A run at its eat level with no food, or one that cannot enter for its Prayer points, refuses before the
+        // potion cleanup owns a bank return.
+        const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
+        if (noFood0) throw Error(noFood0);
+        const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
+        const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
+        if (noPrayer0) throw Error(noPrayer0);
         if (cleanupScope) {
             combatRecovery = combatPotionRecovery(
                 cleanupScope,
@@ -2124,6 +2234,7 @@ export async function runGenericCombatSession(
             );
         }
         if (needsBankPrep()) await bank();
+        else if (foodWant > 0 && combatFoodHeld(s.sdk.getInventory()) < foodWant && !stopCheck() && !lifeDied()) await bank();
         const untilInPack = () => untilId !== undefined && s.sdk.getInventory().some(i => i.id === untilId);
         const untilBanked = () => untilId !== undefined && (s.bankObservation?.()?.items ?? []).some((i: { id: number; count: number }) => i.id === untilId && i.count > 0);
         let untilDeposited = false;
@@ -2132,7 +2243,7 @@ export async function runGenericCombatSession(
             if ((await bank()) && had) untilDeposited = true;
         };
         let stuckWalks = 0;
-        while (!over() && (!cleanupScope || !stopCheck())) {
+        while (!over() && !lifeDied() && (!cleanupScope || !stopCheck())) {
             if (untilDeposited || untilInPack() || untilBanked()) break;
             if (potions) await potions.poll();
             const invSpace = 28 - s.sdk.getInventory().length;
@@ -2152,9 +2263,10 @@ export async function runGenericCombatSession(
                 }
                 continue;
             }
-            if (hp() > 0 && hp() < 20 && countItems(s as Session, /shark|lobster|swordfish|trout/i) > 0) {
-                await s.bot.eatFood(/shark|lobster|swordfish|trout/i);
-                await waitTicks(s, 1);
+            // No food left: the bank trip takes more food, or ends the run with `no food`.
+            if (foodWant > 0 && combatFoodHeld(s.sdk.getInventory()) === 0) {
+                await bankUntil();
+                continue;
             }
             const p = pos();
             if (!p) {
@@ -2162,6 +2274,8 @@ export async function runGenericCombatSession(
                 continue;
             }
             if (Math.max(Math.abs(p.worldX - conf.spot.x), Math.abs(p.worldZ - conf.spot.z)) > 15) {
+                const noPrayer = combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter');
+                if (noPrayer) throw Error(noPrayer);
                 if (await walk(conf.spot.x, conf.spot.z, 4)) stuckWalks = 0;
                 else {
                     stuckWalks++;
@@ -2170,6 +2284,10 @@ export async function runGenericCombatSession(
                 continue;
             }
             stuckWalks = 0;
+            if (combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'leave')) {
+                await bankUntil();
+                continue;
+            }
             if (invSpace > 0) {
                 const candidate = effectiveTelegrab || alch ? s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0] : undefined;
                 const r = effectiveTelegrab || alch ? (candidate ? await loot.pickup(candidate) : { success: false }) : await s.bot.pickupItem(conf.drops);
@@ -2206,13 +2324,20 @@ export async function runGenericCombatSession(
                 let engaged = false;
                 let idleTicks = 0;
                 let dead = false;
-                while (!over() && !stopCheck() && s.tick() - began < 100) {
+                while (!over() && !stopCheck() && !lifeDied() && s.tick() - began < 100) {
                     const st = s.sdk.getState();
                     const npc = st?.nearbyNpcs.find(n => n.index === monster.index);
                     if (npc && ((st?.player?.combat?.targetType === 'npc' && st.player.combat.targetIndex === monster.index) || npc.inCombat)) engaged = true;
                     const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks);
                     if (outcome.done) {
                         dead = outcome.dead;
+                        break;
+                    }
+                    // Out of food at the eat level, or out of Prayer points: the run leaves the fight for the bank.
+                    if (
+                        (foodWant > 0 && combatOutOfFood(hp(), maxHp(), combatFoodHeld(s.sdk.getInventory())))
+                        || combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'leave')
+                    ) {
                         break;
                     }
                     const active = !!st?.player?.combat?.inCombat || !!npc?.inCombat;
@@ -2255,7 +2380,7 @@ export async function runGenericCombatSession(
             detail: `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${opts.untilItemName} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}${ok ? '' : stallWords()}`,
         };
     } catch (e) {
-        let detail = String(e);
+        let detail = combatFailDetail(e);
         if (combatRecovery) {
             try {
                 await combatRecovery();
@@ -2455,11 +2580,15 @@ export async function runMeleeGatherCli(
 
     const stopEnd = () => combatStopEnd(cowStop.reason());
     const stallWords = () => combatStallWords(cowStop.reason());
-    const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
+    const lifeDied = combatLifeWatch(ownedSession, cleanupScope);
+    const runEnd = () => (lifeDied() ? 'died' : undefined) ?? stopEnd();
+    const foodWant = combatFoodWanted(targetConf);
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     try {
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
+        const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0;
+        const prayer = () => s.sdk.getSkill('Prayer')?.level ?? 0;
         const t0 = s.tick();
         const used = () => s.tick() - t0;
         let recoveringPotions = false;
@@ -2557,18 +2686,25 @@ export async function runMeleeGatherCli(
                 if (!hasLaw || !hasAir) throw Error('Law and Air runes required for Telekinetic Grab');
             }
 
-            if (!targetConf.requireTelegrab && countItems(s as Session, /shark|lobster|swordfish|trout/i) < 3) {
-                const w = await s.bot.withdrawItem(/shark/i, 5);
-                if (!w.success) await s.bot.withdrawItem(/lobster/i, 5);
-            }
+            // A trip that leaves no food in the pack ends the run: the run does not fight with no food. The final bank
+            // return of the potion cleanup takes no food, because the run ends there.
+            const fed = foodWant === 0 || recoveringPotions || (await withdrawCombatFood(s, foodWant)) > 0;
 
             bankTrips++;
             await s.bot.closeInterface();
             await waitTicks(s, 1);
+            if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
             return true;
         };
 
+        // A run at its eat level with no food, or one that cannot enter for its Prayer points, refuses before the
+        // potion cleanup owns a bank return.
+        const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
+        if (noFood0) throw Error(noFood0);
+        const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
+        const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
+        if (noPrayer0) throw Error(noPrayer0);
         if (cleanupScope) {
             combatRecovery = combatPotionRecovery(
                 cleanupScope,
@@ -2583,6 +2719,7 @@ export async function runMeleeGatherCli(
 
         console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
         if (needsBankPrep()) await bank();
+        else if (foodWant > 0 && combatFoodHeld(s.sdk.getInventory()) < foodWant && !cowStop.stop() && !lifeDied()) await bank();
         const untilInPack = () => untilId !== undefined && s.sdk.getInventory().some(i => i.id === untilId);
         const untilBanked = () => untilId !== undefined && (s.bankObservation?.()?.items ?? []).some((i: { id: number; count: number }) => i.id === untilId && i.count > 0);
         let untilDeposited = false;
@@ -2592,7 +2729,7 @@ export async function runMeleeGatherCli(
         };
 
         let stuckWalks = 0;
-        while (!over() && (!cleanupScope || !cowStop.stop())) {
+        while (!over() && !lifeDied() && (!cleanupScope || !cowStop.stop())) {
             if (untilDeposited || untilInPack() || untilBanked()) break;
             if (potions) await potions.poll();
             const invSpace = 28 - s.sdk.getInventory().length;
@@ -2612,9 +2749,10 @@ export async function runMeleeGatherCli(
                 }
                 continue;
             }
-            if (hp() > 0 && hp() < 20 && countItems(s as Session, /shark|lobster|swordfish|trout/i) > 0) {
-                await s.bot.eatFood(/shark|lobster|swordfish|trout/i);
-                await waitTicks(s, 1);
+            // No food left: the bank trip takes more food, or ends the run with `no food`.
+            if (foodWant > 0 && combatFoodHeld(s.sdk.getInventory()) === 0) {
+                await bankUntil();
+                continue;
             }
             const p = pos();
             if (!p) {
@@ -2622,6 +2760,8 @@ export async function runMeleeGatherCli(
                 continue;
             }
             if (Math.max(Math.abs(p.worldX - conf.spot.x), Math.abs(p.worldZ - conf.spot.z)) > 15) {
+                const noPrayer = combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter');
+                if (noPrayer) throw Error(noPrayer);
                 if (await walk(conf.spot.x, conf.spot.z, 4)) stuckWalks = 0;
                 else {
                     stuckWalks++;
@@ -2630,6 +2770,10 @@ export async function runMeleeGatherCli(
                 continue;
             }
             stuckWalks = 0;
+            if (combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'leave')) {
+                await bankUntil();
+                continue;
+            }
             if (invSpace > 0) {
                 const candidate =
                     effectiveTelegrab || alch ? s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0] : undefined;
@@ -2668,13 +2812,20 @@ export async function runMeleeGatherCli(
                 let engaged = false;
                 let idleTicks = 0;
                 let dead = false;
-                while (!over() && !cowStop.stop() && s.tick() - began < 100) {
+                while (!over() && !cowStop.stop() && !lifeDied() && s.tick() - began < 100) {
                     const st = s.sdk.getState();
                     const npc = st?.nearbyNpcs.find(n => n.index === monster.index);
                     if (npc && ((st?.player?.combat?.targetType === 'npc' && st.player.combat.targetIndex === monster.index) || npc.inCombat)) engaged = true;
                     const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks);
                     if (outcome.done) {
                         dead = outcome.dead;
+                        break;
+                    }
+                    // Out of food at the eat level, or out of Prayer points: the run leaves the fight for the bank.
+                    if (
+                        (foodWant > 0 && combatOutOfFood(hp(), maxHp(), combatFoodHeld(s.sdk.getInventory())))
+                        || combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'leave')
+                    ) {
                         break;
                     }
                     const active = !!st?.player?.combat?.inCombat || !!npc?.inCombat;
@@ -2738,7 +2889,7 @@ export async function runMeleeGatherCli(
             `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${env.UNTIL_ITEM} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}${ok ? '' : stallWords()}`,
         );
     } catch (e) {
-        let detail = String(e);
+        let detail = combatFailDetail(e);
         if (combatRecovery) {
             try {
                 await combatRecovery();

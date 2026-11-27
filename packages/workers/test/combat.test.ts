@@ -15,11 +15,14 @@ import {
     combatEstimate,
     combatPreflight,
     combatWorkerModule,
+    foodIdsForMode,
     runCombatModuleSession,
     runWildDragonsCli,
     type CombatConfig,
     type CombatSession,
 } from '../src/combat';
+import { combatNoFood } from '../src/combat/melee-gather';
+import { parseModeResult } from '../src/combat/module';
 import { BOSS_ENCOUNTERS, resolveBossStep } from '../../../scripts/aio-boss';
 import {
     FIGHTER_PROFILES,
@@ -210,6 +213,42 @@ describe('combatWorkerModule contracts and preflight', () => {
         const foodShort = combatPreflight(makeAccount(), { mode: 'black-dragon' }, reservedWorld);
         expect(foodShort.ok).toBe(false);
         expect(foodShort.blockers.some(b => b.kind === 'combat_survivability' && b.reason === 'food')).toBe(true);
+    });
+
+    // Unsheathed was admitted to the Black Knights on cake and went in with no food the eat guard eats.
+    test('a generic combat job counts only PLAIN_FOOD, so cake, bread or chicken does not admit it', () => {
+        const base = makeAccount();
+        const items = Object.fromEntries(Object.entries(base.bank!.items).filter(([id]) => ![385, 329, 333, 379].includes(Number(id))));
+        const cakeOnly = makeAccount({ bank: { ...base.bank!, items: { ...items, 1891: 20, 2309: 20, 2140: 20 } } });
+        for (const mode of ['taverley_black_knight', 'giant', 'wizard', 'unicorn'] as const) {
+            expect(foodIdsForMode(mode)).not.toContain(1891);
+            expect(foodIdsForMode(mode)).toContain(329);
+        }
+        const refused = combatPreflight(cakeOnly, { mode: 'taverley_black_knight' }, emptyWorld);
+        expect(refused.ok).toBe(false);
+        expect(refused.blockers.some(b => b.kind === 'combat_survivability' && b.reason === 'food')).toBe(true);
+        const salmon = makeAccount({ bank: { ...base.bank!, items: { ...items, 329: 10 } } });
+        expect(combatPreflight(salmon, { mode: 'taverley_black_knight' }, emptyWorld).ok).toBe(true);
+    });
+
+    // Seven pk_army accounts died to Unicorn#89 and Wizard#13 with 0 food eaten: those sites had no food floor.
+    test('the unicorn and wizard sites refuse an account with fewer than 5 PLAIN_FOOD and admit one with 5', () => {
+        const base = makeAccount();
+        const items = Object.fromEntries(Object.entries(base.bank!.items).filter(([id]) => !foodIdsForMode('wizard').includes(Number(id))));
+        const foodBlock = (r: ReturnType<typeof combatPreflight>) => r.blockers.some(b => b.kind === 'combat_survivability' && b.reason === 'food');
+        for (const mode of ['unicorn', 'wizard'] as const) {
+            expect(COMBAT_SITES[mode].minFood).toBe(5);
+            expect(foodBlock(combatPreflight(makeAccount({ bank: { ...base.bank!, items: { ...items, 385: 4 } } }), { mode }, emptyWorld))).toBe(true);
+            expect(foodBlock(combatPreflight(makeAccount({ bank: { ...base.bank!, items: { ...items, 385: 5 } } }), { mode }, emptyWorld))).toBe(false);
+        }
+    });
+
+    // A worker defect quarantines the activity. A generic run that refuses for food reports a missing supply.
+    test('a generic combat run that refuses with no food is a missing supply, not a worker defect', () => {
+        const detail = combatNoFood('wizard', 5);
+        const generic = { ok: false, kills: 0, itemsLooted: 0, bankTrips: 1, walkTicks: 0, detail };
+        expect(parseModeResult('wizard', 'CombatTester', 10, 10, {}, {}, { ...generic, failure: detail }).kind).toBe('missing_supply');
+        expect(parseModeResult('wizard', 'CombatTester', 10, 10, {}, {}, generic).kind).toBe('worker_defect');
     });
 
     test('estimate produces valid RateEstimate across all combat modes and fallback unknown mode', () => {

@@ -132,7 +132,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         { GUARD_VALUE, recordRun, sellsItems, sharedLootTables },
         { createTickRecorder },
         { startStatus },
-        { FLEE_HP, damageLog, deathLine, recoverDeath },
+        { FLEE_HP, appendDeathAlert, damageLog, deathAlert, deathLine, recoverDeath },
         { fleetLeaseAllowsWorker },
         prayerMod,
         attackStylesMod,
@@ -168,7 +168,8 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // The value guard keeps a held stack worth GUARD_VALUE coins from a drop, a sale or an alch (randomevents.ts
     // `guard`). VALUE_GUARD=0 turns it off; a record run and a script that sells, alchs or trades on purpose get none.
     const guardOn = process.env.VALUE_GUARD !== '0' && !recordRun(name) && !sellsItems(scriptFile);
-    // The flee guard (randomevents.ts `flee`): at FLEE_HP of the maximum Hitpoints or less, with no food, the bot runs
+    // The flee guard (randomevents.ts `flee`): at its flee line (the larger of FLEE_HP of the maximum Hitpoints and
+    // two estimated hits of the attacker) or less, with no PLAIN_FOOD in the pack, the bot runs
     // out of the attacker's reach and the session ends there instead of in a death. FLEE_GUARD=0 turns it off; a record
     // run and a PvP script (it fights on purpose at low Hitpoints) get none.
     const fleeOn = process.env.FLEE_GUARD !== '0' && !recordRun(name) && !/pk|pvp|spar|gang/i.test(scriptFile.split(/[\\/]/).at(-1) ?? '');
@@ -214,7 +215,8 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
             events,
             flee: fleeOn ? {
                 hp: FLEE_HP, onSafe: detail => {
-                    log(`FLEE_GUARD safe ${detail} bot=${name}`);
+                    // A timeout or the loss of every flee tile also ends the session: it is a failed flee, not a safe one.
+                    log(`FLEE_GUARD ${/^\S+ (timeout|no-tile) /.test(detail) ? 'fail' : 'safe'} ${detail} bot=${name}`);
                     if (!stopping && !settling.has(s)) { stopping = true; stop(`fled at low hitpoints: ${detail}`); }
                 },
             } : null,
@@ -263,13 +265,19 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     const damage = damageLog();
     const stop = (reason: string) => void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
     const localServer = isLocalServer(server);
+    // A live death also goes to .practice/alerts.jsonl (death-recovery.ts deathAlert), so it alerts with no monitor running.
+    const logDeath = () => {
+        const line = `${deathLine(lastAlive, lastHpText(), damage.cause(), scriptFile)} bot=${name}`;
+        log(line);
+        if (!localServer) appendDeathAlert(repoRoot, deathAlert(name, line, Date.now()));
+    };
     s.onTick(() => {
         const st = s.sdk.getState();
         lastLife = life(st?.player) ?? lastLife;
         const step = deathStep(born, lastLife, opts.continueAfterDeath === true, deathSeen), died = step.died;
         born = step.born; deathSeen = step.seen;
         damage.read(st);
-        if (step.announce) log(`${deathLine(lastAlive, lastHpText(), damage.cause(), scriptFile)} bot=${name}`);
+        if (step.announce) logDeath();
         if (!died) {
             const pNow = st?.player;
             if (pNow && !pNow.isDead) {
@@ -299,7 +307,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         });
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
-            if (reason === 'died') log(`${deathLine(lastAlive, lastHpText(), damage.cause(), scriptFile)} bot=${name}`);
+            if (reason === 'died') logDeath();
             const watch = randomEvents.get(s), at = lastAlive;
             if (reason !== 'died' || !deathOn || !watch || !at) { stop(reason); return; }
             // The walker's world loads during the respawn wait, not after it.

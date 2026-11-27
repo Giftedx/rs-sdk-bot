@@ -65,6 +65,13 @@ export interface DwarfCannonOptions {
     travelBackFromNulodion?: (ctx: DwarfCannonTravelCtx) => Promise<void>;
 }
 
+// The hitpoints one failed railing roll cuts: stat_base(hp)/10, at least 1 and at most 3 (railings.rs2:72-91).
+export const railingCut = (baseHp: number): number => Math.min(3, Math.max(1, Math.floor(baseHp / 10)));
+// Why the next railing roll must not go out: with no meal in the pack, a hitpoint level that a failed roll takes to 1
+// or below. A 10-hitpoint account with one lobster cut itself to death in 12 failed rolls.
+export const railingRefusal = (hp: number, baseHp: number, meal: boolean): string | undefined =>
+    !meal && hp <= railingCut(baseHp) + 1 ? `low hp ${hp} of ${baseHp}, no food` : undefined;
+
 export async function runDwarfCannon(opts: DwarfCannonOptions = {}): Promise<{ ok: boolean; craftingXp: number; detail: string }> {
 const owned = !opts.session;
 const CAP = opts.cap ?? 3000;
@@ -142,7 +149,8 @@ try {
             const line = `${p?.worldX},${p?.worldZ},${p?.level} dlg=${d?.isOpen ? (d.isWaiting ? 'wait' : 'open') : '-'} opts=${(d?.options ?? []).map((o: any) => o.text).join('|')} anim=${p?.animId ?? ''} msg=${m}`;
             if (line !== lastTrace) { console.log(`TRACE ${T()} ${line}`); lastTrace = line; }
         }
-        if (h > 0 && h <= EAT_AT) {
+        // At most half the base level: a 10-hitpoint account under EAT_AT 40 otherwise eats a meal each tick at full health.
+        if (h > 0 && h <= Math.min(EAT_AT, Math.ceil((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10) / 2))) {
             // Any held meal, best heal first (quest-sweep MEALS: shark, swordfish, lobster, ...): an account with sharks
             // and no lobsters otherwise takes the railing cuts (up to 3 HP each at Crafting 1) unfed.
             const food = MEALS.map(id => inv().find(i => i.id === id)).find(Boolean);
@@ -274,6 +282,8 @@ try {
         const fixed = () => msgCount(OK_RAIL) > ok0;
         for (let i = 0; i < 60 && !fixed(); i++) {
             await guard(`railing ${r.x},${r.z}`);
+            const refusal = railingRefusal(hp(), s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10, MEALS.some(id => has(id)));
+            if (refusal) await fail(`railing ${r.x},${r.z}: ${refusal}`);
             const fails0 = msgCount(FAIL_RAIL);
             const search0 = msgCount(SEARCH);
             railTries++;
