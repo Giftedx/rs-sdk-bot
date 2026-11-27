@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795811117075-1",
+ "account": "ChaosInPants",
+ "partner": "Nockitoff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "d8075589-080d-45da-81f3-96d52980491f",
+ "count": 1,
+ "ok": true,
+ "at": 1795811329578,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795811328802
+ },
+ "logout": {
+  "attemptId": "1795811315749-0000011812-0000000001",
+  "at": 1795811329542,
+  "sha256": "9dccb15b7aec7b5de9d0b305f0f487917f2955bd24a151aa6042e1e2fb9f6f8d"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795811117075-1",
  "account": "Nockitoff",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Staff of air",
  "requested": 1,
  "claim": "c0af9d27-f67d-4116-b92e-7154b620efec",
- "count": 0,
- "ok": false,
- "at": 1795811283153,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795811327965,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795811308003
+ },
+ "logout": {
+  "attemptId": "1795811283169-0000018144-0000000001",
+  "at": 1795811327936,
+  "sha256": "3905323a0f2d58cf4b81451d532a67827abb228f2ae60542bf2f4b2353444c50"
+ },
+ "screen": true
 }
