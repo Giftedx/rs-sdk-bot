@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795748939506,
+ "at": 1795748951612,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,6 +75,22 @@
   },
   {
    "account": "OreElse",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "desertrescue"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:desertrescue",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -182,8 +198,7 @@
   "sporrandip",
   "swordinhand",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
