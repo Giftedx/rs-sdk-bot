@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795791299009,
+ "at": 1795791311376,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -112,7 +112,6 @@
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=3 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=3 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
