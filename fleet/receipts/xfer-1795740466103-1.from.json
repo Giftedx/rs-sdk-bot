@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795740466103-1",
+ "account": "SporranBulge",
+ "partner": "Ballbag",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "e9ea0a0f-d5a4-4117-b016-7b07f52ea2b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795740791506,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Unicorn horn",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}

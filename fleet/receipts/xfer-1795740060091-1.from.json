@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740060091-1",
  "account": "Woodenstaff",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "3eac8ffb-c6d5-4cc4-8502-5e13f49a1b50",
- "count": 0,
- "ok": false,
- "at": 1795740500153,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795740799742,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795740507018
+ },
+ "logout": {
+  "attemptId": "1795740500252-0000019960-0000000001",
+  "at": 1795740799731,
+  "sha256": "785396e2c158a2093463d36e594bf0fba2bb74c1d97c614ebffd377962be0bcf"
+ },
+ "screen": true
 }
