@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795789661745-1",
+ "account": "BackdoorMan",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 875,
+ "claim": "1c6d78b6-3ef9-4439-8f57-f95ae08b8d7d",
+ "count": 875,
+ "ok": true,
+ "at": 1795789993461,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 875
+ },
+ "bank": {
+  "count": 875,
+  "at": 1795789992688
+ },
+ "logout": {
+  "attemptId": "1795789978592-0000011664-0000000001",
+  "at": 1795789993439,
+  "sha256": "9c50be001c58f75c2f96fa1862f87cd182cb924cdb2d0992b539c8ea5e7ec90e"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795789771199-2",
+ "account": "CoinCock",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 1,
+ "claim": "d493a910-83e1-455e-8eb9-708c8acaa383",
+ "count": 0,
+ "ok": false,
+ "at": 1795790014080,
+ "detail": "trade claimed"
+}
