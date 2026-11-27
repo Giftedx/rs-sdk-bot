@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741359373-1",
  "account": "Hocuspokeus",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 500,
  "claim": "0c0302ac-bb03-47a9-9140-3d2a14b0de12",
- "count": 0,
- "ok": false,
- "at": 1795741779022,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795741797663,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795741797024
+ },
+ "logout": {
+  "attemptId": "1795741779030-0000015280-0000000001",
+  "at": 1795741797654,
+  "sha256": "16440477f8713f19ee11fba46c3063a987a393e1763c9c9d6b2c4d305d71eb94"
+ },
+ "screen": true
 }

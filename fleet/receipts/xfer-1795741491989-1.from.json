@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795741491989-1",
  "account": "BoneToPick",
  "partner": "Bigpackage",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "01f8f775-49c3-48c0-8b2c-c0d6d0a90e9c",
- "count": 0,
- "ok": false,
- "at": 1795741745169,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795741795314,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795741745254-0000021072-0000000001",
+  "at": 1795741795304,
+  "sha256": "93a2cd8fad743c6b02380fadd787a1b5161c760f297c8550f42760ca2fa2cd91"
+ },
+ "screen": true
 }
