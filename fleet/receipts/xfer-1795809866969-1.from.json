@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795809866969-1",
  "account": "Spitroaster",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 48,
  "claim": "f57bf2b6-9e8b-4aab-a66b-9871e1c3b7dd",
- "count": 0,
- "ok": false,
- "at": 1795810306694,
- "detail": "trade claimed"
+ "count": 48,
+ "ok": true,
+ "at": 1795810562611,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 48,
+  "after": 0
+ },
+ "bank": {
+  "count": 48,
+  "at": 1795810510439
+ },
+ "logout": {
+  "attemptId": "1795810306711-0000013008-0000000001",
+  "at": 1795810561950,
+  "sha256": "8d1905ab7484ee9605d2bf6d24d1d09a61332ea9d900d374a42987af89794dc0"
+ },
+ "screen": true
 }
