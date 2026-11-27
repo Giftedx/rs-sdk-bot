@@ -1,0 +1,23 @@
+{
+ "id": "1795823670041-kiltlifter-sporrandip-e13c119586a69878",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "SporranDip",
+ "item": "Earth rune",
+ "count": 13,
+ "start": 1795823670041,
+ "end": 1795838070041,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

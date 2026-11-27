@@ -1,0 +1,23 @@
+{
+ "id": "1795823669096-woodpecker-pocketpool-861d48a8d4a04164",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "PocketPool",
+ "item": "Iron arrow",
+ "count": 63,
+ "start": 1795823669096,
+ "end": 1795838069096,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

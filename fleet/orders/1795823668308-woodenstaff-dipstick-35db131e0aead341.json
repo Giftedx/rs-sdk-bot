@@ -1,0 +1,23 @@
+{
+ "id": "1795823668308-woodenstaff-dipstick-35db131e0aead341",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Dipstick",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823668308,
+ "end": 1795838068308,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823657344-backdoorman-swordinhand-2202d0d82076e4e7",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BackdoorMan",
+ "to": "Swordinhand",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1795823657344,
+ "end": 1795838057344,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823655694-fishandchips-pickpockdick-09b55f5d2558fd2d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "PickpockDick",
+ "item": "Lobster",
+ "count": 22,
+ "start": 1795823655694,
+ "end": 1795838055694,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

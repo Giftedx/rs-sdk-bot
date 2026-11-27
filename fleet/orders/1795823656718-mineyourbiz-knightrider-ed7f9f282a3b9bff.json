@@ -1,0 +1,29 @@
+{
+ "id": "1795823656718-mineyourbiz-knightrider-ed7f9f282a3b9bff",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "KnightRider",
+ "item": "Earth rune",
+ "count": 28,
+ "start": 1795823656718,
+ "end": 1795838056718,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 25
+  }
+ ],
+ "takerWaits": true
+}

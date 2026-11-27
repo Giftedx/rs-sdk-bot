@@ -1,0 +1,23 @@
+{
+ "id": "1795823654705-coincock-hocuspokeus-3531c73e8920a040",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "CoinCock",
+ "to": "Hocuspokeus",
+ "item": "Earth rune",
+ "count": 30,
+ "start": 1795823654705,
+ "end": 1795838054705,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

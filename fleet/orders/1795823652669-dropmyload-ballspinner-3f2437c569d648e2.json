@@ -1,0 +1,23 @@
+{
+ "id": "1795823652669-dropmyload-ballspinner-3f2437c569d648e2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "DropMyLoad",
+ "to": "Ballspinner",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1795823652669,
+ "end": 1795838052669,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

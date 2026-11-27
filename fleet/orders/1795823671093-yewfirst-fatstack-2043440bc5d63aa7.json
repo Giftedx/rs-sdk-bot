@@ -1,0 +1,24 @@
+{
+ "id": "1795823671093-yewfirst-fatstack-2043440bc5d63aa7",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Fatstack",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823671093,
+ "end": 1795838071093,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

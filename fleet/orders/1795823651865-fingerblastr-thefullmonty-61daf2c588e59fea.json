@@ -1,0 +1,29 @@
+{
+ "id": "1795823651865-fingerblastr-thefullmonty-61daf2c588e59fea",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "TheFullMonty",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823651865,
+ "end": 1795838051865,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Iron arrow",
+   "count": 19
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+ "id": "1795823669898-yewfirst-sporrandip-754a4cb54dcf7805",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "SporranDip",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823669898,
+ "end": 1795838069898,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

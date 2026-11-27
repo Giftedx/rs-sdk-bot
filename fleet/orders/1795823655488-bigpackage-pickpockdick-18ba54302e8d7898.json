@@ -1,0 +1,29 @@
+{
+ "id": "1795823655488-bigpackage-pickpockdick-18ba54302e8d7898",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "PickpockDick",
+ "item": "Air rune",
+ "count": 6,
+ "start": 1795823655488,
+ "end": 1795838055488,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Nature rune",
+   "count": 20
+  }
+ ],
+ "takerWaits": true
+}

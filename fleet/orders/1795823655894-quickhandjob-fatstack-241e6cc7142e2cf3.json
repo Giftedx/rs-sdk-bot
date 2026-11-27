@@ -1,0 +1,33 @@
+{
+ "id": "1795823655894-quickhandjob-fatstack-241e6cc7142e2cf3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "Fatstack",
+ "item": "Air rune",
+ "count": 6,
+ "start": 1795823655894,
+ "end": 1795838055894,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Earth rune",
+   "count": 30
+  },
+  {
+   "item": "Nature rune",
+   "count": 11
+  }
+ ],
+ "takerWaits": true
+}

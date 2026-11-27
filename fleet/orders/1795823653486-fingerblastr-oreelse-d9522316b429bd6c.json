@@ -1,0 +1,23 @@
+{
+ "id": "1795823653486-fingerblastr-oreelse-d9522316b429bd6c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "OreElse",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823653486,
+ "end": 1795838053486,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

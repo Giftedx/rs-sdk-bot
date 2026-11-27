@@ -1,0 +1,24 @@
+{
+ "id": "1795823657769-yewfirst-thefullmonty-a2cc379d42009117",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "TheFullMonty",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823657769,
+ "end": 1795838057769,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

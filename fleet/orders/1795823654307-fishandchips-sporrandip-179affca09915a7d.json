@@ -1,0 +1,23 @@
+{
+ "id": "1795823654307-fishandchips-sporrandip-179affca09915a7d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "SporranDip",
+ "item": "Lobster",
+ "count": 20,
+ "start": 1795823654307,
+ "end": 1795838054307,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

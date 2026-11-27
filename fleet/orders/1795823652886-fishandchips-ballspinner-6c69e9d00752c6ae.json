@@ -1,0 +1,23 @@
+{
+ "id": "1795823652886-fishandchips-ballspinner-6c69e9d00752c6ae",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Ballspinner",
+ "item": "Lobster",
+ "count": 21,
+ "start": 1795823652886,
+ "end": 1795838052886,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

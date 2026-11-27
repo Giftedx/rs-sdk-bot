@@ -1,0 +1,23 @@
+{
+ "id": "1795823668435-kiltlifter-dipstick-384d2754e97f459a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "Dipstick",
+ "item": "Earth rune",
+ "count": 10,
+ "start": 1795823668435,
+ "end": 1795838068435,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

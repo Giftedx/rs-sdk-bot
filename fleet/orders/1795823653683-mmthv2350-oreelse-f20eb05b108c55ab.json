@@ -1,0 +1,33 @@
+{
+ "id": "1795823653683-mmthv2350-oreelse-f20eb05b108c55ab",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "OreElse",
+ "item": "Shark",
+ "count": 13,
+ "start": 1795823653683,
+ "end": 1795838053683,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Lobster",
+   "count": 8
+  },
+  {
+   "item": "Water rune",
+   "count": 15
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+ "id": "1795823669630-yewfirst-oreelse-97f3df065afb04e9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "OreElse",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823669630,
+ "end": 1795838069630,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

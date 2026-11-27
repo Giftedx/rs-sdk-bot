@@ -1,0 +1,23 @@
+{
+ "id": "1795823668555-mineyourbiz-dipstick-c8970b8e534d92ca",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Dipstick",
+ "item": "Water rune",
+ "count": 25,
+ "start": 1795823668555,
+ "end": 1795838068555,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823656103-shaftmaker-fatstack-591f0322e5cb7f40",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Fatstack",
+ "item": "Lobster",
+ "count": 15,
+ "start": 1795823656103,
+ "end": 1795838056103,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

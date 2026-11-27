@@ -1,0 +1,23 @@
+{
+ "id": "1795823670960-woodenstaff-pickpockdick-3c021346051bf01f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "PickpockDick",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823670960,
+ "end": 1795838070960,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,29 @@
+{
+ "id": "1795823656298-mmthv2350-knightrider-ca95d5bc8d885df1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "KnightRider",
+ "item": "Iron arrow",
+ "count": 256,
+ "start": 1795823656298,
+ "end": 1795838056298,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Bronze arrow",
+   "count": 44
+  }
+ ],
+ "takerWaits": true
+}

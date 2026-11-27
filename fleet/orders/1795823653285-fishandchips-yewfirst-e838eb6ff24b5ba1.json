@@ -1,0 +1,23 @@
+{
+ "id": "1795823653285-fishandchips-yewfirst-e838eb6ff24b5ba1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "YewFirst",
+ "item": "Lobster",
+ "count": 20,
+ "start": 1795823653285,
+ "end": 1795838053285,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823670179-mmtha0205-sporrandip-8d21b9f25e0316d5",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "SporranDip",
+ "item": "Water rune",
+ "count": 9,
+ "start": 1795823670179,
+ "end": 1795838070179,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

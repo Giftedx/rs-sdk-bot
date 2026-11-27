@@ -1,0 +1,23 @@
+{
+ "id": "1795823657563-woodenstaff-swordinhand-84ccc702ac0594b1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Swordinhand",
+ "item": "Water rune",
+ "count": 25,
+ "start": 1795823657563,
+ "end": 1795838057563,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

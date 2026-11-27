@@ -1,0 +1,29 @@
+{
+ "id": "1795823654515-spitroaster-hocuspokeus-43fb152036d8b79e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Hocuspokeus",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823654515,
+ "end": 1795838054515,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 23
+  }
+ ],
+ "takerWaits": true
+}

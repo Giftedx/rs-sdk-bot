@@ -1,0 +1,23 @@
+{
+ "id": "1795823653861-bigpackage-sporrandip-12df6076493d8478",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "SporranDip",
+ "item": "Mithril platebody",
+ "count": 1,
+ "start": 1795823653861,
+ "end": 1795838053861,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

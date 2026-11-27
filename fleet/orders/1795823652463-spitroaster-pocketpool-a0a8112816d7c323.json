@@ -1,0 +1,29 @@
+{
+ "id": "1795823652463-spitroaster-pocketpool-a0a8112816d7c323",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "PocketPool",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823652463,
+ "end": 1795838052463,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 13
+  }
+ ],
+ "takerWaits": true
+}

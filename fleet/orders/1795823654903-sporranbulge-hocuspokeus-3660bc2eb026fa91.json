@@ -1,0 +1,23 @@
+{
+ "id": "1795823654903-sporranbulge-hocuspokeus-3660bc2eb026fa91",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "Hocuspokeus",
+ "item": "Water rune",
+ "count": 22,
+ "start": 1795823654903,
+ "end": 1795838054903,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

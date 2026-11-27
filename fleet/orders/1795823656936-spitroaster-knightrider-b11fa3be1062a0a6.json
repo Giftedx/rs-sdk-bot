@@ -1,0 +1,23 @@
+{
+ "id": "1795823656936-spitroaster-knightrider-b11fa3be1062a0a6",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "KnightRider",
+ "item": "Shark",
+ "count": 20,
+ "start": 1795823656936,
+ "end": 1795838056936,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

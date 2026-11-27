@@ -1,0 +1,23 @@
+{
+ "id": "1795823669763-tossthecaber-oreelse-279bc299f897f5d8",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "OreElse",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823669763,
+ "end": 1795838069763,
+ "meet": [
+  {
+   "x": 3270,
+   "z": 3167,
+   "level": 0
+  },
+  {
+   "x": 3270,
+   "z": 3168,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

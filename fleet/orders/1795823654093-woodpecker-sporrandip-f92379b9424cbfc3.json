@@ -1,0 +1,23 @@
+{
+ "id": "1795823654093-woodpecker-sporrandip-f92379b9424cbfc3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "SporranDip",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1795823654093,
+ "end": 1795838054093,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

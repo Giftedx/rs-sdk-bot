@@ -1,0 +1,23 @@
+{
+ "id": "1795823670433-tossthecaber-hocuspokeus-f36297d4ab15135b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "Hocuspokeus",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823670433,
+ "end": 1795838070433,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

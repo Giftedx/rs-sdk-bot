@@ -1,0 +1,23 @@
+{
+ "id": "1795823652051-bigpackage-dipstick-76d42c021722990f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Dipstick",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823652051,
+ "end": 1795838052051,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823656517-fingerblastr-knightrider-779a4799eb0c6abf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "KnightRider",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823656517,
+ "end": 1795838056517,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

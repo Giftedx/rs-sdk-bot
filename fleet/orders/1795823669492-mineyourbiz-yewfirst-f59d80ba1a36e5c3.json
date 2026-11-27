@@ -1,0 +1,23 @@
+{
+ "id": "1795823669492-mineyourbiz-yewfirst-f59d80ba1a36e5c3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "YewFirst",
+ "item": "Water rune",
+ "count": 25,
+ "start": 1795823669492,
+ "end": 1795838069492,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

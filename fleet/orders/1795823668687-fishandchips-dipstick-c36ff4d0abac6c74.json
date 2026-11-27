@@ -1,0 +1,23 @@
+{
+ "id": "1795823668687-fishandchips-dipstick-c36ff4d0abac6c74",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Dipstick",
+ "item": "Lobster",
+ "count": 9,
+ "start": 1795823668687,
+ "end": 1795838068687,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

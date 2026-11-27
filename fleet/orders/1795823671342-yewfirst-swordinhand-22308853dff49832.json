@@ -1,0 +1,24 @@
+{
+ "id": "1795823671342-yewfirst-swordinhand-22308853dff49832",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Swordinhand",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823671342,
+ "end": 1795838071342,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

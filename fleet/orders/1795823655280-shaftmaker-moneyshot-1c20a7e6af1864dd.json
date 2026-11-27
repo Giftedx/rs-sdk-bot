@@ -1,0 +1,23 @@
+{
+ "id": "1795823655280-shaftmaker-moneyshot-1c20a7e6af1864dd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Moneyshot",
+ "item": "Lobster",
+ "count": 14,
+ "start": 1795823655280,
+ "end": 1795838055280,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

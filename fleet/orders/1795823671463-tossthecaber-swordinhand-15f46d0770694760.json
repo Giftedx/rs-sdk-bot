@@ -1,0 +1,23 @@
+{
+ "id": "1795823671463-tossthecaber-swordinhand-15f46d0770694760",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "Swordinhand",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823671463,
+ "end": 1795838071463,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

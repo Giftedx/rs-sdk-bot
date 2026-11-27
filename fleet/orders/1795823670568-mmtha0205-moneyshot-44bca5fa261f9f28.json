@@ -1,0 +1,24 @@
+{
+ "id": "1795823670568-mmtha0205-moneyshot-44bca5fa261f9f28",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Moneyshot",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823670568,
+ "end": 1795838070568,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823671585-fishandchips-swordinhand-746913651dfd4dc4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Swordinhand",
+ "item": "Lobster",
+ "count": 11,
+ "start": 1795823671585,
+ "end": 1795838071585,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

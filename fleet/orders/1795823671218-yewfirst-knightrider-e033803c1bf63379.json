@@ -1,0 +1,24 @@
+{
+ "id": "1795823671218-yewfirst-knightrider-e033803c1bf63379",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "KnightRider",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823671218,
+ "end": 1795838071218,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

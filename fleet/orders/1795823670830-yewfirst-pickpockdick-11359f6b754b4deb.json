@@ -1,0 +1,24 @@
+{
+ "id": "1795823670830-yewfirst-pickpockdick-11359f6b754b4deb",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "PickpockDick",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823670830,
+ "end": 1795838070830,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795823669353-woodenstaff-ballspinner-2d9d312d4f91456d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Ballspinner",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823669353,
+ "end": 1795838069353,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

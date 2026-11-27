@@ -1,0 +1,23 @@
+{
+ "id": "1795823670698-tossthecaber-moneyshot-aa736dc54a89925e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "Moneyshot",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795823670698,
+ "end": 1795838070698,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

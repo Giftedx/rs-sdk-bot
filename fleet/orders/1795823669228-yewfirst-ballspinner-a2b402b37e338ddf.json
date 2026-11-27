@@ -1,0 +1,24 @@
+{
+ "id": "1795823669228-yewfirst-ballspinner-a2b402b37e338ddf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Ballspinner",
+ "item": "Magic shortbow",
+ "count": 1,
+ "itemId": 861,
+ "start": 1795823669228,
+ "end": 1795838069228,
+ "meet": [
+  {
+   "x": 2654,
+   "z": 3283,
+   "level": 0
+  },
+  {
+   "x": 2654,
+   "z": 3284,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

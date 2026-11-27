@@ -1,0 +1,29 @@
+{
+ "id": "1795823653101-bigpackage-yewfirst-d2e4079dbba750db",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "YewFirst",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795823653101,
+ "end": 1795838053101,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Earth rune",
+   "count": 16
+  }
+ ],
+ "takerWaits": true
+}
