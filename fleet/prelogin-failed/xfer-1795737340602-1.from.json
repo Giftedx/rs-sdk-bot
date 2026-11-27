@@ -5,6 +5,6 @@
  "account": "YewFirst",
  "partner": "Quickhandjob",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795737481532,
+ "at": 1795737648436,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
