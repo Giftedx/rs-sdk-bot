@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795745735069-1",
+ "account": "TheFullMonty",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 4,
+ "claim": "bb614414-627c-4e5e-a6e7-69171295e94c",
+ "count": 4,
+ "ok": true,
+ "at": 1795745887489,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Coins",
+   "requested": 38668,
+   "count": 38668,
+   "inventory": {
+    "before": 6432,
+    "after": 45100
+   },
+   "bank": {
+    "count": 38668,
+    "at": 1795745886377
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795745886796
+ },
+ "logout": {
+  "attemptId": "1795745874576-0000022400-0000000001",
+  "at": 1795745887479,
+  "sha256": "8c76037c55c0cd4fa5d480acdaabfde062f69c280732ff321ef1c1ee7bc7c8e0"
+ },
+ "screen": true
+}
