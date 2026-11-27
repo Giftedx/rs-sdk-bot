@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798870876-1",
  "account": "Fatstack",
  "partner": "Nockitoff",
@@ -10,15 +10,37 @@
  "item": "Air rune",
  "requested": 15,
  "claim": "64810c8a-b846-45f0-82d6-e387e1f7ef0c",
- "count": 0,
- "ok": false,
- "at": 1795799100085,
- "detail": "trade claimed",
+ "count": 15,
+ "ok": true,
+ "at": 1795799154956,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Mind rune",
    "requested": 15,
-   "count": 0
+   "count": 15,
+   "inventory": {
+    "before": 15,
+    "after": 0
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795799110214
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795799109411
+ },
+ "logout": {
+  "attemptId": "1795799100095-0000016740-0000000001",
+  "at": 1795799154942,
+  "sha256": "71d7107c6b17d1df866463177060f3e7b450c27bab8adde27e6728419902132d"
+ },
+ "screen": true
 }
