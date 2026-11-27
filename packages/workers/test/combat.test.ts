@@ -231,6 +231,18 @@ describe('combatWorkerModule contracts and preflight', () => {
         expect(combatPreflight(salmon, { mode: 'taverley_black_knight' }, emptyWorld).ok).toBe(true);
     });
 
+    // Seven pk_army accounts died to Unicorn#89 and Wizard#13 with 0 food eaten: those sites had no food floor.
+    test('the unicorn and wizard sites refuse an account with fewer than 5 PLAIN_FOOD and admit one with 5', () => {
+        const base = makeAccount();
+        const items = Object.fromEntries(Object.entries(base.bank!.items).filter(([id]) => !foodIdsForMode('wizard').includes(Number(id))));
+        const foodBlock = (r: ReturnType<typeof combatPreflight>) => r.blockers.some(b => b.kind === 'combat_survivability' && b.reason === 'food');
+        for (const mode of ['unicorn', 'wizard'] as const) {
+            expect(COMBAT_SITES[mode].minFood).toBe(5);
+            expect(foodBlock(combatPreflight(makeAccount({ bank: { ...base.bank!, items: { ...items, 385: 4 } } }), { mode }, emptyWorld))).toBe(true);
+            expect(foodBlock(combatPreflight(makeAccount({ bank: { ...base.bank!, items: { ...items, 385: 5 } } }), { mode }, emptyWorld))).toBe(false);
+        }
+    });
+
     // A worker defect quarantines the activity. A generic run that refuses for food reports a missing supply.
     test('a generic combat run that refuses with no food is a missing supply, not a worker defect', () => {
         const detail = combatNoFood('wizard', 5);

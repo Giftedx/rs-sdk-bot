@@ -491,6 +491,7 @@ export async function recoverSessionToHub(
         hubAreas?: ReadonlySet<number>;
         rootDir?: string;
         walkToHub?: (s: Session, target: { x: number; z: number; level: number }) => Promise<{ ok: boolean; reason?: string; detail?: string }>;
+        leaveWestArdougne?: (s: Session) => Promise<{ ok: boolean; detail?: string }>;
     } = {},
 ): Promise<{ ok: boolean; kind: string; detail: string; from: string; to: string }> {
     const cap = options.capTicks ?? 900;
@@ -506,10 +507,32 @@ export async function recoverSessionToHub(
         const p = s.sdk.getState()?.player;
         return p ? { worldX: p.worldX, worldZ: p.worldZ, level: p.level } : undefined;
     };
+    const start = cur();
+    if (!start) return { ok: false, kind: 'unknown', detail: 'no player state on login', from, to: from };
+
+    // West Ardougne's city doors stay shut until Biohazard is complete, so no walk from inside reaches a hub bank (the
+    // location class there is a healthy hub, which this function otherwise refuses as nothing to do). The quest sweep's
+    // exit runs first: an Ardougne Teleport, else the Mourner HQ doors and Kilron's ladder. It does nothing after the
+    // quest.
+    let leftWall = false;
+    if (start.level <= 1) {
+        const { inWestArdougne } = await import('../quest/sweep-plan');
+        if (inWestArdougne({ x: start.worldX, z: start.worldZ })) {
+            const leave = options.leaveWestArdougne ?? (async (sess: Session) => (await import('../quest/sweep-travel')).leaveWestArdougne(sess));
+            const left = await leave(s);
+            const end = cur();
+            const at = end ? `${end.worldX},${end.worldZ},${end.level}` : from;
+            if (!left.ok) return { ok: false, kind: 'west_ardougne', detail: `location stranded in West Ardougne: ${left.detail ?? 'exit failed'}`, from, to: at };
+            leftWall = !!end && !inWestArdougne({ x: end.worldX, z: end.worldZ });
+        }
+    }
     const pos = cur();
-    if (!pos) return { ok: false, kind: 'unknown', detail: 'no player state on login', from, to: from };
+    if (!pos) return { ok: false, kind: 'unknown', detail: 'lost player state during recovery', from, to: from };
 
     const initial = classifyLocation(pos, classOpts);
+    if (leftWall && !initial.autoFixable && initial.kind === 'ok') {
+        return { ok: true, kind: 'west_ardougne', detail: `recovered from west_ardougne (${from}) to ${pos.worldX},${pos.worldZ},${pos.level}`, from, to: `${pos.worldX},${pos.worldZ},${pos.level}` };
+    }
     const target = options.target ?? initial.targetHub ?? hubTargetFor(pos);
     if (isWildernessTile(pos) || !initial.autoFixable) {
         return { ok: false, kind: initial.kind, detail: initial.summary, from, to: from };

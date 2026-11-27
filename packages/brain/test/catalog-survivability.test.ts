@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { COMBAT_FLOOR_EXEMPT_TARGETS, createActivityCatalog } from '../src/catalog';
 import type { AccountState, WorldSnapshot } from '../src/contracts';
-import { evaluateCombatSurvivability, type CombatSurvivabilityFloor } from '../src/preflight';
+import { resolveActivityWorkerRoute } from '../src/worker-routing';
+import {
+    accountCombatLevel,
+    activityPreflightFromConfig,
+    evaluateCombatSurvivability,
+    GUARD_FOOD_IDS,
+    type CombatSurvivabilityFloor,
+} from '../src/preflight';
+import { PLAIN_FOOD } from '../../core/src/eat-guard';
 
 const NOW = 1_800_000_000_000;
 
@@ -87,5 +95,51 @@ describe('combat survivability floors in the catalog', () => {
         expect(reasons(strength1, 'quest:biohazard')).toEqual([]);
         expect((catalog.require('quest:biohazard').config.requiredSkills as Record<string, number>).Strength).toBeGreaterThan(1);
         expect((catalog.require('quest:priestperil').config.requiredSkills as Record<string, number>).Attack).toBeGreaterThanOrEqual(20);
+    });
+
+    test('a fighter floor with no named food counts only the food that the eat guard eats', () => {
+        expect(GUARD_FOOD_IDS.length).toBeGreaterThan(0);
+        expect(GUARD_FOOD_IDS.every((id) => PLAIN_FOOD.includes(id))).toBe(true);
+        expect(GUARD_FOOD_IDS[0]).toBe(385);
+        const strong = { Attack: { level: 40, xp: 0 }, Strength: { level: 40, xp: 0 }, Defence: { level: 30, xp: 0 }, Hitpoints: { level: 50, xp: 0 } };
+        // 20 cakes and 20 bread: the guard eats neither, so the trooper fight has no food.
+        const cakes = weakAcct(50, { skills: strong, bank: { items: { 1891: 20, 2309: 20 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(reasons(cakes, 'combat:trooper')).toEqual(['food']);
+        const sharks = weakAcct(50, { skills: strong, bank: { items: { 385: 20 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(reasons(sharks, 'combat:trooper')).toEqual([]);
+    });
+
+    test('the Dwarf Cannon floor asks for 6 food', () => {
+        expect(floorOf('quest:dwarfcannon').minFoodCount).toBe(6);
+    });
+});
+
+describe('fresh-account routes refuse an account they cannot run', () => {
+    const fresh = (pos: { x: number; z: number; level: number }, rangedXp = 0) =>
+        weakAcct(10, { pos, skills: { ...weakAcct(10).skills, Ranged: { level: 1, xp: rangedXp } } });
+    const preflight = (acct: AccountState, id: string) =>
+        activityPreflightFromConfig(acct, createActivityCatalog().require(id), worldOf(acct));
+
+    test('ranged-starter runs only on Tutorial Island with Ranged xp 0', () => {
+        // CoinCock at the Ardougne north hub: the worker refused "fresh tutorial start required" after a login.
+        const hub = preflight(fresh({ x: 2618, z: 3332, level: 0 }), 'combat:ranged-starter');
+        expect(hub.ok).toBe(false);
+        expect(hub.blockers.map((b) => b.kind)).toContain('invalid_config');
+        const trained = preflight(fresh({ x: 3094, z: 3107, level: 0 }, 50), 'combat:ranged-starter');
+        expect(trained.ok).toBe(false);
+        expect(trained.blockers.map((b) => b.kind)).toContain('invalid_config');
+        expect(preflight(fresh({ x: 3094, z: 3107, level: 0 }), 'combat:ranged-starter').blockers).toEqual([]);
+    });
+
+    test('woodcutting fresh45 runs at Draynor and refuses an account below combat 15', () => {
+        const catalog = createActivityCatalog();
+        const act = catalog.require('gather:woodcutting-fresh45');
+        expect(resolveActivityWorkerRoute(act).env.WC_SITE).toBe('draynor');
+        const weak = weakAcct(10);
+        expect(accountCombatLevel(weak)).toBe(3);
+        expect(reasons(weak, 'gather:woodcutting-fresh45')).toEqual(['protection']);
+        const fighter = weakAcct(20, { skills: { ...weak.skills, Attack: { level: 20, xp: 0 }, Strength: { level: 20, xp: 0 }, Defence: { level: 10, xp: 0 }, Hitpoints: { level: 20, xp: 0 } } });
+        expect(accountCombatLevel(fighter)).toBeGreaterThanOrEqual(15);
+        expect(reasons(fighter, 'gather:woodcutting-fresh45')).toEqual([]);
     });
 });

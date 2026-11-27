@@ -227,7 +227,8 @@ export function gatherPreflight(
         return current;
     };
 
-    if (acct.pos && acct.pos.level !== 0 && cfg.method !== 'nature-chest') {
+    // The stable farm's entry walk (goldfarmEntryTravel in thieving.ts) leaves an upper floor itself.
+    if (acct.pos && acct.pos.level !== 0 && cfg.method !== 'nature-chest' && !(cfg.skill === 'thieving' && cfg.method === 'knights-stable')) {
         blockers.push({
             kind: 'unreachable_tile',
             target: { x: acct.pos.x, z: acct.pos.z, level: 0 },
@@ -429,20 +430,9 @@ export function gatherPreflight(
         case 'thieving': {
             if (cfg.method === 'knights' || cfg.method === 'knights-stable') {
                 requireSkill('Thieving', 55);
+                // A start outside the Ardougne market is no blocker: the stable farm walks the world route to the
+                // market bank first (goldfarmEntryTravel in thieving.ts).
                 if (cfg.method === 'knights-stable') {
-                    if (acct.pos) {
-                        const nearBank = Math.max(Math.abs(acct.pos.x - 2654), Math.abs(acct.pos.z - 3283)) <= 40;
-                        const nearSpot = Math.max(Math.abs(acct.pos.x - 2653), Math.abs(acct.pos.z - 3302)) <= 40;
-                        if (acct.pos.level !== 0 || (!nearBank && !nearSpot)) {
-                            blockers.push({
-                                kind: 'unreachable_tile',
-                                target: { x: 2654, z: 3283, level: 0 },
-                                from: acct.pos,
-                                reason: 'no_route',
-                                message: 'knights-stable requires start in Ardougne market',
-                            });
-                        }
-                    }
                     const foodSum = [333, 329, 379, 385, 1891, 2309, 1901].reduce(
                         (sum, id) => sum + availableItem(acct, world, id).available,
                         0,

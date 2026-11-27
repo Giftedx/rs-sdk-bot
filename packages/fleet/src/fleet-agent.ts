@@ -14,6 +14,8 @@ import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '
 import { pidStartedAfter, spawnSyncTimed } from '../../core/src/proc';
 import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
+import type { RawWorkerExitInput } from '../../brain/src/index';
+import { queueWorkerOutcome, tradeNoRouteOutcome } from './brain-runtime';
 import { brainPlannedJobs } from './fleet-sync';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 import { drainedFiles, readPendingUpdate } from './live-update/pending';
@@ -321,6 +323,26 @@ export function recordAgentInfraResult(breaker: InfraCircuitBreaker, output: str
     return false;
 }
 
+// A failed trade whose route search found no route from where the account stands goes to the swarm's outcome
+// inbox, so the planner records a no-route fact and stops sending the account to that hub. Returns the queued file.
+export function queueTradeNoRoute(o: {
+    base: string;
+    account: string;
+    result: string | undefined;
+    startedAt: number;
+    logPath: string;
+    now?: number;
+    queue?: (root: string, raw: RawWorkerExitInput) => string;
+}): string | null {
+    if (!o.result?.startsWith('RESULT fail')) return null;
+    try {
+        const raw = tradeNoRouteOutcome({ root: o.base, account: o.account, resultLine: o.result, startedAt: o.startedAt, finishedAt: o.now ?? Date.now(), logPath: o.logPath });
+        return raw ? (o.queue ?? queueWorkerOutcome)(o.base, raw) : null;
+    } catch {
+        return null;
+    }
+}
+
 export function syncResult(out: string, exitCode: number | null): string {
     const line = lastResult(out);
     return line === 'RESULT fail no result' ? `RESULT fail fleet-sync exit ${exitCode}` : line;
@@ -478,6 +500,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             askedToStop.delete(accountKey);
             endAsked.delete(accountKey);
             log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
+            const tradeStartedAt = Date.now();
             try {
                 const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
                     cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: tradeEnvironment(dir),
@@ -492,7 +515,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                         if (errOut.trim()) log(errOut.trimEnd(), 'err');
                         const combined = `${out}\n${errOut}`;
                         if (exitCode !== 0) recordAgentInfraResult(infraBreaker, combined, exitCode);
-                        log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
+                        const result = out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1);
+                        log(`FLEET_AGENT done ${t.account} ${result ?? 'no result'}`);
+                        const noRoute = queueTradeNoRoute({ base, account: t.account, result, startedAt: tradeStartedAt, logPath: logFile });
+                        if (noRoute) log(`FLEET_AGENT no-route ${t.account}: queued for the swarm's outcome record (${noRoute})`);
                     } catch (err) {
                         log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
                     } finally {

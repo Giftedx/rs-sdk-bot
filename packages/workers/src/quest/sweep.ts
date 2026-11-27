@@ -84,6 +84,8 @@ import {
     reservedEdible,
     returnToAmik,
     withFightMeals,
+    withExitRunes,
+    QUEST_EXIT_RUNES,
     scorpionAntipoisonNeeds,
     scorpionBarcrawlNeeds,
     scorpionEntryRefusal,
@@ -582,6 +584,13 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
         if (fight) {
             for (const [id, n] of withFightMeals(food, quest, baseLevel('Hitpoints'))) food.set(id, n);
             console.log(`QUEST_SWEEP_FIGHT_MEALS ${JSON.stringify({ quest, hitpoints: baseLevel('Hitpoints'), meals: fight })}`);
+        }
+        // The teleport exit from a walled area is required, not optional (QUEST_EXIT_RUNES).
+        if (QUEST_EXIT_RUNES[quest]) {
+            const exit = withExitRunes(base, food, quest, baseLevel('Magic'));
+            base = exit.base;
+            food.clear();
+            for (const [id, n] of exit.food) food.set(id, n);
         }
         if (quest === 'scorpion') base = scorpionAntipoisonNeeds(base, st()?.inventory ?? [], []);
         let wornKit = wornKitPlan(quest, base, st()?.inventory ?? [], [], s.sdk.getEquipment());

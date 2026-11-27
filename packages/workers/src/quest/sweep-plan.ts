@@ -303,6 +303,31 @@ export const fightMeals = (quest: string, maxHp: number): number => {
     const damage = QUEST_FIGHT_DAMAGE[quest];
     return damage === undefined ? 0 : Math.max(0, Math.ceil((damage - Math.floor(maxHp / 2)) / MEAL_HEAL));
 };
+// The runes of a quest's teleport exit from a walled area, required from the bank (the FOOD set otherwise makes runes
+// optional) for an account that can cast the spell. Biohazard: the Mourner HQ is in West Ardougne, whose city doors
+// stay shut until the quest is complete, so without an Ardougne Teleport (Magic 51, 2 law, 2 water) the only exit is
+// Kilron's ladder on foot; a failed walk there left accounts at 2546,3325 with no route out.
+export const QUEST_EXIT_RUNES: Record<string, { magic: number; items: readonly Item[] }> = {
+    biohazard: { magic: 51, items: [{ id: 563, count: 2 }, { id: 555, count: 2 }] },
+};
+// Moves the exit runes from the optional food plan to the required base plan when the Magic level casts the exit. A rune
+// in neither plan (a resume past the exit spent it) stays out.
+export function withExitRunes(base: ReadonlyMap<number, number>, food: ReadonlyMap<number, number>, quest: string, magic: number): { base: Map<number, number>; food: Map<number, number> } {
+    const b = new Map(base);
+    const f = new Map(food);
+    const exit = QUEST_EXIT_RUNES[quest];
+    if (!exit || magic < exit.magic) return { base: b, food: f };
+    for (const i of exit.items) {
+        const have = b.get(i.id) ?? 0;
+        if (have >= i.count || (!b.has(i.id) && !f.has(i.id))) continue;
+        const add = i.count - have;
+        b.set(i.id, i.count);
+        const left = (f.get(i.id) ?? 0) - add;
+        if (left > 0) f.set(i.id, left);
+        else f.delete(i.id);
+    }
+    return { base: b, food: f };
+}
 // The food plan with the fight's meals: the preset's meal raised to fightMeals, or lobsters for a preset with none
 // (mealPlan withdraws other meals for a short one).
 export function withFightMeals(food: ReadonlyMap<number, number>, quest: string, maxHp: number): Map<number, number> {

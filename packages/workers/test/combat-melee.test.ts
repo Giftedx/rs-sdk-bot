@@ -43,6 +43,7 @@ import {
     combatFoodByHeal,
     combatFoodHeld,
     combatFoodWanted,
+    combatEntryNoFood,
     combatLifeWatch,
     combatNoFood,
     combatOutOfFood,
@@ -695,6 +696,27 @@ test('the run food is PLAIN_FOOD by heal, it leaves the fight with no food at th
  expect(combatPrayerShort('wizard',0,CONFIGS.wizard!.prayer,'enter')).toBeUndefined();
  expect(combatFailDetail(Error(combatNoFood('giant',8)))).toBe(combatNoFood('giant',8));
  expect(combatFailDetail(Error('combat travel blocked'))).toBe('Error: combat travel blocked');
+});
+
+// AFKnight (hp=2/13) and Earlyshooter (hp=1/23) were sent to the unicorns with no food. A run at its eat level with no
+// food refuses before any walk or bank trip, with the words that end the job in the supervisor.
+test('a fight run at its eat level with no food in the pack refuses at ticks=0 before any walk or bank trip',async()=>{
+ const at=(level:number)=>(name:string)=>name==='Hitpoints'?{name,level,baseLevel:50,experience:0}:undefined;
+ const low=genericCombat();let walks=0;low.s.sdk.getSkill=at(10);
+ const r=await runGenericCombatSession(low.s,{target:'wizard',cap:1000,env:{},walk:async()=>{walks++;return false;},stop:()=>false});
+ expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.bankTrips).toBe(0);expect(r.kills).toBe(0);
+ expect(r.detail.startsWith('no food: wizard start at 10/50 Hitpoints')).toBe(true);expect(r.detail).toContain('ticks=0');
+ expect(/RESULT fail no food/.test(`RESULT fail ${r.detail}`)).toBe(true);
+ // One piece of food in the pack, or Hitpoints above the eat level: the run goes on to the bank for food.
+ for(const [level,food] of [[10,1],[50,0]] as const){
+  const g=genericCombat();let w=0;g.s.sdk.getSkill=at(level);
+  for(let i=0;i<food;i++)g.s.sdk.getInventory().push({id:385,name:'Shark',count:1,slot:i});
+  const ok=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,env:{},walk:async()=>{w++;g.setTick(1001);return false;},stop:()=>false});
+  expect(w).toBeGreaterThan(0);expect(ok.detail).not.toContain('Hitpoints (eat level');
+ }
+ // A run that carries no food has no entry refusal.
+ expect(combatEntryNoFood('chaos_wine',1,50,0,0)).toBeUndefined();expect(combatEntryNoFood('wizard',0,50,0,5)).toBeUndefined();
+ expect(combatEntryNoFood('wizard',10,10,0,5)).toBeUndefined();expect(combatEntryNoFood('wizard',9,10,0,5)).toContain('no food:');
 });
 
 test('the tick cap that stops a full-pack bank walk ends the run as capped, not as a throw',async()=>{

@@ -1238,3 +1238,84 @@ test('two running accounts on the same finite quest demand do not double-allocat
         expect(reroutedWork.activityId).toBe('gather:thieving-knights');
     }
 });
+
+test('a running account keeps its running job under a slot cap and a full spot instead of an empty plan', () => {
+    const coins: GoalDemand = { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 10_000_000 }, fulfilled: 0, remaining: 10_000_000, priorityWeight: 1, active: true };
+    const slotWorld: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: {
+            RunOne: makeAcct({ name: 'RunOne', lifecycle: 'running', activeJob: { activityId: 'gather:thieving-knights', demandId: 'd:coins', startedAt: NOW - 60_000 } }),
+            RunTwo: makeAcct({ name: 'RunTwo', lifecycle: 'running', activeJob: { activityId: 'gather:thieving-knights', demandId: 'd:coins', startedAt: NOW - 60_000 } }),
+            IdleOne: makeAcct({ name: 'IdleOne' }),
+        },
+    };
+    const capped = scheduleFleet({ world: slotWorld, activities: ACTIVITIES, demands: [coins], maxBots: 1 });
+    for (const name of ['RunOne', 'RunTwo']) {
+        const work = capped.accountPlans[name]?.steps.at(-1);
+        expect(work?.stepKind === 'work' && work.activityId).toBe('gather:thieving-knights');
+        expect(capped.accountPlans[name]?.idleReason).toBeUndefined();
+    }
+    expect(capped.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
+
+    const sharks: GoalDemand = { id: 'd:raw-sharks', goalKind: 'main_supply', valueScore: 20, valuePerHour: 20, target: { kind: 'item', itemId: 383, count: 100 }, fulfilled: 0, remaining: 100, priorityWeight: 1, active: true };
+    const spotWorld: WorldSnapshot = {
+        ...slotWorld,
+        accounts: {
+            FishA: makeAcct({ name: 'FishA', lifecycle: 'running', activeJob: { activityId: 'gather:fishing-shark', demandId: 'd:raw-sharks', startedAt: NOW - 60_000 } }),
+            FishB: makeAcct({ name: 'FishB', lifecycle: 'running', activeJob: { activityId: 'gather:fishing-shark', demandId: 'd:raw-sharks', startedAt: NOW - 60_000 } }),
+        },
+    };
+    const full = scheduleFleet({ world: spotWorld, activities: [ACTIVITIES[0]!], demands: [sharks], maxBots: 5 });
+    for (const name of ['FishA', 'FishB']) {
+        const work = full.accountPlans[name]?.steps.at(-1);
+        expect(work?.stepKind === 'work' && work.activityId).toBe('gather:fishing-shark');
+        expect(full.accountPlans[name]?.idleReason).toBeUndefined();
+    }
+});
+
+test('a hub trade never names an account the controller holds out of trades, as donor or recipient', () => {
+    const donor = makeAcct({
+        name: 'Donor',
+        pos: { x: 3185, z: 3436, level: 0 },
+        skills: { Cooking: { level: 1, xp: 0 }, Fishing: { level: 1, xp: 0 } },
+        bank: { items: { 383: 400, 995: 5000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const cook = makeAcct({
+        name: 'Cooker',
+        pos: { x: 2619, z: 3332, level: 0 },
+        inventory: { 995: 1000 },
+        bank: { items: { 995: 1000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Donor: donor, Cooker: cook },
+    };
+    const demands: GoalDemand[] = [
+        { id: 'd:cooked', goalKind: 'main_supply', valueScore: 20, valuePerHour: 20, target: { kind: 'item', itemId: 385, count: 100 }, fulfilled: 0, remaining: 100, priorityWeight: 1, assignedAccount: 'Cooker', active: true },
+    ];
+    const base = {
+        world,
+        activities: ACTIVITIES,
+        demands,
+        logoutProofs: new Map<string, LogoutProof>([['donor', confirmedProof('Donor')], ['cooker', confirmedProof('Cooker')]]),
+        requireMarketQuote: true,
+        marketQuotes: {},
+        maxBots: 5,
+    };
+    expect(scheduleFleet(base).transferOrders.length).toBe(1);
+    for (const heldName of ['Donor', 'Cooker']) {
+        const plan = scheduleFleet({
+            ...base,
+            transferPartyHold: (account) => (account === heldName ? 'swarm stopped its run last cycle' : undefined),
+        });
+        expect(plan.transferOrders).toEqual([]);
+        const cookerSteps = plan.accountPlans.Cooker?.steps ?? [];
+        expect(cookerSteps.some((s) => (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker')).toBe(false);
+    }
+});

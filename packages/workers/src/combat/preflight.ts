@@ -68,6 +68,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         anchor: { x: 3087, z: 3452, level: 0 },
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
+        minFood: 5,
         defaultCapTicks: 1500,
     },
     wizard: {
@@ -78,6 +79,7 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
         anchor: { x: 3110, z: 3170, level: 0 },
         membersOnly: false,
         minCombatStats: { Hitpoints: 20 },
+        minFood: 5,
         defaultCapTicks: 10000,
     },
     giant: {

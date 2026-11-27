@@ -210,6 +210,16 @@ export function combatOutOfFood(hp: number, maxHp: number, held: number): boolea
 // (packages/practice/src/supervise.ts), so a restart does not walk the account back into the fight with no food.
 export const combatNoFood = (target: string, want: number): string => `no food: ${target} needs ${want} pieces of PLAIN_FOOD and the bank and pack hold none`;
 
+// The refusal at the start of a fight run, before any walk, bank trip or attack, when the account is at its eat level
+// or below and holds no food. The `no food` words make the supervisor end the job, so a later planner pass does not
+// send a low-Hitpoints account with no food back to the same fight. A run that carries no food (Telekinetic Grab) has
+// no such refusal. An account at full Hitpoints (a 10-Hitpoints account, whose eat level is its maximum) goes on to the
+// bank for food: waiting does not raise its Hitpoints.
+export function combatEntryNoFood(target: string, hp: number, maxHp: number, held: number, want: number): string | undefined {
+    if (want === 0 || hp >= maxHp || !combatOutOfFood(hp, maxHp, held)) return undefined;
+    return `no food: ${target} start at ${hp}/${maxHp} Hitpoints (eat level ${defaultEatAt(maxHp)}) with no PLAIN_FOOD in the pack ticks=0`;
+}
+
 // The RESULT detail of a thrown error. A `no food` refusal keeps its words at the start of the detail.
 export const combatFailDetail = (e: unknown): string => (e instanceof Error && e.message.startsWith('no food:') ? e.message : String(e));
 
@@ -2205,7 +2215,10 @@ export async function runGenericCombatSession(
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
             return true;
         };
-        // A run that cannot enter for its Prayer points refuses before the potion cleanup owns a bank return.
+        // A run at its eat level with no food, or one that cannot enter for its Prayer points, refuses before the
+        // potion cleanup owns a bank return.
+        const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
+        if (noFood0) throw Error(noFood0);
         const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
         const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
         if (noPrayer0) throw Error(noPrayer0);
@@ -2685,7 +2698,10 @@ export async function runMeleeGatherCli(
             return true;
         };
 
-        // A run that cannot enter for its Prayer points refuses before the potion cleanup owns a bank return.
+        // A run at its eat level with no food, or one that cannot enter for its Prayer points, refuses before the
+        // potion cleanup owns a bank return.
+        const noFood0 = combatEntryNoFood(TARGET_KEY, hp(), maxHp(), combatFoodHeld(s.sdk.getInventory()), foodWant);
+        if (noFood0) throw Error(noFood0);
         const far0 = pos() && Math.max(Math.abs(pos()!.worldX - conf.spot.x), Math.abs(pos()!.worldZ - conf.spot.z)) > 15;
         const noPrayer0 = far0 ? combatPrayerShort(TARGET_KEY, prayer(), targetConf.prayer, 'enter') : undefined;
         if (noPrayer0) throw Error(noPrayer0);

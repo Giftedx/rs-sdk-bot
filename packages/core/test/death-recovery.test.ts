@@ -238,3 +238,25 @@ test('flee guard: food in the pack or Hitpoints above the line start nothing', a
         w.stop();
     }
 });
+
+test('death cause: a Wilderness hit with no faced source names the player that attacks, never npc@-1', () => {
+    const log = damageLog();
+    const ev = (tick: number, damage: number, o: number) => ({ type: 'damage_taken', tick, damage, sourceType: 'npc', sourceIndex: -1, observationId: o, targetType: 'player', targetIndex: -1 });
+    // Player slot 12 attacks a slot that is no nearby player: this player.
+    const foe = { index: 12, name: 'Pker', distance: 2, combatTargetType: 'player', combatTargetIndex: 40 };
+    log.read({ tick: 10, player: { hp: 30 }, nearbyNpcs: [], nearbyPlayers: [foe], combatEvents: [ev(10, 12, 1)] });
+    log.read({ tick: 12, player: { hp: 0 }, nearbyNpcs: [], nearbyPlayers: [foe], combatEvents: [ev(10, 12, 1), ev(12, 18, 2)] });
+    expect(log.cause()).toBe('by=player:Pker taken=30 hits=2');
+    // With no attacker seen, the hit is unknown, not npc@-1.
+    const blind = damageLog();
+    blind.read({ tick: 5, player: { hp: 9 }, nearbyNpcs: [], nearbyPlayers: [], combatEvents: [ev(5, 9, 1)] });
+    expect(blind.cause()).toBe('by=unknown taken=9 hits=1');
+});
+
+test('death cause: another player hitting an NPC is no damage to this player', () => {
+    const log = damageLog();
+    log.read({ tick: 3, player: { hp: 20 }, nearbyNpcs: [], nearbyPlayers: [], combatEvents: [
+        { type: 'damage_taken', tick: 3, damage: 7, sourceType: 'other_player', sourceIndex: -1, observationId: 1, targetType: 'npc', targetIndex: 4 },
+    ] });
+    expect(log.cause()).toBe('by=unknown taken=0 hits=0');
+});

@@ -2413,3 +2413,25 @@ test('a surface walk whose straight line enters the Wilderness goes to the route
  expect(crossesWilderness({x:3222,z:3218},{x:3210,z:3424})).toBe(false);
  expect(crossesWilderness({x:3100,z:3500},{x:3100,z:3519})).toBe(false);
 });
+
+import {withExitRunes,needs as sweepNeeds,presetFor as sweepPreset} from '../src/quest/sweep';
+test('Biohazard requires the runes of one Ardougne Teleport from the bank for an account that can cast it', () => {
+ const food=sweepNeeds(sweepPreset('biohazard'),true,'biohazard');
+ expect(food.get(563)).toBe(4);
+ const base=sweepNeeds(sweepPreset('biohazard'),false,'biohazard');
+ expect(base.has(563)).toBe(false);
+ // Magic 51 casts the exit: 2 law and 2 water move to the required plan; the second teleport's runes stay optional.
+ const cast=withExitRunes(base,food,'biohazard',51);
+ expect(cast.base.get(563)).toBe(2);
+ expect(cast.base.get(555)).toBe(2);
+ expect(cast.food.get(563)).toBe(2);
+ expect(cast.food.get(555)).toBe(2);
+ // Magic 50 cannot cast it: the plan stays as it was, and the bot leaves by Kilron's ladder.
+ const low=withExitRunes(base,food,'biohazard',50);
+ expect(low.base.has(563)).toBe(false);
+ expect(low.food.get(563)).toBe(4);
+ // A resume past the exit spent the runes: none is added back.
+ const spent=new Map(food);spent.delete(563);spent.delete(555);
+ expect(withExitRunes(base,spent,'biohazard',99).base.has(563)).toBe(false);
+ expect(withExitRunes(base,food,'imp',99).base.size).toBe(base.size);
+});

@@ -126,8 +126,9 @@ export async function recoverDeath(s: RecoverySession, d: DeathSnapshot, o: Reco
     return done(picked === piles.length ? 'ok' : 'partial', ` picked=${picked} of=${piles.length} worn=${worn}`);
 }
 
-// The flee guard (randomevents.ts `flee`) starts at this share of the maximum Hitpoints, with no food in the pack.
-// An estimate: a 30 Hitpoints account flees at 9, above one hit of most NPCs that a low account fights.
+// The flee guard (randomevents.ts `flee`) starts at this share of the maximum Hitpoints or at FLEE_HITS estimated hits
+// of the attacker (randomevents/combat.ts fleeHpLine), whichever is higher, when the pack holds no PLAIN_FOOD.
+// A 30 Hitpoints account flees at 9 or more; a 10 Hitpoints account flees at 6 against a level 9 Wizard.
 export const FLEE_HP = 0.3;
 
 // ---- death cause ----
@@ -143,11 +144,21 @@ export const ATTACKER_TICKS = 100;
 const SEEN_TICKS = 60;
 export type Hit = { tick: number; damage: number; source: string };
 
-// The name of a damage source: an NPC as `name#id`, a player as `player:name`.
+// The name of a damage source: an NPC as `name#id`, a player as `player:name`. The client names the source by the
+// entity the player faces (StateCollector decodeFaceEntity), so an index below 0 is a hit with no known source.
 export function sourceName(st: any, type: string, index: number): string {
+    if (index < 0 && (type === 'npc' || type === 'other_player')) return 'unknown';
     if (type === 'npc') { const n = (st?.nearbyNpcs ?? []).find((x: any) => x.index === index); return n ? `${String(n.name ?? 'npc').replace(/\s+/g, '_')}#${n.id}` : `npc@${index}`; }
     if (type === 'other_player') { const q = (st?.nearbyPlayers ?? []).find((x: any) => x.index === index); return `player:${q?.name ?? index}`; }
     return type;
+}
+
+// The nearest player whose combat target is this player: a target slot that is no other nearby player (targetsMe).
+export function attackingPlayer(st: any): any | undefined {
+    const others = st?.nearbyPlayers ?? [];
+    return others.filter((q: any) => q && q.combatTargetType === 'player' && typeof q.combatTargetIndex === 'number'
+        && q.combatTargetIndex >= 0 && !others.some((o: any) => o?.index === q.combatTargetIndex))
+        .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
 }
 
 export function damageLog() {
@@ -170,13 +181,21 @@ export function damageLog() {
             }
             const near = (st?.nearbyNpcs ?? []).filter((n: any) => n && targetsMe(st, n))
                 .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
-            if (near) attacker = { tick, source: sourceName(st, 'npc', near.index) };
+            const foe = attackingPlayer(st);
+            // A player that attacks this player is the attacker before an NPC: in the Wilderness the player kills.
+            if (foe) attacker = { tick, source: `player:${foe.name ?? foe.index}` };
+            else if (near) attacker = { tick, source: sourceName(st, 'npc', near.index) };
             for (const e of st?.combatEvents ?? []) {
-                if (e?.type !== 'damage_taken') continue;
+                // A hit of another player on an NPC is `damage_taken` too, with an NPC as its target.
+                if (e?.type !== 'damage_taken' || (e.targetType !== undefined && e.targetType !== 'player')) continue;
                 const key = e.observationId !== undefined ? `o${e.observationId}` : `${e.tick}:${e.sourceType}:${e.sourceIndex}:${e.damage}`;
                 if (seen.has(key)) continue;
                 seen.set(key, e.tick ?? st?.tick ?? 0);
-                const hit = { tick: e.tick ?? st.tick ?? 0, damage: e.damage ?? 0, source: sourceName(st, e.sourceType, e.sourceIndex) };
+                const named = sourceName(st, e.sourceType, e.sourceIndex);
+                // A hit with no faced source counts for the attacker of the last ATTACKER_TICKS ticks.
+                const hitTick = e.tick ?? st.tick ?? 0;
+                const source = named === 'unknown' && attacker && hitTick - attacker.tick <= ATTACKER_TICKS ? attacker.source : named;
+                const hit = { tick: hitTick, damage: e.damage ?? 0, source };
                 hits.push(hit);
                 if (!attacker || hit.tick >= attacker.tick) attacker = { tick: hit.tick, source: hit.source };
             }
@@ -189,7 +208,8 @@ export function damageLog() {
         cause(): string {
             const by = new Map<string, number>();
             for (const h of hits) by.set(h.source, (by.get(h.source) ?? 0) + h.damage);
-            const top = [...by].sort((a, b) => b[1] - a[1])[0];
+            // The named source that did the most damage; hits with no known source fall to the last attacker.
+            const top = [...by].sort((a, b) => b[1] - a[1]).find(([name]) => name !== 'unknown');
             const last = attacker && lastTick - attacker.tick <= ATTACKER_TICKS ? attacker.source : undefined;
             const taken = Math.max(hits.reduce((n, h) => n + h.damage, 0), drops.reduce((n, h) => n + h.damage, 0));
             return `by=${top?.[0] ?? last ?? 'unknown'} taken=${taken} hits=${hits.length}`;

@@ -112,3 +112,29 @@ test('flee guard: once the flee job ends, a new low-Hitpoints attack starts a ne
     expect(f.lines.filter(l => /^EVENT flee_guard flee /.test(l)).length).toBe(2);
     f.w.stop();
 });
+
+test('flee guard: cake or bread with an Eat option does not turn the flee off; a plain fish does', async () => {
+    const cake = fake({ hp: 2, maxHp: 10, combatLevel: 9 });
+    cake.st.inventory = [{ slot: 0, id: 1891, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }, { slot: 1, id: 2309, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }];
+    await cake.step();
+    expect(cake.walks().length).toBe(1);
+    cake.w.stop();
+    const fish = fake({ hp: 2, maxHp: 10, combatLevel: 9 });
+    fish.st.inventory = [{ slot: 0, id: 329, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }];
+    await fish.step();
+    expect(fish.walks().length).toBe(0);
+    fish.w.stop();
+});
+
+test('flee guard: the flee job sends no walk after the player dies', async () => {
+    const f = fake({ hp: 2, maxHp: 10, combatLevel: 9 });
+    await f.step(3);
+    expect(f.walks().length).toBeGreaterThanOrEqual(1);
+    f.st.player = { ...f.st.player, hp: 0, isDead: true };
+    await f.step();
+    const after = f.walks().length;
+    await f.step(10);
+    expect(f.walks().length).toBe(after);
+    expect(f.lines.some(l => /^EVENT flee_guard dead /.test(l))).toBe(true);
+    f.w.stop();
+});

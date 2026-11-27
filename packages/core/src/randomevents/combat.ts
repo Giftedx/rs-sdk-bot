@@ -1,5 +1,6 @@
+import { PLAIN_FOOD } from '../eat-guard';
 import {
-    EAT, FLEE_RANGE, cheb, invOf, meOf, outOfReach, targetsMe, tileOf,
+    FLEE_RANGE, cheb, invOf, meOf, outOfReach, targetsMe, tileOf,
     type JobSpec, type PathFinder, type Tile, type TileLevel, type WatcherContext,
 } from './model';
 
@@ -117,6 +118,9 @@ export function createFleeJob(ctx: WatcherContext, idx: number, onSafe?: (detail
             const p = meOf(st);
             if (!h || !p) return true;
             const now = ctx.tick();
+            // A dead player sends no more flee walks: death handling (death-recovery.ts) owns the session from here.
+            const me = st?.player;
+            if (me?.isDead || (typeof me?.hp === 'number' && me.hp <= 0)) { ctx.say(h.name, 'dead', `ticks=${now - begin}`); h.done = true; return true; }
             const npc = (st?.nearbyNpcs ?? []).find((n: any) => n.index === idx);
             const away = outOfReach(p, h.spawn, h.range);
             const engaged = npc ? targetsMe(st, npc) : false;
@@ -216,7 +220,8 @@ export function createFleeGuard(ctx: WatcherContext, fleeOpt: { hp: number; onSa
         // The line holds FLEE_HITS hits of the hardest hitter, so a 10-13 Hitpoints account runs before one hit kills it.
         const strongest = Math.max(...attackers.map((x: any) => (typeof x.combatLevel === 'number' ? x.combatLevel : -1)));
         if (hp > fleeHpLine(max, fleeOpt.hp, strongest >= 0 ? strongest : null)) return;
-        if (invOf(st).some(i => (i.optionsWithIndex ?? []).some((o: any) => EAT.test(o.text ?? '')))) return;
+        // Only food that the eat guard eats (PLAIN_FOOD) turns the flee off: the guard never eats cake, bread or a pie.
+        if (invOf(st).some(i => i && PLAIN_FOOD.includes(i.id))) return;
         const n = attackers.sort((a: any, b: any) => a.distance - b.distance)[0];
         fleeing = true;
         fleeKey = `flee:${n.index}`;
