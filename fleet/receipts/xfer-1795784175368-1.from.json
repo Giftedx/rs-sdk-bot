@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795784175368-1",
  "account": "mmtha0205",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "ca746b3e-832b-4aca-b39f-2150ddf56637",
- "count": 0,
- "ok": false,
- "at": 1795784623220,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795784648407,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795784630089
+ },
+ "logout": {
+  "attemptId": "1795784623228-0000019556-0000000001",
+  "at": 1795784648397,
+  "sha256": "b6bc910f751e633613f761be3f9018bc4a128992f3f6d04f0f49d2f9fb88ab84"
+ },
+ "screen": true
 }
