@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, guardRoute, guardWalk, pack, type DangerScope } from '../danger';
+import { activeDanger, guardRoute, guardWalk, npcReach, pack, planAroundHarm, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
@@ -31,6 +31,7 @@ export async function installDoorPolicy(sdk: any, client?: unknown): Promise<voi
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     if (policySdks.has(raw)) return;
     const original = raw.findPath;
+    let reach: NpcReach | undefined;
     raw.findPath = function(x: number, z: number, ...args: unknown[]) {
         const state = raw.getState(), p = state?.player;
         if (!p) return original.call(raw, x, z, ...args);
@@ -39,7 +40,11 @@ export async function installDoorPolicy(sdk: any, client?: unknown): Promise<voi
         const blocks = blockedDoorsNear(from, { x, z, level: p.level }, accountForSdk(raw))
             .map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
         const npcTiles = npcBlockTiles(Array.isArray(state.nearbyNpcs) ? state.nearbyNpcs : [], from, { x, z, level: p.level });
-        return guardWalk(grid, accountForSdk(raw), from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => withNpcBlocks(grid, npcTiles, () => original.call(raw, x, z, ...args))));
+        const acct = accountForSdk(raw);
+        const find = () => guardWalk(grid, acct, from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => withNpcBlocks(grid, npcTiles, () => original.call(raw, x, z, ...args))));
+        // Harm ground (danger/exposure.ts): a path that hunters of this account can attack goes round them when the way
+        // round is inside its bound. Outermost, so the NPC floods read the plain grid.
+        return planAroundHarm(grid, stateWalkProfile(acct, p), p.level, from, { x, z }, 32, find, { reach: reach ??= npcReach(grid, pf.getDoorAt as any) });
     };
     policySdks.add(raw);
 }

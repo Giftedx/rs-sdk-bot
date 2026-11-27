@@ -2,6 +2,7 @@
 import type { Account, Tile } from '../world-types';
 import { npcAttackStyles } from '../../../knowledge/src/npc-attack-styles';
 import { combatLevel, loadHunters } from './catalog';
+import { routeHarmKeep, routeHarmSet } from './exposure';
 import { PROTECT_MELEE_LEVEL, isDeadlyWithCombat } from './threat';
 import { pack, unpack, withDanger, type FloorGrid } from './tiles';
 
@@ -63,7 +64,13 @@ export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Til
     if (!tiles) { const parts = [0, 1, 2, 3].map(l => dangerSet(acct, l, WORLD)), all = new Int32Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { all.set(p, at); at += p.length; } routeTiles.set(key, tiles = all); }
     // The start (keep[0]) may leave the zone it stands in. Those legs get their own cache key.
     const start = keep[0], out = start ? escapeTiles(acct, start) : [];
-    return withDanger(grid, tiles, [...keep, ...out], query, out.length ? `${key}|from:${start!.level},${start!.x},${start!.z}` : key);
+    const deadlyKey = out.length ? `${key}|from:${start!.level},${start!.x},${start!.z}` : key;
+    if (!acct.avoidHarm) return withDanger(grid, tiles, [...keep, ...out], query, deadlyKey);
+    // A route search for an account that avoids harm (walk/goto.ts, a walk whose verdict is not clear) also closes the
+    // square of each hunter of its combat level (exposure.ts routeHarmSet); the squares of its start and goal stay open.
+    // The harm scope is the inner one: the route labels and scope keys (world/pathfinding.ts) read the inner key.
+    const combat = combatLevel(acct.skills), harm = routeHarmKeep(combat, keep);
+    return withDanger(grid, tiles, [...keep, ...out], () => withDanger(grid, routeHarmSet(combat), [...keep, ...out, ...harm.tiles], query, `${deadlyKey}|harm:${combat}|${harm.key}`), deadlyKey);
 }
 
 // The danger tiles for a walk from `from` to `to` on one level: the box around both ends plus `pad` tiles.

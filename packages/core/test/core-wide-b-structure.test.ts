@@ -257,6 +257,9 @@ test('facades preserve every external/test export and keep internal-only helpers
         'combatLevel', 'parseHunter', 'CAGED', 'parseRoamer', 'loadRoamers', 'loadHunters',
         'hunts', 'deadly', 'PROTECT_MELEE_LEVEL', 'meleeOnly', 'deadlyTo', 'protectedFromMelee', 'liveHunters',
         'pack', 'unpack', 'dangerSet', 'dangerTiles', 'activeDanger', 'withDanger', 'escapeTiles', 'guardRoute', 'guardWalk',
+        'cornerTiles', 'cornersOf', 'dangerSummary', 'foodHealOf', 'harmSet', 'huntersNear', 'isMulti', 'npcReach', 'planAroundHarm',
+        'routeDanger', 'routeExposure', 'routeHarmKeep', 'routeHarmSet', 'runTiles', 'stateWalkProfile', 'walkExposure', 'walkFloorLine', 'walkProfile',
+        'walkThreats', 'walkVerdict',
     ];
     for (const name of [...expectedDangerRuntime, 'Hunter', 'Roamer', 'LiveHunter']) {
         expect(dangerExports.has(name)).toBe(true);
