@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795771571125-1",
  "account": "SporranDip",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Iron bar",
  "requested": 3,
  "claim": "99680126-6ab3-40dc-8516-23e554bfd065",
- "count": 0,
- "ok": false,
- "at": 1795771789516,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795771810394,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795771795884
+ },
+ "logout": {
+  "attemptId": "1795771789883-0000005876-0000000001",
+  "at": 1795771810243,
+  "sha256": "4d665be13b4effe6df6497578e6ab866ba6d6401b0bdaf0c92e6566957c73fb7"
+ },
+ "screen": true
 }
