@@ -1,8 +1,10 @@
 // Prints one line for each recent fast-fail loop recorded in the main checkout results file, then one line for each error
-// that ended short runs of 3 or more accounts in 24 h (crossAccountFaults). It reads the file and changes nothing.
+// that ended short runs of 3 or more accounts in 24 h (crossAccountFaults), then the accounts that the swarm holds after
+// repeated ok runs with no change (packages/core/src/noop-runs.ts). It reads the files and changes nothing.
 // Usage: bun tools/fail-loops.ts [hours]
 import { join, resolve } from 'node:path';
 import { crossAccountFaults, crossAccountLines, failLoops, loopLines, readRecentResults } from '../packages/core/src/fail-loops';
+import { noOpLines, noOpRunsFile, readNoOpRuns } from '../packages/core/src/noop-runs';
 
 export * from '../packages/core/src/fail-loops';
 
@@ -21,4 +23,7 @@ if (import.meta.main) {
     const cross = crossAccountFaults(rows, now);
     console.log(cross.length ? `cross-account faults in 24 h (${cross.length}):` : 'no cross-account faults in 24 h');
     for (const line of crossAccountLines(cross, 20)) console.log(`  ${line}`);
+    const noops = noOpLines(readNoOpRuns(noOpRunsFile(join(main, '.practice', 'live'))), 50);
+    console.log(noops.length ? `no-op holds (${noops.length}): ok runs with no XP, item, position or quest change` : 'no no-op holds');
+    for (const line of noops) console.log(`  ${line}`);
 }

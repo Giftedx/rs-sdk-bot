@@ -32,6 +32,7 @@ import {
     HUB_BANKER_LOCATIONS,
     isProtectedAccountName,
     isTransferOrder,
+    standsAtHubBank,
     pruneExpiredCooldowns,
     pruneExpiredHolds,
     reconcileOfflineBankTrust,
@@ -334,7 +335,8 @@ export function classifyAccountLifecycle(input: AccountLifecycleInput): AccountL
     ) {
         return 'needs_logout_recovery';
     }
-    if (input.strandedHold || isStrandedPosition(input.pos ?? null) || walledInAt(input.pos ?? null, input.quests)
+    // A stranded hold sends the account to a hub bank. At a hub bank that walk ends where it starts.
+    if ((input.strandedHold && !standsAtHubBank(input.pos)) || isStrandedPosition(input.pos ?? null) || walledInAt(input.pos ?? null, input.quests)
         || fencedInAt(input.pos ?? null)) {
         return 'needs_location_recovery';
     }

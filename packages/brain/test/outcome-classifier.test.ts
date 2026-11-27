@@ -320,7 +320,8 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         // Snapshot overlay transitions accounts cleanly; death NEVER expires even days later
         const snap = makeSnapshot({
             HelperA: makeAccount('HelperA'),
-            HelperB: makeAccount('HelperB'),
+            // Off a hub bank: at one, the walk of a location recovery has already arrived.
+            HelperB: { ...makeAccount('HelperB'), pos: { x: 3285, z: 3365, level: 0 } },
             HelperC: makeAccount('HelperC'),
             HelperD: makeAccount('HelperD', 'running'),
         });

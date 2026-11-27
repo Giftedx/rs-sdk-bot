@@ -22,12 +22,12 @@ import {
 } from '../../workers/src/contracts';
 import {
     createExpiringHold,
-    HUB_BANKER_LOCATIONS,
     isHoldActive,
     marketCooldownKey,
     pruneExpiredCooldowns,
     pruneExpiredHolds,
     setCooldown,
+    standsAtHubBank,
     validateAccountState,
     validateDefectRecord,
     validateRateSample,
@@ -1292,7 +1292,7 @@ export class OutcomeClassifier {
         // bank the recovery walk (to the nearest hub) ends where it starts, so the facts would hold and the recovery
         // would repeat; there the account stays idle and noRouteTo refuses the places it cannot reach.
         if (acct.lifecycle === 'idle' && enclosedAt(noRoutes, acct.pos, now)
-            && !Object.values(HUB_BANKER_LOCATIONS).some(h => standsAt(acct.pos, h.bankTile))) {
+            && !standsAtHubBank(acct.pos)) {
             acct = { ...acct, lifecycle: 'needs_location_recovery' };
         }
         const hasOverlay = this.accountOverlays.has(key);
@@ -1339,6 +1339,10 @@ export class OutcomeClassifier {
         for (const h of overlay.holds) {
             if (isHoldActive(h, now)) holdMap.set(`${h.kind}:${h.key}`, h);
         }
+        // A stranded hold sends the account to a hub bank. An account that stands at one has arrived: the hold and
+        // its recovery lifecycle end, or each recovery walk would end where it starts and the next would follow.
+        const arrived = standsAtHubBank(acct.pos);
+        if (arrived) holdMap.delete('maintenance:location_stranded');
         const mergedHolds = [...holdMap.values()];
 
         let nextLifecycle: AccountLifecycle = acct.lifecycle;
@@ -1350,7 +1354,8 @@ export class OutcomeClassifier {
                     nextLifecycle = 'needs_logout_recovery';
                 } else if (
                     overlay.lifecycleOverride === 'needs_location_recovery' &&
-                    acct.lifecycle !== 'needs_logout_recovery'
+                    acct.lifecycle !== 'needs_logout_recovery' &&
+                    !arrived
                 ) {
                     nextLifecycle = 'needs_location_recovery';
                 }
@@ -1397,6 +1402,28 @@ export class OutcomeClassifier {
             throw new Error(`OutcomeClassifier.applyToSnapshot produced invalid WorldSnapshot: ${errors.join('; ')}`);
         }
         return nextSnapshot;
+    }
+
+    // A location recovery run ended ok where the account is not stranded. A recovery run has no activity, so no
+    // outcome of it reaches classify(): without this call its stranded hold and lifecycle stay until they expire,
+    // and each brain pass plans the same recovery walk again.
+    clearLocationRecovery(account: string, now = Date.now()): boolean {
+        const key = account.toLowerCase();
+        const overlay = this.accountOverlays.get(key);
+        if (!overlay) return false;
+        const holds = overlay.holds.filter((h) => h.key !== 'location_stranded');
+        const dropLifecycle = overlay.lifecycleOverride === 'needs_location_recovery';
+        if (holds.length === overlay.holds.length && !dropLifecycle) return false;
+        const { lifecycleOverride, lifecycleExpiresAt, ...rest } = overlay;
+        const next: AccountOutcomeOverlay = {
+            ...rest,
+            ...(!dropLifecycle && lifecycleOverride ? { lifecycleOverride, ...(lifecycleExpiresAt !== undefined ? { lifecycleExpiresAt } : {}) } : {}),
+            holds,
+        };
+        if (!next.lifecycleOverride && holds.length === 0 && Object.keys(next.cooldowns).length === 0) this.accountOverlays.delete(key);
+        else this.accountOverlays.set(key, next);
+        this.saveIfEnabled(now);
+        return true;
     }
 
     applyOperatorCommand(cmd: OperatorCommand, now = Date.now()): boolean {
