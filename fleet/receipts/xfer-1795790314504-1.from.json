@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790314504-1",
  "account": "Billionaire",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "720ee477-f607-44b7-b53f-58a55a679f62",
- "count": 0,
- "ok": false,
- "at": 1795790858477,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790888123,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790865395
+ },
+ "logout": {
+  "attemptId": "1795790858487-0000002460-0000000001",
+  "at": 1795790888110,
+  "sha256": "22fafb66d68c4c816bfaf30b62383fdec8d3bd3bb1c990d07f88dffb56a545f6"
+ },
+ "screen": true
 }
