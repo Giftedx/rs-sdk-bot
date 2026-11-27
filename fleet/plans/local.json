@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795799739220,
+ "at": 1795799752426,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -144,7 +144,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1143"
+    "BATCH_UNITS": "1137"
    },
    "enabled": true,
    "repeat": false,
