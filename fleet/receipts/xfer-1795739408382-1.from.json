@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795739408382-1",
  "account": "SporranDip",
  "partner": "Moneyshot",
@@ -10,15 +10,37 @@
  "item": "Iron ore",
  "requested": 56,
  "claim": "7489cfac-0c06-41a1-98ea-660216e4504c",
- "count": 0,
- "ok": false,
- "at": 1795739805523,
- "detail": "trade claimed",
+ "count": 56,
+ "ok": true,
+ "at": 1795740023769,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Coal",
    "requested": 156,
-   "count": 0
+   "count": 156,
+   "inventory": {
+    "before": 156,
+    "after": 0
+   },
+   "bank": {
+    "count": 156,
+    "at": 1795739937411
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 56,
+  "after": 0
+ },
+ "bank": {
+  "count": 56,
+  "at": 1795739936671
+ },
+ "logout": {
+  "attemptId": "1795739805531-0000013780-0000000001",
+  "at": 1795740023760,
+  "sha256": "87975aecbeebf037a9f707cbe2b3e003e8273b71b51435a586a9c2997f072f6a"
+ },
+ "screen": true
 }
