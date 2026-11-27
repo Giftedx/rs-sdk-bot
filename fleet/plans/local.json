@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777528536,
+ "at": 1795777549128,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,28 @@
    "role": "pvp"
   },
   {
-   "account": "Pocketpython",
+   "account": "Unsheathed",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -69,14 +90,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "15",
+    "MAX_ITEMS": "9",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "15"
+    "BATCH_UNITS": "9"
    },
    "enabled": true,
    "repeat": false,
@@ -101,25 +122,6 @@
    "role": "auto",
    "resources": [
     "chickens"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
    ]
   },
   {
@@ -265,14 +267,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "603",
+    "MAX_ITEMS": "382",
     "COIN_RESERVE": "1000",
-    "FLOAT": "122600",
+    "FLOAT": "78400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "603"
+    "BATCH_UNITS": "382"
    },
    "enabled": true,
    "repeat": false,
@@ -290,19 +292,38 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "57",
+    "MAX_ITEMS": "63",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "57"
+    "BATCH_UNITS": "63"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1230",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
    "account": "Swordswallow",
@@ -380,24 +401,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "runeshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "6",
+    "ITEM_ID": "554",
+    "ITEMS": "Fire rune",
+    "MAX_ITEMS": "337",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "6"
+    "DEMAND_ID": "campaign:haggis:item:554",
+    "BATCH_UNITS": "337"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:554",
    "role": "army"
   },
   {
@@ -405,24 +426,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magic_guild_elemental",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
     "MAX_ITEMS": "350",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
+    "DEMAND_ID": "campaign:haggis:item:557",
     "BATCH_UNITS": "350"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "campaign:haggis:item:557",
    "role": "army"
   },
   {
@@ -446,6 +467,41 @@
    "repeat": false,
    "goal": "campaign:haggis:item:557",
    "role": "auto"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Abracadickra",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Moneyshot",
@@ -480,26 +536,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:99",
    "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "161"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
   }
  ],
  "army": [
