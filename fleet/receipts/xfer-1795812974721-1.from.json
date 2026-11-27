@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795812974721-1",
  "account": "Fatstack",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Unfinished potion",
  "requested": 1,
  "claim": "28cc94eb-70ec-4304-91e4-7b5aa5fc993a",
- "count": 0,
- "ok": false,
- "at": 1795813100423,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795813150271,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795813134317
+ },
+ "logout": {
+  "attemptId": "1795813100443-0000022628-0000000001",
+  "at": 1795813150255,
+  "sha256": "c7156f99ac81730810a15ae77c50028657534240a02258907cd7046d246b0173"
+ },
+ "screen": true
 }
