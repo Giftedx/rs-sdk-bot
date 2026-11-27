@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795781600754,
+ "at": 1795781614262,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,31 @@
    "role": "pvp"
   },
   {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "266",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "266"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -78,21 +103,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=27 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -101,7 +111,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1085"
+    "BATCH_UNITS": "1069"
    },
    "enabled": true,
    "repeat": false,
