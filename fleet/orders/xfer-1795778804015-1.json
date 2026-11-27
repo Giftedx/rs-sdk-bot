@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795778804015-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "TossTheCaber",
+  "item": "Iron axe",
+  "count": 1,
+  "itemId": 1349,
+  "start": 1795778804015,
+  "end": 1795779704015,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
