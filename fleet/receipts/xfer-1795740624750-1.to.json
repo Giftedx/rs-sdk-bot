@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795740624750-1",
  "account": "YewFirst",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Bronze bar",
  "requested": 4,
  "claim": "3839102b-e613-4246-9c66-46aa270f2b05",
- "count": 0,
- "ok": false,
- "at": 1795740916476,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795740945367,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795740944555
+ },
+ "logout": {
+  "attemptId": "1795740916485-0000019288-0000000001",
+  "at": 1795740945357,
+  "sha256": "595fa748bd3dfd4787b082703f7cec934319a459ae745163666e39fbf411d8ba"
+ },
+ "screen": true
 }
