@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795739444831-2",
+ "role": "from",
+ "account": "BowBeforeMe",
+ "partner": "Hocuspokeus",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795740146030,
+ "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
+}
