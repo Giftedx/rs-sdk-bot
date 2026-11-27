@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795776398769-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "BowBeforeMe",
+  "item": "Coins",
+  "count": 10,
+  "itemId": 995,
+  "start": 1795776398769,
+  "end": 1795777298769,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
