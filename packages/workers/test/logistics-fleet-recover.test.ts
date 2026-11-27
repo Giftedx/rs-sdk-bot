@@ -952,6 +952,9 @@ test('a pre-login admission failure signals the partner without writing a failed
     expect(partnerFailed(receipts, trade, 'from', prelogin)).toBe(true);
     expect(partnerFailed(receipts, trade, 'to', prelogin)).toBe(false);
     expect(partnerFailed(receipts, trade, 'from')).toBe(true);
+    // A refusal from before this run is an earlier attempt of a partner that the agent starts again with this run.
+    expect(partnerFailed(receipts, trade, 'from', prelogin, 2001)).toBe(false);
+    expect(partnerFailed(receipts, trade, 'from', prelogin, 2000)).toBe(true);
     clearPreloginFailure(prelogin, trade.id, 'to');
     expect(partnerFailed(receipts, trade, 'from', prelogin)).toBe(false);
     const giverFailed = { ...claimedReceipt('from'), id: trade.id, state: 'failed' as const, detail: 'partner failed' };

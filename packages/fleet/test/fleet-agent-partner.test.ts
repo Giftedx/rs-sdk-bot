@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Owner } from '../../core/src/fleet';
 import type { Order, Receipt } from '../../core/src/fleet-trade-settlement';
-import { heldTradeClaims, planTradePass, tradeStop } from '../src/fleet-agent';
+import { heldTradeClaims, planTradePass, readTradeClaims, SWARM_HELD, tradeStop } from '../src/fleet-agent';
 import { SWARM_STOP } from '../src/swarm';
 
 // Five orders that share accounts, with order ids and start times from .practice/fleet-agent.log. Each window is
@@ -140,10 +140,55 @@ describe('fleet agent: a trade claim held for another order holds both parties',
         } finally { rmSync(base, { recursive: true, force: true }); }
     });
 
+    // Order xfer-1795751426410-1: FishAndChips' login failed "fleet account claim held by swarm" 8 times in 10 minutes,
+    // and each time Shaftsinker stopped with "partner failed before login".
+    test('a swarm claim that the login refuses holds both parties', () => {
+        const p = pass({ claimHeld: () => new Map([['knightstick', SWARM_HELD]]) });
+        expect(starts(p)).not.toContain(`Moneyshot ${MK.id}`);
+        expect(waits(p).Knightstick).toBe('held: account claim held by swarm');
+        expect(waits(p).Moneyshot).toBe('held: partner Knightstick account claim held by swarm');
+    });
+
+    test('readTradeClaims maps a refused swarm claim, skips one the login takes, and gives null when unreadable', () => {
+        const swarm = (account: string) => ({ kind: 'swarm' as const, account, server: 's', side: 'local', nonce: '33333333-3333-4333-8333-333333333333', phase: 'held' as const, at: 1, checkout: '44444444-4444-4444-8444-444444444444', host: 'h', pid: 1 });
+        const read = () => [swarm('moneyshot'), swarm('knightstick')];
+        const held = readTradeClaims('/nowhere', ['Moneyshot', 'Knightstick'], read, c => c.account === 'moneyshot' ? 'fleet account claim held by swarm' : undefined);
+        expect([...held!]).toEqual([['moneyshot', SWARM_HELD]]);
+        const failing = readTradeClaims('/nowhere', ['Knightstick'], () => [swarm('knightstick')], () => { throw Error('lifecycle unreadable'); });
+        expect([...failing!]).toEqual([['knightstick', SWARM_HELD]]);
+        expect(readTradeClaims('/nowhere', ['Moneyshot'], () => { throw Error('unreadable'); })).toBeNull();
+    });
+
     test('an owner halt reads no claims', () => {
         let read = false;
         pass({ halt: 'owner stop', claimHeld: () => { read = true; return new Map(); } });
         expect(read).toBe(false);
+    });
+});
+
+describe('fleet agent: a preflight refusal or an absent giver on another side holds the start', () => {
+    test('a party that fails the preflight waits, and its partner on this side waits with it', () => {
+        const seen: string[] = [];
+        const p = pass({ admit: (account, order, role) => { seen.push(`${account} ${role}`); return account === 'Knightstick' && order.id === MK.id ? 'no route to the meet 3182,3440,0' : undefined; } });
+        expect(seen).toContain('Knightstick to');
+        expect(seen).toContain('Moneyshot from');
+        expect(waits(p).Knightstick).toBe('held: no route to the meet 3182,3440,0');
+        expect(waits(p).Moneyshot).toBe('held: partner Knightstick waits: no route to the meet 3182,3440,0');
+        expect(starts(p)).not.toContain(`Moneyshot ${MK.id}`);
+    });
+
+    test('a taker waits for a giver on another side until that giver claims the order; a giver starts at once', () => {
+        // Moneyshot gives to Knightstick; Moneyshot is on the cloud side.
+        const moneyshotOnCloud = new Map([...owners, ['moneyshot', { side: 'cloud', server: 's' }]]);
+        const absent = pass({ owners: moneyshotOnCloud, claimHeld: () => new Map() });
+        expect(starts(absent)).not.toContain(`Knightstick ${MK.id}`);
+        expect(waits(absent).Knightstick).toBe('held: partner Moneyshot on side cloud holds no claim for this order');
+        expect(starts(pass({ owners: moneyshotOnCloud, claimHeld: () => new Map([['moneyshot', MK.id]]) }))).toContain(`Knightstick ${MK.id}`);
+        expect(starts(pass({ owners: moneyshotOnCloud, claimHeld: () => new Map(), receipts: [{ id: MK.id, role: 'from' } as Receipt] }))).toContain(`Knightstick ${MK.id}`);
+        // An unreadable claim authority gives no sign: the taker starts as before.
+        expect(starts(pass({ owners: moneyshotOnCloud, claimHeld: () => null }))).toContain(`Knightstick ${MK.id}`);
+        // The giver of an order whose taker is on another side starts with no claim of the taker.
+        expect(starts(pass({ owners: knightstickOnCloud(), claimHeld: () => new Map() }))).toContain(`Moneyshot ${MK.id}`);
     });
 });
 
