@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798665502-1",
+ "account": "Woodenstaff",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 1,
+ "claim": "e5f2412b-6fcf-4e4b-9fb8-2e046cb7d6a1",
+ "count": 1,
+ "ok": true,
+ "at": 1795798963393,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795798962583
+ },
+ "logout": {
+  "attemptId": "1795798951642-0000026212-0000000001",
+  "at": 1795798963313,
+  "sha256": "2489fe708dc9b409eda223b76dc1c640f86091b38e45b4cae5a53f0b2994e38b"
+ },
+ "screen": true
+}

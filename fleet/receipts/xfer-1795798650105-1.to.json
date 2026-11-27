@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795798650105-1",
+ "account": "MeatNTwoVeg",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "cea43087-aae9-40f9-ab3c-1c7caf5a3fd4",
+ "count": 10,
+ "ok": true,
+ "at": 1795798958941,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795798958217
+ },
+ "logout": {
+  "attemptId": "1795798946085-0000033048-0000000001",
+  "at": 1795798958925,
+  "sha256": "a82f613428343414b63f25cb9b809024c6d5a03638e8ce6031f8d23472d018bd"
+ },
+ "screen": true
+}

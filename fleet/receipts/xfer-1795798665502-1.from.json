@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798665502-1",
  "account": "YewFirst",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 1,
  "claim": "6760dabc-fe11-4c6f-b4dc-a7e99f70f6c0",
- "count": 0,
- "ok": false,
- "at": 1795798930248,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795798961738,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795798938658
+ },
+ "logout": {
+  "attemptId": "1795798930262-0000031540-0000000001",
+  "at": 1795798961727,
+  "sha256": "7ad04e89aaf8bc7e5009b5e6075d5e3bac6ac3bd44394ff4e28ded8c41f11d95"
+ },
+ "screen": true
 }

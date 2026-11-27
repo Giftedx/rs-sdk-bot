@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798650105-1",
  "account": "Unsheathed",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "a9c82cb0-0d32-405f-9aca-8ddbe9e8807d",
- "count": 0,
- "ok": false,
- "at": 1795798865967,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795798957338,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795798876624
+ },
+ "logout": {
+  "attemptId": "1795798865979-0000014680-0000000001",
+  "at": 1795798957321,
+  "sha256": "11af3118ad6e96c34e2c041c85714d0e44a6b12b8595adc86004d9f30d9382f7"
+ },
+ "screen": true
 }

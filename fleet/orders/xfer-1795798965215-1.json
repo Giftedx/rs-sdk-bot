@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795798965215-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Woodenstaff",
+  "item": "Dragon bones",
+  "count": 6,
+  "itemId": 536,
+  "start": 1795798965215,
+  "end": 1795799865215,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
