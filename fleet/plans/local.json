@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795804806462,
+ "at": 1795804820570,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,7 +72,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "98"
+    "BATCH_UNITS": "96"
    },
    "enabled": true,
    "repeat": false,
@@ -191,7 +191,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1231"
+    "BATCH_UNITS": "1222"
    },
    "enabled": true,
    "repeat": false,
@@ -227,7 +227,7 @@
    "role": "auto"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Fingersmith",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -245,7 +245,7 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "TheFullMonty",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
