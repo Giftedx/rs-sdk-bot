@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795786230477,
+ "at": 1795786325469,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,23 +59,34 @@
    "role": "pvp"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "essence"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=6 PRODUCT_TARGET=6 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=6 PRODUCT_TARGET=6 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -90,42 +101,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1436",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
    "role": "army"
   },
   {
@@ -148,28 +123,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_irit_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:101",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:101",
    "role": "army"
   },
   {
@@ -198,6 +151,28 @@
    "role": "army"
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_irit_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "5",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:101",
+    "BATCH_UNITS": "5",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:101",
+   "role": "army"
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -223,6 +198,26 @@
    "role": "army"
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "fire-giant"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army",
+   "resources": [
+    "fire-giants"
+   ]
+  },
+  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -231,20 +226,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "92",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "240",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20400",
+    "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "92"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "240"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:42",
    "role": "auto"
   },
   {
