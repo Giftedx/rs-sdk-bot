@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795796743215,
+ "at": 1795796758599,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -149,21 +149,6 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -215,7 +200,7 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "SporranDip",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -232,7 +217,7 @@
    ]
   },
   {
-   "account": "Wandwaver",
+   "account": "UnderMyKilt",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -257,7 +242,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1996"
+    "BATCH_UNITS": "1776"
    },
    "enabled": true,
    "repeat": false,
@@ -265,28 +250,53 @@
    "role": "helper"
   },
   {
-   "account": "FishAndChips",
+   "account": "MeatNTwoVeg",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "magic_guild_elemental",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "237",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "13",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "237"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
+   "goal": "campaign:haggis:item:562",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1313",
+    "ITEMS": "Black 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1313",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1313",
    "role": "auto"
   }
  ],
