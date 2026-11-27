@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795788136630,
+ "at": 1795788150130,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -106,21 +106,6 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1460 TARGET_COUNT=146 PRODUCT_TARGET=146 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=146 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -131,14 +116,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "31",
+    "MAX_ITEMS": "32",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "31"
+    "BATCH_UNITS": "32"
    },
    "enabled": true,
    "repeat": false,
@@ -171,7 +156,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1587"
+    "BATCH_UNITS": "1582"
    },
    "enabled": true,
    "repeat": false,
@@ -190,7 +175,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1587"
+    "BATCH_UNITS": "1582"
    },
    "enabled": true,
    "repeat": false,
@@ -209,7 +194,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "1587"
+    "BATCH_UNITS": "1582"
    },
    "enabled": true,
    "repeat": false,
@@ -233,6 +218,31 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2552",
    "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "141",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "141"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
   },
   {
    "account": "Woodenstaff",
