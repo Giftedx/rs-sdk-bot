@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777125722,
+ "at": 1795777137378,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1740 TARGET_COUNT=174 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
@@ -74,7 +89,7 @@
    "role": "auto"
   },
   {
-   "account": "Woodpecker",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1750 TARGET_COUNT=175 PRODUCT_TARGET=175 -- mining essence",
@@ -89,18 +104,21 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1750 TARGET_COUNT=175 PRODUCT_TARGET=175 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
    ],
    "env": {
-    "ROUNDS": "1"
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -120,24 +138,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
   },
   {
    "account": "TossTheCaber",
