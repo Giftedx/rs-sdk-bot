@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795816403844-1",
  "account": "BowBeforeMe",
  "partner": "KnightRider",
@@ -10,15 +10,37 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "c0de040d-7678-4965-bf9b-94b8177f71ca",
- "count": 0,
- "ok": false,
- "at": 1795816502281,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795816564496,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Steel bar",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 0,
+    "after": 4
+   },
+   "bank": {
+    "count": 4,
+    "at": 1795816563767
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795816563330
+ },
+ "logout": {
+  "attemptId": "1795816502291-0000014456-0000000001",
+  "at": 1795816564484,
+  "sha256": "4cec096a61f4d6443332215ed353dca51b58d948ba9fe4d5a6dd895ef3b9a370"
+ },
+ "screen": true
 }
