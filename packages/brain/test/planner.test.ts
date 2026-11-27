@@ -1726,3 +1726,19 @@ describe('a skill unlock by inventory production is sized for the XP that it nee
         expect(isAccountPlan(p)).toBe(true);
     });
 });
+
+test('a location recovery inside walled West Ardougne names the quest exit, so routing runs the quest, not a hub walk', async () => {
+    const { resolvePlannedStepWorkerRoute } = await import('../src/worker-routing');
+    // KnightRider and mmsmk1232: Biohazard started, standing in the Mourner HQ at 2546,3325.
+    const acct = makeAcct({ name: 'KnightRider', lifecycle: 'needs_location_recovery', pos: { x: 2546, z: 3325, level: 0 }, quests: { Biohazard: 'started', 'Plague City': 'complete' } });
+    const world: WorldSnapshot = { schemaVersion: 1, at: Date.now(), side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { KnightRider: acct } };
+    const step = planAccount(acct, { world, activities: [], demands: [] }).steps[0];
+    expect(step?.stepKind).toBe('recover');
+    if (step?.stepKind !== 'recover') throw Error('no recover step');
+    expect(step.reason).toBe('walled in west-ardougne; exit by quest:biohazard');
+    expect(resolvePlannedStepWorkerRoute('KnightRider', step).family).toBe('quest');
+    // After Biohazard the city is open: the hub walk is the recovery.
+    const open = { ...acct, quests: { Biohazard: 'complete', 'Plague City': 'complete' } } as AccountState;
+    const openStep = planAccount(open, { world: { ...world, accounts: { KnightRider: open } }, activities: [], demands: [] }).steps[0];
+    expect(openStep?.stepKind === 'recover' && openStep.reason).toBe('stranded off-hub or non-ground plane');
+});

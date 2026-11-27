@@ -43,6 +43,8 @@ import {
 } from './acquire';
 import { TICKS_PER_HOUR } from './demand';
 import { campaignShortfalls } from './campaigns';
+import { walledInAt } from './snapshot';
+import { walledRecoveryReason } from './worker-routing';
 import {
     STANDARD_FOOD_IDS,
     accountSkillLevel,
@@ -1207,12 +1209,15 @@ function planAccountCore(
     }
 
     if (acct.lifecycle === 'needs_location_recovery') {
+        // Inside a walled place no walk reaches a hub: the reason names the quest exit, which worker-routing.ts
+        // dispatches to the quest worker in place of the hub walk.
+        const walled = walledInAt(acct.pos ?? null, acct.quests);
         const recStep: RecoverPlannedStep = {
             stepKind: 'recover',
             recoveryKind: 'location',
             targetHub: nearestHub(acct.pos),
             estimatedTicks: 60,
-            reason: 'stranded off-hub or non-ground plane',
+            reason: walled ? walledRecoveryReason(walled) : 'stranded off-hub or non-ground plane',
         };
         const p: AccountPlan = {
             account: acct.name,
