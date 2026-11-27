@@ -38,10 +38,10 @@ export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: numb
     withDanger?<T>(acct: Account, from: Tile, to: Tile, query: () => T): T;
     walkable?(t: Tile): boolean;
     areaOf?(t: Tile): number;
-    // The area labels of the active scope (shut doors and closed danger ground), built when missing. `area`: >= 0 an
-    // area, -1 not walkable, -2 outside the loaded map. `reach`: the areas of the tiles that reach loc `q` at `to`, null
-    // when one is outside the map. Called inside withPolicy and withDanger.
-    scopeAreas?(blocked: DoorBlock[]): ScopeAreas;
+    // The area labels of the active scope (shut doors and closed danger ground), or null while that scope has none.
+    // `area`: >= 0 an area, -1 not walkable, -2 outside the loaded map. `reach`: the areas of the tiles that reach loc
+    // `q` at `to`, null when one is outside the map. Called inside withPolicy and withDanger.
+    scopeAreas?(blocked: DoorBlock[]): ScopeAreas | null;
     measurePrechecked?(from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null;
 };
 

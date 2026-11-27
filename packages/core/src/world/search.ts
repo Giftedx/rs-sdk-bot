@@ -243,11 +243,15 @@ export function routeOnGraph(
     const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
     const searchStart = performance.now();
     let areaChecked = !opts.pathLength.scopeAreas;
-    // Inside the danger and door scope of the search, so the labels close what the walks cannot pass.
+    // Inside the danger and door scope of the search, so the labels close what the walks cannot pass. A scope with no
+    // labels yet is checked again later: its measured nulls build them (pathfinding.ts SCOPE_LABEL_NULLS), and a
+    // search with no route measures many nulls.
     const unreachable = (): boolean => {
+        const scope = opts.pathLength.scopeAreas!(blocked);
+        if (!scope) return false;
         areaChecked = true;
         const goalTol = strictTo ? 0 : opts.goalTolerance ?? GOAL_TOL;
-        return !goalReachable(opts.pathLength.scopeAreas!(blocked), from, to, goalTol, transports, allowedT, travel, t => travelZeroOk.get(t)!);
+        return !goalReachable(scope, from, to, goalTol, transports, allowedT, travel, t => travelZeroOk.get(t)!);
     };
 
     const search = (trackFares: boolean): ReturnType<World['route']> => {

@@ -331,14 +331,11 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     measure.withPolicy = scoped;
     measure.walkable = t => { (pf as any).initPathfinding(); return (pf as any).isTileWalkable(t.level, t.x, t.z); };
     measure.areaOf = t => areas.area(t.level, t.x, t.z);
-    const activeLabels = (blocked: DoorBlock[]): Labels => {
-        if (plainScope(blocked)) return areas;
-        const prefix = scopePrefix(blocked);
-        if (!scopeLabels.has(prefix)) buildScopeLabels(prefix, blocked);
-        return scopeLabels.get(prefix)!;
-    };
+    // Labels that exist: the map labels of a plain scope, or the labels that SCOPE_LABEL_NULLS measured nulls built.
+    // None are built here, so a search that can still finish does not pay a label flood inside its budget.
     measure.scopeAreas = blocked => {
-        const labels = activeLabels(blocked);
+        const labels = plainScope(blocked) ? areas : scopeLabels.get(scopePrefix(blocked));
+        if (!labels) return null;
         return {
             area: (l, x, z) => labels.area(l, x, z),
             reach: (to, tol, q) => reachAreas(to, tol, q, labels),
