@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777102614,
+ "at": 1795777114266,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,25 +59,10 @@
    "role": "pvp"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1510 TARGET_COUNT=151 PRODUCT_TARGET=175 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1520 TARGET_COUNT=152 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts CAP=1470 TARGET_COUNT=147 PRODUCT_TARGET=175 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
    ],
    "env": {
@@ -87,6 +72,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "auto"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1480 TARGET_COUNT=148 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   },
   {
    "account": "Fingerblastr",
