@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795787545378-1",
  "account": "Bigpackage",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "ac10ba09-5be4-4884-8ace-9cdadc654ec2",
- "count": 0,
- "ok": false,
- "at": 1795787922321,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795788017481,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787943542
+ },
+ "logout": {
+  "attemptId": "1795787922331-0000011572-0000000001",
+  "at": 1795788017456,
+  "sha256": "36cf7980ece97bb0913ea7471585872a755f830121e1955074c380520c1c2517"
+ },
+ "screen": true
 }
