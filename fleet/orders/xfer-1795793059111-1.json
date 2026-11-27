@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795793059111-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Wandwaver",
+  "item": "Kwuarm",
+  "count": 2,
+  "itemId": 263,
+  "start": 1795793059111,
+  "end": 1795793959111,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

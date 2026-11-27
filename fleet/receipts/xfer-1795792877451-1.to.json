@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795792877451-1",
  "account": "Wandwaver",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "1cc205fc-3ac1-4812-95fd-037ca59a6a16",
- "count": 0,
- "ok": false,
- "at": 1795792991881,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795793056411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795793055662
+ },
+ "logout": {
+  "attemptId": "1795792991889-0000029200-0000000001",
+  "at": 1795793056401,
+  "sha256": "5c3a2f2c3b1bd3a924d75399272833f5ea72d755778880a5ccdafd793ca539cd"
+ },
+ "screen": true
 }

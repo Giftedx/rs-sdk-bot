@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795793090949-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "mmtha0205",
+  "item": "Magic shortbow",
+  "count": 1,
+  "itemId": 861,
+  "start": 1795793090949,
+  "end": 1795793990949,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
