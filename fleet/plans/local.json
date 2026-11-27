@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795819501711,
+ "at": 1795819713242,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,38 @@
    "role": "pvp"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -106,7 +138,6 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
@@ -115,7 +146,6 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",

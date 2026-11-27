@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795819448549-pickpockdick-mightyrod-5c2f7444c8d42ca2",
+ "account": "PickpockDick",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon dagger(p)",
+ "requested": 1,
+ "claim": "948358a8-254c-4731-a960-d62a6ff262a3",
+ "count": 0,
+ "ok": false,
+ "at": 1795819703943,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795819687979
+ },
+ "logout": {
+  "attemptId": "1795819668228-0000029880-0000000001",
+  "at": 1795819703933,
+  "sha256": "fca3a1381c15a4708966dd39dd08cb3a5381c863974e26bf4f1c000874ba6f8e"
+ },
+ "screen": false
+}

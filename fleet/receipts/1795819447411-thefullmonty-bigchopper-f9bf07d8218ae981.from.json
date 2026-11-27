@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795819447411-thefullmonty-bigchopper-f9bf07d8218ae981",
+ "account": "TheFullMonty",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(2)",
+ "requested": 1,
+ "claim": "8176e5ac-aa80-4a17-835c-c0af5d4b4f8e",
+ "count": 0,
+ "ok": false,
+ "at": 1795819664348,
+ "detail": "Error: route to 3093, 3243: precondition no route to 3093,3243,0",
+ "logout": {
+  "attemptId": "1795819657591-0000032652-0000000001",
+  "at": 1795819664329,
+  "sha256": "2cd231f03c7062fb5bff032ef510416c1ebae52f281cda31598673116cde63dd"
+ },
+ "screen": false
+}

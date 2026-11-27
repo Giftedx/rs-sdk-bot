@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819451459-tossthecaber-trousersnake-21ae14c0d2008a02",
+ "account": "TossTheCaber",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "60bfacba-2cb8-4dd1-a281-d04c021d09db",
+ "count": 0,
+ "ok": false,
+ "at": 1795819647038,
+ "detail": "trade claimed"
+}

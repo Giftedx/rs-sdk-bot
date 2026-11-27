@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795819448549-pickpockdick-mightyrod-5c2f7444c8d42ca2",
+ "role": "to",
+ "account": "Mightyrod",
+ "partner": "PickpockDick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795819691086,
+ "detail": "Error: fleet trade: reserved account"
+}
