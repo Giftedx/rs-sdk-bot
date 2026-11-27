@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786769387-1",
  "account": "CoinCock",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "b5655244-d613-46a6-9a51-5dcf245ae60c",
- "count": 0,
- "ok": false,
- "at": 1795787011858,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795787049128,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787019984
+ },
+ "logout": {
+  "attemptId": "1795787011867-0000000444-0000000001",
+  "at": 1795787049115,
+  "sha256": "fb67ffb65a83b5fbe2170c1baf57e1cf850ae95573f7da93fe1b23449b79aa56"
+ },
+ "screen": true
 }

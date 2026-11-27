@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786809874-1",
  "account": "Billionaire",
  "partner": "Pocketpython",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 6,
  "claim": "79316e69-2165-464f-a791-fc4c7793663d",
- "count": 0,
- "ok": false,
- "at": 1795787030145,
- "detail": "trade claimed",
+ "count": 6,
+ "ok": true,
+ "at": 1795787040746,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 6,
-   "count": 0
+   "count": 6,
+   "inventory": {
+    "before": 0,
+    "after": 6
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795787040020
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795787039577
+ },
+ "logout": {
+  "attemptId": "1795787030154-0000011628-0000000001",
+  "at": 1795787040735,
+  "sha256": "1ac370b2a10dd34a52a631f13e7bb0f24f2362670082016626a8606478215a47"
+ },
+ "screen": true
 }

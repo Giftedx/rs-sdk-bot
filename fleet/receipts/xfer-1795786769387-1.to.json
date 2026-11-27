@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786769387-1",
+ "account": "Woodpecker",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "6312f790-5db4-4177-8b87-819ee4e68588",
+ "count": 1,
+ "ok": true,
+ "at": 1795787050701,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795787049977
+ },
+ "logout": {
+  "attemptId": "1795787039126-0000027544-0000000001",
+  "at": 1795787050690,
+  "sha256": "3e40484596782f290665784f0f7b0b67e2bfd17e54d2e5a729c8820c9f00b7b6"
+ },
+ "screen": true
+}
