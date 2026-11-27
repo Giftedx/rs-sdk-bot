@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795791564943-2",
+ "account": "MeatNTwoVeg",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 500,
+ "claim": "704e027b-514d-483f-9ee1-52e880a6eda2",
+ "count": 500,
+ "ok": true,
+ "at": 1795792366064,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795792365310
+ },
+ "logout": {
+  "attemptId": "1795792353710-0000013220-0000000001",
+  "at": 1795792366028,
+  "sha256": "d3391287fa048fbdd3f7cf0cdbd0a048bd1bb3f659a09adde187ccee403bbe6f"
+ },
+ "screen": true
+}

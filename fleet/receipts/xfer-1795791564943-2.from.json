@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795791564943-2",
  "account": "mmtha0205",
  "partner": "MeatNTwoVeg",
@@ -10,8 +10,18 @@
  "item": "Fire rune",
  "requested": 500,
  "claim": "4e4677ce-567e-4521-be3a-09a507eedbf1",
- "count": 0,
- "ok": false,
- "at": 1795792338742,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795792364461,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795792338750-0000029952-0000000001",
+  "at": 1795792364448,
+  "sha256": "ac71ff17f752dc22d2bb72eee3e826971b6f97893ffe69a5ff1367384fe12cf4"
+ },
+ "screen": true
 }
