@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795792209156-1",
  "account": "Woodenstaff",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "37d2caa4-1cb3-448c-abed-9cc837b37493",
- "count": 0,
- "ok": false,
- "at": 1795792512075,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795792564852,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795792548106
+ },
+ "logout": {
+  "attemptId": "1795792512083-0000021200-0000000001",
+  "at": 1795792564838,
+  "sha256": "8329229d759a10d84a4311c066561565dd2d462331b98f9820b9f7083221afbc"
+ },
+ "screen": true
 }
