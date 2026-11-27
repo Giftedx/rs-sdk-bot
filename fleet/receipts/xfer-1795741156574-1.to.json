@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795741156574-1",
  "account": "InTheSack",
  "partner": "Billionaire",
@@ -12,6 +12,12 @@
  "claim": "fba6b6fd-5381-4ddf-8a30-1cf5b31a03ab",
  "count": 0,
  "ok": false,
- "at": 1795741497167,
- "detail": "trade claimed"
+ "at": 1795741504877,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795741497176-0000025984-0000000001",
+  "at": 1795741504868,
+  "sha256": "d705bcc637e38fb6fd75d36b6f776d3270532d6ad84ea00768774483b1d52be5"
+ },
+ "screen": false
 }

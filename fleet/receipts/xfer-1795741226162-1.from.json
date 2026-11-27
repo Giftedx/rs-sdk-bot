@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795741226162-1",
  "account": "DropMyLoad",
  "partner": "ChaosInPants",
@@ -12,6 +12,16 @@
  "claim": "ce0121e1-d79f-467b-9279-78398b1f5d68",
  "count": 0,
  "ok": false,
- "at": 1795741483816,
- "detail": "trade claimed"
+ "at": 1795741518500,
+ "detail": "fled at low hitpoints: flee_guard id=99 at=2618,3332 ticks=5",
+ "bank": {
+  "count": 1,
+  "at": 1795741512212
+ },
+ "logout": {
+  "attemptId": "1795741483827-0000010360-0000000001",
+  "at": 1795741518491,
+  "sha256": "cf4f044b146bd84533afee83a9a9c403059264da8492558734f594a30f17ffdf"
+ },
+ "screen": false
 }

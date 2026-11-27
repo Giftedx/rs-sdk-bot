@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795741498063,
+ "at": 1795741521263,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2260 TARGET_COUNT=226 PRODUCT_TARGET=226 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 PRODUCT_TARGET=226 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=226 -- cooking food"
    ],
    "env": {
@@ -140,19 +140,6 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/pk.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "21"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
    "script": "scripts/pk.ts",
    "args": [],
    "env": {
@@ -291,6 +278,42 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1639",
    "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
   }
  ],
  "army": [
@@ -302,7 +325,6 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
-  "billionaire",
   "dipstick",
   "fingerblastr",
   "fingersmith",
