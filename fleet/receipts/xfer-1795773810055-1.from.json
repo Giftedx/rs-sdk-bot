@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795773810055-1",
  "account": "KnightRider",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Marrentill",
  "requested": 1,
  "claim": "9082d751-8d63-4c97-9ab6-b2b69930c58d",
- "count": 0,
- "ok": false,
- "at": 1795774401541,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795774464915,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795774460999
+ },
+ "logout": {
+  "attemptId": "1795774401551-0000011108-0000000001",
+  "at": 1795774464904,
+  "sha256": "2105a010fc6e6f1c54c91793898e1920c53bcb84108df1caa380b7cddbab7087"
+ },
+ "screen": true
 }
