@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795786862686-1",
  "account": "Woodenstaff",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 11,
  "claim": "81f08465-f27f-4129-a885-12c2689162e2",
- "count": 0,
- "ok": false,
- "at": 1795787327112,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795787375905,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795787335133
+ },
+ "logout": {
+  "attemptId": "1795787327135-0000031144-0000000001",
+  "at": 1795787375889,
+  "sha256": "9bf211803b0025d83d3d20029550deb5ac4e9ab8f4d552b154c7b31030172c58"
+ },
+ "screen": true
 }

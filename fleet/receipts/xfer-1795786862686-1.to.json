@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795786862686-1",
+ "account": "Abracadickra",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "22279252-6892-44ca-be67-090f728610d4",
+ "count": 11,
+ "ok": true,
+ "at": 1795787377902,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795787377153
+ },
+ "logout": {
+  "attemptId": "1795787363259-0000029716-0000000001",
+  "at": 1795787377887,
+  "sha256": "8fc46d5d71ad4654d6d27e57621c4fd4b7567d7ec12383442133f374c2fc5855"
+ },
+ "screen": true
+}

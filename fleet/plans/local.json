@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795787362381,
+ "at": 1795787383836,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "3",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "3"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -109,8 +109,8 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1700 TARGET_COUNT=170 PRODUCT_TARGET=180 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=180 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1660 TARGET_COUNT=166 PRODUCT_TARGET=192 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=192 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -125,7 +125,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "magic_guild",
     "3000"
    ],
    "env": {
@@ -146,6 +146,28 @@
    "role": "army"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_harralander_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:97",
+   "role": "army"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -154,7 +176,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1205"
+    "BATCH_UNITS": "1209"
    },
    "enabled": true,
    "repeat": false,
@@ -180,29 +202,36 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-market.ts",
+   "account": "Abracadickra",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "khazardshop",
-    "3000"
+    "ranged-camp"
    ],
    "env": {
-    "ITEM_ID": "1933",
-    "ITEMS": "Pot of flour",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1933",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Abracadickra",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1933",
-   "role": "army"
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=27 PRODUCT_TARGET=27 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:556 BATCH_UNITS=27 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:fullblooded:item:556",
+   "role": "auto"
   },
   {
    "account": "Moneyshot",
