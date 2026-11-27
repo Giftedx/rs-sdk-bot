@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795797373917-1",
  "account": "PickpockDick",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "e6734f8b-e3a7-4c5f-9109-d00740f6c11e",
- "count": 0,
- "ok": false,
- "at": 1795797865542,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795797876183,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795797875468
+ },
+ "logout": {
+  "attemptId": "1795797865552-0000023648-0000000001",
+  "at": 1795797876170,
+  "sha256": "8dbef97c1ee35f8d9085d855a584b9733cee45d4a2316ce594d8ae75ac4ab7db"
+ },
+ "screen": true
 }
