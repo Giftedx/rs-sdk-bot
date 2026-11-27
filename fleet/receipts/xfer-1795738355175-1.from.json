@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795738355175-1",
  "account": "Wandwaver",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "92f4a619-b843-4c3d-a904-dec43ba4bcdf",
  "count": 0,
  "ok": false,
- "at": 1795739078955,
- "detail": "trade claimed"
+ "at": 1795739255438,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 6,
+  "at": 1795739087454
+ },
+ "logout": {
+  "attemptId": "1795739078968-0000015072-0000000001",
+  "at": 1795739255424,
+  "sha256": "300072a1d85057101e3676de8830963de21a712f8179b7c92280e50608edff81"
+ },
+ "screen": false
 }
