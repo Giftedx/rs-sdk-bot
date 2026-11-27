@@ -256,12 +256,14 @@ const CLAIM_HELD_RE = /^RESULT fail (?:login: )?(?:Error: )?fleet (?:account|tra
 export const isClaimHeldResult = (result: string) => CLAIM_HELD_RE.test(result);
 // A worker that a stop ends in the middle of its work names the stop in its own words: "stop file", "cargo stopped",
 // "production session stopped", "stop=stopped", "magic-order stop requested", "far walk to ...: stopped", and the
-// smelt send guard "owner/life/stop unavailable".
-const STOP_RESULT_RE = /\bstop file\b|\bstopped\b|\bstop requested\b|\/stop unavailable\b/;
+// smelt send guard "owner/life/stop unavailable". A route that the stop cancels prints the abort of its signal:
+// "AbortError: The operation was aborted." (a magic earth production run that crafted 1053 runes).
+const STOP_RESULT_RE = /\bstop file\b|\bstopped\b|\bstop requested\b|\/stop unavailable\b|\bAbortError\b|\boperation was aborted\b/;
 export const isStopResult = (result: string) => STOP_RESULT_RE.test(result);
 // A saved defect has no end reason of its supervisor, so only a text that a stop request alone writes counts there.
 // "production session stopped", "herblore stopped" and the smelt send guard also name an ended session or a changed
-// life: such a record keeps its quarantine.
+// life: such a record keeps its quarantine. An abort can also come from a tick budget, so it counts only in
+// STOP_RESULT_RE, which needs a supervisor end that a stop wrote.
 const STOP_FAILURE_RE = /\bstop file\b|\bstop requested\b/;
 // A result line that a gate wrote: a release hold, a held claim or a stop. Such a line is no worker defect.
 export const isGateHeldResult = (result: string) => isWorkerReleaseHold(result) || isClaimHeldResult(result) || STOP_FAILURE_RE.test(result);

@@ -12,6 +12,7 @@ import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type AccountPlan, type PlannedStep } from '../../brain/src/index';
 import { DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs } from '../../brain/src/outcome-classifier';
+import { accountClassLevels, defectBlocksAccount } from '../../brain/src/planner';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
@@ -710,12 +711,25 @@ export const BRAIN_SOFT_IDLE: ReadonlySet<string> = new Set([
 // (combat_survivability:*) is the blocker of the last candidate the re-plan tried, often a fight the account does not
 // run; the running worker keeps its own eat and flee guards. A location recovery run is never rebuilt (a running
 // account is no longer in needs_location_recovery), so its re-plan always ends at such a blocker.
-const BRAIN_SOFT_IDLE_PREFIXES = ['unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:', 'combat_survivability:'] as const;
-export function brainSoftIdle(reason: string | undefined): boolean {
-    return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || BRAIN_SOFT_IDLE_PREFIXES.some(p => reason.startsWith(p));
+const BRAIN_BLOCKER_PREFIXES = [
+    'unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:', 'combat_survivability:',
+    'missing_skill_unlock:', 'unlock_inputs_unavailable:', 'unreachable_tile:',
+] as const;
+// A planner blocker: the re-plan found no candidate for the account. The planner names the blocker that stopped the
+// most candidates (planner.ts dominantBlocker), often a goal that the running job does not serve.
+export function brainPlannerBlocker(reason: string | undefined): boolean {
+    return reason === 'no_matching_demand_or_activity' || reason === 'missing_food_supply'
+        || (reason !== undefined && (BRAIN_BLOCKER_PREFIXES.some(p => reason.startsWith(p)) || /:exceeds_(?:\d+_|max_)steps$/.test(reason)));
 }
+export function brainSoftIdle(reason: string | undefined): boolean {
+    return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || brainPlannerBlocker(reason);
+}
+// A repeating run whose re-plan ends at a planner blocker keeps running while its own demand is open and its activity
+// holds no defect for the account (ownJobOpen): a stop gives the slot to no work. Live: the swarm stopped a magic earth
+// production run for the open Earth rune demand after 602 s at unresolvable_supply:1289, a supply of another goal.
 export function brainDropKeep(o: {
     run: Pick<Run, 'accounts' | 'started' | 'brain' | 'finite'>;
+    ownJobOpen?: (account: string) => boolean;
     now: number;
     dropCycles: number;
     stopAll: boolean;
@@ -734,9 +748,27 @@ export function brainDropKeep(o: {
         if (!brainSoftIdle(o.idleReason(a))) return undefined;
     }
     if (o.run.finite) return 'finite job runs to its end';
+    if (o.ownJobOpen && o.run.accounts.every(a => brainPlannerBlocker(o.idleReason(a)) && o.ownJobOpen!(a))) {
+        return 'its demand is open and the plan has no other work';
+    }
     if (o.now - o.run.started < BRAIN_RUN_MIN_MS) return `run younger than ${BRAIN_RUN_MIN_MS / 60_000} min`;
     if (o.dropCycles < BRAIN_DROP_CYCLES) return `dropped for ${o.dropCycles} of ${BRAIN_DROP_CYCLES} brain cycles`;
     return undefined;
+}
+
+// The demand of a brain run is active with work left in the brain goals, and no defect holds its activity for the account.
+export function brainJobOpen(
+    brain: Pick<BrainCycleResult, 'fleetState' | 'world'>,
+    run: Pick<Run, 'activityId' | 'demandId'>,
+    account: string,
+    now: number,
+): boolean {
+    if (!run.activityId || !run.demandId) return false;
+    const goal = brain.fleetState.goals.find(g => g.id === run.demandId);
+    if (!goal || !goal.active || goal.remaining <= 0) return false;
+    const acct = brain.world.accounts[account.toLowerCase()];
+    const levels = acct ? accountClassLevels(acct) : undefined;
+    return !brain.fleetState.quarantinedDefects.some(d => d.activityId === run.activityId && defectBlocksAccount(d, account, now, levels));
 }
 
 // Counts the brain cycles in a row that dropped each run. A run that the plan holds again, or that ended, leaves the map.
@@ -2127,6 +2159,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     ended: a => { const end = endedMapByLower(ended).get(a.toLowerCase())?.[1]; return !!end && end.at >= r.started; },
                     replacement: a => brainModes.get(a.toLowerCase()),
                     idleReason: brainIdle,
+                    ...(lastBrainResult ? { ownJobOpen: (a: string) => brainJobOpen(lastBrainResult!, r, a, Date.now()) } : {}),
                 });
                 if (kept) {
                     for (const a of r.accounts) {

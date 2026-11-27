@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-    campaignGates, failClass, goalKey, progressLine, progressLines, readAttempts, readProgress, readResultsSince, runStats, sessionStats, snapshotDiff, workStats,
-    HOUR_MS, type Attempt, type ProgressReport, type Snapshot,
+    campaignGates, failClass, goalKey, progressLine, progressLines, readAttempts, readProgress, readResultsSince, runStats, sessionStats, sharedIdleBlocks, snapshotDiff, workStats,
+    HOUR_MS, SHARED_IDLE_MAX, type Attempt, type ProgressReport, type Snapshot,
 } from './progress';
 
 const NOW = 1_800_000_000_000, MIN = 60_000;
@@ -172,7 +172,8 @@ const report = (over: Partial<ProgressReport> = {}): ProgressReport => ({
 test('progressLine puts the window, online use, runs, gains and work on one line', () => {
     expect(progressLine(report())).toBe('progress 24 h: 36.0 bot-hours online (average 1.5 bots, 6% of 25 maxBots), 1,105 logins (974 under 5 min); '
         + 'runs 522 ok, 308 failed, most run time aio-logistics 19.0 of 28.1 h; XP +1,085,460, levels +123, quests +1, coins -272,623; '
-        + '0 accounts with work (idle: infra_circuit_breaker_open 64, campaign_state_staging 20) (bun tools/progress.ts)');
+        + '0 accounts with work (idle: infra_circuit_breaker_open 64, campaign_state_staging 20); '
+        + 'IDLE BLOCK 64 accounts at infra_circuit_breaker_open, 20 accounts at campaign_state_staging (more than 10 at one reason) (bun tools/progress.ts)');
 });
 
 test('progressLine names an open session, a start snapshot older than the window and the parts it could not read', () => {
@@ -193,6 +194,18 @@ test('progressLines prints each part and each source that could not be read', ()
     expect(lines).toContain('gains   XP +1,085,460, levels +123, quest completions +1, new quests fleet-wide 0, coins -272,623');
     expect(lines).toContain('work    0 accounts with work; idle: infra_circuit_breaker_open 64, campaign_state_staging 20, paused_owner 10; fleet state 2 s old');
     expect(lines.at(-1)).toBe('missing gains: no git version of fleet/snapshots/local.json');
+});
+
+test('sharedIdleBlocks fails on more than SHARED_IDLE_MAX accounts at one blocker, not at a pause, a death or a slot cap', () => {
+    const idle: [string, number][] = [
+        ['unresolvable_supply:1289', 32], ['missing_skill_unlock:Hitpoints', 20], ['dead', 13], ['paused_owner', 12],
+        ['max_bots_limit', 31], ['owned_by_other_side:cloud', 14], ['protected_clock_no_campaign', 11], ['missing_coins:500', SHARED_IDLE_MAX],
+    ];
+    expect(sharedIdleBlocks({ idle })).toEqual([['unresolvable_supply:1289', 32], ['missing_skill_unlock:Hitpoints', 20]]);
+    expect(sharedIdleBlocks({ idle: [['missing_coins:500', SHARED_IDLE_MAX]] })).toEqual([]);
+    const lines = progressLines(report({ work: { at: NOW - 2000, withWork: 0, idle } }));
+    expect(lines).toContain('block   32 accounts at unresolvable_supply:1289, 20 accounts at missing_skill_unlock:Hitpoints (more than 10 at one reason)');
+    expect(progressLine(report({ work: { at: NOW, withWork: 3, idle: [['paused_owner', 40]] } }))).not.toContain('IDLE BLOCK');
 });
 
 const git = (dir: string, args: string[], date?: number) => {

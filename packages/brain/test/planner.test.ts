@@ -12,8 +12,10 @@ import {
     buildPlannerSharedIndex,
     canProtectedAccountLaunch,
     defectBlocksAccount,
+    dominantBlocker,
     evaluateBestGearUpgrade,
     FLEET_QUARANTINE_MIN_COUNT,
+    isFleetWideDefect,
     planAccount,
     xpForLevel,
 } from '../src/planner';
@@ -1495,6 +1497,79 @@ test('planner prefers deterministic npc_shop (zaff Staff of air) over higher-cos
         stepKind: 'work',
         activityId: 'market:ge-buy',
         config: { mode: 'ge-buy', itemId: 536, quantity: 7 },
+    });
+});
+
+describe('one unresolvable supply or one buy defect does not idle the fleet', () => {
+    const shopBuyAct: ActivityDefinition = {
+        id: 'market:shop-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'shop',
+        label: 'Buy from shop',
+        location: { x: 3185, z: 3436, level: 0 },
+        config: { mode: 'shop-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    // A fight whose kit needs a Rune sword (1289): no shop sells it and the GE has no ask.
+    const swordTrip: ActivityDefinition = {
+        id: 'bank-artisan:sword-trip',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'produce',
+        label: 'Sword trip',
+        config: {},
+        baselineRate: { xpPerTick: 0, unitsPerTick: 0.5, gpPerTick: 500, setupTicks: 20, minBatchUnits: 1, confidence: 'practice', outputsPerUnit: { 536: 1 } },
+        inputs: [{ itemId: 1289, countPerUnit: 1 }],
+        outputs: [{ itemId: 536, countPerUnit: 1 }],
+        location: { x: 3185, z: 3436, level: 0 },
+        trust: 'practice_passed',
+    };
+    const buyer = makeAcct({ name: 'ShopBuyer', pos: { x: 3185, z: 3436, level: 0 }, bank: { items: { 995: 500_000 }, observedAt: NOW - 1_000, trusted: true } });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { ShopBuyer: buyer } };
+    const itemDemand = (id: string, itemId: number, itemName: string, valuePerHour: number): GoalDemand => ({
+        id, goalKind: 'main_supply', valueScore: valuePerHour / 6, valuePerHour,
+        target: { kind: 'item', itemId, itemName, count: 3 }, fulfilled: 0, remaining: 3, priorityWeight: 1, active: true,
+    });
+    const bones = itemDemand('d:bones', 536, 'Dragon bones', 90_000);
+    const staff = itemDemand('d:staff-of-air', 1381, 'Staff of air', 3_000);
+    const buyDefect = (activityId: string, account: string, count: number): DefectRecord => ({
+        id: `defect:${activityId}:${account}`, activityId, faultSignature: 'RESULT fail Error: market bank travel failed', outcomeKind: 'worker_defect',
+        account, observedAt: NOW - 1000, quarantinedAt: NOW - 1000, expiresAt: NOW + 3_600_000, quarantined: true,
+        logPath: '.practice/live/logs/test.log', detail: 'RESULT fail Error: market bank travel failed', count,
+    });
+    const plan = (demands: GoalDemand[], defects: DefectRecord[] = [], shared = false) => planAccount(buyer, {
+        world, activities: [shopBuyAct, swordTrip], demands, defects, marketQuotes: {},
+        ...(shared ? { _sharedIndex: buildPlannerSharedIndex({ world, activities: [shopBuyAct, swordTrip], defects }) } : {}),
+    });
+
+    test('an account falls through an unresolvable supply to the next goal', () => {
+        expect(plan([bones]).steps).toEqual([]);
+        expect(plan([bones]).idleReason).toBe('unresolvable_supply:1289');
+        const p = plan([bones, staff]);
+        expect(p.demandId).toBe('d:staff-of-air');
+        expect(p.steps.at(-1)).toMatchObject({ stepKind: 'work', activityId: 'market:shop-buy' });
+    });
+
+    test('a buy defect of another account holds no buy of this account at any count; its own defect holds its own buys', () => {
+        for (const shared of [false, true]) {
+            for (const count of [1, FLEET_QUARANTINE_MIN_COUNT, 4]) {
+                expect(plan([staff], [buyDefect('market:shop-buy', 'Swordinhand', count)], shared).steps.at(-1))
+                    .toMatchObject({ activityId: 'market:shop-buy' });
+            }
+            expect(plan([staff], [buyDefect('market:shop-buy', 'ShopBuyer', 4)], shared).steps).toEqual([]);
+        }
+        expect(isFleetWideDefect(buyDefect('market:ge-buy', 'Swordinhand', 4))).toBe(false);
+        expect(isFleetWideDefect({ ...buyDefect('market:ge-buy', 'Swordinhand', 1), outcomeKind: 'death' }, NOW)).toBe(true);
+        expect(isFleetWideDefect(buyDefect('bank-artisan:sword-trip', 'Swordinhand', FLEET_QUARANTINE_MIN_COUNT))).toBe(true);
+    });
+
+    test('the idle reason names the blocker that stopped the most candidates, the first one on a tie', () => {
+        expect(dominantBlocker(new Map([['unresolvable_supply:1289', 2], ['missing_quest_unlock:druid', 22], ['missing_skill_unlock:Smithing', 18]])))
+            .toBe('missing_quest_unlock:druid');
+        expect(dominantBlocker(new Map([['a', 1], ['b', 1]]))).toBe('a');
+        expect(dominantBlocker(new Map())).toBeUndefined();
     });
 });
 
