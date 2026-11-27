@@ -228,6 +228,14 @@ export function dialogClick(dialog: { isOpen: boolean; isWaiting: boolean; optio
     return dialog.options.find(o => say.test(o.text))?.index ?? 0;
 }
 
+// Why a static walk plan cannot reach its goal, or undefined: its last corner (the start for an empty plan) lies over
+// `tol` tiles from the goal.
+export function planShortOf(from: { x: number; z: number }, goal: { x: number; z: number }, corners: readonly { x: number; z: number }[], tol: number): string | undefined {
+    const end = corners.at(-1) ?? from;
+    const gap = Math.max(Math.abs(end.x - goal.x), Math.abs(end.z - goal.z));
+    return gap > tol ? `plan ends short: ${end.x},${end.z} is ${gap} tiles from ${goal.x},${goal.z}` : undefined;
+}
+
 export function approachLegs(via: { x: number; z: number }[] | undefined, from: { x: number; z: number }, to: { x: number; z: number }, far = 60) {
     const d = (a: { x: number; z: number }) => Math.max(Math.abs(a.x - to.x), Math.abs(a.z - to.z));
     let left = d(from);
@@ -482,6 +490,27 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         blindBase = null;
     };
 
+    // A static plan that stops short of the goal (a guild door the map keeps shut) ends in rejected clicks at a wall;
+    // goTo routes through the door instead, so such a walk goes to it at once.
+    const walkPlanned = async (x: number, z: number, tol: number) => {
+        const deps = await sessionWalker(s);
+        const plan = deps.plan;
+        let short: string | undefined;
+        deps.plan = (lv, from, goal, avoid) => {
+            const corners = avoid ? plan(lv, from, goal, avoid) : plan(lv, from, goal);
+            short = planShortOf(from, goal, corners, tol);
+            if (short) throw Error(short);
+            return corners;
+        };
+        try {
+            return await walkPath(deps, [{ x, z, tol }], { stop: over });
+        } catch (error) {
+            if (!short) throw error;
+            return { ok: false, detail: short, ticks: 0 };
+        } finally {
+            deps.plan = plan;
+        }
+    };
     const walk = async (x: number, z: number, tol = 2, level = 0): Promise<boolean> => {
         const c0 = coins();
         const off = (p: ReturnType<typeof pos>) => (!p ? Infinity : p.level !== level ? Infinity : Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)));
@@ -506,7 +535,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
             }
             const cur = pos();
             if (off(cur) <= tol) break;
-            const r = cur?.level === level ? await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over }) : { ok: false, detail: `on level ${cur?.level}`, ticks: 0 };
+            const r = cur?.level === level ? await walkPlanned(x, z, tol) : { ok: false, detail: `on level ${cur?.level}`, ticks: 0 };
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 const g = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), { legTimeoutTicks: 100 });
@@ -649,6 +678,15 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         console.log(`MILESTONE realm-leave t=${used()} out=${inRealm() ? 0 : 1} weapon=${weapon()}`);
     };
     const shelfOf = (name: string) => conf.items.find(t => t.re.test(name))?.shelf;
+    let shelfSent = '';
+    const reportShelf = (items: readonly { id: number; name: string; count: number }[]) => {
+        if (!cfg.onShelf) return;
+        const rows = items.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ id: i.id, count: i.count }));
+        const sig = JSON.stringify(rows);
+        if (!rows.length || sig === shelfSent) return;
+        shelfSent = sig;
+        try { cfg.onShelf(profileKey, rows); } catch (e) { console.log(`WARN shelf record failed: ${String(e)}`); }
+    };
 
     console.log(`START shop-buyer ${s.name} profile=${profileKey} coins=${coins()}`);
     let loggedEmpty = false;
@@ -800,6 +838,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
             }
 
             if (shop?.isOpen && shop.shopItems) {
+                reportShelf(shop.shopItems);
                 const purchases = planShopPurchases(
                     planTargets,
                     shop.shopItems,

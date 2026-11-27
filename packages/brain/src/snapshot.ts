@@ -22,6 +22,7 @@ import {
     statusReadDirs,
 } from '../../core/src/practice-paths';
 import { PVP_DEATH_SCHEMA, type PvpDeath } from '../../core/src/pvp-deaths';
+import { readShopShelves } from '../../core/src/shop-shelf';
 import { domainOf, readLatestAttemptReceipt, readLogoutProof, type AttemptReceipt, type LogoutProof } from '../../core/src/session-lifecycle';
 import { readJsonStatCached } from './json-cache';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
@@ -720,6 +721,19 @@ function normalizeItemContainer(raw: unknown): Record<number, number> {
     return out;
 }
 
+// The pack slots per base item id: each status inventory row is one slot, and a noted row names its base id.
+function normalizePackSlots(raw: unknown): Record<number, number> | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const out: Record<number, number> = {};
+    for (const item of raw) {
+        if (!item || typeof item !== 'object') continue;
+        const id = Number(item.baseId ?? item.id);
+        if (!Number.isSafeInteger(id) || id < 0 || !(Number(item.count) > 0)) continue;
+        out[id] = (out[id] ?? 0) + 1;
+    }
+    return out;
+}
+
 function normalizeTile(raw: unknown): WorkerTile | null {
     if (!isWorkerTile(raw)) return null;
     return { x: raw.x, z: raw.z, level: raw.level };
@@ -953,6 +967,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         const quests = normalizeQuests(status);
         const pos = normalizeTile(status?.pos);
         const inventory = normalizeItemContainer(status?.inventory);
+        const packSlots = normalizePackSlots(status?.inventory);
         const equipment = normalizeItemContainer(status?.equipment);
 
         // Stop file / swarm.json / side card owner pause check (ignore controller auto-stops).
@@ -1130,6 +1145,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
             quests,
             pos,
             inventory,
+            ...(packSlots ? { packSlots } : {}),
             equipment,
             bank,
             ...(accountReserves ? { reserves: accountReserves } : {}),
@@ -1218,6 +1234,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
     );
     const recentTransfers = tradeMemory.recentTransfers.filter((t) => isTransferOrder(t));
     const geEscrowCoins = { ...readGeEscrowByAccount(root, server), ...(opts.geEscrowCoins ?? {}) };
+    const shopShelves = readShopShelves(server, now, root);
 
     const snapshot: WorldSnapshot = {
         schemaVersion: 1,
@@ -1229,6 +1246,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         ...(opts.reserves ? { reserves: opts.reserves } : {}),
         ...(opts.globalReserves ? { globalReserves: opts.globalReserves } : {}),
         ...(Object.keys(marketCooldowns).length > 0 ? { marketCooldowns } : {}),
+        ...(Object.keys(shopShelves).length > 0 ? { shopShelves } : {}),
         ...(Object.keys(spotOccupancy).length > 0 ? { spotOccupancy } : {}),
         ...(Object.keys(geEscrowCoins).length > 0 ? { geEscrowCoins } : {}),
         ...(activeTransfers.length > 0 ? { activeTransfers } : {}),

@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { marketQuotes as parseMarketCacheQuotes } from '../../core/src/market-cache';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
+import { SHELF_MAX_AGE_MS } from '../../core/src/shop-shelf';
 import type { Shop } from '../../knowledge/src/shops';
 import type { GearSources } from '../../knowledge/src/gear-sources';
 import {
@@ -306,6 +307,30 @@ export function loadMarketQuotesFromRoot(root: string, now = Date.now()): Market
     return {};
 }
 
+// How long a seen empty shelf stays empty for the plan: the stock-out cooldown, or the shop restock when longer, at
+// most the shelf store age (core/src/shop-shelf.ts SHELF_MAX_AGE_MS).
+// The two numbers are outcome-classifier.ts DEFAULT_MARKET_COOLDOWN_MS and SERVER_TICK_MS; that module imports this one.
+const STOCK_OUT_COOLDOWN_MS = 10 * 60_000;
+const SERVER_TICK_MS = 400;
+export function emptyShelfMs(restockTicks: number | null | undefined): number {
+    return Math.min(SHELF_MAX_AGE_MS, Math.max(STOCK_OUT_COOLDOWN_MS, (restockTicks ?? 0) * SERVER_TICK_MS));
+}
+
+// The GE buy refuses a round when the pack holds more than this many items after it banks its coins and the item
+// (core/src/order-refusal.ts orderRefusal, workers/src/market/ge-buy.ts bankPack).
+export const GE_PACK_LIMIT = 26;
+
+// The pack slots that stay full after the GE buy banks coins and the item, or undefined when the status shows no pack.
+export function packAfterGeBanking(acct: AccountState, itemId: number): number | undefined {
+    if (!acct.packSlots) return undefined;
+    let n = 0;
+    for (const [id, slots] of Object.entries(acct.packSlots)) {
+        const k = Number(id);
+        if (k !== COINS_ITEM_ID && k !== itemId) n += slots;
+    }
+    return n;
+}
+
 function isVenueOnCooldown(
     acct: AccountState,
     world: WorldSnapshot,
@@ -374,6 +399,11 @@ export function resolveAcquireItem(
     const allowedSources = req.allowedSources;
     const candidates: AcquireCandidate[] = [];
     const skippedReasons: { source: AcquireSourceKind; reason: string }[] = [];
+    // A seller of the item has an empty shelf (a stock-out cooldown or a fresh empty shelf count): other players drain
+    // shared shop stock, so the next seller is often empty too, and the GE takes the order unless that seller is cheaper.
+    let shelfDrained = false;
+    let bestShopTravelCoins = 0;
+    let geTravelCoins = 0;
 
     for (const source of ACQUIRE_SOURCE_ORDER) {
         if (allowedSources !== undefined && !allowedSources.includes(source)) {
@@ -458,6 +488,7 @@ export function resolveAcquireItem(
             }
 
             let bestShopStep: AcquireStep | null = null;
+            bestShopTravelCoins = 0;
             let shopRejectReason = 'no accessible NPC shop';
             const hasCooldownMaps = Boolean(acct.cooldowns || world.marketCooldowns);
             for (const shop of shops) {
@@ -467,7 +498,15 @@ export function resolveAcquireItem(
                     continue;
                 }
                 if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `shop:${shop.shop}`, shop.shop)) {
+                    shelfDrained = true;
                     if (!skipDiag) shopRejectReason = `shop:${shop.shop} on cooldown`;
+                    continue;
+                }
+                const seenRow = world.shopShelves?.[shopVenueKey];
+                const seen = seenRow && world.at - seenRow.at < emptyShelfMs(shop.restockTicks) ? seenRow : undefined;
+                if (seen && seen.count === 0) {
+                    shelfDrained = true;
+                    if (!skipDiag) shopRejectReason = `shop:${shop.shop} shelf seen empty ${Math.round((world.at - seen.at) / 1000)} s ago`;
                     continue;
                 }
                 if (!shopIsAccessible(acct, shop, req.questPoints ?? 0, acctCache)) {
@@ -507,14 +546,17 @@ export function resolveAcquireItem(
                 }
                 const stockPerCycle = Math.max(1, shop.stock);
                 const restockTicks = Math.max(5, shop.restockTicks ?? 30);
-                const restockWaitFor = (qty: number) => Math.max(0, Math.ceil(qty / stockPerCycle) - 1) * restockTicks;
+                // A fresh shelf count replaces the full first shelf that the catalog stock assumes.
+                const firstShelf = seen ? Math.min(stockPerCycle, seen.count) : stockPerCycle;
+                const restockWaitFor = (qty: number) => Math.ceil(Math.max(0, qty - firstShelf) / stockPerCycle) * restockTicks;
                 const runTicksFor = (qty: number) => travelTicks + Math.ceil(qty / 10) + restockWaitFor(qty) + 15;
                 // One run must fill the order. A partial order takes what the shop restocks inside the cap; a full
                 // order goes to the next source (the Ardougne gem stall restocks its 2 sapphires each 15000 ticks).
                 let shopQty = req.quantity;
                 if (runTicksFor(shopQty) > SHOP_BUY_CAP_TICKS) {
                     const cycles = Math.floor((SHOP_BUY_CAP_TICKS - travelTicks - 15 - Math.ceil(shopQty / 10)) / restockTicks) + 1;
-                    const fits = Math.max(0, Math.min(shopQty, cycles * stockPerCycle));
+                    // The first shelf, then one full shelf for each restock inside the cap.
+                    const fits = cycles < 1 ? 0 : Math.max(0, Math.min(shopQty, firstShelf + (cycles - 1) * stockPerCycle));
                     if (req.allowPartial !== true || fits < 1) {
                         if (!skipDiag) shopRejectReason = `shop ${shop.shop} restock wait ${restockWaitFor(shopQty)} + travel ${travelTicks} > cap ${SHOP_BUY_CAP_TICKS} ticks`;
                         continue;
@@ -525,6 +567,7 @@ export function resolveAcquireItem(
                 const buyTicks = Math.max(10, runTicksFor(shopQty));
                 if (!bestShopStep || shopCost < bestShopStep.estimatedCoinCost
                     || (shopCost === bestShopStep.estimatedCoinCost && buyTicks < bestShopStep.estimatedTicks)) {
+                    bestShopTravelCoins = travelCoins;
                     bestShopStep = {
                         stepKind: 'acquire',
                         source: 'npc_shop',
@@ -614,6 +657,12 @@ export function resolveAcquireItem(
                 if (!skipDiag) skippedReasons.push({ source, reason: 'insufficient coins for GE limit cost plus travel fare' });
                 continue;
             }
+            const pack = packAfterGeBanking(acct, req.itemId);
+            if (pack !== undefined && pack > GE_PACK_LIMIT) {
+                if (!skipDiag) skippedReasons.push({ source, reason: `pack holds ${pack} items after banking coins and the item, over ${GE_PACK_LIMIT}: two collection slots unavailable` });
+                continue;
+            }
+            geTravelCoins = reach.travelCoins;
             candidates.push({
                 step: {
                     stepKind: 'acquire',
@@ -857,6 +906,19 @@ export function resolveAcquireItem(
             }
             if (bestActStep) candidates.push({ step: bestActStep, source });
             else if (!skipDiag) skippedReasons.push({ source, reason: rejectReason });
+        }
+    }
+
+    const shopAt = candidates.findIndex((c) => c.source === 'npc_shop');
+    const ge = candidates.find((c) => c.source === 'ge')?.step;
+    if (shelfDrained && shopAt >= 0 && ge) {
+        const shop = candidates[shopAt]!.step;
+        const perUnit = (n: number, s: AcquireStep) => n / Math.max(1, s.quantity);
+        const shopCheaper = perUnit(shop.estimatedTicks, shop) < perUnit(ge.estimatedTicks, ge)
+            && perUnit(shop.estimatedCoinCost + bestShopTravelCoins, shop) <= perUnit(ge.estimatedCoinCost + geTravelCoins, ge);
+        if (!shopCheaper) {
+            candidates.splice(shopAt, 1);
+            if (!skipDiag) skippedReasons.push({ source: 'npc_shop', reason: `a seller shelf is empty and shop:${shop.shopId} is not cheaper than the GE in ticks and coins` });
         }
     }
 
