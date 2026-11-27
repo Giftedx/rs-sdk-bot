@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795820840891,
+ "at": 1795820922669,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -112,11 +112,11 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "magic_guild_elemental",
     "3000"
    ],
    "env": {
@@ -137,11 +137,11 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magic_guild_elemental",
+    "runeshop",
     "3000"
    ],
    "env": {
