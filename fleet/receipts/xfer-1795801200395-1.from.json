@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795801200395-1",
  "account": "Woodpecker",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 1,
  "claim": "337cb189-efa5-44a3-8d37-6dc9580677f7",
- "count": 0,
- "ok": false,
- "at": 1795801578701,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795801611595,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801586477
+ },
+ "logout": {
+  "attemptId": "1795801578714-0000011524-0000000001",
+  "at": 1795801611584,
+  "sha256": "e2f69d2434c96b00e1d36ebdba7d8f4717c70801f94244213df34b1ea7ece232"
+ },
+ "screen": true
 }

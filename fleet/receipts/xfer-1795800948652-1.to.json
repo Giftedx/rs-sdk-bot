@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795800948652-1",
  "account": "Quickhandjob",
  "partner": "Nockitoff",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "f3ff0857-6819-4d66-88ba-1d809f41082d",
- "count": 0,
- "ok": false,
- "at": 1795801560920,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795801619221,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801618451
+ },
+ "logout": {
+  "attemptId": "1795801560932-0000034092-0000000001",
+  "at": 1795801619210,
+  "sha256": "875233cdbab28cbf9090649e12a2c84151db1b84a2c1a831b8aa35df8e4e653d"
+ },
+ "screen": true
 }

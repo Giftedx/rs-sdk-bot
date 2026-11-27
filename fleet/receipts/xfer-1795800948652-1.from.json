@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800948652-1",
+ "account": "Nockitoff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "6aeb8c63-5feb-4d48-91cf-994046a3bb27",
+ "count": 1,
+ "ok": true,
+ "at": 1795801617600,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795801609663
+ },
+ "logout": {
+  "attemptId": "1795801603129-0000033032-0000000001",
+  "at": 1795801617588,
+  "sha256": "1be3e13d1601fb9056e5adbddd1c696cbad0380b7d879635dca73f9d9bc5bfe1"
+ },
+ "screen": true
+}

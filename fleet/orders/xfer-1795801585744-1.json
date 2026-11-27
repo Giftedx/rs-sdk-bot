@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795801585744-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "PickpockDick",
+  "item": "Herb",
+  "count": 4,
+  "itemId": 209,
+  "start": 1795801585744,
+  "end": 1795802485744,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
