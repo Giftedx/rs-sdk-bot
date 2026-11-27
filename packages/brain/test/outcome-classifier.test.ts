@@ -624,3 +624,15 @@ describe('repeat faults', () => {
         }
     });
 });
+
+describe('infra fault status codes', () => {
+    const kind = (error: string) => classifyRawWorkerExit({ activityId: 'a:infra', account: 'Bot1', exitCode: 1, error, ticksElapsed: 5 }).kind;
+    test('a plain number in a result line is no HTTP status', () => {
+        for (const line of ['RESULT fail walk-to {"ok":false} at=3287,3032,0 ticks=503', 'TypeError at tick 429', 'RESULT fail kills=502 bones=0'])
+            expect(kind(line), line).not.toBe('infra_fault');
+    });
+    test('a status named as one is an infra fault', () => {
+        for (const line of ['The requested URL returned error: 503', 'HTTP 502 from the gateway', '503 Service Unavailable', '429 Too Many Requests', 'status 429'])
+            expect(kind(line), line).toBe('infra_fault');
+    });
+});
