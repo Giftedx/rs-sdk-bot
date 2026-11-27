@@ -25,7 +25,7 @@ describe('brain run kept when one brain cycle drops it', () => {
     });
 
     test('a re-plan that cannot rebuild the running plan (planner blocker) keeps the run', () => {
-        for (const reason of ['no_matching_demand_or_activity', 'unresolvable_supply:1975', 'missing_coins:500', 'missing_food_supply']) {
+        for (const reason of ['no_matching_demand_or_activity', 'unresolvable_supply:1975', 'missing_coins:500', 'missing_food_supply', 'combat_survivability:protection', 'combat_survivability:defence']) {
             expect(brainDropKeep(base({ idleReason: () => reason }))).toBeDefined();
         }
     });
@@ -80,4 +80,12 @@ test('a brain run that a swarm stop ended is released; an owner stop, no food or
     expect(brainStopEnd(own, 'RESULT fail ticks=40 hp=3 fled=true', undefined)).toBe(own);
     // Other ends are untouched.
     expect(brainStopEnd('blocked after 2 runs', 'RESULT fail stop file', undefined)).toBe('blocked after 2 runs');
+});
+
+test('a finite brain run (a location recovery) that a re-plan drops at a combat floor runs to its end', () => {
+    const run = { accounts: ['BackdoorMan'], started: NOW - 7_000, brain: true, finite: true };
+    expect(brainDropKeep(base({ run, idleReason: () => 'combat_survivability:defence' }))).toBe('finite job runs to its end');
+    // A death or an owner pause still stops it.
+    expect(brainDropKeep(base({ run, idleReason: () => 'dead' }))).toBeUndefined();
+    expect(brainDropKeep(base({ run, idleReason: () => 'paused_owner' }))).toBeUndefined();
 });

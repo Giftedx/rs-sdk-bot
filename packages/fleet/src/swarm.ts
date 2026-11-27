@@ -696,8 +696,11 @@ export const BRAIN_SOFT_IDLE: ReadonlySet<string> = new Set([
     'max_bots_limit', 'spot_capacity_full', 'demand_saturated', 'idle', 'no_matching_demand_or_activity', 'missing_food_supply',
 ]);
 // Planner blocker reasons: the re-plan of a running account excludes hub_banker supply, so it can fail to rebuild the
-// plan that started the run. These reasons say nothing about the safety of the running worker.
-const BRAIN_SOFT_IDLE_PREFIXES = ['unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:'] as const;
+// plan that started the run. These reasons say nothing about the safety of the running worker. A combat floor
+// (combat_survivability:*) is the blocker of the last candidate the re-plan tried, often a fight the account does not
+// run; the running worker keeps its own eat and flee guards. A location recovery run is never rebuilt (a running
+// account is no longer in needs_location_recovery), so its re-plan always ends at such a blocker.
+const BRAIN_SOFT_IDLE_PREFIXES = ['unresolvable_supply:', 'missing_coins:', 'missing_quest_unlock:', 'quest_unlock_blocked:', 'combat_survivability:'] as const;
 export function brainSoftIdle(reason: string | undefined): boolean {
     return reason === undefined || BRAIN_SOFT_IDLE.has(reason) || BRAIN_SOFT_IDLE_PREFIXES.some(p => reason.startsWith(p));
 }
