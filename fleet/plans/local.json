@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795777149290,
+ "at": 1795777173244,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1710 TARGET_COUNT=171 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts CAP=1540 TARGET_COUNT=154 PRODUCT_TARGET=175 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
    ],
    "env": {
@@ -77,7 +77,7 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1710 TARGET_COUNT=171 PRODUCT_TARGET=175 -- mining essence",
+    "scripts/aio-skiller.ts CAP=1610 TARGET_COUNT=161 PRODUCT_TARGET=175 -- mining essence",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=175 -- runecraft air"
    ],
    "env": {
