@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795790063280-1",
  "account": "Billionaire",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "ee2d3e2c-1f17-4343-8029-8a9fb1cf345e",
- "count": 0,
- "ok": false,
- "at": 1795790279102,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795790303769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795790288211
+ },
+ "logout": {
+  "attemptId": "1795790279112-0000023884-0000000001",
+  "at": 1795790303755,
+  "sha256": "29b2df984cfd6a75daaf3333102ab8c3a895b4eaca7bf21e1fcfb52aeea72cd3"
+ },
+ "screen": true
 }
