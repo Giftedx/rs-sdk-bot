@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795785086570,
+ "at": 1795785116696,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,25 +60,18 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "earth-production",
-    "craft",
-    "2000"
+    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "27",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "army",
-   "resources": [
-    "earth-altar"
-   ]
+   "role": "army"
   },
   {
    "account": "Fingersmith",
@@ -269,14 +262,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "20",
+    "MAX_ITEMS": "18",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "20"
+    "BATCH_UNITS": "18"
    },
    "enabled": true,
    "repeat": false,
@@ -317,6 +310,40 @@
    "resources": [
     "fire-giants"
    ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "167"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=4780 TARGET_COUNT=478 PRODUCT_TARGET=478 -- mining essence",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=478 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   }
  ],
  "army": [
