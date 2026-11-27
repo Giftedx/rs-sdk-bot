@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795775186891-1",
  "account": "Shaftsinker",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "07a4be5c-6317-46de-b065-70ee33ef86ab",
- "count": 0,
- "ok": false,
- "at": 1795775257614,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795775306882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795775283734
+ },
+ "logout": {
+  "attemptId": "1795775257624-0000006972-0000000001",
+  "at": 1795775306870,
+  "sha256": "12f9630f76dd7d3b66b9bb9b137ecd6ffb7f805621b956e507ce950c3680aeb6"
+ },
+ "screen": true
 }
