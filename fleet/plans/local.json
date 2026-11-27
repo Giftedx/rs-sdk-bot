@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795784102826,
+ "at": 1795784128890,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,17 +60,71 @@
   },
   {
    "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "earth-production",
+    "craft",
+    "2000"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "27",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army",
+   "resources": [
+    "earth-altar"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=20000 TARGET_COUNT=2000 PRODUCT_TARGET=2000 -- mining essence",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 STALL_TICKS=280 -- magic earth-production craft 2000"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
@@ -78,24 +132,49 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "gemshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
+    "DEMAND_ID": "campaign:haggis:item:1623",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
+   "goal": "campaign:haggis:item:1623",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "41",
+    "ITEMS": "Steel arrowtips",
+    "MAX_ITEMS": "20",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:41",
+    "BATCH_UNITS": "20"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:41",
    "role": "army"
   },
   {
@@ -107,46 +186,38 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "41",
-    "ITEMS": "Steel arrowtips",
-    "MAX_ITEMS": "44",
+    "ITEM_ID": "40",
+    "ITEMS": "Iron arrowtips",
+    "MAX_ITEMS": "90",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "44"
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "90"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:41",
+   "goal": "campaign:haggis:item:40",
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-market.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "ranged-camp"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "19",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "19"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
   },
   {
    "account": "mmsmk1232",
@@ -169,51 +240,6 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
@@ -268,28 +294,6 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_tarromin_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:95",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:95",
-   "role": "auto"
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -320,15 +324,16 @@
    "args": [
     "crafting",
     "inventory",
-    "identify:harralander"
+    "brew:unf_harralander_potion"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1000",
+    "MAX_MAKE": "1",
+    "CAP": "1200",
     "MEMBERS": "1",
-    "TARGET_COUNT": "2",
-    "PRODUCT_TARGET": "3",
-    "STALL_TICKS": "150"
+    "DEMAND_ID": "campaign:haggis:item:97",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
    },
    "enabled": true,
    "repeat": false,
