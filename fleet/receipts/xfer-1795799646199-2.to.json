@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795799646199-2",
+ "account": "Shaftmaker",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 297,
+ "claim": "09df4a29-ba9d-449a-925c-4ab34d66c1c2",
+ "count": 0,
+ "ok": false,
+ "at": 1795800546481,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795800371595-0000020548-0000000001",
+  "at": 1795800546464,
+  "sha256": "c8795712794c55fc101ed3008cbe52c73175dd5166d970edd05c5aba5e43b3cc"
+ },
+ "screen": false
+}

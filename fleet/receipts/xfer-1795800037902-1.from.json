@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795800037902-1",
+ "account": "Swordswallow",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 120,
+ "claim": "a25e4aed-f329-4957-bd61-d9571b705cfd",
+ "count": 120,
+ "ok": true,
+ "at": 1795800462065,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 120,
+  "after": 0
+ },
+ "bank": {
+  "count": 120,
+  "at": 1795800416535
+ },
+ "logout": {
+  "attemptId": "1795800389083-0000033520-0000000001",
+  "at": 1795800462052,
+  "sha256": "120f9206ecc00480ec3f165bcf1069314b451095aadfb4ce3c95fd5d7430fff5"
+ },
+ "screen": true
+}

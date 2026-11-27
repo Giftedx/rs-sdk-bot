@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799653444-1",
+ "account": "Billionaire",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 34,
+ "claim": "bc69cc66-2b1b-474d-aef3-e3bb51600e03",
+ "count": 34,
+ "ok": true,
+ "at": 1795800524046,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 34
+ },
+ "bank": {
+  "count": 34,
+  "at": 1795800523322
+ },
+ "logout": {
+  "attemptId": "1795800512302-0000001868-0000000001",
+  "at": 1795800524031,
+  "sha256": "43326f633b777bb731c9cc48e396128db6c36ea2f199556a2858ec1fda0563fb"
+ },
+ "screen": true
+}

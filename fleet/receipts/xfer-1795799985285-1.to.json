@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799985285-1",
+ "account": "YewFirst",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 9,
+ "claim": "10908a63-7b5b-469c-b6db-deb17a769884",
+ "count": 9,
+ "ok": true,
+ "at": 1795800552884,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 9
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795800552217
+ },
+ "logout": {
+  "attemptId": "1795800540242-0000001696-0000000001",
+  "at": 1795800552868,
+  "sha256": "41fc10956c7b7502e4c462aa91f753755e2d5240bf12ef13b7ddb178178fe96b"
+ },
+ "screen": true
+}

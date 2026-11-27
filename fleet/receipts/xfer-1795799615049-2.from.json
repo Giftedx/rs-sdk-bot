@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795799615049-2",
+ "account": "Kiltlifter",
+ "partner": "ChaosInPants",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 15,
+ "claim": "9942ce37-b169-4c37-838b-17a22563fd40",
+ "count": 0,
+ "ok": false,
+ "at": 1795800515707,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795800462087-0000027628-0000000001",
+  "at": 1795800515689,
+  "sha256": "be8a5ab778149b387ce6a3b503438e5675f51d972c836aa31f3c64e95379cac6"
+ },
+ "screen": false
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795799627397-2",
+ "account": "mmsmk1232",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unfinished potion",
+ "requested": 2,
+ "claim": "966c9975-d751-4428-b5ba-cbe296fc052a",
+ "count": 2,
+ "ok": true,
+ "at": 1795800507328,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795800493787
+ },
+ "logout": {
+  "attemptId": "1795800482819-0000032116-0000000001",
+  "at": 1795800507288,
+  "sha256": "ce5385f2acf4c1b385f8bf2a05c5018292730bf2bc06076febabbf96c86daa24"
+ },
+ "screen": true
+}
