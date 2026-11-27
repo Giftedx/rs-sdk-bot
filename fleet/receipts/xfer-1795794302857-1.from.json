@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795794302857-1",
  "account": "Woodpecker",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "42617c09-9fd1-410d-b56f-2c3afd5b5e14",
- "count": 0,
- "ok": false,
- "at": 1795794826949,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795794886351,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795794836374
+ },
+ "logout": {
+  "attemptId": "1795794826977-0000024644-0000000001",
+  "at": 1795794886332,
+  "sha256": "1f3e35a426218d38fe1f54c1f71a0aa3e2c681e6afd11a7042ad5bcf244c5912"
+ },
+ "screen": true
 }
