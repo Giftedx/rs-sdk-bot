@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795795023188-1",
+ "account": "UnderMyKilt",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "c2c04d4e-067d-4a36-bbdc-dccc36088eff",
+ "count": 1,
+ "ok": true,
+ "at": 1795795458393,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795795443959
+ },
+ "logout": {
+  "attemptId": "1795795434187-0000017708-0000000001",
+  "at": 1795795458274,
+  "sha256": "5d599b1124ff40f8c42c9f5abbd2affa68f924f22ea9a7ceb986f5aa0369752a"
+ },
+ "screen": true
+}

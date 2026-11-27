@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795795260759-2",
+ "account": "Bigpackage",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Limpwurt root",
+ "requested": 16,
+ "claim": "97970700-10df-4d86-a6bd-1a2cef439bb0",
+ "count": 0,
+ "ok": false,
+ "at": 1795795478949,
+ "detail": "trade claimed"
+}
