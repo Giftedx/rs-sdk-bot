@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795790073997-1",
+ "account": "Quickhandjob",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 13,
+ "claim": "9b3cc8a5-7e63-4739-a468-35a7b19ff675",
+ "count": 13,
+ "ok": true,
+ "at": 1795790572557,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 13
+ },
+ "bank": {
+  "count": 13,
+  "at": 1795790571796
+ },
+ "logout": {
+  "attemptId": "1795790561703-0000022616-0000000001",
+  "at": 1795790572543,
+  "sha256": "be6d983f14c5d23fcf6a42d8d9efedea66d0e5fd3c031e0e4445a0c22be5f4ea"
+ },
+ "screen": true
+}
