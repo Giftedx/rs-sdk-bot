@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795740701487,
+ "at": 1795740718810,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -120,11 +120,13 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/pk.ts",
-   "args": [],
+   "script": "scripts/aio-boss.ts",
+   "args": [
+    "trawler"
+   ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "25"
    },
    "enabled": true,
    "repeat": false,
