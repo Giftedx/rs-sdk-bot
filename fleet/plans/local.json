@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795815543064,
+ "at": 1795815561940,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,21 +84,6 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "army"
-  },
-  {
    "account": "Nockitoff",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -124,7 +109,22 @@
    "role": "auto"
   },
   {
-   "account": "Bigpackage",
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:TossTheCaber BATCH_UNITS=250 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -149,23 +149,7 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
-   "account": "mmsmk1232",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -190,7 +174,23 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "Kiltlifter",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "grandtree"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -200,14 +200,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "20",
+    "MAX_ITEMS": "58",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "25200",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "20"
+    "BATCH_UNITS": "58"
    },
    "enabled": true,
    "repeat": false,
@@ -215,7 +215,7 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
+   "account": "OreElse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -240,32 +240,17 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1349 \"ITEMS=Iron axe\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
+   "account": "PickpockDick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
     "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "DEMAND_ID": "campaign:haggis:item:1519",
     "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lightmylog:item:1519",
+   "goal": "campaign:haggis:item:1519",
    "role": "army",
    "resources": [
     "draynor-willows"
@@ -287,6 +272,21 @@
    "resources": [
     "draynor-willows"
    ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1349 \"ITEMS=Iron axe\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/generated/woodcutting.ts WC_SITE=draynor DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army"
   },
   {
    "account": "Ballspinner",
@@ -477,6 +477,40 @@
    "repeat": false,
    "goal": "goal:supply_chain:263",
    "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:lightmylog:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lightmylog:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
@@ -487,7 +521,6 @@
   "Wandwaver",
   "mmsmk1232",
   "billionaire",
-  "bowbeforeme",
   "fingerblastr",
   "hocuspokeus",
   "knightrider",

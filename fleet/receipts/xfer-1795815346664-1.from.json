@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795815346664-1",
  "account": "Pocketpython",
  "partner": "BoneToPick",
@@ -10,8 +10,18 @@
  "item": "Trout",
  "requested": 10,
  "claim": "23fc92a7-f207-4d48-9a79-2eaf8a07293e",
- "count": 0,
- "ok": false,
- "at": 1795815482054,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795815557364,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795815482064-0000014368-0000000001",
+  "at": 1795815557352,
+  "sha256": "8b1ead9f8fddeda4459825548b55d23050100147af9d4b7bb206ffe8680f850f"
+ },
+ "screen": true
 }
