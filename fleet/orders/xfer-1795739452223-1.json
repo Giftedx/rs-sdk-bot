@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795739452223-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "YewFirst",
+  "item": "Swamp toad",
+  "count": 1,
+  "itemId": 2150,
+  "start": 1795739452223,
+  "end": 1795740352223,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

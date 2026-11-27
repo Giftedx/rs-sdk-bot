@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795739452316,
+ "at": 1795739492841,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,10 +59,10 @@
    "role": "pvp"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort -- crafting inventory grind:chocolate_bar"
    ],
@@ -72,7 +72,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "Bigpackage",
@@ -91,7 +91,7 @@
    "role": "army"
   },
   {
-   "account": "Quickhandjob",
+   "account": "Fingerblastr",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -108,22 +108,6 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:fluffs",
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -260,56 +244,25 @@
    "role": "army"
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=2349 \"ITEMS=Bronze bar\" MAX_ITEMS=14 STOCK_TARGET=25 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1351 MAX_MAKE=25 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 TARGET_COUNT=25 CAP=1000 -- smithing anvil 1000",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=554 \"ITEMS=Fire rune\" MAX_ITEMS=249 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
-    "scripts/aio-market.ts ITEM_ID=563 \"ITEMS=Law rune\" MAX_ITEMS=231 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic teleport varrock 50 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
+   "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
+    "crafting",
+    "inventory",
+    "grind:unicorn_horn"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:235",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
+   "goal": "campaign:haggis:item:235",
+   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
@@ -353,11 +306,14 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
