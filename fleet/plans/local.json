@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795783379039,
+ "at": 1795783470050,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,23 +59,66 @@
    "role": "pvp"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "essence"
+    "ge-buy"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "167"
+    "ORDER_KEY": "brain-1513-1-o16-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "16",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
+   "goal": "campaign:haggis:item:1513",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "39",
+    "ITEMS": "Bronze arrowtips",
+    "MAX_ITEMS": "15",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "15"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -86,45 +129,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "167"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "167"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "167"
+    "BATCH_UNITS": "1839"
    },
    "enabled": true,
    "repeat": false,
@@ -153,62 +158,42 @@
    "role": "army"
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
+   "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "jewellery-trip"
+    "smithing",
+    "smelt"
    ],
    "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "14",
+    "ORE_RESERVE": "0",
+    "STALL_TICKS": "350"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1643",
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magic_guild_elemental",
     "3000"
    ],
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "113",
+    "MAX_ITEMS": "266",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "113"
+    "BATCH_UNITS": "266"
    },
    "enabled": true,
    "repeat": false,
@@ -216,21 +201,62 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "ranged-camp"
+    "crafting",
+    "inventory",
+    "identify:kwuarm"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
+    "MAX_MAKE": "6",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:263",
+    "BATCH_UNITS": "6",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "goal:supply_chain:263",
    "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "herblore",
+    "potions"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "65",
+    "STALL_TICKS": "200"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:265",
+   "role": "army"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto",
+   "resources": [
+    "edgeville-yews"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -253,28 +279,6 @@
    "resources": [
     "earth-altar"
    ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_tarromin_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:95",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:95",
-   "role": "auto"
   }
  ],
  "army": [
@@ -285,6 +289,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
@@ -292,11 +297,11 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
