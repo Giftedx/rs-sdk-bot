@@ -11,7 +11,7 @@ import { spawn as spawnChild } from 'node:child_process';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type AccountPlan, type PlannedStep } from '../../brain/src/index';
-import { DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs } from '../../brain/src/outcome-classifier';
+import { DEFAULT_MARKET_COOLDOWN_MS, shopRestockCooldownMs, shopStockWaitText } from '../../brain/src/outcome-classifier';
 import { accountClassLevels, defectBlocksAccount } from '../../brain/src/planner';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
@@ -662,13 +662,18 @@ export type EndRecord = { at: number; reason: string; revision?: string; release
 // SHOP_STOCK_WAIT_RE, brain-runtime.ts extractWorkerOutcomeInput).
 const STOCK_OUT_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here|\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
 
-// The market venue of a failed run that the venue's empty stock ended, or that a stable buy refusal ended, for its end record.
+// The market venue of a failed run that the venue's empty stock ended, or that a stable buy refusal ended, or of a
+// shop run that ended "done" with nothing bought, for its end record.
 export function stockOutEnd(
     run: { marketItemId?: number; marketVenue?: string },
     reason: string,
     lastResultLine: string | undefined,
 ): { marketItemId: number; marketVenue: string; marketRefusal?: RefusalCause } | undefined {
-    if (run.marketItemId === undefined || !run.marketVenue || successfulEnd(reason) || /^died\b/.test(reason)) return undefined;
+    if (run.marketItemId === undefined || !run.marketVenue || /^died\b/.test(reason)) return undefined;
+    // A shop run that bought nothing ends "done": its venue still failed.
+    if (successfulEnd(reason)) {
+        return lastResultLine !== undefined && shopStockWaitText(lastResultLine) ? { marketItemId: run.marketItemId, marketVenue: run.marketVenue } : undefined;
+    }
     const refusal = lastResultLine !== undefined ? unplacedCause(lastResultLine) : undefined;
     if (refusal !== undefined && STABLE_CAUSES.includes(refusal)) return { marketItemId: run.marketItemId, marketVenue: run.marketVenue, marketRefusal: refusal };
     return STOCK_OUT_RE.test(`${reason}\n${lastResultLine ?? ''}`) ? { marketItemId: run.marketItemId, marketVenue: run.marketVenue } : undefined;

@@ -1870,6 +1870,8 @@ function planAccountCore(
                     estimatedCoinCost: mc.estimatedCoinCost,
                     coinFloatPreserved: mc.coinFloatPreserved,
                     batchUnits: mc.quantity,
+                    // The GE buy refuses an item that the account holds unless the plan names the count it saw.
+                    ...(mc.source === 'ge' ? { ownedBefore: accountOwnedItemCount(acct, targetItemId, { includeBank: true, requireTrustedBank: false }) } : {}),
                 },
             };
             const candidatePlan: AccountPlan = {

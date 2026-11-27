@@ -24,6 +24,7 @@ import { campaignShortfalls } from '../src/campaigns';
 import { createActivityCatalog } from '../src/catalog';
 import { loadItemsMap } from '../src/preflight';
 import { createRateStore } from '../src/rate-store';
+import { resolvePlannedStepWorkerRoute } from '../src/worker-routing';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
 import { resolveShopProfile } from '../../workers/src/market/preflight';
 
@@ -994,7 +995,31 @@ test('planner scales quest XP rewards by 25x, filters quarantined craft_gather p
     expect(gePlan.steps[0]?.stepKind).toBe('work');
     if (gePlan.steps[0]?.stepKind === 'work') {
         expect(gePlan.steps[0].activityId).toBe('market:ge-buy');
+        expect(gePlan.steps[0].config?.ownedBefore).toBe(0);
     }
+
+    // A helper that holds some of the item: the GE buy names the count the plan saw, so the worker tops up from it
+    // instead of refusing "owned item already present" at the GE.
+    const holding = makeAcct({
+        name: 'HelperA',
+        role: 'helper',
+        skills: { Fishing: { level: 1, xp: 0 } },
+        inventory: { 383: 2 },
+        bank: { items: { 995: 100_000, 383: 3 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const holdingPlan = planAccount(holding, {
+        world: { ...geWorld, accounts: { HelperA: holding, StageAlt: stageAlt } },
+        activities,
+        demands: campEval.shortfalls,
+        marketQuotes: { 383: { ask: sharkCost, sell: 500, trades: 20 } },
+    });
+    const holdingStep = holdingPlan.steps[0];
+    expect(holdingStep?.stepKind === 'work' && holdingStep.activityId).toBe('market:ge-buy');
+    if (holdingStep?.stepKind !== 'work') throw Error('unreachable');
+    expect(holdingStep.config?.ownedBefore).toBe(5);
+    const routed = resolvePlannedStepWorkerRoute('HelperA', holdingStep);
+    expect(routed.env.EXPECTED_OWNED).toBe('5');
+    expect(routed.env.ORDER_KEY).toContain('-o5');
 });
 
 test('planner prevents multi-step coin double-spend across prepSteps and does not double-count travelTicks with RateStore', () => {

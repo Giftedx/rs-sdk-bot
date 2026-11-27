@@ -49,6 +49,16 @@ test('a stock-out end records its venue; a death, a success or another failure r
     expect(stockOutEnd({}, 'blocked after 1 runs', 'RESULT fail out of stock')).toBeUndefined();
 });
 
+test('a shop run that exits 0 with nothing bought at stock-wait holds its venue; a partial buy does not', () => {
+    // An empty shelf ends the shop run "done" with nothing bought; the next login meets the same empty shelf.
+    const run = { marketItemId: 1621, marketVenue: 'shop:gemshop2' };
+    const none = 'RESULT ok ticks=72 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1066 spentTotal=0 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=5';
+    expect(stockOutEnd(run, 'done after 1 runs', none)).toEqual(run);
+    expect(stockOutEnd(run, 'done after 1 runs', none.replace('boughtTotal=0', 'boughtTotal=53'))).toBeUndefined();
+    expect(stockOutEnd(run, 'done after 1 runs', 'RESULT ok ticks=72 boughtTotal=1 stop=stock-target targetMet=1')).toBeUndefined();
+    expect(stockOutEnd(run, 'died after 1 runs', none)).toBeUndefined();
+});
+
 test('a market plan at the venue whose stock ended the last run waits for the venue hold, though its quantity changed', () => {
     const first = geBuy(10);
     const ended = new Map<string, EndRecord>([['OreElse', {
