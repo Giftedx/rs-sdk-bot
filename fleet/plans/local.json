@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795771467947,
+ "at": 1795771484531,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "218",
+    "MAX_ITEMS": "205",
     "COIN_RESERVE": "1000",
-    "FLOAT": "45600",
+    "FLOAT": "43000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "218"
+    "BATCH_UNITS": "205"
    },
    "enabled": true,
    "repeat": false,
@@ -84,11 +84,11 @@
    "role": "auto"
   },
   {
-   "account": "KnightRider",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
@@ -117,31 +117,6 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "67",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "67"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
     "MAX_ITEMS": "240",
@@ -156,6 +131,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_armourshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1169",
+    "ITEMS": "Coif",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1169",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1169",
    "role": "army"
   },
   {
@@ -194,14 +194,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "71",
+    "MAX_ITEMS": "77",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "71"
+    "BATCH_UNITS": "77"
    },
    "enabled": true,
    "repeat": false,
@@ -216,7 +216,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
@@ -231,22 +231,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-boss.ts",
-   "args": [
-    "trawler"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
@@ -261,7 +246,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
@@ -276,12 +261,28 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
   },
   {
    "account": "YewGotWood",
@@ -291,7 +292,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "41"
+    "BATCH_UNITS": "47"
    },
    "enabled": true,
    "repeat": false,
@@ -299,7 +300,7 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -309,19 +310,19 @@
    "env": {
     "ITEM_ID": "557",
     "ITEMS": "Earth rune",
-    "MAX_ITEMS": "1272",
+    "MAX_ITEMS": "309",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "1272"
+    "BATCH_UNITS": "309"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "Swordinhand",
