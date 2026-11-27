@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795789287780-1",
+ "account": "Woodenstaff",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "476e719a-b009-4e62-87a9-6880173ef715",
+ "count": 0,
+ "ok": false,
+ "at": 1795790046528,
+ "detail": "trade claimed"
+}
