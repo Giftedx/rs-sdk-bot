@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795752081156,
+ "at": 1795752117319,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,6 +71,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "desertrescue"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:desertrescue",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
    "role": "army"
   },
   {
@@ -187,7 +203,6 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fingersmith",
   "hocuspokeus",

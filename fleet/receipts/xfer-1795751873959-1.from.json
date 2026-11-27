@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795751873959-1",
  "account": "TheFullMonty",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 155,
  "claim": "5b20f078-eae2-479e-92f0-72388afd1382",
- "count": 0,
- "ok": false,
- "at": 1795751964194,
- "detail": "trade claimed"
+ "count": 155,
+ "ok": true,
+ "at": 1795752112395,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 155,
+  "after": 0
+ },
+ "bank": {
+  "count": 155,
+  "at": 1795752098828
+ },
+ "logout": {
+  "attemptId": "1795751964203-0000027824-0000000001",
+  "at": 1795752112385,
+  "sha256": "ed02cce7263b878e804ed115c071fde9f73a8c0713ec7741e0ae36273453ce3f"
+ },
+ "screen": true
 }
