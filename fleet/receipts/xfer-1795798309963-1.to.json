@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795798309963-1",
  "account": "Nockitoff",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 33,
  "claim": "de390750-d72a-475e-9b92-09ddd655d51a",
- "count": 0,
- "ok": false,
- "at": 1795798404984,
- "detail": "trade claimed"
+ "count": 33,
+ "ok": true,
+ "at": 1795798418176,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 33
+ },
+ "bank": {
+  "count": 33,
+  "at": 1795798417428
+ },
+ "logout": {
+  "attemptId": "1795798404993-0000016220-0000000001",
+  "at": 1795798418156,
+  "sha256": "962e65b076d552c040e191e1c6ffaff421d7acdac214151427384a41e8199220"
+ },
+ "screen": true
 }
