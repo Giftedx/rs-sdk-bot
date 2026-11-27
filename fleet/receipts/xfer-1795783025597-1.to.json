@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795783025597-1",
+ "account": "BowBeforeMe",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 10,
+ "claim": "1383e3df-2806-440d-9085-505d1b683135",
+ "count": 0,
+ "ok": false,
+ "at": 1795783675296,
+ "detail": "trade claimed"
+}

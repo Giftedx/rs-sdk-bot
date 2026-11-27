@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795783286237-1",
+ "account": "KnightRider",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harralander",
+ "requested": 1,
+ "claim": "a3727d20-e7b2-4d90-96ca-80ba5571138a",
+ "count": 1,
+ "ok": true,
+ "at": 1795783783680,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795783782934
+ },
+ "logout": {
+  "attemptId": "1795783771722-0000011564-0000000001",
+  "at": 1795783783664,
+  "sha256": "bc9724240954bbb3179e3fa22be294796e3a46c70af124a56d37831724919cec"
+ },
+ "screen": true
+}

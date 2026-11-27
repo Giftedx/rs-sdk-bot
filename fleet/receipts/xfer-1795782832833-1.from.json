@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795782832833-1",
+ "account": "Shaftsinker",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "0c2649b5-42cc-476d-9903-66ff09b312f3",
+ "count": 0,
+ "ok": false,
+ "at": 1795783733298,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795783690659
+ },
+ "logout": {
+  "attemptId": "1795783679575-0000011728-0000000001",
+  "at": 1795783733277,
+  "sha256": "adf7b53cdf052f55088d39fc5c18c9ad92b8bf1d4c3ba73cf265aad4fb16dbf3"
+ },
+ "screen": false
+}

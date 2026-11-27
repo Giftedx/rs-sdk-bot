@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795782842068-1",
+ "account": "TheFullMonty",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn dust",
+ "requested": 1,
+ "claim": "23658588-3452-4532-a658-854e03e640a2",
+ "count": 0,
+ "ok": false,
+ "at": 1795783742469,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795783733774-0000016508-0000000001",
+  "at": 1795783742458,
+  "sha256": "d62dcefc0fbd0a631bafb5940017ce1d74319ff8507d7d83398018a73d2e2fee"
+ },
+ "screen": false
+}

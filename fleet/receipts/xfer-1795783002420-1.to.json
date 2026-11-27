@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795783002420-1",
+ "account": "TossTheCaber",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "78e9c6e5-2cac-49cf-92c0-444c428d027e",
+ "count": 0,
+ "ok": false,
+ "at": 1795783709129,
+ "detail": "trade claimed"
+}
