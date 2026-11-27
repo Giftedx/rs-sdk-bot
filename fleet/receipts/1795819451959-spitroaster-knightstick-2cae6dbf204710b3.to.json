@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795819451959-spitroaster-knightstick-2cae6dbf204710b3",
+ "account": "Knightstick",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "77268623-281a-4a7c-b4e0-adddb7d010b3",
+ "count": 20,
+ "ok": true,
+ "at": 1795821857439,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795821856681
+ },
+ "logout": {
+  "attemptId": "1795821845155-0000030568-0000000001",
+  "at": 1795821857419,
+  "sha256": "53bb12e7eac22a1282ae7c52b2733b97c353decc608a15e2cadf776176246850"
+ },
+ "screen": true
+}
