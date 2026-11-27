@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795748562198-1",
+ "account": "Woodenstaff",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "fa19ec72-51c7-41b7-a914-6c43516d7167",
+ "count": 0,
+ "ok": false,
+ "at": 1795748750534,
+ "detail": "Error: route to 3183, 3440: precondition Varrock teleport: cannot cast now (needs 1 firerune, 3 airrune, 1 lawrune)",
+ "logout": {
+  "attemptId": "1795748741621-0000010652-0000000001",
+  "at": 1795748750523,
+  "sha256": "027d3f1394b367b7c4fa847dd541cb1e199a9a93b89c8032ff9ef595a8fea1c0"
+ },
+ "screen": false
+}
