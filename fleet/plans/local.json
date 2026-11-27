@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795805520996,
+ "at": 1795805535021,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,7 +84,7 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
+   "account": "Bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -106,22 +106,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "grandtree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -222,6 +206,21 @@
    "role": "auto"
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=79600 TARGET_COUNT=7960 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 -- sweep grandtree"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -230,7 +229,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1085"
+    "BATCH_UNITS": "1277"
    },
    "enabled": true,
    "repeat": false,
@@ -249,7 +248,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1085"
+    "BATCH_UNITS": "1277"
    },
    "enabled": true,
    "repeat": false,
