@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795741277107-1",
+ "account": "BoneToPick",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "71d77768-f46d-4d9b-a49d-0a6f8751aee1",
+ "count": 250,
+ "ok": true,
+ "at": 1795741486902,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795741464950
+ },
+ "logout": {
+  "attemptId": "1795741451387-0000017124-0000000001",
+  "at": 1795741486891,
+  "sha256": "c24dfd7ebd5e947dcc5b75eb13c029965232aaadb84346d409f35670eb23bc88"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741261942-1",
+ "account": "Kiltlifter",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 500,
+ "claim": "03b8c1be-509e-4d64-86de-6d5fac66312e",
+ "count": 0,
+ "ok": false,
+ "at": 1795741493949,
+ "detail": "trade claimed"
+}

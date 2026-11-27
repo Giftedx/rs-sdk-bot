@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795741359373-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "Hocuspokeus",
+  "item": "Coins",
+  "count": 500,
+  "itemId": 995,
+  "start": 1795741359373,
+  "end": 1795742259373,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

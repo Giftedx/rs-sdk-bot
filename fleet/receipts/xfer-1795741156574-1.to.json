@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795741156574-1",
+ "account": "InTheSack",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 560,
+ "claim": "fba6b6fd-5381-4ddf-8a30-1cf5b31a03ab",
+ "count": 0,
+ "ok": false,
+ "at": 1795741497167,
+ "detail": "trade claimed"
+}
