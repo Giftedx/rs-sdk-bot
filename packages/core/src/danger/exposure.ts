@@ -27,10 +27,11 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
 // it looks) + 1 margin tile, as dangerSet counts it. `vislevel`: the NPC's visible combat level. `tooStrong`: the NPC
 // skips a player outside the Wilderness whose combat level is above 2 x vislevel (engine Npc.ts huntPlayers,
 // HuntCheckNotTooStrong.OUTSIDE_WILDERNESS). `distant`: it attacks with ranged or magic, so a wall between does not
-// keep its hits off (npcReach counts the whole square).
+// keep its hits off (npcReach counts the whole square). `hitRange`: the tiles past its walk tiles that npcReach counts
+// (default 1, a melee attack from an adjacent tile).
 export type WalkThreat = {
     readonly id: number; readonly name: string; readonly x: number; readonly z: number; readonly level: number;
-    readonly r: number; readonly vislevel: number; readonly tooStrong: boolean; readonly distant: boolean;
+    readonly r: number; readonly vislevel: number; readonly tooStrong: boolean; readonly distant: boolean; readonly hitRange?: number;
     readonly maxHit: number; readonly attackRoll: number; readonly attackRate: number;
 };
 
@@ -154,9 +155,10 @@ export function npcReach(grid: ReachGrid, doorAt: (level: number, x: number, z: 
             return w ? [{ x: d.x, z: d.z, level: d.level, angle: w.angle, shape: w.shape, blockrange: !!(w as { blockrange?: boolean }).blockrange }] : [];
         });
         if (doors.length && grid.changeWall && grid.__set) withDoorPolicy(grid as Parameters<typeof withDoorPolicy>[0], doors, run); else run();
+        const hit = Math.max(1, t.hitRange ?? 1);
         for (let x = -t.r; x <= t.r; x++) for (let z = -t.r; z <= t.r; z++) {
             if (!walk[(x + t.r) * side + (z + t.r)]) continue;
-            for (let ax = Math.max(-t.r, x - 1); ax <= Math.min(t.r, x + 1); ax++) for (let az = Math.max(-t.r, z - 1); az <= Math.min(t.r, z + 1); az++) out[(ax + t.r) * side + (az + t.r)] = 1;
+            for (let ax = Math.max(-t.r, x - hit); ax <= Math.min(t.r, x + hit); ax++) for (let az = Math.max(-t.r, z - hit); az <= Math.min(t.r, z + hit); az++) out[(ax + t.r) * side + (az + t.r)] = 1;
         }
         return out;
     };
@@ -292,9 +294,10 @@ export const walkFloorLine = (e: WalkExposure) => 2 * Math.max(e.burst || e.maxH
 export type WalkVerdict = { verdict: 'clear' | 'eat' | 'refuse'; need: number; needHeal: number; eatFirst: number };
 export function walkVerdict(p: WalkProfile, e: WalkExposure): WalkVerdict {
     if (e.damage <= 0) return { verdict: 'clear', need: 0, needHeal: 0, eatFirst: 0 };
-    const need = Math.ceil(e.damage * WALK_SAFETY + retreatLine(e.maxHit));
-    if (p.hp >= need) return { verdict: 'clear', need, needHeal: 0, eatFirst: 0 };
-    const line = walkFloorLine(e), maxHp = Math.max(p.hp, p.maxHp ?? p.hp);
+    const need = Math.ceil(e.damage * WALK_SAFETY + retreatLine(e.maxHit)), line = walkFloorLine(e);
+    // At or under the floor line the first hit sends the HP floor into its eat or escape, so the walk starts above it.
+    if (p.hp >= need && p.hp > line) return { verdict: 'clear', need, needHeal: 0, eatFirst: 0 };
+    const maxHp = Math.max(p.hp, p.maxHp ?? p.hp);
     if (maxHp <= line) return { verdict: 'refuse', need, needHeal: 0, eatFirst: 0 };
     const eatFirst = Math.max(0, line + 1 - p.hp), total = Math.max(need, line + 1) - p.hp;
     if (p.foodHeal >= total) return { verdict: 'eat', need, needHeal: 0, eatFirst };

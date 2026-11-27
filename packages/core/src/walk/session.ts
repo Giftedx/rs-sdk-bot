@@ -29,6 +29,7 @@ export async function sessionWalker(s: {
     onTick(cb: () => void): () => void;
     direct(a: { type: string; [k: string]: unknown }): Promise<unknown>;
     ended?: Promise<unknown>;
+    bot?: { eatFood?(target?: unknown): Promise<unknown> };
 }, walkOpts: { noFareFloat?: boolean } = {}): Promise<PathDeps> {
     const [pf, grid, { dangerSummary, guardWalk, liveHunters, npcReach, planAroundHarm, protectedFromMelee, stateWalkProfile, walkExposure, walkVerdict, withDanger }, { clientReach }] = await Promise.all([
         import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
@@ -73,6 +74,7 @@ export async function sessionWalker(s: {
             const guarded = () => guardWalk(grid, accountForSdk(s.sdk), { ...from, level }, { ...to, level }, 32, () => avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find());
             return planAroundHarm(grid, profile(), level, from, to, 32, guarded, { reach: harmReach });
         },
+        ...(typeof s.bot?.eatFood === 'function' ? { eat: () => s.bot!.eatFood!() } : {}),
         danger: (level, tiles) => {
             const p = profile(), exposure = walkExposure(p, level, tiles, { reach: harmReach }), verdict = walkVerdict(p, exposure);
             return { verdict: verdict.verdict, start: walkExposure(p, level, tiles.slice(0, 1), { reach: harmReach }).tiles > 0, summary: dangerSummary(exposure, verdict) };

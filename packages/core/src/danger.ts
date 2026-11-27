@@ -6,7 +6,7 @@ export type { LiveHunter } from './danger/threat';
 export { PROTECT_MELEE_LEVEL, deadly, deadlyTo, hunts, liveHunters, meleeOnly, protectedFromMelee } from './danger/threat';
 export type { DangerScope } from './danger/tiles';
 export { activeDanger, pack, unpack, withDanger } from './danger/tiles';
-export { dangerSet, dangerTiles, escapeTiles, guardRoute, guardWalk } from './danger/guard';
+export { DISTANT_HIT_RANGE, WIDE_DANGER_SQUARE, dangerSet, dangerTiles, escapeTiles, guardRoute, guardWalk, setDangerDoorAt } from './danger/guard';
 export type { ExposureOptions, NpcReach, RouteDanger, WalkExposure, WalkProfile, WalkThreat, WalkVerdict } from './danger/exposure';
 export {
     cornerTiles, cornersOf, dangerSummary, foodHealOf, harmSet, huntersNear, isMulti, npcReach, planAroundHarm, routeDanger, routeExposure,

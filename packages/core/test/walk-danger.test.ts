@@ -69,8 +69,41 @@ test('at or under the floor line the walk eats first, and a refusal asks for the
     const short = walkVerdict({ combat: 3, hp: 3, maxHp: 30, defence: 1, foodHeal: 0, runTiles: 0 }, e);
     expect(short).toEqual({ verdict: 'refuse', need: 16, needHeal: 13, eatFirst: 6 });
     expect(walkVerdict({ combat: 3, hp: 3, maxHp: 30, defence: 1, foodHeal: short.needHeal, runTiles: 0 }, e).verdict).toBe('eat');
+    // Damage 0.9 needs ceil(1.125 + 6) = 8, which 8 HP holds, but 8 is on the floor line: eat first, not clear.
+    const light = { tiles: 2, damage: 0.9, maxHit: 4, zones: [] };
+    expect(walkVerdict({ combat: 3, hp: 8, maxHp: 30, defence: 1, foodHeal: 12, runTiles: 0 }, light)).toEqual({ verdict: 'eat', need: 8, needHeal: 0, eatFirst: 1 });
+    expect(walkVerdict({ combat: 3, hp: 9, maxHp: 30, defence: 1, foodHeal: 0, runTiles: 0 }, light).verdict).toBe('clear');
     // Two 4-hits at once in a multi-combat zone: the line is 16, over 12 base Hitpoints. No food lets it start above.
     expect(walkVerdict({ combat: 3, hp: 10, maxHp: 12, defence: 1, foodHeal: 60, runTiles: 0 }, { ...e, burst: 8 })).toEqual({ verdict: 'refuse', need: 16, needHeal: 0, eatFirst: 0 });
+});
+
+test('walkPath eats its pack food before a walk that must start above the floor line, and names no food short without an eater', async () => {
+    let hp = 8, eats = 0, clicks = 0;
+    const listeners = new Set<() => void>();
+    const deps: PathDeps = {
+        pos: () => ({ x: 3000, z: 3200, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        walk: () => { clicks++; },
+        interactLoc: () => {},
+        locs: () => [],
+        plan: (_l, _f, to) => [{ x: to.x, z: to.z }],
+        danger: () => hp <= 8
+            ? { verdict: 'eat', start: false, summary: { zone: 'Wolf 1,1', damage: 0.9, need: 8, needHeal: 0, eatFirst: 9 - hp, floorLine: 8 } }
+            : { verdict: 'clear', start: false, summary: { zone: 'Wolf 1,1', damage: 0.9, need: 8, needHeal: 0, eatFirst: 0, floorLine: 8 } },
+        eat: async () => { eats++; hp += 3; return { success: true }; },
+    };
+    const timer = setInterval(() => { for (const l of [...listeners]) l(); }, 1);
+    const r = await walkPath(deps, [{ x: 3030, z: 3200, tol: 1 }], { maxTicks: 2 });
+    clearInterval(timer);
+    expect(eats).toBe(1);
+    expect(r.detail ?? '').not.toContain('walk danger');
+    // Without an eater the walk is refused, and the text names no food short.
+    hp = 8; clicks = 0;
+    const { eat: _eat, ...noEater } = deps;
+    const refused = await walkPath(noEater, [{ x: 3030, z: 3200, tol: 1 }]);
+    expect(refused.detail).toContain('must eat above 8 Hitpoints before the walk');
+    expect(refused.detail).not.toMatch(/needs \d+ heal/);
+    expect(clicks).toBe(0);
 });
 
 test('eatBeforeWalk eats until the Hitpoints are above the line, and fails when the food runs out', async () => {

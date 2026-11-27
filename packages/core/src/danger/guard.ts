@@ -1,14 +1,41 @@
 // Danger tile region generation and route/walk collision guarding.
 import type { Account, Tile } from '../world-types';
 import { npcAttackStyles } from '../../../knowledge/src/npc-attack-styles';
-import { combatLevel, loadHunters } from './catalog';
-import { routeHarmKeep, routeHarmSet } from './exposure';
-import { PROTECT_MELEE_LEVEL, isDeadlyWithCombat } from './threat';
-import { pack, unpack, withDanger, type FloorGrid } from './tiles';
+import { combatLevel, loadHunters, type Hunter } from './catalog';
+import { npcReach, routeHarmKeep, routeHarmSet, type WalkThreat } from './exposure';
+import { PROTECT_MELEE_LEVEL, isDeadlyWithCombat, meleeOnly } from './threat';
+import { activeDanger, pack, unpack, withDanger, type FloorGrid } from './tiles';
+
+// A square at least this wide (reach + 1) closes only the tiles its monster can walk to or hit (exposure.ts npcReach):
+// the King black dragon (wanderrange 30, huntrange 20) at 2716,9817 has a square of 51 tiles each way, which covers the
+// Temple of Ikov dungeon on the other side of the lair walls and closed the only way out of the pocket below the Ikov
+// dark stairs (packages/core/test/world.data.test.ts). A narrower square closes all its tiles: its floods would cost
+// more than they open.
+export const WIDE_DANGER_SQUARE = 10, DISTANT_HIT_RANGE = 10;
+type SpawnReach = (h: Hunter, s: Tile, x: number, z: number) => boolean;
+let doorAt: ((level: number, x: number, z: number) => { angle: number; shape: number; blockrange?: boolean } | undefined) | undefined;
+// The door shapes for the floods (rs-sdk pathfinding getDoorAt): world/pathfinding.ts registers them when it loads.
+export const setDangerDoorAt = (f: NonNullable<typeof doorAt>) => { doorAt = f; };
+const spawnThreats = new Map<string, WalkThreat>();
+// The flood of a wide square on `grid`, or null (every tile counts) when the grid cannot flood or a danger scope is
+// active (its closed floor would cut the flood short).
+function spawnReach(grid: FloorGrid | undefined): SpawnReach | null {
+    if (!grid || typeof (grid as { canTravel?: unknown }).canTravel !== 'function' || activeDanger()) return null;
+    const reach = npcReach(grid as Parameters<typeof npcReach>[0], (l, x, z) => doorAt?.(l, x, z));
+    return (h, s, x, z) => {
+        if (h.reach + 1 < WIDE_DANGER_SQUARE) return true;
+        const key = `${h.id ?? h.name}|${s.level},${s.x},${s.z}`;
+        let t = spawnThreats.get(key);
+        // A monster that attacks from a distance hits up to DISTANT_HIT_RANGE tiles past where it walks.
+        if (!t) spawnThreats.set(key, t = { id: h.id ?? -1, name: h.name, x: s.x, z: s.z, level: s.level, r: h.reach + 1, vislevel: h.combat, tooStrong: h.tooStrong ?? true, distant: false, hitRange: meleeOnly(h) ? 1 : DISTANT_HIT_RANGE, maxHit: 0, attackRoll: 0, attackRate: 4 });
+        return reach(t, x, z);
+    };
+}
 
 // Danger tiles (deadly hunters) for this account inside a box, one margin tile past each monster's reach, packed.
-export function dangerSet(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Int32Array {
-    const styles = npcAttackStyles(), out = new Set<number>();
+// With `grid` a wide square keeps only the tiles its monster reaches (spawnReach).
+export function dangerSet(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters(), grid?: FloorGrid): Int32Array {
+    const styles = npcAttackStyles(), out = new Set<number>(), reach = spawnReach(grid);
     const combat = combatLevel(acct.skills), hitpoints = acct.skills.hitpoints ?? 10;
     const prayerProtected = (acct.skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && process.env.PRAYER_GUARD !== '0';
     for (const h of list) {
@@ -16,7 +43,7 @@ export function dangerSet(acct: Account, level: number, box: { minX: number; max
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== level || s.x + r < box.minX || s.x - r > box.maxX || s.z + r < box.minZ || s.z - r > box.maxZ) continue;
-            for (let x = Math.max(0, s.x - r); x <= s.x + r; x++) for (let z = Math.max(0, s.z - r); z <= s.z + r; z++) out.add(pack(level, x, z));
+            for (let x = Math.max(0, s.x - r); x <= s.x + r; x++) for (let z = Math.max(0, s.z - r); z <= s.z + r; z++) if (!reach || reach(h, s, x, z)) out.add(pack(level, x, z));
         }
     }
     return Int32Array.from(out);
@@ -61,7 +88,7 @@ const routeTiles = new Map<string, Int32Array>();
 export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Tile[], query: () => T): T {
     const key = dangerKey(acct);
     let tiles = routeTiles.get(key);
-    if (!tiles) { const parts = [0, 1, 2, 3].map(l => dangerSet(acct, l, WORLD)), all = new Int32Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { all.set(p, at); at += p.length; } routeTiles.set(key, tiles = all); }
+    if (!tiles) { const parts = [0, 1, 2, 3].map(l => dangerSet(acct, l, WORLD, undefined, grid)), all = new Int32Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { all.set(p, at); at += p.length; } routeTiles.set(key, tiles = all); }
     // The start (keep[0]) may leave the zone it stands in. Those legs get their own cache key.
     const start = keep[0], out = start ? escapeTiles(acct, start) : [];
     const deadlyKey = out.length ? `${key}|from:${start!.level},${start!.x},${start!.z}` : key;
@@ -76,5 +103,5 @@ export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Til
 // The danger tiles for a walk from `from` to `to` on one level: the box around both ends plus `pad` tiles.
 export function guardWalk<T>(grid: FloorGrid, acct: Account, from: Tile, to: Tile, pad: number, query: () => T): T {
     const box = { minX: Math.min(from.x, to.x) - pad, maxX: Math.max(from.x, to.x) + pad, minZ: Math.min(from.z, to.z) - pad, maxZ: Math.max(from.z, to.z) + pad };
-    return withDanger(grid, from.level === to.level ? dangerSet(acct, from.level, box) : [], [from, to, ...escapeTiles(acct, from)], query);
+    return withDanger(grid, from.level === to.level ? dangerSet(acct, from.level, box, undefined, grid) : [], [from, to, ...escapeTiles(acct, from)], query);
 }

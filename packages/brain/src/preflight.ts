@@ -1404,7 +1404,7 @@ export function evaluatePreflight(
     // The account's walker refused the route to this target or activity for its hunters (no-route.ts route-danger
     // fact). With food short, the job needs food first: the planner stages it (combat_survivability food), and the new
     // pack or bank ends the fact. With no food that helps (needHeal 0), no route serves the account now.
-    const danger = routeDangerFor(accountNoRoutes(acct), acct.pos, spec.targetTile, spec.activityId, world.at);
+    const danger = routeDangerFor(accountNoRoutes(acct), acct.pos, spec.targetTile ?? undefined, spec.activityId, world.at);
     if (danger && !blockers.some(b => b.kind === 'unreachable_tile')) {
         blockers.push((danger.needHeal ?? 1) > 0
             ? { kind: 'combat_survivability', reason: 'food', required: danger.needHeal ?? 1, message: `route danger: ${noRouteMessage(acct.name, danger)}` }

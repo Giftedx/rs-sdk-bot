@@ -26,7 +26,9 @@ export interface PathDeps {
     hunters?(): readonly { x: number; z: number; r: number }[];
     // The harm verdict of a planned path (danger/exposure.ts walkVerdict) and whether its first tile is already in a
     // hunter's reach. walkPath does not start a `refuse` walk from outside a hunter's reach.
-    danger?(level: number, tiles: readonly PathTile[]): { verdict: 'clear' | 'eat' | 'refuse'; start: boolean; summary: { zone: string; damage: number; need: number; needHeal: number; eatFirst?: number } };
+    danger?(level: number, tiles: readonly PathTile[]): { verdict: 'clear' | 'eat' | 'refuse'; start: boolean; summary: { zone: string; damage: number; need: number; needHeal: number; eatFirst?: number; floorLine?: number } };
+    // Eats one piece of pack food (sessionWalker: bot.eatFood), for a walk that must eat before its first step.
+    eat?(): Promise<unknown>;
     // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
     reach?(to: { x: number; z: number; level: number }, opts?: { adjacentOk?: boolean }): boolean | null;
     // A paid crossing at this door tile (travel.ts fareCrossings): its Open starts a dialogue that takes the fare.
@@ -46,6 +48,7 @@ export interface PathOptions {
     maxTicks?: number;      // tick budget (default: path tiles + 60)
     immediateHunterDetours?: boolean; // take a complete live-hunter detour immediately instead of waiting for a short one
     stop?: () => boolean;   // checked on every tick (death, abort)
+    eatenFirst?: boolean;   // set by walkPath itself after it ate before the first step: it does not eat again
     log?: (msg: string) => void;
 }
 // `next` is the index of the first point the bot has not passed yet: a retry can start from points.slice(next).
@@ -257,6 +260,14 @@ function selectClickIndex(
 }
 
 /** Walks through waypoints the way a player clicks ahead on the minimap. */
+// Resolves after `n` ticks of deps.onTick.
+function waitDepsTicks(deps: PathDeps, n: number): Promise<void> {
+    return new Promise(done => {
+        let left = n;
+        const off = deps.onTick(() => { if (--left <= 0) { off(); done(); } });
+    });
+}
+
 export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions = {}): Promise<PathResult> {
     const goal = points[points.length - 1], at = deps.pos();
     if (!deps.prepare || !goal || !at) return walkPathFrom(deps, points, opts);
@@ -323,14 +334,28 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
     if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
     // A walk whose hunters would take the Hitpoints under the retreat line with the pack food is not started (the
     // caller stages food). A walk that starts in a hunter's reach goes on: standing still there costs more.
-    // walkPath does not eat: an `eat` walk that must eat before its first step (eatFirst) is refused here too; goTo eats
-    // first (walk/harm.ts eatBeforeWalk). The head of the text is walk/harm.ts routeDangerText, for the brain.
+    // An `eat` walk that must eat before its first step (eatFirst) eats its pack food first (deps.eat), then plans
+    // again. Without deps.eat, or when the eats do not lift it, it is refused; that text names no food short (the pack
+    // holds it), so the brain records no food need for it. The head of the text is walk/harm.ts routeDangerText.
     const harm = deps.danger?.(level, tiles);
-    if (harm && (harm.verdict === 'refuse' || harm.verdict === 'eat' && (harm.summary.eatFirst ?? 0) > 0) && !harm.start) {
+    const eatFirst = harm && harm.verdict === 'eat' && !harm.start ? harm.summary.eatFirst ?? 0 : 0;
+    if (eatFirst > 0 && deps.eat && !opts.eatenFirst) {
+        return (async () => {
+            for (let i = 0; i < 28; i++) {
+                const now = deps.danger!(level, tiles);
+                if (now.verdict !== 'eat' || (now.summary.eatFirst ?? 0) <= 0) break;
+                const r = await deps.eat!() as { success?: boolean } | undefined;
+                if (r && r.success === false) break;
+                await waitDepsTicks(deps, 3);
+            }
+            return walkPathFrom(deps, points, { ...opts, eatenFirst: true });
+        })();
+    }
+    if (harm && (harm.verdict === 'refuse' || eatFirst > 0) && !harm.start) {
         console.log(`WALK_DANGER ${JSON.stringify({ action: 'refuse', from: { ...start }, to: { x: goal.x, z: goal.z, level }, ...harm.summary })}`);
         const head = `walk danger from ${start.x},${start.z},${level}: route danger to ${goal.x},${goal.z},${level}`;
-        return Promise.resolve({ ...res, detail: harm.verdict === 'eat'
-            ? `${head}: ${harm.summary.zone} needs ${harm.summary.eatFirst} heal eaten before the walk (expected damage ${harm.summary.damage})`
+        return Promise.resolve({ ...res, detail: eatFirst > 0
+            ? `${head}: ${harm.summary.zone} must eat above ${harm.summary.floorLine ?? '?'} Hitpoints before the walk (expected damage ${harm.summary.damage})`
             : `${head}: ${harm.summary.zone} needs ${harm.summary.needHeal} heal of food (expected damage ${harm.summary.damage})` });
     }
     const maxTicks = opts.maxTicks ?? tiles.length + 60;

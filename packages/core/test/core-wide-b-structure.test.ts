@@ -259,7 +259,7 @@ test('facades preserve every external/test export and keep internal-only helpers
         'pack', 'unpack', 'dangerSet', 'dangerTiles', 'activeDanger', 'withDanger', 'escapeTiles', 'guardRoute', 'guardWalk',
         'cornerTiles', 'cornersOf', 'dangerSummary', 'foodHealOf', 'harmSet', 'huntersNear', 'isMulti', 'npcReach', 'planAroundHarm',
         'routeDanger', 'routeExposure', 'routeHarmKeep', 'routeHarmSet', 'runTiles', 'stateWalkProfile', 'walkExposure', 'walkFloorLine', 'walkProfile',
-        'walkThreats', 'walkVerdict',
+        'walkThreats', 'walkVerdict', 'DISTANT_HIT_RANGE', 'WIDE_DANGER_SQUARE', 'setDangerDoorAt',
     ];
     for (const name of [...expectedDangerRuntime, 'Hunter', 'Roamer', 'LiveHunter']) {
         expect(dangerExports.has(name)).toBe(true);

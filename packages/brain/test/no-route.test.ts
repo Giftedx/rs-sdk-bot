@@ -308,6 +308,8 @@ const weak = (noRoutes?: readonly NoRouteFact[], bankItems: Record<number, numbe
 
 test('a walk danger refusal is a route-danger fact: the 10 HP account is not dispatched to the job until food is staged', () => {
     expect(parseNoRoute(DANGER)).toEqual({ from: CATHERBY, to: TAVERLEY, danger: 'Big Wolf 2840,3497', needHeal: 42 });
+    // A walk that holds its food but did not eat above the floor line names no food short: no food need is recorded.
+    expect(parseNoRoute('RESULT fail walk danger from 2809,3436,0: route danger to 2895,3445,0: Big Wolf 2840,3497 must eat above 14 Hitpoints before the walk (expected damage 3)')).toBeNull();
     const classifier = new OutcomeClassifier({ root, persist: false });
     const res = classifier.classifyAndApplyRaw(
         { activityId: 'market:shop-buy', account: 'Tenhp', exitCode: 1, status: 'fail', reason: 'blocked after 1 runs', detail: DANGER, pos: CATHERBY },
