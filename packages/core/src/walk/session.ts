@@ -2,6 +2,7 @@
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
 import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
+import { topUpFareFloat } from './fare-float';
 import type { PathDeps, PathTile } from './path';
 
 // The door blocks of a plan. A paid crossing (travel.ts fareCrossings) stays open when the account holds its fare:
@@ -28,7 +29,7 @@ export async function sessionWalker(s: {
     onTick(cb: () => void): () => void;
     direct(a: { type: string; [k: string]: unknown }): Promise<unknown>;
     ended?: Promise<unknown>;
-}): Promise<PathDeps> {
+}, walkOpts: { noFareFloat?: boolean } = {}): Promise<PathDeps> {
     const [pf, grid, { guardWalk, liveHunters, protectedFromMelee, withDanger }, { clientReach }] = await Promise.all([
         import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
         import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
@@ -55,6 +56,8 @@ export async function sessionWalker(s: {
         coins: () => packCoins(s.sdk),
         dialog: () => s.sdk.getDialog?.() ?? null,
         answer: index => s.direct({ type: 'clickDialogOption', optionIndex: index, reason: 'SDK' }),
+        // A session with a bank (a name and bot.openBank) takes the fare float before a walk through an unpaid fare.
+        ...(walkOpts.noFareFloat ? {} : { prepare: (goal: { x: number; z: number; level: number }) => topUpFareFloat(s as Parameters<typeof topUpFareFloat>[0], goal) }),
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
         doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.

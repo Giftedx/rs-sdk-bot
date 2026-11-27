@@ -7,8 +7,9 @@ export {
     MINE_JAIL_ROCKS, MINE_JAIL_WINDOW, inMineJail, leaveMineJail, mineJailRock, onMineJailCliff,
 } from './walk/mine-jail';
 export {
-    DETOUR_MARGIN, TELEPORT_JEWELRY_RE, fareDetour, goTo, unpaidFaresNear, withoutJewelry, withoutSpells, withoutTeleports,
+    DETOUR_MARGIN, TELEPORT_JEWELRY_RE, fareDetour, goTo, withoutJewelry, withoutSpells, withoutTeleports,
 } from './walk/goto';
+export { FLOAT_BANK_TILES, FLOAT_WALK_TILES, fareFloatNeed, topUpFareFloat, unpaidFaresNear } from './walk/fare-float';
 export type {
     PathDeps, PathLoc, PathOptions, PathPoint, PathResult, PathTile,
 } from './walk/path';

@@ -2,8 +2,8 @@
 import type { Outcome } from '../act';
 import { accountForSdk } from '../door-policy';
 import { waitTicks } from '../ticks';
-import type { Travel } from '../travel';
 import type { TripPlan } from '../trip';
+import { topUpFareFloat, unpaidFaresNear } from './fare-float';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
 import { walkRoute } from './legs';
@@ -21,16 +21,10 @@ export const withoutJewelry = (a: Account): Account => {
 };
 export const withoutTeleports = (a: Account): Account => withoutJewelry(withoutSpells(a));
 
-// Paid edges (travel.ts: tolls, boats, carts) inside the box of a walk that this account cannot pay now. A route that
-// goes round one of them is worth a second search with the fare: when that is much cheaper, the walk logs WALK_DETOUR
-// with both costs, and tools/tick-waste.ts counts the lost ticks.
-export const DETOUR_MARGIN = 40, DETOUR_PAD = 40;
-export function unpaidFaresNear(from: Tile, to: Tile, coins: number, travel: readonly Travel[]): Travel[] {
-    const minX = Math.min(from.x, to.x) - DETOUR_PAD, maxX = Math.max(from.x, to.x) + DETOUR_PAD;
-    const minZ = Math.min(from.z, to.z) - DETOUR_PAD, maxZ = Math.max(from.z, to.z) + DETOUR_PAD;
-    const inBox = (t: Tile | null) => !!t && t.x >= minX && t.x <= maxX && t.z >= minZ && t.z <= maxZ;
-    return travel.filter(t => t.coins > coins && inBox(t.from) && inBox(t.to));
-}
+// A route that goes round an unpaid fare in its box (fare-float.ts unpaidFaresNear) is worth a second search with the
+// fare: when that is much cheaper, the walk logs WALK_DETOUR with both costs, and tools/tick-waste.ts counts the
+// lost ticks.
+export const DETOUR_MARGIN = 40;
 export function fareDetour(plan: { cost: number }, paid: { cost: number } | null): boolean {
     return !!paid && paid.cost + DETOUR_MARGIN < plan.cost;
 }
@@ -100,7 +94,13 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         import('../trip'),
         world.offThread ? import('../route-plan') : Promise.resolve(null),
     ]);
-    const rawStock = hasBank ? bankStock(name!, { server: walkerServer(s) }) : undefined;
+    let rawStock = hasBank ? bankStock(name!, { server: walkerServer(s) }) : undefined;
+    // A walk from beside a bank through an unpaid fare takes the fare float there first (fare-float.ts).
+    if (hasBank && !opts.noFareFloat && await topUpFareFloat(s as Parameters<typeof topUpFareFloat>[0], to, { stop: () => opts.signal?.aborted === true, ...(rawStock ? { stock: rawStock } : {}), ...(walkerServer(s) ? { server: walkerServer(s)! } : {}) })) {
+        const coins = accountForSdk(s.sdk).coins ?? 0;
+        acct = { ...acct, coins, counts: { ...acct.counts, coins }, items: acct.items.includes('coins') ? acct.items : [...acct.items, 'coins'] };
+        rawStock = bankStock(name!, { server: walkerServer(s) });
+    }
     const stock = opts.noJewelry && rawStock ? { coins: rawStock.coins, items: Object.fromEntries(Object.entries(rawStock.items ?? {}).filter(([k]) => !TELEPORT_JEWELRY_RE.test(k))) } : rawStock;
     const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now();
     let why = '';

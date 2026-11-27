@@ -14,6 +14,15 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export const BANK_STOP_COST = 10; // estimate in ticks: open the bank, withdraw, close
 export const TRIP_COINS = 1000;   // the most coins a plan counts on taking for fares
 const DIRECT_GOOD_ENOUGH = 150;   // a direct route this cheap is not compared with bank stops
+// The fare float: coins a bank stop leaves in the pack for the fares of later walks. Workers bank the whole pack, and
+// an account that stands on the Lumbridge side with no coins walks round the Al Kharid toll fence (307 ticks against
+// 125 through the gate): no bank on that side gives it the 10 coins. An account whose bank holds FARE_FLOAT_AFFORD
+// keeps FARE_FLOAT; a poorer one takes the fares of the route twice (there and back).
+export const FARE_FLOAT = 300, FARE_FLOAT_AFFORD = 3000;
+export function fareFloatTake(held: number, bankCoins: number, fares: number): number {
+    const want = bankCoins >= FARE_FLOAT_AFFORD ? Math.max(FARE_FLOAT, 2 * fares) : 2 * fares;
+    return Math.max(0, Math.min(bankCoins, want - held));
+}
 const cheb = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 export type BankStock = { coins: number; items?: Record<string, number> };
@@ -76,7 +85,7 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
             for (const [i, n] of Object.entries(want)) { const short = n - (acct.counts?.[i] ?? 0); if (short > 0) items[i] = short; }
             // Fares for the legs after the bank, twice over for the way back, within what the bank holds.
             const fares = on.legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
-            best = { cost, legs: there.legs, bank: { at: bank, coins: Math.min(take, Math.max(0, 2 * fares - held)), items, then: on.legs } };
+            best = { cost, legs: there.legs, bank: { at: bank, coins: Math.min(take, fares > 0 ? fareFloatTake(held, stock?.coins ?? 0, fares) : 0), items, then: on.legs } };
         }
     }
     return best;
