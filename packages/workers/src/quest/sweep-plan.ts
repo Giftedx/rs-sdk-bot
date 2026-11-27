@@ -619,6 +619,9 @@ export const WEST_ARDOUGNE = {
     gate: { id: 2060, x: 2551, z: 3325 },
     stairsTop: { id: 1740, x: 2543, z: 3325 },
     stairsDoor: { x: 2546, z: 3325 },
+    // The open stairs door (loc 1531): the server adds it at 2547,3325 on the south edge (doors.rs2 open_door, angle
+    // 2 + 1). With a chair at 2548,3325 it walls the doorway tile off from the HQ, so the exit shuts it from that tile.
+    stairsLeaf: { x: 2547, z: 3325 },
     kilron: { id: 349, x: 2556, z: 3266 },
     landing: { x: 2559, z: 3267 },
     teleport: { comp: 'magic:ardougne_teleport', x: 2661, z: 3301 },

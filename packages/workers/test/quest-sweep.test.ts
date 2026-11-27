@@ -965,6 +965,48 @@ test('Mightyrod in the Mourner HQ with no teleport runes leaves West Ardougne by
  }finally{clearInterval(timer);}
 });
 
+// KnightRider.log and mmsmk1232.log: START 2546 3325 0 in the stairs room with its door open (loc 1531 at 2547,3325,
+// Close); three walkTo 2551,3321 client_rejected, then 'hq door tile unobserved'. The open leaf walls the doorway tile
+// off from the HQ, so the exit steps onto the doorway tile and shuts it before the HQ door walk.
+test('KnightRider in the Mourner HQ stairs room shuts the open stairs door from its doorway before the HQ door walk',async()=>{
+ const {leaveWestArdougne}=await import('../src/quest/sweep');
+ let player={worldX:2546,worldZ:3325,level:0},tick=0,dialog:any={isOpen:false},leafOpen=true,shuts=true;
+ const clicks:any[]=[],walks:unknown[]=[];
+ const listeners=new Set<()=>void>();
+ const kilron={id:349,name:'Kilron',x:2556,z:3266,distance:2,index:7};
+ const locs=()=>leafOpen
+  ?[{id:1531,name:'Door',x:2547,z:3325,optionsWithIndex:[{text:'Close',opIndex:1}]}]
+  :[{id:1530,name:'Door',x:2546,z:3325,optionsWithIndex:[{text:'Open',opIndex:1}]}];
+ const s={sdk:{getState:()=>({player,inventory:[],skills:[{name:'Magic',level:99}],nearbyLocs:locs(),nearbyNpcs:player.worldZ<3300?[kilron]:[]}),
+   getEquipment:()=>[],getDialog:()=>dialog,
+   clickDialogByText:async(re:RegExp)=>{if(dialog.options?.some((o:any)=>re.test(o.text))){dialog={isOpen:false};player={worldX:2559,worldZ:3267,level:0};}return{success:true};},
+   sendClickDialog:async()=>{dialog={isOpen:false};return{success:true};}},
+  bot:{talkTo:async()=>{dialog={isOpen:true,isWaiting:false,options:[{text:'Yes I do.'}]};return{success:true};}},
+  tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;
+  const last=clicks[clicks.length-1];
+  if(shuts&&last?.locId===1531&&player.worldX===2547)leafOpen=false;
+  if(last?.locId===2036&&player.worldX===2551&&player.worldZ===3321)player={worldX:2551,worldZ:3319,level:0};
+  for(const cb of listeners)cb();},1);
+ // The client refuses the HQ door walk while the leaf is open, as live.
+ const approach=async(to:readonly any[])=>{walks.push(to.map(t=>[t.x,t.z,t.level]));const t=to[to.length-1]!;
+  if(leafOpen&&t.x===2551&&t.z===3321)return{ok:false};
+  player={worldX:t.x,worldZ:t.z,level:t.level};return{ok:true};};
+ try{
+  expect(await leaveWestArdougne(s,{approach,walled:()=>true})).toEqual({ok:true});
+  expect(walks).toEqual([[[2546,3325,0]],[[2547,3325,0]],[[2551,3321,0]],[[2556,3268,0]]]);
+  expect(clicks.filter(c=>c.type==='interactLoc').map(c=>[c.locId,c.x,c.z,c.optionIndex])).toEqual([[1531,2547,3325,1],[2036,2551,3320,1]]);
+  expect(player.worldX).toBeGreaterThanOrEqual(2559);
+  // A leaf that stays open refuses at the doorway with no HQ door walk.
+  player={worldX:2546,worldZ:3325,level:0};leafOpen=true;shuts=false;clicks.length=0;walks.length=0;
+  const stuck=await leaveWestArdougne(s,{approach,walled:()=>true});
+  expect(stuck).toEqual({ok:false,detail:'west ardougne exit: stairs door shut unobserved at 2547,3325,0'});
+  expect(walks).toEqual([[[2546,3325,0]],[[2547,3325,0]]]);
+  expect(clicks.filter(c=>c.locId===1531)).toHaveLength(4);
+ }finally{clearInterval(timer);}
+});
+
 // task-db12662c: 'start walk failed to {"level":0,"x":2591,"z":3336}: precondition no route'. The walker has no route
 // through elenadoor2 (loc 2054, 2592,3339), so the sweep opens it and hands over inside.
 const elenaSession=(opens:boolean)=>{

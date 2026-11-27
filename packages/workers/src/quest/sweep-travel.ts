@@ -477,7 +477,22 @@ export async function leaveWestArdougne(s: Session, deps: Partial<WestArdougneDe
                 await s.direct({ type: 'interactLoc', x: W.stairsDoor.x, z: W.stairsDoor.z, locId: o.id, optionIndex: o.op, reason: 'SDK' });
                 await waitUntil(s, () => !openOp(W.stairsDoor), { timeoutTicks: 8 });
             }
+            if (!(await approach([{ x: W.stairsLeaf.x, z: W.stairsLeaf.z, level: 0 }])).ok || !at(W.stairsLeaf, 0)) return fail('stairs doorway');
         }
+        // Live KnightRider and mmsmk1232: with the leaf open, three walks from 2546,3325 to the HQ door tile got
+        // client_rejected. Shut from the doorway tile, the door wall is on the stairs room side again. The leaf walls in
+        // only the doorway tile and the two tiles north and east of it (2547,3326 and 2548,3326).
+        const leaf = () => (st()?.nearbyLocs ?? []).find(
+            (k: any) => k.x === W.stairsLeaf.x && k.z === W.stairsLeaf.z && (k.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)),
+        );
+        const pocket = () => lvl() === 0 && x() > W.stairsDoor.x && x() <= W.stairsLeaf.x + 1 && z() >= W.stairsLeaf.z && z() <= W.stairsLeaf.z + 1;
+        for (let i = 0; i < 4 && pocket() && leaf(); i++) {
+            const l: any = leaf();
+            const op = (l.optionsWithIndex as { text: string; opIndex: number }[]).find((o) => /^close$/i.test(o.text))!.opIndex;
+            await s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' });
+            await waitUntil(s, () => !leaf(), { timeoutTicks: 8 });
+        }
+        if (pocket() && leaf()) return fail('stairs door shut');
         if (!(await approach([{ x: W.hqDoor.x, z: W.hqDoor.z + 1, level: 0 }])).ok || !at({ x: W.hqDoor.x, z: W.hqDoor.z + 1 }, 0)) return fail('hq door tile');
         if (!(await cross(W.hqDoor, () => z() <= W.hqDoor.z))) return fail('hq door');
     }
