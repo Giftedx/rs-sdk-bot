@@ -10,6 +10,7 @@ import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDelive
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
 import { few } from './inspect';
 import { clearPendingUpdate, readPendingUpdate, renewedPendingUpdate, writePendingUpdate } from './pending';
+import { routeCodeChanged, startRoutePrewarm } from './prewarm';
 import { patchCollisions, resetVendor, SDK, SDK_PATCH, vendorExact, vendorReleaseFiles, vendorState } from './vendor';
 
 export const DAEMONS: Record<string, string[]> = {
@@ -141,6 +142,8 @@ export async function runLiveUpdateCli(
         const reload = reloadsFor(checkout.incoming, closures), to = git('rev-parse', '--short', 'HEAD').out;
         const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };
         writeLiveUpdate(root, mark);
+        // New route code or data: the slow walks of the last day are planned again in the background (prewarm.ts).
+        if (routeCodeChanged(checkout.incoming, root) && startRoutePrewarm(root, env)) log('LIVE_UPDATE route prewarm started (.practice/route-prewarm/run.log)');
         const vendor = !patchMoves || sdk === null ? null : resets ? resetVendor(root, oldPatch)
             : { ok: true, detail: inTheWay.length ? `kept: ${few(inTheWay)} in ${SDK} is in the way of the new SDK patch` : `kept: ${SDK} has edits that are not the SDK patch` };
         const note = !vendor ? '' : !vendor.ok ? ` vendor=FAILED ${vendor.detail}` : ` vendor=${vendor.detail || 'patched'}`;

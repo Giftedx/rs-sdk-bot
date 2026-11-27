@@ -26,6 +26,8 @@ export const withoutTeleports = (a: Account): Account => withoutJewelry(withoutS
 // fare: when that is much cheaper, the walk logs WALK_DETOUR with both costs, and tools/tick-waste.ts counts the
 // lost ticks.
 export const DETOUR_MARGIN = 40;
+// A route plan this slow is logged as WALK_PLAN_SLOW.
+export const SLOW_PLAN_MS = 2000;
 export function fareDetour(plan: { cost: number }, paid: { cost: number } | null): boolean {
     return !!paid && paid.cost + DETOUR_MARGIN < plan.cost;
 }
@@ -127,6 +129,10 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
             console.log(`WALK_JOURNAL_REPLAN ${JSON.stringify({ quests, stages: Object.fromEntries(quests.map(q => [q, seen[q] ?? null])), ok: !!r })}`);
         }
     }
+    // A slow plan that found a route: the live logs show how often a walk waits on a cold search (tools/route-prewarm.ts
+    // reads these lines and WALK_NO_ROUTE).
+    const planMs = Math.round(performance.now() - planStart);
+    if (r && planMs >= SLOW_PLAN_MS) console.log(`WALK_PLAN_SLOW ${JSON.stringify({ from, to, ms: planMs, budgetMs, cost: r.cost, bank: !!r.bank })}`);
     if (!r) {
         // What the failed search started from: a live "no route" names only its target otherwise.
         console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
