@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795787904147,
+ "at": 1795787914234,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "7",
+    "MAX_ITEMS": "8",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "7"
+    "BATCH_UNITS": "8"
    },
    "enabled": true,
    "repeat": false,
@@ -112,39 +112,8 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=12 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=12 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 PRODUCT_TARGET=12 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=12 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=7 PRODUCT_TARGET=7 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=7 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -177,29 +146,20 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-market.ts",
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=7 PRODUCT_TARGET=7 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=7 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "ITEM_ID": "557",
-    "ITEMS": "Earth rune",
-    "MAX_ITEMS": "85",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:557",
-    "BATCH_UNITS": "85"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto"
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -279,47 +239,68 @@
    ]
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 TARGET_COUNT=2 PRODUCT_TARGET=2 STALL_TICKS=150 -- crafting inventory cut-sapphire",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 STALL_TICKS=280 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
    "account": "FishAndChips",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "156",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "74",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "74"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magic_guild_elemental",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "557",
+    "ITEMS": "Earth rune",
+    "MAX_ITEMS": "85",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "156"
+    "DEMAND_ID": "campaign:haggis:item:557",
+    "BATCH_UNITS": "85"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fletching",
-    "shafts"
-   ],
-   "env": {
-    "MODE": "shafts",
-    "CAP": "19950",
-    "TARGET_COUNT": "1995",
-    "PRODUCT_TARGET": "2100",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
+   "goal": "campaign:haggis:item:557",
    "role": "auto"
   }
  ],
