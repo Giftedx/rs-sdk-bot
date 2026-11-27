@@ -63,6 +63,7 @@ import {
     loadItemsMap,
     loadQuestRows,
     type AccountLookupCache,
+    type CombatSurvivabilityBlocker,
     type CombatSurvivabilityFloor,
     type KnowledgeQuestRow,
 } from './preflight';
@@ -1455,6 +1456,28 @@ function planAccountCore(
         return res;
     };
 
+    // The acquire step that stages the food of a fight's food blocker, or null when no source sells it. The quantity
+    // is at least the floor's food count, and at least the pieces that an admission blocker (preflight.ts
+    // threatNpcIds) names.
+    const stageCombatFood = (
+        activity: ActivityDefinition,
+        blocker: CombatSurvivabilityBlocker,
+        committed: number,
+    ): PlannedStep | null => {
+        const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
+        const countNeed = Math.max(10, floor?.minFoodCount ?? 15, (blocker.message ?? '').startsWith('admission:') ? blocker.required ?? 0 : 0);
+        for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
+            const acq = resolveAcquireCached({
+                itemId: fid,
+                quantity: countNeed,
+                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                committedCoinSpend: committed,
+            });
+            if (acq.ok && acq.step) return acq.step;
+        }
+        return null;
+    };
+
     const nonHolderSurplusCache = new Map<string, number>();
     const getFleetNonHolderSurplus = (itemId: number, holderLower: string): number => {
         const key = `${itemId}:${holderLower}`;
@@ -1486,8 +1509,12 @@ function planAccountCore(
         };
     const upgradeCache = new Map<string, GearUpgradeCandidateResult | null>();
     const upgradeCandidatesCache = new Map<string, readonly ResolvedGearUpgradeCandidate[]>();
-    // Train activities for a skill unlock, most XP per tick first. An activity whose only blocker for one
-    // unit is a missing input stays a candidate: the unlock can buy its inputs.
+    // Train activities for a skill unlock, most XP per tick first. An activity whose only blockers for one
+    // unit are missing inputs or the fight's food stays a candidate: the unlock can buy its inputs and its food.
+    // A Hitpoints, Defence or admission "too weak" blocker removes the candidate, so the unlock fights only a
+    // target that the admission allows.
+    const stageableUnlockBlocker = (a: ActivityDefinition, b: PreflightResult['blockers'][number]): boolean =>
+        (b.kind === 'missing_supply' && (a.inputs?.length ?? 0) > 0) || (b.kind === 'combat_survivability' && b.reason === 'food');
     const skillUnlockCache = new Map<string, readonly { activity: ActivityDefinition; rate: RateEstimate }[]>();
     const skillUnlockCandidates = (skill: string): readonly { activity: ActivityDefinition; rate: RateEstimate }[] => {
         const skLower = skill.toLowerCase();
@@ -1498,7 +1525,7 @@ function planAccountCore(
                     if ((shared && hasActExclusions && !isActAllowed(a)) || a.family === 'quest') return false;
                     if (activityXpForSkill(a, getRate(a), skill) <= 0) return false;
                     const one = getPreflight(a, 1);
-                    return one.ok || ((a.inputs?.length ?? 0) > 0 && one.blockers.every((b) => b.kind === 'missing_supply'));
+                    return one.ok || one.blockers.every((b) => stageableUnlockBlocker(a, b));
                 })
                 .sort((a, b) => {
                     const xpDiff = activityXpForSkill(b, getRate(b), skill) - activityXpForSkill(a, getRate(a), skill);
@@ -1538,18 +1565,17 @@ function planAccountCore(
         for (const pass of ['stock', 'buy'] as const) {
             for (const { activity: a, rate: r } of candidates) {
                 const inputs = (a.inputs ?? []).filter((io) => io.countPerUnit > 0);
-                if (inputs.length === 0) {
-                    if (pass === 'stock' && getPreflight(a, 1).ok) choice = { activity: a, rate: r, prep: [], prepCoins: 0 };
-                    if (choice) break;
-                    continue;
+                let units: number | undefined;
+                if (inputs.length > 0) {
+                    if (inputs.some((io) => workInputs.has(io.itemId))) continue;
+                    const xpPerUnit = activityXpPerUnit(a, r, skill) * xpRate;
+                    if (!(xpPerUnit > 0)) continue;
+                    units = Math.max(1, r.minBatchUnits, Math.ceil(needXp / xpPerUnit));
                 }
-                if (inputs.some((io) => workInputs.has(io.itemId))) continue;
-                const xpPerUnit = activityXpPerUnit(a, r, skill) * xpRate;
-                if (!(xpPerUnit > 0)) continue;
-                const units = Math.max(1, r.minBatchUnits, Math.ceil(needXp / xpPerUnit));
-                const pre = getPreflight(a, units);
+                const sized = units !== undefined ? { batchUnits: units } : {};
+                const pre = getPreflight(a, units ?? 1);
                 if (pass === 'stock') {
-                    if (pre.ok) choice = { activity: a, rate: r, batchUnits: units, prep: [], prepCoins: 0 };
+                    if (pre.ok) choice = { activity: a, rate: r, ...sized, prep: [], prepCoins: 0 };
                     if (choice) break;
                     continue;
                 }
@@ -1557,22 +1583,27 @@ function planAccountCore(
                 const prep: PlannedStep[] = [];
                 let coins = 0;
                 for (const b of pre.blockers) {
-                    if (b.kind !== 'missing_supply') break;
-                    const acq = resolveAcquireCached({
-                        itemId: b.itemId,
-                        itemName: b.itemName,
-                        quantity: Math.max(1, b.required - b.available),
-                        allowOwnBank: false,
-                        operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                        committedCoinSpend: committed + coins,
-                    });
-                    if (!acq.ok || !acq.step) break;
-                    // The owned total after the purchase: a chain rerun that finds it buys nothing.
-                    prep.push({ ...acq.step, stockTarget: Math.max(1, b.required + b.reserved), ...(b.owned !== undefined ? { ownedBefore: b.owned } : {}) });
-                    coins += stepCommittedCoinCost(acq.step);
+                    let step: PlannedStep | null = null;
+                    if (b.kind === 'missing_supply' && inputs.length > 0) {
+                        const acq = resolveAcquireCached({
+                            itemId: b.itemId,
+                            itemName: b.itemName,
+                            quantity: Math.max(1, b.required - b.available),
+                            allowOwnBank: false,
+                            operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                            committedCoinSpend: committed + coins,
+                        });
+                        // The owned total after the purchase: a chain rerun that finds it buys nothing.
+                        if (acq.ok && acq.step) step = { ...acq.step, stockTarget: Math.max(1, b.required + b.reserved), ...(b.owned !== undefined ? { ownedBefore: b.owned } : {}) };
+                    } else if (b.kind === 'combat_survivability' && b.reason === 'food') {
+                        step = stageCombatFood(a, b, committed + coins);
+                    }
+                    if (!step) break;
+                    prep.push(step);
+                    coins += stepCommittedCoinCost(step);
                 }
                 if (prep.length === pre.blockers.length) {
-                    choice = { activity: a, rate: r, batchUnits: units, prep, prepCoins: coins };
+                    choice = { activity: a, rate: r, ...sized, prep, prepCoins: coins };
                     break;
                 }
             }
@@ -2043,22 +2074,7 @@ function planAccountCore(
                         committedCoins += stepCommittedCoinCost(acq.step);
                     } else if (blocker.kind === 'combat_survivability') {
                         if (blocker.reason === 'food') {
-                            const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
-                            // An admission blocker (preflight.ts threatNpcIds) names the pieces that the fight needs.
-                            const countNeed = Math.max(10, floor?.minFoodCount ?? 15, (blocker.message ?? '').startsWith('admission:') ? blocker.required ?? 0 : 0);
-                            let foodStep: PlannedStep | null = null;
-                            for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
-                                const acq = resolveAcquireCached({
-                                    itemId: fid,
-                                    quantity: countNeed,
-                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                                    committedCoinSpend: committedCoins,
-                                });
-                                if (acq.ok && acq.step) {
-                                    foodStep = acq.step;
-                                    break;
-                                }
-                            }
+                            const foodStep = stageCombatFood(activity, blocker, committedCoins);
                             if (!foodStep) {
                                 lastBlockerReason = 'missing_food_supply';
                                 chainFeasible = false;
