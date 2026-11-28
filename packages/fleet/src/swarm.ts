@@ -106,6 +106,9 @@ type Run = {
     accounts: string[];
     revision: string;
     host?: boolean;
+    poolId?: string;
+    poolStarted?: number;
+    poolAttached?: boolean;
     log: string;
     offset: number;
     activityId?: string;
@@ -377,6 +380,11 @@ export function adoptedRunAlive(
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
 export const START_BUDGET_GB = 1;
+// Measured marginal live session cost inside a shared host pool is ~15-30 MB private; 0.15 GiB leaves 5x headroom.
+export const POOL_ATTACH_BUDGET_GB = 0.15;
+export const POOL_MAX_BOTS = 8;
+export const POOL_MAX_LAUNCHES = 64;
+export const POOL_IDLE_EXIT_MS = 30_000;
 const START_RESERVE_MS = 30_000;
 
 export function activeExternalLive(statuses: readonly any[], managed: readonly string[], now: number): string[] {
@@ -471,19 +479,22 @@ export function foodSupplyDemand(
     });
 }
 
-export function pendingStartupCount(runs: readonly { started: number; accounts: readonly string[]; host?: boolean }[], now: number): number {
+export function pendingStartupCount(runs: readonly { started: number; accounts: readonly string[]; host?: boolean; poolAttached?: boolean }[], now: number): number {
     let pending = 0;
     const seen = new Set<string>();
+    const attachUnits = POOL_ATTACH_BUDGET_GB / START_BUDGET_GB;
     for (const r of runs) {
         if (now - r.started >= 0 && now - r.started < START_RESERVE_MS) {
-            if (r.host) pending += 1;
+            if (r.poolAttached) pending += attachUnits;
+            else if (r.host) pending += 1;
             else for (const a of r.accounts) if (!seen.has(a.toLowerCase())) { seen.add(a.toLowerCase()); pending += 1; }
         }
     }
     return pending;
 }
 
-export function startReserve(p: { host: boolean; job: Job }, accounts: number): number {
+export function startReserve(p: { host: boolean; job: Job }, accounts: number, attachingToPool = false): number {
+    if (attachingToPool) return POOL_ATTACH_BUDGET_GB / START_BUDGET_GB;
     return p.host || p.job.orchestrate ? 1 : accounts;
 }
 
@@ -632,11 +643,81 @@ export function supervisorCommand(parsed: ParsedJob, accounts: string[]): string
     const job = parsed.job, maxRestarts = String(job.maxRestarts ?? (job.orchestrate ? 0 : 20));
     return parsed.host
         ? [
-            'bun', 'packages/practice/src/supervise-host.ts', job.script, maxRestarts, ...accounts,
+            'bun', '--smol', 'packages/practice/src/supervise-host.ts', job.script, maxRestarts, ...accounts,
             ...(job.args ?? []).flatMap(a => ['--arg', a]),
             ...accounts.flatMap(a => Object.entries(job.envByAccount?.[a] ?? {}).flatMap(([k, v]) => ['--env', a, `${k}=${v}`])),
         ]
-        : ['bun', 'packages/practice/src/supervise.ts', accounts[0]!, job.script, maxRestarts, ...(job.orchestrate ? accounts.slice(1) : []), ...(job.args ?? [])];
+        : ['bun', '--smol', 'packages/practice/src/supervise.ts', accounts[0]!, job.script, maxRestarts, ...(job.orchestrate ? accounts.slice(1) : []), ...(job.args ?? [])];
+}
+
+export function hostPoolEnabled(env: Record<string, string | undefined> = process.env): boolean {
+    return env.SWARM_HOST_POOL !== '0';
+}
+
+// Single-account non-standing, non-orchestrate, non-PvP, non-reserved jobs share dynamic host pools so the fleet avoids
+// per-bot supervise.ts processes and duplicate Bun/WebClient/LocIndex/SDK runtimes.
+export function canUseHostPool(parsed: ParsedJob, env: Record<string, string | undefined> = process.env): boolean {
+    if (!hostPoolEnabled(env)) return false;
+    if (parsed.host || parsed.job.orchestrate || parsed.job.standing || parsed.accounts.length !== 1) return false;
+    const account = parsed.accounts[0]!.toLowerCase();
+    if (PROTECTED_ACCOUNTS.includes(account) || Object.hasOwn(SPECIALIST_BOARDS, account)) return false;
+    if (PVP_DEATH_SCRIPTS.has(scriptKey(parsed.job.script))) return false;
+    return true;
+}
+
+export function poolCommand(poolId: string, source: string, opts: { maxBots?: number; maxLaunches?: number; idleExitMs?: number } = {}): string[] {
+    return [
+        'bun', '--smol', 'packages/practice/src/supervise-host.ts',
+        '--pool', poolId,
+        '--max-bots', String(opts.maxBots ?? POOL_MAX_BOTS),
+        '--max-launches', String(opts.maxLaunches ?? POOL_MAX_LAUNCHES),
+        '--idle-exit-ms', String(opts.idleExitMs ?? POOL_IDLE_EXIT_MS),
+        ...(source ? ['--source', source] : []),
+    ];
+}
+
+export type HostPoolSlot = {
+    id: string;
+    pid: number;
+    started: number;
+    source: string;
+    launches: number;
+    draining: boolean;
+};
+
+// Picks the fullest eligible live pool matching `source` so active bots pack into fewer processes and idle pools drain out.
+export function selectHostPool(
+    pools: Iterable<HostPoolSlot>,
+    activeCount: (poolId: string) => number,
+    alive: (pool: HostPoolSlot) => boolean,
+    source: string,
+    maxBots = POOL_MAX_BOTS,
+    maxLaunches = POOL_MAX_LAUNCHES,
+): HostPoolSlot | null {
+    let best: HostPoolSlot | null = null;
+    let bestActive = -1;
+    for (const pool of pools) {
+        if (pool.draining || pool.source !== source || pool.launches >= maxLaunches || !alive(pool)) continue;
+        const n = activeCount(pool.id);
+        if (n >= maxBots) continue;
+        if (n > bestActive) {
+            best = pool;
+            bestActive = n;
+        }
+    }
+    return best;
+}
+
+function swarmPoolDir(root: string, poolId: string): string {
+    return join(root, '.practice', 'host-pools', poolId);
+}
+
+function sendPoolCommand(root: string, poolId: string, cmd: Record<string, unknown>): void {
+    const inbox = join(swarmPoolDir(root, poolId), 'inbox');
+    mkdirSync(inbox, { recursive: true });
+    const id = String(cmd.id ?? randomUUID()).replace(/[^A-Za-z0-9_.-]/g, '_');
+    const file = join(inbox, `${String(Date.now()).padStart(13, '0')}-${id}.json`);
+    writeStateFile(file, JSON.stringify(cmd));
 }
 
 export function completeJobCandidates(
@@ -1744,6 +1825,57 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         } catch (e) { console.log(`SWARM runs file not saved: ${String(e)}`); }
     };
 
+    const pools = new Map<string, HostPoolSlot>();
+    const poolExited = new Set<string>();
+    const canceledPooled = new Set<string>();
+    const poolActiveCount = (poolId: string): number => {
+        let count = 0;
+        for (const r of runs.values()) if (r.poolId === poolId) count += r.accounts.length;
+        return count;
+    };
+    const poolSlotAlive = (pool: HostPoolSlot): boolean =>
+        !poolExited.has(pool.id) && adoptedRunAlive({ pid: pool.pid, started: pool.started }, pidAlive, pidStarts);
+    const drainPool = (pool: HostPoolSlot) => {
+        if (pool.draining) return;
+        pool.draining = true;
+        try { sendPoolCommand(root, pool.id, { op: 'drain', id: `drain-${randomUUID().slice(0, 8)}` }); } catch { /* pool may already be gone */ }
+    };
+    const cancelPooledBot = (run: Run, account: string) => {
+        if (!run.poolId) return;
+        const token = `${run.poolId}:${account.toLowerCase()}`;
+        if (canceledPooled.has(token)) return;
+        canceledPooled.add(token);
+        try { sendPoolCommand(root, run.poolId, { op: 'cancel', id: `cancel-${account}-${randomUUID().slice(0, 6)}`, bot: account, reason: 'stop file' }); }
+        catch { /* stop file still ends the bot */ }
+    };
+    const spawnHostPool = (source: string): HostPoolSlot => {
+        const poolId = `pool-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`;
+        const poolLogPath = join(logDir, `${poolId}.log`);
+        rotateLog(poolLogPath);
+        const out = openSync(poolLogPath, 'a');
+        let child: ReturnType<typeof spawnChild>;
+        try {
+            const cmd = poolCommand(poolId, source);
+            child = spawnChild(cmd[0]!, cmd.slice(1), {
+                cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
+                env: leanBunEnv({
+                    ...process.env,
+                    SWARM_BOTS: String(POOL_MAX_BOTS),
+                    SWARM_LEASE_HOLDER: lease.holder,
+                    WORKER_RELEASE: source,
+                    DEMO_OK: '1',
+                }),
+            });
+        } finally { closeSync(out); }
+        if (!child.pid) throw Error('host pool did not start');
+        child.unref();
+        const slot: HostPoolSlot = { id: poolId, pid: child.pid, started: Date.now(), source, launches: 0, draining: false };
+        pools.set(poolId, slot);
+        child.on('exit', () => { poolExited.add(poolId); pools.delete(poolId); });
+        console.log(`SWARM start host-pool ${poolId} pid=${child.pid} maxBots=${POOL_MAX_BOTS}`);
+        return slot;
+    };
+
     const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
         let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, lastResultLine: string | undefined, exitCode: number | null | undefined, done = false;
         let lastFullResult: string | undefined;
@@ -1773,7 +1905,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             done = true; clearInterval(timer);
             brainDirty = true;
             read(); if (tail) consume(tail);
-            runs.delete(key); adopted.delete(run); saveRuns();
+            runs.delete(key); adopted.delete(run);
+            if (run.poolId) for (const a of run.accounts) canceledPooled.delete(`${run.poolId}:${a.toLowerCase()}`);
+            saveRuns();
             const code = exitCode === undefined ? 'unknown' : exitCode;
             if (!run.host) {
                 const reason = currentEnd ?? `exit ${code}`;
@@ -1858,7 +1992,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             const before = run.offset;
             read();
             if (run.offset !== before) saveRuns();
-            if (!child && !adoptedRunAlive(run, pidAlive, pidStarts)) finish();
+            if (run.poolId && currentEnd) {
+                exitCode = /^done\b/.test(currentEnd) ? 0 : 1;
+                finish();
+                return;
+            }
+            const livenessRun = run.poolId ? { pid: run.pid, started: run.poolStarted ?? run.started } : run;
+            if (!child && ((run.poolId && poolExited.has(run.poolId)) || !adoptedRunAlive(livenessRun, pidAlive, pidStarts))) finish();
         }, 2000);
         child?.on('exit', code => { exitCode = code; finish(); });
     };
@@ -1870,8 +2010,30 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     }
     readPidStarts();
     for (const [key, run] of runs) {
-        const state = !pidAlive(run.pid) ? ' (ended)' : adoptedRunAlive(run, pidAlive, pidStarts) ? '' : ' (ended: a later process holds the pid)';
-        console.log(`SWARM adopt ${run.host ? `host ${run.accounts.join(',')}` : run.accounts[0]} pid ${run.pid}${state}`);
+        const livenessRun = run.poolId ? { pid: run.pid, started: run.poolStarted ?? run.started } : run;
+        const aliveNow = adoptedRunAlive(livenessRun, pidAlive, pidStarts);
+        const state = !pidAlive(run.pid) ? ' (ended)' : aliveNow ? '' : ' (ended: a later process holds the pid)';
+        console.log(`SWARM adopt ${run.poolId ? `pooled ${run.accounts[0]} (${run.poolId})` : run.host ? `host ${run.accounts.join(',')}` : run.accounts[0]} pid ${run.pid}${state}`);
+        if (run.poolId && aliveNow && !pools.has(run.poolId)) {
+            let metaSource = '', metaStarted = run.poolStarted ?? run.started;
+            try {
+                const meta = JSON.parse(readFileSync(join(swarmPoolDir(root, run.poolId), 'meta.json'), 'utf8'));
+                if (typeof meta?.source === 'string') metaSource = meta.source;
+                if (Number.isFinite(meta?.startedAt)) metaStarted = meta.startedAt;
+            } catch { /* missing meta drains safely */ }
+            const slot: HostPoolSlot = {
+                id: run.poolId,
+                pid: run.pid,
+                started: metaStarted,
+                source: metaSource,
+                launches: poolActiveCount(run.poolId),
+                draining: !metaSource || metaSource !== startSource,
+            };
+            pools.set(run.poolId, slot);
+            if (slot.draining) {
+                try { sendPoolCommand(root, slot.id, { op: 'drain', id: `drain-adopt-${randomUUID().slice(0, 6)}` }); } catch { /* ignore */ }
+            }
+        }
         follow(key, run);
     }
     saveRuns();
@@ -1880,14 +2042,16 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const job = p.job;
         const revision = missionSignature(job);
         const logName = p.host ? `host-${accounts[0]}.log` : `${accounts[0]}.log`, logPath = join(logDir, logName);
-        const cmd = supervisorCommand(p, accounts);
         rotateLog(logPath);
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
         const fingerprint = accounts.length === 1 && !p.host ? statusFingerprint(readAccountStatus(root, accounts[0]!)?.data) : undefined;
         const baseline = accounts.length === 1 && job.activityId
             ? captureRunBaseline(root, accounts[0]!, LIVE_SERVER) ?? undefined
             : undefined;
-        let child: ReturnType<typeof spawnChild>;
+        const usePool = canUseHostPool(p) && accounts.length === 1;
+        let child: ReturnType<typeof spawnChild> | undefined;
+        let poolSlot: HostPoolSlot | undefined;
+        let poolAttached = false;
         let workRelease: string | undefined;
         let workEntries: string[] = [];
         try {
@@ -1896,22 +2060,48 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             workRelease = cachedReleaseFor(entries, root);
             assertLease();
             writeSync(out, jobLogStart(job));
-            child = spawnChild(cmd[0]!, cmd.slice(1), {
-                cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: leanBunEnv({
-                    ...process.env, ...job.env, ...botCountEnv(accounts),
-                    SWARM_LEASE_HOLDER: lease.holder,
-                    SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'),
-                    WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1',
-                    BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '',
-                    STANDING: job.standing ? '1' : '',
-                }),
-            });
+            const sharedBotEnv: Record<string, string> = {
+                ...(job.env ?? {}),
+                SWARM_LEASE_HOLDER: lease.holder,
+                SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'),
+                WORKER_RELEASE: workRelease,
+                WORKER_ENTRY: entries.join(','),
+                DEMO_OK: '1',
+                BOT_ROLE: job.role ?? '',
+                BOT_GOAL: job.goal ?? '',
+                STANDING: job.standing ? '1' : '',
+            };
+            if (usePool) {
+                const existing = selectHostPool(pools.values(), poolActiveCount, poolSlotAlive, startSource);
+                poolSlot = existing ?? spawnHostPool(startSource);
+                poolAttached = existing !== null;
+                poolSlot.launches++;
+                sendPoolCommand(root, poolSlot.id, {
+                    op: 'start',
+                    id: `start-${accounts[0]}-${randomUUID().slice(0, 6)}`,
+                    bot: accounts[0]!,
+                    script: job.script,
+                    args: job.args ?? [],
+                    maxRestarts: job.maxRestarts ?? 20,
+                    env: { ...sharedBotEnv, SWARM_BOTS: String(POOL_MAX_BOTS) },
+                    logPath,
+                });
+            } else {
+                const cmd = supervisorCommand(p, accounts);
+                child = spawnChild(cmd[0]!, cmd.slice(1), {
+                    cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
+                    env: leanBunEnv({
+                        ...process.env, ...sharedBotEnv, ...botCountEnv(accounts),
+                    }),
+                });
+            }
         } finally { closeSync(out); }
-        if (!child.pid) throw Error('supervisor did not start');
-        child.unref();
+        const pid = poolSlot ? poolSlot.pid : child?.pid;
+        if (!pid) throw Error('supervisor did not start');
+        child?.unref();
         const run: Run = {
-            pid: child.pid, started: Date.now(), accounts, revision, host: p.host, log: logPath, offset,
+            pid, started: Date.now(), accounts, revision, host: p.host, log: logPath, offset,
+            ...(poolSlot ? { poolId: poolSlot.id, poolStarted: poolSlot.started, poolAttached } : {}),
             ...(job.activityId ? { activityId: job.activityId } : {}),
             ...(job.outcomeActivityId ? { outcomeActivityId: job.outcomeActivityId } : {}),
             ...(job.isMultiStepChain ? { isMultiStepChain: true } : {}),
@@ -1930,7 +2120,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 : {}),
         };
         runs.set(p.key, run); saveRuns();
-        console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
+        console.log(`SWARM start ${poolSlot ? `pooled ${accounts[0]} (${poolSlot.id})` : p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
         follow(p.key, run, child);
     });
 
@@ -2234,6 +2424,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         if (mode !== 'fleet_trade') brainDropAt.set(a.toLowerCase(), Date.now());
                     }
                     writeSwarmStop(stopFile(a), SWARM_STOP.removed);
+                    cancelPooledBot(r, a);
                     stopFlagsPresent.add(a.toLowerCase());
                 }
             }
@@ -2330,6 +2521,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         let endedByLower = endedMapByLower(ended);
         const buildLocked = existsSync(join(liveDir, 'build-lock.json'));
         const pendingUpdate = readPendingUpdateMark();
+        // Prune dead pools and drain pools whenever a live update is pending or stop-swarm is set.
+        for (const [id, pool] of [...pools]) {
+            if (!poolSlotAlive(pool)) { pools.delete(id); continue; }
+            if (pendingUpdate || stopAll || pool.launches >= POOL_MAX_LAUNCHES) drainPool(pool);
+        }
         if (pendingUpdate) {
             const drainRuns: DrainRun[] = [...runs].map(([key, run]) => {
                 const p = planned.find(x => x.key === key);
@@ -2342,6 +2538,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             for (const a of drainStopAccounts(pendingUpdate, Date.now(), drainRuns, busyRecovery)) {
                 if (hasStopFile(a, root)) continue;
                 writeSwarmStop(stopFile(a), SWARM_STOP.drain);
+                const ownerRun = overlappingRun(runs.values(), [a]);
+                if (ownerRun) cancelPooledBot(ownerRun, a);
                 console.log(`SWARM drain stop ${a}: the live update to ${pendingUpdate.target.slice(0, 10)} has waited ${Math.round((Date.now() - (pendingUpdate.since ?? pendingUpdate.at)) / 60_000)} min`);
             }
         }
@@ -2389,6 +2587,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 for (const a of p.accounts) st[a] = 'waiting: another job of this account is running';
             } else if (r) {
                 Object.assign(st, runningJobState(p, r, ended, pendingResume, stopAll, stopFile));
+                if (r.poolId && (!p.job.enabled || stopAll)) {
+                    for (const a of p.accounts) if (st[a] === 'stopping') cancelPooledBot(r, a);
+                }
             } else if (!job.enabled || stopAll) {
                 for (const a of p.accounts) st[a] = 'disabled';
             } else if (!endStateOk) {
@@ -2447,9 +2648,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         for (const a of go) st[a] = `waiting: infra circuit backoff (${infraCheck.kind})`;
                     } else {
                         const held = recoverySlotReserve(heldSlot, { recovering: !!recoveryDispatch.active, accounts: p.accounts, now: Date.now() });
+                        const attachingToPool = canUseHostPool(p) && go.length === 1
+                            && selectHostPool(pools.values(), poolActiveCount, poolSlotAlive, startSource) !== null;
                         const admission = admissionDecision({
                             running: botsRunning(), external: externalCount(), starting: go.length + held,
-                            startingReserve: startReserve(p, go.length), pending: pendingCount(),
+                            startingReserve: startReserve(p, go.length, attachingToPool), pending: pendingCount(),
                             freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots,
                         });
                         if (!admission.allowed) {

@@ -29,7 +29,7 @@ test('keepOutput holds a bounded amount of a long child output and a line over t
 }, 60_000);
 
 test('supervisor forwards remaining CLI arguments and validates all orchestrator participants',async()=>{
- expect(workerCommand('Donor','scripts/handoff-inputs.ts',['Receiver','batch'])).toEqual(['bun','scripts/handoff-inputs.ts','Donor','Receiver','batch']);
+ expect(workerCommand('Donor','scripts/handoff-inputs.ts',['Receiver','batch'])).toEqual(['bun','--smol','scripts/handoff-inputs.ts','Donor','Receiver','batch']);
  expect(supervisorParticipants('Donor','["Donor","Receiver"]')).toEqual(['Donor','Receiver']);
  expect(supervisorParticipants('Donor',undefined)).toEqual(['Donor']);
  for(const raw of ['no json','[]','["Receiver"]','["Donor","donor"]','["Donor","bad/name"]'])expect(()=>supervisorParticipants('Donor',raw)).toThrow();

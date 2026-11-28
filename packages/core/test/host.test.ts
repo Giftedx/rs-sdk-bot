@@ -202,3 +202,113 @@ test('hostedEntrySource escapes newline and separator characters in bot ids clea
     expect(() => new Bun.Transpiler({ loader: 'js', target: 'bun' }).transformSync(rendered)).not.toThrow();
     expect(rendered).toContain('hostbot=bot\\nline\\r\\\'\\u2028');
 });
+
+test('zero-ts rewriter handles regexes, templates, bracket access, property chains, dynamic imports and exports', () => {
+    const src = [
+        `import { openBot } from '../packages/core/src/bot';`,
+        `const re = /process\\.env|console\\.log/;`,
+        `const tpl = \`v=\${process.env.A} literal process.exit(9)\`;`,
+        `const kept = obj.process.env.X + obj?.console.log('keep');`,
+        `const arg = process['argv'][2];`,
+        `console["warn"](arg, tpl, re, kept);`,
+        `const dyn = () => import('../packages/core/src/bot');`,
+        `export { arg };`,
+        `export default class { run() { return openBot; } }`,
+    ].join('\n');
+    const out = rewriteScript(src, 'edge1', 'F:/r/scripts', 'F:/r/packages/core/src/bot.ts');
+    expect(out).toContain('/process\\.env|console\\.log/');
+    expect(out).toContain('${__host.env.A} literal process.exit(9)');
+    expect(out).toContain('obj.process.env.X');
+    expect(out).toContain("obj?.console.log('keep')");
+    expect(out).toContain('const arg = __host.argv[2];');
+    expect(out).toContain('__host.console.warn(arg');
+    expect(out).toContain("import('F:/r/packages/core/src/bot.ts?hostbot=edge1')");
+
+    const entry = hostedEntrySource(src, 'edge1', resolve(import.meta.dir, '..', '..', '..', 'scripts'));
+    expect(() => new Bun.Transpiler({ loader: 'js', target: 'bun' }).transformSync(entry)).not.toThrow();
+    expect(entry).not.toContain('export { arg }');
+    expect(entry).toContain('void (class');
+});
+
+test('process.env Proxy isolates per-bot reads, spreads, keys, mutations and Bun.spawnSync env', async () => {
+    const { mkdirSync, mkdtempSync, writeFileSync } = await import('node:fs');
+    const { relative } = await import('node:path');
+    const prac = resolve(import.meta.dir, '..', '..', '..', '.practice');
+    mkdirSync(prac, { recursive: true });
+    const dir = mkdtempSync(join(prac, 'host-env-proxy-'));
+    const helper = join(dir, 'helper.ts');
+    const script = join(dir, 'worker.ts');
+    const botRel = relative(dir, resolve(import.meta.dir, '../src/bot')).replaceAll('\\', '/');
+    const botImport = botRel.startsWith('.') ? botRel : `./${botRel}`;
+    writeFileSync(helper, `export function inspectEnv(tag: string) {
+    process.env.MUTATED_BY_BOT = tag;
+    const spread = { ...process.env };
+    const hasOwn = 'BOT_SECRET_TAG' in process.env;
+    const keysHas = Object.keys(process.env).includes('BOT_SECRET_TAG');
+    const spawned = Bun.spawnSync(['bun', '-e', 'console.log(process.env.BOT_SECRET_TAG + ":" + process.env.MUTATED_BY_BOT)'], { env: process.env }).stdout.toString().trim();
+    return { direct: process.env.BOT_SECRET_TAG, spread: spread.BOT_SECRET_TAG, mutated: process.env.MUTATED_BY_BOT, hasOwn, keysHas, spawned };
+}\n`);
+    writeFileSync(script, `import { inspectEnv } from './helper';
+import { finish } from '${botImport}';
+const tag = process.argv[2]!;
+await Bun.sleep(tag === 'alpha' ? 15 : 5);
+const res = inspectEnv(tag);
+await Bun.sleep(10);
+const afterMut = process.env.MUTATED_BY_BOT;
+console.log('ENV_CHECK ' + JSON.stringify({ ...res, afterMut }));
+await finish([], true, 'ok');\n`);
+    const lines: string[] = [];
+    const logDir = join(dir, 'logs');
+    try {
+        const results = await runHost([
+            { name: 'alpha', script, env: { BOT_SECRET_TAG: 'A_VAL' } },
+            { name: 'beta', script, env: { BOT_SECRET_TAG: 'B_VAL' } },
+        ], { out: l => lines.push(l), logDir, guard: false });
+        expect(results.every(r => r.ok)).toBe(true);
+        const parse = (bot: string) => JSON.parse(lines.find(l => l.startsWith(`[${bot}] ENV_CHECK `))!.slice(`[${bot}] ENV_CHECK `.length));
+        expect(parse('alpha')).toEqual({ direct: 'A_VAL', spread: 'A_VAL', mutated: 'alpha', hasOwn: true, keysHas: true, spawned: 'A_VAL:alpha', afterMut: 'alpha' });
+        expect(parse('beta')).toEqual({ direct: 'B_VAL', spread: 'B_VAL', mutated: 'beta', hasOwn: true, keysHas: true, spawned: 'B_VAL:beta', afterMut: 'beta' });
+        // Neither bot's mutation or overlay leaks into the host process env.
+        expect(process.env.MUTATED_BY_BOT).toBeUndefined();
+        expect(process.env.BOT_SECRET_TAG).toBeUndefined();
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('runHostedBot cancel and stall isolation stop only the affected bot while peers complete', async () => {
+    const { mkdirSync, mkdtempSync, writeFileSync } = await import('node:fs');
+    const { relative } = await import('node:path');
+    const { runHostedBot } = await import('../src/host');
+    const prac = resolve(import.meta.dir, '..', '..', '..', '.practice');
+    mkdirSync(prac, { recursive: true });
+    const dir = mkdtempSync(join(prac, 'host-isolate-'));
+    const script = join(dir, 'waiter.ts');
+    const botRel = relative(dir, resolve(import.meta.dir, '../src/bot')).replaceAll('\\', '/');
+    const botImport = botRel.startsWith('.') ? botRel : `./${botRel}`;
+    writeFileSync(script, `import { finish } from '${botImport}';
+const mode = process.argv[3];
+if (mode === 'stall' || mode === 'cancel') {
+    await new Promise(() => {});
+}
+await Bun.sleep(60);
+await finish([], true, 'peer-done');\n`);
+    const cancel = new AbortController();
+    setTimeout(() => cancel.abort('stop file'), 40);
+    try {
+        const [canceled, stalled, healthy] = await Promise.all([
+            runHostedBot({ name: 'cancelbot', script, args: ['cancel'] }, { logFile: null, out: () => {}, guard: false, cancel: cancel.signal }),
+            runHostedBot({ name: 'stallbot', script, args: ['stall'] }, { logFile: null, out: () => {}, guard: false, stallMs: 80, checkMs: 20, newestStatus: () => 0 }),
+            runHostedBot({ name: 'healthybot', script, args: ['ok'] }, { logFile: null, out: () => {}, guard: false }),
+        ]);
+        expect(canceled.ok).toBe(false);
+        expect(canceled.result).toContain('stop file');
+        expect(stalled.ok).toBe(false);
+        expect(stalled.stalled).toBe(true);
+        expect(stalled.result).toContain('stalled with no output and no status write');
+        expect(healthy.ok).toBe(true);
+        expect(healthy.result).toBe('RESULT ok peer-done');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
