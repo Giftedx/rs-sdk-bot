@@ -11,8 +11,8 @@ export {
     inIkovArmadylPocket, inIkovShack, leaveIkovArmadyl, needsIkovShinyKeyExit,
 } from './walk/ikov-exit';
 export {
-    KARAMJA_BANANA_ID, KARAMJA_CRATE, KARAMJA_GROVE_TILE, KARAMJA_LUTHAS_TILE, KARAMJA_SHIP_FARE,
-    earnKaramjaFare, inKaramjaIsland, needsKaramjaFareEscape,
+    KARAMJA_BANANA_ID, KARAMJA_CRATE, KARAMJA_GROVE_TILE, KARAMJA_JIMINUA_TILE, KARAMJA_LUTHAS_TILE, KARAMJA_SHIP_FARE,
+    earnKaramjaFare, inKaramjaIsland, needsKaramjaFareEscape, pickDispensableKaramjaItems,
 } from './walk/karamja-fare';
 export {
     DETOUR_MARGIN, TELEPORT_JEWELRY_RE, fareDetour, goTo, unreadJournalQuests, withoutJewelry, withoutSpells, withoutTeleports,

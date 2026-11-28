@@ -68,15 +68,24 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
     // This holds when the direct search found no route as well: the banks cannot open one, so the bank searches would
     // only run until the route budget ends (819 WALK_NO_ROUTE lines, each after up to 45 s).
     if (take <= 0 && world.routeGain && !world.routeGain(acct, richer)) return best;
-    const candidates=[...bankTiles].filter(b=>b.level===from.level).sort((a,b)=>cheb(a,from)-cheb(b,from)).slice(0,8),initial=Math.min(candidates.length,Math.max(0,Math.floor(nearest)));
-    let bankRouteFound=false;
-    for (let index=0;index<candidates.length;index++) {
-        if(index===initial&&bankRouteFound||routeOpts?.deadline!==undefined&&performance.now()>=routeOpts.deadline)break;
-        const bank=candidates[index]!;
-        const there = world.route(from, bank, acct, routeOpts);
+    // Underground coordinates sit at z >= 6400 (surface z + 6400): project to surface z when ranking surface banks so
+    // dungeon starts compare nearby local banks instead of northernmost Wilderness/Zanaris banks.
+    const bankDist = (b: Tile) => {
+        const z = from.z >= 6400 && b.z < 6400 ? from.z - 6400 : from.z;
+        return Math.max(Math.abs(b.x - from.x), Math.abs(b.z - z));
+    };
+    const candidates = [...bankTiles].filter(b => b.level === from.level).sort((a, b) => bankDist(a) - bankDist(b)).slice(0, 8), initial = Math.min(candidates.length, Math.max(0, Math.floor(nearest)));
+    let bankRouteFound = false;
+    for (let index = 0; index < candidates.length; index++) {
+        if (index === initial && bankRouteFound || routeOpts?.deadline !== undefined && performance.now() >= routeOpts.deadline) break;
+        const bank = candidates[index]!;
+        const thereBound = best ? best.cost - BANK_STOP_COST : undefined;
+        if (thereBound !== undefined && thereBound <= 0) break;
+        const there = world.route(from, bank, acct, thereBound !== undefined ? { ...routeOpts, maxCost: thereBound } : routeOpts);
         if (!there.ok || (best && there.cost + BANK_STOP_COST >= best.cost)) continue;
-        if(routeOpts?.deadline!==undefined&&performance.now()>=routeOpts.deadline)break;
-        const on = world.route(bank, to, richer, routeOpts);
+        if (routeOpts?.deadline !== undefined && performance.now() >= routeOpts.deadline) break;
+        const onBound = best ? best.cost - BANK_STOP_COST - there.cost : undefined;
+        const on = world.route(bank, to, richer, onBound !== undefined ? { ...routeOpts, maxCost: onBound } : routeOpts);
         if (!on.ok) continue;
         bankRouteFound=true;
         const cost = there.cost + BANK_STOP_COST + on.cost;

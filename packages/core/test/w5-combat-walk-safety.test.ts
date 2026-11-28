@@ -8,13 +8,16 @@ import {
     IKOV_SHINY_KEY_TILE,
     KARAMJA_BANANA_ID,
     KARAMJA_CRATE,
+    KARAMJA_JIMINUA_TILE,
     KARAMJA_LUTHAS_TILE,
+    earnKaramjaFare,
     fareFloatNeed,
     goTo,
     inIkovArmadylPocket,
     inKaramjaIsland,
     needsIkovShinyKeyExit,
     needsKaramjaFareEscape,
+    pickDispensableKaramjaItems,
     unreadJournalQuests,
 } from '../src/walk';
 import type { Account, Tile, World } from '../src/world';
@@ -234,4 +237,172 @@ test('unreadJournalQuests deduplicates already-known stages and fareFloatNeed co
     });
     expect(need).toMatchObject({ fare: 10, take: FARE_FLOAT });
     expect(KARAMJA_LUTHAS_TILE).toEqual({ x: 2939, z: 3154, level: 0 });
+    expect(KARAMJA_JIMINUA_TILE).toEqual({ x: 2767, z: 3122, level: 0 });
+});
+
+test('pickDispensableKaramjaItems excludes coins, quest items, gear, talismans, valuable items, and large stacks', () => {
+    const inv = [
+        { id: 995, name: 'Coins', count: 12, slot: 0 },
+        { id: 1446, name: 'Body talisman', count: 1, slot: 1 },
+        { id: 85, name: 'Shiny key', count: 1, slot: 2 },
+        { id: 35, name: 'Excalibur', count: 1, slot: 3 },
+        { id: 1333, name: 'Rune scimitar', count: 1, slot: 4 },
+        { id: 314, name: 'Feather', count: 50, slot: 5 },
+        { id: 227, name: 'Vial of water', count: 1, slot: 6 },
+        { id: 227, name: 'Vial of water', count: 1, slot: 7 },
+    ];
+    const picked = pickDispensableKaramjaItems(inv, { allowStackable: true });
+    expect(picked.map(i => i.id)).toEqual([227, 227]);
+    expect(picked.map(i => i.slot)).toEqual([6, 7]);
+});
+
+test('Karamja full 28/28 inventory with 12 gp and 26x Vial of water sells at Jiminua or drops 1 vial and always logs WALK_KARAMJA_FARE', async () => {
+    const jiminuaStart: Tile = { x: 2767, z: 3123, level: 0 };
+    const bank: Tile = { x: 3092, z: 3243, level: 0 };
+
+    const makeFatstackInv = () => [
+        { id: 995, name: 'Coins', count: 12, slot: 0 },
+        { id: 1446, name: 'Body talisman', count: 1, slot: 1 },
+        ...Array.from({ length: 26 }, (_, i) => ({ id: 227, name: 'Vial of water', count: 1, slot: i + 2 })),
+    ];
+
+    // Case 1: Jiminua's General Store buys vials for 1 gp each -> earns 30 gp directly, never touches Body talisman.
+    {
+        let tick = 0;
+        let pos = { worldX: jiminuaStart.x, worldZ: jiminuaStart.z, level: 0 };
+        const inv = makeFatstackInv();
+        const listeners = new Set<() => void>();
+        const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 1);
+        let shopClosed = 0;
+        const soldIds: number[] = [];
+        const logs: string[] = [];
+        const origLog = console.log;
+        console.log = (...args: unknown[]) => { logs.push(args.map(String).join(' ')); };
+        const walker: any = {
+            tick: () => tick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+            sdk: { getState: () => ({ player: pos, inventory: inv, gameMessages: [], nearbyNpcs: [], nearbyLocs: [], skills: [] }), getDialog: () => null, sendClickDialog: async () => ({ success: true }) },
+            bot: {
+                walkTo: async (x: number, z: number) => { pos = { worldX: x, worldZ: z, level: 0 }; return { success: true }; },
+                openShop: async () => ({ success: true }),
+                sellToShop: async (item: { id: number; slot: number }) => {
+                    soldIds.push(item.id);
+                    const idx = inv.findIndex(r => r.slot === item.slot && r.id === item.id);
+                    if (idx >= 0) { inv.splice(idx, 1); inv[0]!.count += 1; return { success: true, amountSold: 1 }; }
+                    return { success: false, amountSold: 0 };
+                },
+                closeShop: async () => { shopClosed++; return { success: true }; },
+            },
+            direct: async () => ({ success: true }),
+        };
+        try {
+            const res = await earnKaramjaFare(walker, bank);
+            expect(res).toBe('earned');
+            expect(inv[0]!.count).toBe(30);
+            expect(soldIds.length).toBe(18);
+            expect(soldIds.every(id => id === 227)).toBe(true);
+            expect(inv.some(i => i.id === 1446)).toBe(true);
+            expect(shopClosed).toBe(1);
+            expect(logs.some(l => l.startsWith('WALK_KARAMJA_FARE ') && l.includes('earned'))).toBe(true);
+        } finally {
+            console.log = origLog;
+            clearInterval(timer);
+        }
+    }
+
+    // Case 2: Shop refuses/unavailable -> drops 1 Vial of water, frees 1 slot, packs 10 bananas for Luthas, earns 30 gp.
+    {
+        let tick = 0;
+        let pos = { worldX: jiminuaStart.x, worldZ: jiminuaStart.z, level: 0 };
+        const inv = makeFatstackInv();
+        let employed = false, packed = 0;
+        let dialog: { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } = { isOpen: false, isWaiting: false, options: [] };
+        const droppedSlots: number[] = [];
+        const listeners = new Set<() => void>();
+        const timer = setInterval(() => { tick++; for (const fn of [...listeners]) fn(); }, 1);
+        const logs: string[] = [];
+        const origLog = console.log;
+        console.log = (...args: unknown[]) => { logs.push(args.map(String).join(' ')); };
+        const walker: any = {
+            tick: () => tick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); },
+            sdk: {
+                getState: () => ({
+                    player: pos, inventory: inv, gameMessages: [],
+                    nearbyNpcs: [{ index: 7, name: 'Luthas', distance: 1 }],
+                    nearbyLocs: [{ id: 2073, x: 2925, z: 3156, distance: 1 }],
+                    skills: [],
+                }),
+                getDialog: () => dialog,
+                sendClickDialog: async () => {
+                    if (!employed) employed = true;
+                    else if (packed >= 10) inv[0]!.count += 30;
+                    dialog = { isOpen: false, isWaiting: false, options: [] };
+                    return { success: true };
+                },
+            },
+            bot: {
+                walkTo: async (x: number, z: number) => { pos = { worldX: x, worldZ: z, level: 0 }; return { success: true }; },
+                openShop: async () => ({ success: false }),
+                sellToShop: async () => ({ success: false, amountSold: 0 }),
+                closeShop: async () => ({ success: true }),
+            },
+            direct: async (a: { type: string; slot?: number; locId?: number; npcIndex?: number }) => {
+                if (a.type === 'dropItem' && a.slot !== undefined) {
+                    const idx = inv.findIndex(i => i.slot === a.slot);
+                    if (idx >= 0) { droppedSlots.push(inv[idx]!.id); inv.splice(idx, 1); }
+                } else if (a.type === 'interactNpc' && a.npcIndex === 7) {
+                    dialog = {
+                        isOpen: true, isWaiting: false,
+                        options: employed ? [{ index: 0, text: "Thank you, I'll be on my way" }] : [{ index: 0, text: 'Could you offer me employment on your plantation?' }],
+                    };
+                } else if (a.type === 'interactLoc' && a.locId === 2073) {
+                    inv.push({ id: KARAMJA_BANANA_ID, name: 'Banana', count: 1, slot: 27 });
+                } else if (a.type === 'useItemOnLoc' && a.locId === KARAMJA_CRATE.id) {
+                    const idx = inv.findIndex(i => i.id === KARAMJA_BANANA_ID);
+                    if (idx >= 0) { inv.splice(idx, 1); packed++; }
+                }
+                return { success: true };
+            },
+        };
+        try {
+            const res = await earnKaramjaFare(walker, bank);
+            expect(res).toBe('earned');
+            expect(droppedSlots).toEqual([227]);
+            expect(inv.some(i => i.id === 1446)).toBe(true);
+            expect(packed).toBe(10);
+            expect(inv[0]!.count).toBe(42);
+            expect(logs.some(l => l.startsWith('WALK_KARAMJA_FARE ') && l.includes('dropped=227'))).toBe(true);
+            expect(logs.some(l => l.startsWith('WALK_KARAMJA_FARE ') && l.includes('earned'))).toBe(true);
+        } finally {
+            console.log = origLog;
+            clearInterval(timer);
+        }
+    }
+
+    // Case 3: Full 28/28 of ONLY protected items -> refuses to drop/sell anything and STILL logs structured WALK_KARAMJA_FARE stuck.
+    {
+        const protectedInv = [
+            { id: 995, name: 'Coins', count: 12, slot: 0 },
+            ...Array.from({ length: 27 }, (_, i) => ({ id: 1446, name: 'Body talisman', count: 1, slot: i + 1 })),
+        ];
+        const logs: string[] = [];
+        const origLog = console.log;
+        console.log = (...args: unknown[]) => { logs.push(args.map(String).join(' ')); };
+        const walker: any = {
+            tick: () => 0,
+            onTick: () => () => {},
+            sdk: { getState: () => ({ player: { worldX: jiminuaStart.x, worldZ: jiminuaStart.z, level: 0 }, inventory: protectedInv }) },
+            bot: { walkTo: async () => ({ success: true }) },
+            direct: async () => { throw Error('must not drop protected items'); },
+        };
+        try {
+            const res = await earnKaramjaFare(walker, bank);
+            expect(res).toBe('stuck');
+            expect(protectedInv.length).toBe(28);
+            expect(logs.some(l => l.startsWith('WALK_KARAMJA_FARE ') && l.includes('stuck'))).toBe(true);
+        } finally {
+            console.log = origLog;
+        }
+    }
 });

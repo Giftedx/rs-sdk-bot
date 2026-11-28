@@ -16,6 +16,10 @@ export type RouteQueryBody = { kind: string; [key: string]: unknown };
 export const serviceWanted = (env: Record<string, string | undefined> = process.env): boolean =>
     env.ROUTE_SERVICE === '1' || (env.ROUTE_SERVICE !== '0' && !!env.SWARM_LEASE_HOLDER);
 
+// Shared host pools and route-service clients must never run synchronous in-process WASM pathfinding on the main event loop.
+export const offThreadRouteWanted = (env: Record<string, string | undefined> = process.env): boolean =>
+    serviceWanted(env) || Boolean(executionContext.getStore()?.log);
+
 const SERVICE_RETRY_MS = 30_000, SERVICE_START_WAIT_MS = 5_000, QUERY_TIMEOUT_MS = 15_000;
 let serviceDownUntil = 0, lastLaunch = -Infinity, failedService = '', remoteSeq = 0;
 const remoteInFlight = new Map<number, number>();
@@ -43,6 +47,7 @@ export function pendingRemoteRouteWork(youngerThanMs = Infinity): number {
 
 export async function discoverRouteService(): Promise<ServiceInfo | null> {
     if (performance.now() < serviceDownUntil) return null;
+    if (failedService) failedService = '';
     const [svc, { pathfindingDataKey }] = await Promise.all([import('./route-service-client'), import('./pathcache')]);
     const rev = svc.checkoutRev(), key = pathfindingDataKey();
     const find = () => {

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { CONFIGS, isNonWildernessGatherGoal, roamTarget, runGenericCombatSession } from '../src/combat/melee-gather';
 import { edgevilleRoute } from '../src/combat/survivability';
 import { inWilderness } from '../src/logistics/preflight';
+import { ledgerPhaseOf } from '../../core/src/ledger';
 import { TAKER_WAIT_POLL_MS, TRADE_REQUEST_TIMEOUT_MS, performFleetTransfer, waitForGiver, type FleetTradeProgress } from '../src/logistics/trade-helpers';
 import { buyFromShops, crossesWilderness } from '../src/quest/sweep-travel';
 
@@ -248,4 +249,49 @@ test('fleet-trade uses fast giver polling and avoids blind pacing before partner
     expect(tradeCalls).toBe(1);
     expect(walkCalls).toBe(0);
     expect(observedRequestTimeout).toBe(TRADE_REQUEST_TIMEOUT_MS);
+    expect(ledgerPhaseOf(s)).toBeNull();
+});
+
+test('performFleetTransfer tags partner wait with trade-wait ledger phase and restores null on exit and error', async () => {
+    const phases: (string | null)[] = [];
+    const inv: { id: number; name: string; count: number; slot: number }[] = [{ id: 995, name: 'Coins', count: 100, slot: 0 }];
+    const giverSession: any = {
+        ended: new Promise(() => {}),
+        sdk: { getInventory: () => inv, getState: () => ({ inventory: inv, bank: { isOpen: false, items: [] } }) },
+        client: { objType: () => ({ stackable: true, certtemplate: -1, certlink: -1 }) },
+        bot: {
+            serveTrades: async (opts: { onTrade?: (t: any) => void }) => {
+                phases.push(ledgerPhaseOf(giverSession));
+                inv.splice(0, 1);
+                opts.onTrade?.({ success: true, partner: 'Taker', gave: [{ id: 995, name: 'Coins', count: 100 }], received: [] });
+                return { reason: 'max_trades', trades: [] };
+            },
+        },
+    };
+    const order = { id: 'o-phase', server: 'live', from: 'Giver', to: 'Taker', item: 'Coins', count: 100, start: 0, end: 60_000 };
+    await performFleetTransfer(giverSession, order, 'from', { uncertain: false, count: 0 }, { now: () => 0, wait: async () => true });
+    expect(phases).toEqual(['trade-wait']);
+    expect(ledgerPhaseOf(giverSession)).toBeNull();
+
+    // Verify phase is also restored to null when the wait throws (partner failed).
+    const failSession: any = {
+        ended: new Promise(() => {}),
+        sdk: { getInventory: () => [], findNearbyPlayer: () => null, getState: () => ({ inventory: [], bank: { isOpen: false, items: [] } }) },
+        client: { objType: () => ({ stackable: true, certtemplate: -1, certlink: -1 }) },
+        bot: {},
+    };
+    const seenDuringWait: (string | null)[] = [];
+    await expect(performFleetTransfer(
+        failSession,
+        order,
+        'to',
+        { uncertain: false, count: 0 },
+        {
+            now: () => 0,
+            gone: () => seenDuringWait.length > 0,
+            wait: async () => { seenDuringWait.push(ledgerPhaseOf(failSession)); return false; },
+        },
+    )).rejects.toThrow(/partner failed/);
+    expect(seenDuringWait).toEqual(['trade-wait']);
+    expect(ledgerPhaseOf(failSession)).toBeNull();
 });

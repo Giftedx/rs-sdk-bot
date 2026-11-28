@@ -262,8 +262,12 @@ export function planResponse(plan: Promise<unknown>, heartbeatMs = HEARTBEAT_MS)
     }), { headers: { 'content-type': 'application/json' } });
 }
 
-export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowIdleMs?: number; overflowDelayMs?: number; primaryIdleMs?: number; recycleRssBytes?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
+export const DEFAULT_QUERY_WORKERS = 2;
+export const DEFAULT_QUERY_OVERFLOW_DELAY_MS = 500;
+
+export function serveRoutes(opts: { workers?: number; queryWorkers?: number; idleMs?: number; overflowIdleMs?: number; overflowDelayMs?: number; primaryIdleMs?: number; recycleRssBytes?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
     const workers = opts.workers ?? DEFAULT_WORKERS, idleMs = opts.idleMs ?? DEFAULT_IDLE_MS, file = opts.file ?? SERVICE_FILE;
+    const queryWorkers = opts.queryWorkers ?? Math.min(DEFAULT_QUERY_WORKERS, Math.max(1, workers));
     const sharedAreas = opts.makeWorker ? undefined : () => {
         const labels = cachedMapAreas(repoRoot);
         return labels ? shareLabels(labels) : null;
@@ -275,6 +279,14 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
         recycleRssBytes: opts.recycleRssBytes ?? (opts.makeWorker ? 0 : DEFAULT_RECYCLE_RSS_BYTES),
         sharedAreas,
     });
+    // Dedicated lightweight pool for single-plane /query requests (walk-plan, walk-danger, sdk-find-path, approach,
+    // route-exposure) so fast queries never head-of-line block behind slow multi-plane /plan searches.
+    const queryPool = workerPool(queryWorkers, opts.makeWorker, {
+        overflowIdleMs: opts.overflowIdleMs,
+        overflowDelayMs: opts.makeWorker ? 0 : DEFAULT_QUERY_OVERFLOW_DELAY_MS,
+        primaryIdleMs: opts.primaryIdleMs ?? (opts.makeWorker ? 0 : PRIMARY_WORKER_IDLE_MS),
+        recycleRssBytes: opts.recycleRssBytes ?? (opts.makeWorker ? 0 : DEFAULT_RECYCLE_RSS_BYTES),
+    });
     let last = Date.now(), served = 0;
     const server = Bun.serve({
         hostname: '127.0.0.1',
@@ -283,7 +295,14 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
         async fetch(req) {
             const url = new URL(req.url);
             if (req.method === 'GET' && url.pathname === '/health') {
-                return Response.json({ ...info, inFlight: pool.inFlight(), activeWorkers: pool.activeWorkers(), served });
+                return Response.json({
+                    ...info,
+                    inFlight: pool.inFlight() + queryPool.inFlight(),
+                    planInFlight: pool.inFlight(),
+                    queryInFlight: queryPool.inFlight(),
+                    activeWorkers: pool.activeWorkers() + queryPool.activeWorkers(),
+                    served,
+                });
             }
             if (req.method === 'POST' && url.pathname === '/plan') {
                 let body: ServicePlan;
@@ -297,7 +316,7 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
                 try { body = await req.json() as ServiceQuery; } catch { return new Response('bad request', { status: 400 }); }
                 if (!body?.kind || !QUERY_KINDS.has(body.kind)) return new Response('bad request', { status: 400 });
                 last = Date.now();
-                const out = await pool.query(body);
+                const out = await queryPool.query(body);
                 last = Date.now();
                 served++;
                 return Response.json(out);
@@ -320,6 +339,7 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
         console.log(`ROUTE_SERVICE_STOP ${JSON.stringify({ pid: process.pid, why, served })}`);
         clearInterval(timer);
         pool.stop();
+        queryPool.stop();
         server.stop(true);
         // Only this service's own record is removed: a newer service may have written the file.
         if (readServiceInfo(file)?.pid === process.pid) try { unlinkSync(file); } catch { /* gone */ }
@@ -327,11 +347,11 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
     };
     const timer = setInterval(() => {
         if (readServiceInfo(file)?.pid !== process.pid) return stop('another service owns the record');
-        if (pool.inFlight() === 0 && Date.now() - last > idleMs) return stop('idle');
+        if (pool.inFlight() === 0 && queryPool.inFlight() === 0 && Date.now() - last > idleMs) return stop('idle');
         clearCheckoutRevMemo();
         if (checkoutRev() !== info.rev) return stop('checkout moved to another commit');
     }, Math.min(REV_POLL_MS, idleMs));
-    return { info, stop, pool };
+    return { info, stop, pool, queryPool };
 }
 
 if (import.meta.main) {

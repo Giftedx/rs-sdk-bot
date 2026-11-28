@@ -1,7 +1,13 @@
-// Karamja < 30 gp ship-fare escape via Luthas's banana crate job (quests/quest_hunt/scripts/luthas.rs2, banana_crate.rs2).
+// Karamja < 30 gp ship-fare escape via Jiminua's General Store and Luthas's banana crate job
+// (quests/quest_hunt/scripts/luthas.rs2, banana_crate.rs2).
 // An account stranded on Karamja with fewer than 30 coins cannot pay the customs officer (2953,3147 or 2772,3225).
+// With a full 28/28 pack and no bananas, it first tries selling cheap dispensable items at Jiminua's General Store
+// (2767,3122) to reach 30 coins or free a slot, falling back to dropping 1 cheapest non-quest/non-gear/non-rare item.
 // Picking 10 bananas from the free plantation trees (loc 2073..2077) and packing them into Luthas's crate (2072 at
 // 2943,3151) pays 30 coins on completion, unlocking the Musa Point -> Port Sarim ferry route.
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { sharedLootTables, unitValue, type LootTables } from '../loot';
 import type { Tile } from '../world';
 import { waitTicks, waitUntil } from '../ticks';
 import type { Walker } from '../walk-leg';
@@ -9,13 +15,76 @@ import { walkPath } from './path';
 import { sessionWalker } from './session';
 
 type Pos = { x: number; z: number; level: number };
+type InvItem = { id: number; slot: number; count?: number; name?: string };
+type ItemMeta = { id: number; name: string; debugname: string; cost: number; tradeable: boolean; stackable: boolean; src?: string; def?: string };
+
+const repoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
 
 export const KARAMJA_SHIP_FARE = 30;
 export const KARAMJA_BANANA_ID = 1963;
 export const KARAMJA_CRATE = { id: 2072, x: 2943, z: 3151, level: 0 } as const;
 export const KARAMJA_LUTHAS_TILE: Tile = { x: 2939, z: 3154, level: 0 };
 export const KARAMJA_GROVE_TILE: Tile = { x: 2925, z: 3156, level: 0 };
+export const KARAMJA_JIMINUA_TILE: Tile = { x: 2767, z: 3122, level: 0 };
+export const KARAMJA_MAX_DISPENSABLE_COST = 50;
+export const KARAMJA_MAX_DISPENSABLE_VALUE = 250;
+export const KARAMJA_MAX_STACKABLE_DISPENSABLE = 5;
 const BANANA_TREE_IDS = new Set([2073, 2074, 2075, 2076, 2077]);
+const PROTECTED_ITEM_NAME_RE = /\b(?:coins?|rune|talisman|tiara|key|teleport|clue|casket|lamp|ring|amulet|necklace|pickaxe|axe|hatchet|tinderbox|knife|chisel|hammer|spade|rope|net|rod|harpoon|cage|staff|wand|scimitar|sword|dagger|bow|arrow|bolt|shield|helm|plate|chain|robe|cape|boot|glove|herb|seed|gem|diamond|ruby|emerald|sapphire|dragonstone|onyx)\b/i;
+
+let itemMetaMap: Map<number, ItemMeta> | null = null;
+let gearIdSet: Set<number> | null = null;
+
+function loadItemMeta(): Map<number, ItemMeta> {
+    if (itemMetaMap) return itemMetaMap;
+    const raw = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'items.json'), 'utf8')) as ItemMeta[];
+    itemMetaMap = new Map(raw.map(i => [i.id, i]));
+    return itemMetaMap;
+}
+
+function loadGearIds(): Set<number> {
+    if (gearIdSet) return gearIdSet;
+    const raw = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'gear.json'), 'utf8')) as { id: number }[];
+    gearIdSet = new Set(raw.map(g => g.id));
+    return gearIdSet;
+}
+
+// Ranks cheap, non-quest, non-gear, non-rare dispensable items that are safe to sell at Jiminua's General Store
+// or drop (1 unit) to free a slot for Luthas's banana crate. Never returns coins, quest items, untradeables,
+// wearable gear, valuable items, or stackables above the threshold.
+export function pickDispensableKaramjaItems(
+    inventory: readonly InvItem[],
+    opts: { allowStackable?: boolean; tables?: LootTables } = {},
+): InvItem[] {
+    const items = loadItemMeta();
+    const gear = loadGearIds();
+    const tables = opts.tables ?? sharedLootTables();
+    const countsById = new Map<number, number>();
+    for (const item of inventory) countsById.set(item.id, (countsById.get(item.id) ?? 0) + 1);
+    const scored: { item: InvItem; value: number; cost: number; slots: number }[] = [];
+    for (const item of inventory) {
+        if (item.id === 995 || item.id === KARAMJA_BANANA_ID) continue;
+        const meta = items.get(item.id);
+        if (!meta || meta.tradeable !== true) continue;
+        if (gear.has(item.id)) continue;
+        if ((meta.src && /\bquest_/i.test(meta.src)) || (meta.def && /\bquest_/i.test(meta.def))) continue;
+        const label = item.name || meta.name;
+        if (PROTECTED_ITEM_NAME_RE.test(label) || PROTECTED_ITEM_NAME_RE.test(meta.debugname)) continue;
+        const count = item.count ?? 1;
+        if (meta.stackable) {
+            if (!opts.allowStackable || count > KARAMJA_MAX_STACKABLE_DISPENSABLE) continue;
+        } else if (count > 1) {
+            continue;
+        }
+        const cost = Number.isFinite(meta.cost) ? meta.cost : Infinity;
+        const value = unitValue(item.id, tables);
+        if (cost > KARAMJA_MAX_DISPENSABLE_COST || value > KARAMJA_MAX_DISPENSABLE_VALUE) continue;
+        if (value * count > KARAMJA_MAX_DISPENSABLE_VALUE) continue;
+        scored.push({ item, value, cost, slots: countsById.get(item.id) ?? 1 });
+    }
+    scored.sort((a, b) => a.value - b.value || a.cost - b.cost || b.slots - a.slots || a.item.slot - b.item.slot);
+    return scored.map(s => s.item);
+}
 
 // Covers Brimhaven (x <= 2825, z <= 3240) and Musa Point / Jiminua / Shilo (z <= 3190), excluding Rimmington and Crandor.
 export const inKaramjaIsland = (p: Pos): boolean =>
@@ -30,11 +99,17 @@ type KaramjaSession = Walker & {
         getDialog?(): { isOpen: boolean; isWaiting?: boolean; text?: string; options: { index: number; text: string }[] } | null | undefined;
         sendClickDialog?(index: number): Promise<unknown>;
     };
+    bot: Walker['bot'] & {
+        openShop?(target?: unknown): Promise<{ success?: boolean; message?: string }>;
+        sellToShop?(target: unknown, amount?: number | 'all'): Promise<{ success?: boolean; amountSold?: number; message?: string }>;
+        closeShop?(): Promise<unknown>;
+        dropItem?(target: unknown, amount?: number | 'all'): Promise<{ success?: boolean }>;
+    };
     direct?(a: { type: string; [k: string]: unknown }): Promise<unknown>;
 };
 
 // 'none' when the account is not stranded on Karamja under 30 gp, 'earned' when it holds >= 30 coins,
-// 'stuck' when the banana-crate job could not be completed.
+// 'stuck' when neither Jiminua's store nor Luthas's banana-crate job could produce 30 coins.
 export async function earnKaramjaFare(
     s: Walker,
     to: Tile,
@@ -45,17 +120,15 @@ export async function earnKaramjaFare(
         const p = s.sdk.getState()?.player;
         return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null;
     };
-    const inv = (): readonly { id: number; slot: number; count?: number }[] => (s.sdk.getState()?.inventory ?? []) as { id: number; slot: number; count?: number }[];
+    const inv = (): readonly InvItem[] => (s.sdk.getState()?.inventory ?? []) as InvItem[];
     const coins = () => inv().filter(i => i.id === 995).reduce((n, i) => n + (i.count ?? 1), 0);
     const bananas = () => inv().filter(i => i.id === KARAMJA_BANANA_ID);
     const start = pos();
     if (!start || !needsKaramjaFareEscape(start, to, coins())) return 'none';
-    if (inv().length >= 28 && !bananas().length) return 'stuck';
-    if (typeof sess.direct !== 'function' || typeof sess.sdk.getDialog !== 'function' || typeof sess.sdk.sendClickDialog !== 'function') return 'stuck';
 
     const done = (r: 'earned' | 'stuck', why: string) => {
         const p = pos();
-        console.log(`WALK_KARAMJA_FARE from=${start.x},${start.z},${start.level} ${r} coins=${coins()} at=${p?.x},${p?.z} ${why}`);
+        console.log(`WALK_KARAMJA_FARE from=${start.x},${start.z},${start.level} ${r} coins=${coins()} inv=${inv().length} at=${p?.x},${p?.z} ${why}`);
         return r;
     };
 
@@ -76,6 +149,63 @@ export async function earnKaramjaFare(
         const after = pos();
         return !!after && after.level === goal.level && Math.max(Math.abs(after.x - goal.x), Math.abs(after.z - goal.z)) <= tol;
     };
+
+    // 0. Full 28/28 pack with no bananas: sell cheap dispensable items at Jiminua's General Store first (raising coins
+    //    to >= 30 gp or freeing a slot), falling back to dropping 1 cheapest non-quest/non-gear/non-rare item.
+    if (inv().length >= 28 && !bananas().length) {
+        const sellCandidates = pickDispensableKaramjaItems(inv(), { allowStackable: true });
+        if (!sellCandidates.length) return done('stuck', 'full inventory: no safe item to sell or drop');
+
+        let sold = 0;
+        if (typeof sess.bot.openShop === 'function' && typeof sess.bot.sellToShop === 'function') {
+            if (await moveTo(KARAMJA_JIMINUA_TILE, 4)) {
+                const opened = await sess.bot.openShop(/^jiminua$/i).catch(() => ({ success: false }));
+                if (opened?.success) {
+                    try {
+                        for (let step = 0; step < 28 && !stop() && coins() < KARAMJA_SHIP_FARE; step++) {
+                            const cand = pickDispensableKaramjaItems(inv(), { allowStackable: true })[0];
+                            if (!cand) break;
+                            const beforeCoins = coins();
+                            const beforeLen = inv().length;
+                            const res = await sess.bot.sellToShop(cand, 1).catch(() => ({ success: false, amountSold: 0 }));
+                            if (!res?.success && (res?.amountSold ?? 0) <= 0 && inv().length >= beforeLen && coins() === beforeCoins) break;
+                            if (inv().length === beforeLen && coins() === beforeCoins) await waitTicks(s, 1);
+                            if (inv().length < beforeLen || coins() > beforeCoins || (res?.amountSold ?? 0) > 0) sold++;
+                            else break;
+                            // If the shop pays 0 gp for this item, stop once 1 slot is freed so Luthas's crate earns 30 gp.
+                            if (coins() === beforeCoins && inv().length < 28) break;
+                        }
+                    } finally {
+                        await sess.bot.closeShop?.().catch(() => {});
+                    }
+                    if (coins() >= KARAMJA_SHIP_FARE) return done('earned', `sold=${sold} at jiminua`);
+                }
+            }
+        }
+
+        if (inv().length >= 28 && !bananas().length) {
+            const dropCand = pickDispensableKaramjaItems(inv(), { allowStackable: false })[0];
+            if (!dropCand) return done('stuck', `full inventory after shop sold=${sold}: no safe item to drop`);
+            const beforeLen = inv().length;
+            if (typeof sess.direct === 'function') {
+                await sess.direct({ type: 'dropItem', slot: dropCand.slot, reason: 'SDK' });
+                await waitUntil(s, () => stop() || inv().length < beforeLen, { timeoutTicks: 8 });
+            } else if (typeof sess.bot.dropItem === 'function') {
+                await sess.bot.dropItem(dropCand, 1);
+                await waitUntil(s, () => stop() || inv().length < beforeLen, { timeoutTicks: 8 });
+            }
+            if (inv().length >= 28) return done('stuck', `full inventory: drop unobserved id=${dropCand.id}`);
+            const p = pos();
+            console.log(`WALK_KARAMJA_FARE from=${start.x},${start.z},${start.level} freed coins=${coins()} inv=${inv().length} at=${p?.x},${p?.z} dropped=${dropCand.id}`);
+        } else if (sold > 0) {
+            const p = pos();
+            console.log(`WALK_KARAMJA_FARE from=${start.x},${start.z},${start.level} freed coins=${coins()} inv=${inv().length} at=${p?.x},${p?.z} sold=${sold}`);
+        }
+    }
+
+    if (typeof sess.direct !== 'function' || typeof sess.sdk.getDialog !== 'function' || typeof sess.sdk.sendClickDialog !== 'function') {
+        return done('stuck', 'session missing direct/dialog controls');
+    }
 
     const messages = () => (s.sdk.getState()?.gameMessages ?? []) as readonly { text: string; tick?: number }[];
     const talkLuthas = async (patterns: readonly RegExp[]): Promise<void> => {
@@ -110,7 +240,7 @@ export async function earnKaramjaFare(
     // 2. Pick bananas and pack into Luthas's crate until full (10 bananas) or stopped.
     let packed = 0;
     let crateFull = false;
-    for (let round = 0; round < 12 && !stop() && !crateFull && packed < 10; round++) {
+    for (let round = 0; round < 15 && !stop() && !crateFull && packed < 10; round++) {
         const need = Math.min(10 - packed, Math.max(0, 28 - inv().length));
         if (need > 0 && bananas().length < 10 - packed) {
             if (!(await moveTo(KARAMJA_GROVE_TILE, 4))) break;

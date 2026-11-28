@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { familyOf, fareWaste, idleReasons, liveTickOffenders, parseTickWasteArgs, scriptFamilyOf, tickWaste, tickWasteByAccount, wasteShare } from './tick-waste';
+import { extractLineTimestamp, familyOf, fareWaste, idleReasons, liveTickOffenders, parseTickWasteArgs, scriptFamilyOf, tickWaste, tickWasteByAccount, wasteShare } from './tick-waste';
 
 test('fare detours sum the planner and walkPath extra ticks per account', () => {
     const dir = mkdtempSync(join(tmpdir(), 'fare-waste-'));
@@ -132,4 +132,61 @@ test('liveTickOffenders reads live status tickStats and timeline fallbacks', () 
     expect(offenders.map(o => o.name)).toEqual(['StuckBot', 'LegacyBot']);
     expect(offenders[0]).toMatchObject({ currentStandStill: 45, why: 'after:interactLoc', script: 'shop-buyer' });
     expect(offenders[1]).toMatchObject({ currentStandStill: 25, script: 'goldfarm.ts' });
+});
+
+test('--since-hours filters per-run timestamps inside active log files and falls back to file mtime only when un-timestamped', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tick-waste-per-run-'));
+    const now = 1_795_776_000_000;
+    const oldAt = now - 5 * 3_600_000;
+    const recentAt = now - 15 * 60_000;
+    const oldIso = new Date(oldAt).toISOString();
+    const recentIso = new Date(recentAt).toISOString();
+
+    expect(extractLineTimestamp(`LEDGER ticks=500 move=0 idle=500 at=${recentAt} bot=BotA`)).toBe(recentAt);
+    expect(extractLineTimestamp(`START 3185 3436 0 ${oldIso}`)).toBe(oldAt);
+    expect(extractLineTimestamp(`FLEET_RECEIPT {"at":${recentAt}}`)).toBe(recentAt);
+    expect(extractLineTimestamp('LEDGER ticks=500 move=0 idle=500')).toBeNull();
+
+    const activeFile = join(dir, 'ActiveBot.log');
+    writeFileSync(activeFile, [
+        marker('a'),
+        `START 3185 3436 0`,
+        `RELEASE aaaaaaaaaaaa script=goldfarm`,
+        `${ledger} standStill=900 maxStandStill=90@t1(0,0) script=goldfarm at=${oldAt} bot=ActiveBot`,
+        'RESULT ok coinsGained=10',
+        marker('b'),
+        `START 3185 3436 0 ${oldIso}`,
+        `RELEASE aaaaaaaaaaaa script=goldfarm`,
+        `${ledger} standStill=800 maxStandStill=80@t1(0,0) script=goldfarm bot=ActiveBot`,
+        'RESULT ok coinsGained=20',
+        marker('c'),
+        `START 3185 3436 0`,
+        `RELEASE bbbbbbbbbbbb script=goldfarm`,
+        `${ledger} standStill=120 maxStandStill=12@t1(0,0) script=goldfarm at=${recentAt} bot=ActiveBot`,
+        'RESULT ok coinsGained=30',
+        marker('d'),
+        `START 3185 3436 0`,
+        `RELEASE bbbbbbbbbbbb script=aio-logistics:walk-to`,
+        `${ledger} standStill=50 maxStandStill=5@t1(0,0) script=aio-logistics:walk-to bot=ActiveBot`,
+        `FLEET_RECEIPT {"at":${recentAt}}`,
+        'RESULT ok walk-to done',
+    ].join('\n') + '\n');
+
+    // Legacy file with no per-run timestamps falls back to file mtime.
+    const legacyFile = join(dir, 'LegacyBot.log');
+    writeFileSync(legacyFile, `${ledger} standStill=300 script=shop-buyer bot=LegacyBot\n`);
+    const recentSec = (now - 10 * 60_000) / 1000;
+    utimesSync(activeFile, recentSec, recentSec);
+    utimesSync(legacyFile, recentSec, recentSec);
+
+    const lastHour = tickWaste(dir, { sinceHours: 1, now });
+    // Old runs (5h ago) inside ActiveBot.log are excluded despite ActiveBot.log having a recent mtime.
+    expect(lastHour.get('goldfarm')).toMatchObject({ runs: 1, standStill: 120, maxStandStill: 12 });
+    expect(lastHour.get('walk-to')).toMatchObject({ runs: 1, standStill: 50, maxStandStill: 5 });
+    expect(lastHour.get('shop-buyer')).toMatchObject({ runs: 1, standStill: 300 });
+    expect(tickWasteByAccount(dir, { sinceHours: 1, now }).get('ActiveBot')).toMatchObject({ runs: 2, standStill: 170 });
+
+    // Expanding window to 6 hours includes the older timestamped runs too.
+    expect(tickWaste(dir, { sinceHours: 6, now }).get('goldfarm')?.runs).toBe(3);
+    expect(recentIso).toContain('T');
 });

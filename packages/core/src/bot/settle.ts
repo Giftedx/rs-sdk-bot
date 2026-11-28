@@ -77,7 +77,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         const hostedScope = currentHostedScope();
         const log = opts.log ?? sessions.map(s => sessionLogs.get(s)).find(Boolean) ?? (hostedScope ? (l: string) => hostedScope.log(l) : (l: string) => console.log(l));
         for (const s of sessions) {
-            const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
+            const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} at=${Date.now()} bot=${s.name}`);
             // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
             void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
             eatGuards.get(s)?.stop(); eatGuards.delete(s);

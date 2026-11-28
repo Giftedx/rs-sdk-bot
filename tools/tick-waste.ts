@@ -4,7 +4,8 @@
 // wasteShare() gives each family's idle+move share.
 // A run's worker release comes from the `RELEASE` line after its START (packages/core/src/bot/rules.ts releaseLine);
 // a run without one is `unknown`. `--latest` counts, for each family, only the runs on the release of its newest run.
-// `--since-hours <n>` restricts the scan to log files modified within the last `n` hours.
+// `--since-hours <n>` filters per-run using each run's timestamp (START/RELEASE/LEDGER/line timestamp when present,
+// falling back to file mtime only when no run timestamp exists).
 // Usage: bun tools/tick-waste.ts [min ticks per family, default 2000] [--latest] [--since-hours <n>] [--by-account]
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -167,6 +168,32 @@ export interface TickWasteOptions {
   now?: number;
 }
 
+const MIN_EPOCH_MS = 1_500_000_000_000;
+const MAX_EPOCH_MS = 4_102_444_800_000;
+const ISO_TS_RE = /\b(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z)\b/;
+const KV_EPOCH_RE = /\b(?:at|ts|time)=(\d{13})\b/;
+const JSON_EPOCH_RE = /"(?:at|loggedOutAt|started|timestamp)"\s*:\s*(\d{13})\b/;
+
+// Extracts an epoch-ms timestamp from a log line (key-value `at=<ms>`, ISO-8601 UTC timestamp, or JSON epoch field).
+export function extractLineTimestamp(line: string): number | null {
+  const kv = line.match(KV_EPOCH_RE);
+  if (kv) {
+    const ms = Number(kv[1]);
+    if (ms >= MIN_EPOCH_MS && ms <= MAX_EPOCH_MS) return ms;
+  }
+  const iso = line.match(ISO_TS_RE);
+  if (iso) {
+    const ms = Date.parse(iso[1]!);
+    if (Number.isFinite(ms) && ms >= MIN_EPOCH_MS && ms <= MAX_EPOCH_MS) return ms;
+  }
+  const json = line.match(JSON_EPOCH_RE);
+  if (json) {
+    const ms = Number(json[1]);
+    if (ms >= MIN_EPOCH_MS && ms <= MAX_EPOCH_MS) return ms;
+  }
+  return null;
+}
+
 function scanLogs(dir: string, opts: TickWasteOptions = {}) {
   const agg = new Map<string, Waste>();
   const byRelease = new Map<string, Map<string, Waste>>();
@@ -183,46 +210,72 @@ function scanLogs(dir: string, opts: TickWasteOptions = {}) {
     .filter((x): x is { f: string; at: number } => !!x && x.at >= minMtime)
     .sort((a, b) => a.at - b.at || (a.f < b.f ? -1 : 1));
 
-  for (const { f } of files) {
+  for (const { f, at: fileAt } of files) {
     const fileBot = f.replace(/^host-/, '').replace(/\.log(\.\d+)?$/, '');
     const lines = readFileSync(`${dir}/${f}`, 'latin1').split(/\r?\n/);
     let release = 'unknown';
     let releaseScript: string | null = null;
     let hostScript: string | null = null;
+    let runAt: number | null = null;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
-      if (line.startsWith('SWARM_JOB ')) { release = 'unknown'; releaseScript = null; hostScript = null; continue; }
+      const lineTs = extractLineTimestamp(line);
+      if (line.startsWith('SWARM_JOB ')) {
+        release = 'unknown';
+        releaseScript = null;
+        hostScript = null;
+        runAt = lineTs;
+        continue;
+      }
       const body = workerLine(line);
       const hostStart = body.match(/^HOST start .* script=(\S+)/);
       if (hostStart) {
         hostScript = hostStart[1]!.split(/[\\/]/).pop()?.replace(/\.ts$/i, '') ?? null;
+        runAt = lineTs;
         continue;
       }
-      const rel = body.match(/^RELEASE (\S+)(?:\s+script=(\S+))?$/);
-      if (rel) { release = rel[1]!; if (rel[2]) releaseScript = rel[2]!; continue; }
-      if (!line.includes('LEDGER ticks=')) continue;
+      if (body.startsWith('START ')) {
+        runAt = lineTs;
+        continue;
+      }
+      const rel = body.match(/^RELEASE (\S+)(?:\s+script=(\S+))?/);
+      if (rel) {
+        release = rel[1]!;
+        if (rel[2]) releaseScript = rel[2]!;
+        if (lineTs !== null) runAt = lineTs;
+        continue;
+      }
+      if (!line.includes('LEDGER ticks=')) {
+        if (lineTs !== null) runAt = lineTs;
+        continue;
+      }
       const m = body.match(/^LEDGER ticks=(\d+).* move=(\d+) anim=(\d+) dialog=(\d+) stun=(\d+) idle=(\d+)/);
       if (!m) continue;
       const reasons = idleReasons(line);
       const { standStill, maxStandStill } = parseStandingStill(line, +m[6]!, reasons);
       const botPrefix = lineBotPrefix(line);
-      const botName = body.match(/ bot=(\S+)$/)?.[1] ?? botPrefix ?? fileBot;
+      const botName = body.match(/ bot=(\S+)/)?.[1] ?? botPrefix ?? fileBot;
       const explicitScript = body.match(/ script=(\S+)/)?.[1] ?? releaseScript;
       let key = explicitScript ? scriptFamilyOf(explicitScript) : '?';
-      if (key === '?') {
-        for (let k = i + 1; k < Math.min(lines.length, i + 80); k++) {
-          const next = lines[k]!;
-          if (next.startsWith('SWARM_JOB ')) break;
-          const nextPrefix = lineBotPrefix(next);
-          if (botPrefix && nextPrefix && nextPrefix !== botPrefix) continue;
-          const nextBody = workerLine(next);
-          if (nextBody.startsWith('LEDGER ticks=') || nextBody.startsWith('START ')) break;
-          if (!next.includes('RESULT ')) continue;
+      let postTs: number | null = null;
+      for (let k = i + 1; k < Math.min(lines.length, i + 80); k++) {
+        const next = lines[k]!;
+        if (next.startsWith('SWARM_JOB ')) break;
+        const nextPrefix = lineBotPrefix(next);
+        if (botPrefix && nextPrefix && nextPrefix !== botPrefix) continue;
+        const nextBody = workerLine(next);
+        if (nextBody.startsWith('LEDGER ticks=') || nextBody.startsWith('START ')) break;
+        if (postTs === null && k <= i + 20) postTs = extractLineTimestamp(next);
+        if (key === '?' && next.includes('RESULT ')) {
           const r = nextBody.match(/^RESULT (?:ok|fail) (.*)$/);
-          if (r) { key = familyOf(r[1]!); break; }
+          if (r) key = familyOf(r[1]!);
         }
+        if (key !== '?' && (lineTs !== null || runAt !== null || postTs !== null)) break;
       }
       if (key === '?' && hostScript) key = scriptFamilyOf(hostScript);
+      const effectiveAt = lineTs ?? runAt ?? postTs ?? fileAt;
+      runAt = null;
+      if (minMtime > 0 && effectiveAt < minMtime) continue;
       const add = (e: Waste) => {
         e.runs++;
         e.ticks += +m[1]!;
@@ -382,7 +435,7 @@ if (import.meta.main) {
   const opts: TickWasteOptions = { latest, ...(sinceHours !== undefined ? { sinceHours } : {}) };
   const rows = [...tickWaste(undefined, opts)].filter(([, e]) => e.ticks >= minTicks).sort((a, b) => (b[1].standStill + b[1].move) - (a[1].standStill + a[1].move));
   if (latest) console.log('Each family counts only the runs on the release of its newest run (`unknown`: from before RELEASE lines).');
-  if (sinceHours !== undefined) console.log(`Filtered to log files modified in the last ${sinceHours} h.`);
+  if (sinceHours !== undefined) console.log(`Filtered to runs in the last ${sinceHours} h (falling back to file mtime when un-timestamped).`);
   console.log('script'.padEnd(26), 'runs', 'ticks'.padStart(8), 'stand%', 'idle%', 'move%', 'anim%', 'maxStrk', 'wasteTicks', ' idle reasons (share of the idle ticks that carry one)');
   for (const [k, e] of rows.slice(0, 30)) {
     const named = Object.values(e.idleBy).reduce((n, v) => n + v, 0);

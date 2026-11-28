@@ -110,13 +110,16 @@ export function ledgerScriptId(script: string | undefined, argv: readonly string
     return cleanBase ? cleanBase.slice(0, 64) : null;
 }
 
-// The reason for one idle tick, from the state of that tick, the last action the script sent, and any active phase.
-export function idleWhy(now: any, lastAction: string | null, phase?: string | null): string {
+// The reason for one idle tick, from the state of that tick, an explicit phase tag (setLedgerPhase), the last action
+// the script sent, and any passive status phase fallback.
+export function idleWhy(now: any, lastAction: string | null, phase?: string | null, explicitPhase?: string | null): string {
     if (now?.fight) return 'combat';
     if (now?.hurt) return 'hurt';
     if (now?.bank) return 'bank';
     if (now?.shop) return 'shop';
     if (now?.window) return 'window';
+    const explicit = phaseIdleReason(explicitPhase);
+    if (explicit) return explicit;
     if (lastAction) return `after:${lastAction}`;
     return phaseIdleReason(phase) ?? 'none';
 }
@@ -448,12 +451,13 @@ export function startLedger(
             : cur.animId !== -1 ? 'anim'
             : cur.dialogOpen ? 'dialog'
             : tick <= stunUntil ? 'stun' : 'idle';
-        const activePhase = ledgerPhaseOf(s) ?? opts.phase?.() ?? null;
+        const explicitPhase = ledgerPhaseOf(s);
+        const fallbackPhase = opts.phase?.() ?? null;
         const row: TickRow = {
             tick,
             kind,
             at: cur.hasPlayer ? `${cur.x},${cur.z}` : 'undefined,undefined',
-            ...(kind === 'idle' ? { why: idleWhy(cur, resolveLastAction(), activePhase) } : kind === 'dialog' ? { dialogTicks: shownTicks } : {}),
+            ...(kind === 'idle' ? { why: idleWhy(cur, resolveLastAction(), fallbackPhase, explicitPhase) } : kind === 'dialog' ? { dialogTicks: shownTicks } : {}),
         };
         tally.add(row);
         rows.push(row);
