@@ -182,7 +182,7 @@ describe('live defect regression tests', () => {
                         gen = 2;
                         return { success: true };
                     }
-                    return { success: false, message: 'dropped first click' };
+                    return { success: false, reason: 'timeout', message: 'Timeout waiting for Knife to be deposited' };
                 },
             },
         };

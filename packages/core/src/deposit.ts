@@ -70,9 +70,11 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
         return !!after && after.generation > generation && held() === 0 && stored(after.items) === bankBefore + amount;
     };
     let ok = await waitUntil(s, matched, { timeoutTicks: 10 }) && matched();
-    // A single dropped deposit click leaves bank open with pack and bank both unchanged: retry once while keeping
-    // the exact paired debit/credit predicate.
-    if (!ok && s.sdk.getState()?.bank?.isOpen && held() === amount && stored(s.bankObservation?.()?.items ?? []) === bankBefore) {
+    // A single dropped deposit click times out in the SDK (or completes with zero delta) leaving bank open with pack
+    // and bank both unchanged: retry once while keeping the exact paired debit/credit predicate. Explicit SDK refusals
+    // (reason !== 'timeout' when !sdkSuccess) fail immediately without retrying.
+    const retryable = sdkSuccess || (typeof dispatchResult === 'object' && dispatchResult !== null && (dispatchResult as { reason?: string }).reason === 'timeout');
+    if (!ok && retryable && s.sdk.getState()?.bank?.isOpen && held() === amount && stored(s.bankObservation?.()?.items ?? []) === bankBefore) {
         const retryTarget = s.sdk.getState()?.inventory.find(i => i.id === item.id && i.name === item.name);
         if (retryTarget) {
             try { const result = await s.bot.depositItem(retryTarget, -1); dispatchResult = result; sdkSuccess = result.success; }
