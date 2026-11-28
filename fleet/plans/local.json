@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850786469,
+ "at": 1795851459501,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,82 +185,72 @@
    "role": "pvp"
   },
   {
-   "account": "Bigpackage",
+   "account": "mmtha0205",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
+   "goal": "campaign:haggis:item:1515",
    "role": "army"
   },
   {
-   "account": "RearEntry",
+   "account": "BackdoorMan",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
+   "goal": "campaign:haggis:item:1515",
+   "role": "helper"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
    "role": "helper"
   },
   {
    "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "87",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "87"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Ballbag",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -273,30 +263,40 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
+   "role": "auto"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=5000 TARGET_COUNT=500 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:barcrawl BATCH_UNITS=1 -- sweep barcrawl"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
    "role": "helper"
   },
   {
    "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "chicken"
+    "scripts/aio-skiller.ts CAP=3600 TARGET_COUNT=360 -- thieving knights",
+    "scripts/magic-order.ts TARGET_LEVEL=90 CAP=3000 TRAIN_SKILL=Magic DEMAND_ID=goal:pk_army:Abracadickra BATCH_UNITS=250 STALL_TICKS=224 --"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Abracadickra",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "role": "auto"
   },
   {
-   "account": "BackdoorMan",
+   "account": "YewGotWood",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -309,28 +309,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper"
+   "role": "auto"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1817"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "SporranBulge",
+   "account": "DropMyLoad",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "runecraft",
@@ -434,71 +416,41 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "426"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "WellHung",
+   "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=5600 TARGET_COUNT=560 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:barcrawl BATCH_UNITS=1 -- sweep barcrawl"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:supply_chain:377",
    "role": "helper"
   },
   {
-   "account": "DropMyLoad",
+   "account": "BoneToPick",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:556",
-    "BATCH_UNITS": "2000"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "4",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "4",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:556",
-   "role": "helper"
+   "goal": "campaign:haggis:item:2349",
+   "role": "auto"
   }
  ],
  "army": [
@@ -512,9 +464,9 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
+  "bigpackage",
   "bowbeforeme",
   "fingerblastr",
-  "kiltlifter",
   "mineyourbiz",
   "mmthv2350",
   "pocketpython",
