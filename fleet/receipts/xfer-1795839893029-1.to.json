@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795839893029-1",
+ "account": "WellHung",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 223,
+ "claim": "3b710af8-055e-482a-a7cd-87a7564466ee",
+ "count": 223,
+ "ok": true,
+ "at": 1795840120272,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 223
+ },
+ "bank": {
+  "count": 223,
+  "at": 1795840119522
+ },
+ "logout": {
+  "attemptId": "1795840103622-0000009532-0000000001",
+  "at": 1795840120264,
+  "sha256": "189522af08a2189b73919b0a3c1af013ad9b406ad41009a5b254854ab49f91e4"
+ },
+ "screen": true
+}
