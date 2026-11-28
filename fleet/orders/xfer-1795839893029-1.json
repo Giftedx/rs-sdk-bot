@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795839893029-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "WellHung",
+  "item": "Coins",
+  "count": 223,
+  "itemId": 995,
+  "start": 1795839893029,
+  "end": 1795840793029,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

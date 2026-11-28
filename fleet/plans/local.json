@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795839899489,
+ "at": 1795839914267,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -188,7 +188,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2230 TARGET_COUNT=223 PRODUCT_TARGET=225 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2220 TARGET_COUNT=222 PRODUCT_TARGET=225 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=225 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
@@ -212,7 +212,7 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "78",
+    "BATCH_UNITS": "66",
     "STALL_TICKS": "280"
    },
    "enabled": true,
@@ -315,6 +315,21 @@
    "role": "army"
   },
   {
+   "account": "TossTheCaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=221 \"ITEMS=Eye of newt\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:145 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:3dose2attack"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:145",
+   "role": "army"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -334,21 +349,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1513",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=221 \"ITEMS=Eye of newt\" MAX_ITEMS=3 STOCK_TARGET=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:145 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:3dose2attack"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:145",
    "role": "army"
   },
   {
@@ -427,31 +427,6 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magic_guild_elemental",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "28",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "army"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
@@ -507,33 +482,19 @@
    "role": "helper"
   },
   {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
+   "account": "Nockitoff",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2230 TARGET_COUNT=223 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:vampire BATCH_UNITS=1 -- sweep vampire"
+    "sweep",
+    "vampire"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "helper"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=865 MAX_MAKE=1 BAR_RESERVE=0 CAP=1000 TARGET_COUNT=1 STALL_TICKS=280 -- smithing anvil 1000",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- ranged-camp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
    "role": "auto"
   },
   {
@@ -603,6 +564,7 @@
   "bowbeforeme",
   "mmtha0205",
   "mmthv2350",
+  "pocketpython",
   "pocketrocket",
   "sausagefest"
  ],

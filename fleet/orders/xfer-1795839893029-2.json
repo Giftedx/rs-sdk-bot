@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795839893029-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Woodenstaff",
+  "item": "Water rune",
+  "count": 6,
+  "itemId": 555,
+  "start": 1795839893029,
+  "end": 1795840793029,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
