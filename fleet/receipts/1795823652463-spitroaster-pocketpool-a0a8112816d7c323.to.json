@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795823652463-spitroaster-pocketpool-a0a8112816d7c323",
  "account": "PocketPool",
  "partner": "Spitroaster",
@@ -10,15 +10,37 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "a0d699d9-839b-4a27-989d-f99ba67d0437",
- "count": 0,
- "ok": false,
- "at": 1795834073470,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795834154914,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Shark",
    "requested": 13,
-   "count": 0
+   "count": 13,
+   "inventory": {
+    "before": 0,
+    "after": 13
+   },
+   "bank": {
+    "count": 13,
+    "at": 1795834154167
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795834153782
+ },
+ "logout": {
+  "attemptId": "1795834073479-0000024772-0000000001",
+  "at": 1795834154905,
+  "sha256": "426b908870d8b485ae936ef137a237115c09daf82e30fe202816faffd07acf67"
+ },
+ "screen": true
 }
