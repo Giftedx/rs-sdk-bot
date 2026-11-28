@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795841071336,
+ "at": 1795841081497,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "272",
+    "MAX_ITEMS": "258",
     "COIN_RESERVE": "1000",
-    "FLOAT": "110800",
+    "FLOAT": "105200",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "272"
+    "BATCH_UNITS": "258"
    },
    "enabled": true,
    "repeat": false,
@@ -224,25 +224,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:440",
    "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
@@ -354,6 +335,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
    "role": "army"
   },
   {
