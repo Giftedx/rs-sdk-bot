@@ -197,6 +197,7 @@ const FOOD_RAW_ID: Record<string, number> = {
     lobster: 377,
     swordfish: 371,
     shark: 383,
+    karambwan: 3142,
 };
 
 export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig, world: WorkerWorldView): PreflightResult {
@@ -222,7 +223,8 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
             case 'cooking': {
                 checkMaxCap(acct, 'Cooking', blockers);
                 if (cfg.method === 'food') {
-                    const foodType = (resolveArtisanSetting(cfg, 'FOOD_TYPE', cfg.args[1]) ?? 'lobster').toLowerCase();
+                    const arg0IsCap = cfg.args[0] !== undefined && /^\d+$/.test(cfg.args[0]);
+                    const foodType = (resolveArtisanSetting(cfg, 'FOOD_TYPE', arg0IsCap ? cfg.args[1] : cfg.args[0]) ?? 'lobster').toLowerCase();
                     const rule = loadCookingMod().foodRule(foodType);
                     checkSkill(acct, 'Cooking', rule.level, blockers);
                     const rawId = FOOD_RAW_ID[foodType];
@@ -245,10 +247,15 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                         checkSupply(acct, world, 1937, max + reserve, 'Jug of water', blockers, missingItems);
                     }
                 } else if (cfg.method === 'batch') {
-                    const recipeName = resolveArtisanSetting(cfg, 'RECIPE', cfg.args[0]) ?? 'cooking_generic_trout';
-                    const recipe = cookingRecipeByName(recipeName);
+                    const explicitRecipe = resolveArtisanSetting(cfg, 'RECIPE', cfg.args[0]);
+                    const foodType = resolveArtisanSetting(cfg, 'FOOD_TYPE')?.toLowerCase();
+                    const recipe = explicitRecipe
+                        ? cookingRecipeByName(explicitRecipe)
+                        : foodType
+                          ? loadCookingMod().foodRecipe(foodType)
+                          : cookingRecipeByName('cooking_generic_trout');
                     if (!recipe) {
-                        blockers.push({ kind: 'invalid_config', message: `unknown cooking recipe: ${recipeName}` });
+                        blockers.push({ kind: 'invalid_config', message: `unknown cooking recipe: ${explicitRecipe ?? foodType}` });
                     } else {
                         checkSkill(acct, 'Cooking', recipe.level, blockers);
                         checkSupply(acct, world, recipe.raw, 1, recipe.name, blockers, missingItems);
@@ -427,20 +434,39 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'tanning') {
                     const { tanningRecipes } = loadCraftingMod();
-                    const kind = (cfg.args[0] ?? 'soft') as keyof typeof tanningRecipes;
-                    const qty = Number(cfg.args[1] ?? 1);
-                    if (!Object.hasOwn(tanningRecipes, kind) || !Number.isSafeInteger(qty) || qty < 1) {
+                    const banked = resolveArtisanSetting(cfg, 'TAN_BANKED') === '1';
+                    const kind = (cfg.args[0] ?? resolveArtisanSetting(cfg, 'TAN_KIND', banked ? 'black' : 'soft')) as keyof typeof tanningRecipes;
+                    const qty = Number(
+                        cfg.args[1] ??
+                            resolveArtisanSetting(
+                                cfg,
+                                'MAX_MAKE',
+                                resolveArtisanSetting(cfg, 'TARGET_COUNT', resolveArtisanSetting(cfg, 'BATCH_UNITS', banked ? '27' : '1')),
+                            ),
+                    );
+                    if (!Object.hasOwn(tanningRecipes, kind) || !Number.isSafeInteger(qty) || qty < (banked ? 0 : 1)) {
                         blockers.push({ kind: 'invalid_config', message: `invalid tanning kind/quantity: ${String(kind)}/${qty}` });
                     } else {
                         const r = tanningRecipes[kind];
-                        checkSupply(acct, world, r.input, qty, `Hide #${r.input}`, blockers, missingItems);
-                        checkCoins(acct, world, qty * r.cost, blockers);
+                        const need = banked ? (qty === 0 ? 1 : qty) : qty;
+                        checkSupply(acct, world, r.input, need, `Hide #${r.input}`, blockers, missingItems);
+                        checkCoins(acct, world, need * r.cost, blockers);
                     }
                 } else if (cfg.method === 'black-dhide-sets') {
                     checkMaxCap(acct, 'Crafting', blockers);
-                    const piece = resolveArtisanSetting(cfg, 'PIECE');
-                    const level = piece === 'vambraces' ? 79 : piece === 'chaps' ? 82 : 84;
-                    checkSkill(acct, 'Crafting', level, blockers);
+                    const { DHIDE_TIERS } = loadCraftingMod();
+                    const tierRaw = (resolveArtisanSetting(cfg, 'TIER', 'black') ?? 'black').trim().toLowerCase();
+                    const tierSpec = Object.hasOwn(DHIDE_TIERS, tierRaw) ? DHIDE_TIERS[tierRaw as keyof typeof DHIDE_TIERS] : undefined;
+                    const piece = resolveArtisanSetting(cfg, 'PIECE')?.trim().toLowerCase();
+                    if (!tierSpec) {
+                        blockers.push({ kind: 'invalid_config', message: `unknown dhide TIER: ${tierRaw}` });
+                    } else if (piece && !['body', 'chaps', 'vambraces'].includes(piece)) {
+                        blockers.push({ kind: 'invalid_config', message: `unknown dhide PIECE: ${piece}` });
+                    } else {
+                        const idx = piece === 'body' ? 0 : piece === 'chaps' ? 1 : 2;
+                        const level = piece ? tierSpec.pieces[idx]!.level : Math.max(...tierSpec.pieces.map(p => p.level));
+                        checkSkill(acct, 'Crafting', level, blockers);
+                    }
                 } else if (cfg.method === 'soften-clay') {
                     const res = parseIntSetting(resolveArtisanSetting(cfg, 'RAW_RESERVE'), 0, { min: 0, label: 'RAW_RESERVE' }, blockers);
                     if (res !== null) checkSupply(acct, world, 434, res + 1, 'Clay', blockers, missingItems);
@@ -653,7 +679,8 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                 };
             }
             const catalog = loadCatalogMod().artisanDbtablesCatalog();
-            const food = (resolveArtisanSetting(cfg, 'FOOD_TYPE', cfg.args[1]) ?? 'trout').toLowerCase();
+            const arg0IsCap = cfg.args[0] !== undefined && /^\d+$/.test(cfg.args[0]);
+            const food = (resolveArtisanSetting(cfg, 'FOOD_TYPE', arg0IsCap ? cfg.args[1] : cfg.args[0]) ?? 'trout').toLowerCase();
             const entry = catalog.cooking.find(c => c.uncooked.includes(food));
             const xpPer = entry ? entry.xp / 10 : 70;
             const xpPerTick = scaleXp(xpPer * 0.25);

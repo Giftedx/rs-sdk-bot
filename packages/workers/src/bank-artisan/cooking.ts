@@ -280,13 +280,26 @@ export const foodDepositPattern = (food: string) => new RegExp(`^(?:${escapeName
 const CATHERBY_RANGE = { x: 2816, z: 3443 };
 const CATHERBY_BANK = { x: 2809, z: 3441 };
 
-export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE, cap = 15000, stop: () => boolean = () => false) {
+export async function runCookFood(
+    s: Session,
+    foodTypeInput = DEFAULT_FOOD_TYPE,
+    cap = 15000,
+    stop: () => boolean = () => false,
+    maximum = Infinity,
+) {
     const FOOD_TYPE = foodTypeInput.toLowerCase();
+    const recipe = foodRecipe(FOOD_TYPE);
+    const karambwanChoice = recipe?.karambwanChoice;
+    const cookedId = recipe?.products[0];
     const pos = () => s.sdk.getState()?.player;
     const rawRe = rawFoodPattern(FOOD_TYPE);
     const cookedRe = cookedFoodPattern(FOOD_TYPE);
     const rawCount = () => countItems(s, rawRe);
-    const cookedCount = () => countItems(s, cookedRe);
+    // Thoroughly cooked karambwan (3144) shares display name with poorly cooked karambwan (3146); count by ID for karambwan.
+    const cookedCount = () =>
+        FOOD_TYPE === 'karambwan' && cookedId !== undefined
+            ? s.sdk.getInventory().filter(i => i.id === cookedId).reduce((n, i) => n + i.count, 0)
+            : countItems(s, cookedRe);
     const t0 = s.tick();
     const used = () => s.tick() - t0;
     const over = () => stop() || used() >= cap;
@@ -326,7 +339,8 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         const loaded = (s.sdk.getState()?.bank?.items?.length ?? 0) > 0
             || await waitUntil(s, () => (s.sdk.getState()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 5 });
         const empty = loaded && !(s.sdk.getState()?.bank?.items ?? []).some((i: { name: string; count: number }) => rawRe.test(i.name) && i.count > 0);
-        if (!empty) await s.bot.withdrawItem(rawRe, 28);
+        const wantWithdraw = Number.isFinite(maximum) ? Math.min(28, Math.max(1, maximum - cookedTotal)) : 28;
+        if (!empty && wantWithdraw > 0) await s.bot.withdrawItem(rawRe, wantWithdraw);
         bankTrips++;
         await s.bot.closeInterface();
         return empty ? 'empty' : 'ok';
@@ -339,7 +353,7 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         failure = cookLevelShortfall(FOOD_TYPE, cookingLevel()) ?? undefined;
     }
     if (failure) console.log(`STOP ${failure}`);
-    while (!failure && !over()) {
+    while (!failure && !over() && cookedTotal < maximum) {
         if (rawCount() === 0) {
             const banked = await bank();
             if (banked === 'empty' && rawCount() === 0) {
@@ -371,9 +385,20 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         const before = cookedCount();
         const sentTick = s.tick();
         await s.sdk.sendUseItemOnLoc(rawItem.slot, range.x, range.z, range.id);
+        if (karambwanChoice) {
+            await waitUntil(
+                s,
+                () => over() || !!s.sdk.getState()?.dialog?.isOpen || rawCount() < rawBefore || cookedCount() > before || cookLevelRefusal(s.sdk.getState(), sentTick) !== null,
+                { timeoutTicks: 6 },
+            );
+            const dlg = s.sdk.getState()?.dialog;
+            if (dlg?.isOpen && cookLevelRefusal(s.sdk.getState(), sentTick) === null && !over()) {
+                await s.sdk.sendClickComponent(componentId(`multiobj2:objtext${karambwanChoice}`));
+            }
+        }
         await waitUntil(
             s,
-            () => rawCount() < rawBefore || cookedCount() > before || rawCount() === 0 || cookLevelRefusal(s.sdk.getState(), sentTick) !== null,
+            () => over() || rawCount() < rawBefore || cookedCount() > before || rawCount() === 0 || cookLevelRefusal(s.sdk.getState(), sentTick) !== null,
             { timeoutTicks: 10 },
         );
         const gained = cookedCount() - before;
@@ -382,6 +407,15 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         if (refused !== null && gained <= 0) {
             failure = `no cooking progress: the server needs Cooking ${refused} for ${FOOD_TYPE} and the account has ${cookingLevel()}`;
             console.log(`STOP ${failure}`);
+        }
+    }
+    if (bankTrips > 0 && !failure && !over() && countItems(s, foodDepositPattern(FOOD_TYPE)) > 0) {
+        if (await walk(CATHERBY_BANK.x, CATHERBY_BANK.z, 2)) {
+            const b = await s.bot.openBank();
+            if (b.success) {
+                await s.bot.depositItem(foodDepositPattern(FOOD_TYPE), -1);
+                await s.bot.closeInterface();
+            }
         }
     }
 
@@ -1007,12 +1041,15 @@ export async function runCookingCli(
         return runGeCookingCli(account, args, deps);
     }
     if (method === 'food') {
-        const cap = Number(args[0] ?? env.CAP ?? 15000);
-        const foodType = args[1] ?? env.FOOD_TYPE ?? DEFAULT_FOOD_TYPE;
+        const arg0IsCap = args[0] !== undefined && /^\d+$/.test(args[0]);
+        const cap = Number(arg0IsCap ? args[0] : env.CAP ?? 15000);
+        const foodType = (arg0IsCap ? args[1] : args[0]) ?? env.FOOD_TYPE ?? DEFAULT_FOOD_TYPE;
+        const rawMax = env.MAX_MAKE ?? env.TARGET_COUNT ?? env.BATCH_UNITS;
+        const maximum = rawMax !== undefined && rawMax !== '' ? Number(rawMax) : Infinity;
         let stopped = false;
         const s = await openBot(account, { onStop: async () => { stopped = true; } }).catch(e => finish([], false, `login: ${String(e)}`));
         try {
-            const r = await runCookFood(s, foodType, cap, () => stopped || !!stopFlag?.());
+            const r = await runCookFood(s, foodType, cap, () => stopped || !!stopFlag?.(), maximum);
             await finish([s], r.ok, r.summary);
             return r.ok ? 0 : 1;
         } catch (e) {
@@ -1056,10 +1093,31 @@ export async function runCookingCli(
     }
     if (method === 'batch') {
         const [recipeName, heatArg, maxArg, capArg] = args;
+        const foodType = env.FOOD_TYPE?.trim().toLowerCase();
+        if (!recipeName && !env.RECIPE && foodType && env.BANKED !== '0') {
+            const cap = Number(capArg ?? env.CAP ?? 3000);
+            const rawMax = maxArg ?? env.MAX_MAKE ?? env.TARGET_COUNT ?? env.BATCH_UNITS;
+            const maximum = rawMax !== undefined && rawMax !== '' ? Number(rawMax) : Infinity;
+            let stopped = false;
+            const s = await openBot(account, { onStop: async () => { stopped = true; } }).catch(e => finish([], false, `login: ${String(e)}`));
+            try {
+                const r = await runCookFood(s, foodType, cap, () => stopped || !!stopFlag?.(), maximum);
+                await finish([s], r.ok, r.summary);
+                return r.ok ? 0 : 1;
+            } catch (e) {
+                await finish([s], false, String(e));
+                return 1;
+            }
+        }
         const heat = (heatArg ?? env.HEAT ?? 'range') as Heat;
-        const maximum = Number(maxArg ?? env.MAX_MAKE ?? 1);
+        const maximum = Number(maxArg ?? env.MAX_MAKE ?? env.TARGET_COUNT ?? env.BATCH_UNITS ?? 1);
         const cap = Number(capArg ?? env.CAP ?? 200);
-        const recipe = cookingRecipes().recipes.find(r => r.name === recipeName);
+        const resolvedName = recipeName ?? env.RECIPE;
+        const recipe = resolvedName
+            ? cookingRecipes().recipes.find(r => r.name === resolvedName)
+            : foodType
+              ? foodRecipe(foodType)
+              : undefined;
         if (!recipe) throw Error('account and native cooking table recipe name required');
         let ended = false;
         const s = await openBot(account).catch(e => finish([], false, `login: ${String(e)}`));

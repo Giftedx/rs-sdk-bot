@@ -380,9 +380,34 @@ export function gatherPreflight(
             const atkLevel = skillLevel(acct, 'Attack');
             const rec = bestMiningPickaxe(stock(), { mining: mLevel, attack: atkLevel }).current;
             if (cfg.method === 'ore') {
-                const profile = cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed';
-                if (profile !== 'mixed' && profile !== 'clay') {
+                const profile = (cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed').trim().toLowerCase();
+                if (!['mixed', 'clay', 'coal', 'gold', 'heroes-runite'].includes(profile)) {
                     blockers.push({ kind: 'invalid_config', message: `invalid ORE_PROFILE: ${profile}` });
+                } else if (profile === 'coal') {
+                    requireSkill('Mining', 30);
+                    if (!rec) requireItem(1265, 1, 'Bronze pickaxe');
+                } else if (profile === 'gold') {
+                    requireSkill('Mining', 40);
+                    if (!rec) requireItem(1265, 1, 'Bronze pickaxe');
+                } else if (profile === 'heroes-runite') {
+                    requireSkill('Mining', 85);
+                    if (!questComplete(acct, /^heroes(?:'?\s*quest)?$/i)) {
+                        blockers.push({
+                            kind: 'quest_incomplete',
+                            quest: "Heroes' Quest",
+                            requiredState: 'complete',
+                            currentState: questStatusOf(acct, /^heroes(?:'?\s*quest)?$/i),
+                        });
+                    }
+                    if (hasSkillEntry(acct, 'Hitpoints') && skillLevel(acct, 'Hitpoints') < 75) {
+                        blockers.push({
+                            kind: 'combat_survivability',
+                            reason: 'hitpoints',
+                            required: 75,
+                            current: skillLevel(acct, 'Hitpoints'),
+                        });
+                    }
+                    if (!rec) requireItem(1275, 1, 'Rune pickaxe');
                 }
             } else if (cfg.method === 'essence') {
                 if (!questComplete(acct, 'Rune Mysteries')) {
@@ -709,6 +734,24 @@ export function gatherEstimate(
                     minBatchUnits: 1,
                     riskPerHour: 0.01,
                     confidence: 'model',
+                };
+            }
+            const oreProfile = cfg.method === 'ore' ? (cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed').trim().toLowerCase() : undefined;
+            if (oreProfile === 'coal' || oreProfile === 'gold' || oreProfile === 'heroes-runite' || oreProfile === 'clay') {
+                const outId = oreProfile === 'coal' ? 453 : oreProfile === 'gold' ? 444 : oreProfile === 'heroes-runite' ? 451 : 434;
+                const unitsPerTick = oreProfile === 'heroes-runite' ? 0.012 : oreProfile === 'gold' ? 0.08 : oreProfile === 'coal' ? 0.1 : 0.14;
+                const xpPerOre = oreProfile === 'heroes-runite' ? 125 : oreProfile === 'gold' ? 65 : oreProfile === 'coal' ? 50 : 5;
+                const xp = scaleXp(unitsPerTick * xpPerOre);
+                return {
+                    xpPerTick: xp,
+                    skillXpPerTick: { Mining: xp },
+                    unitsPerTick,
+                    gpPerTick: oreProfile === 'heroes-runite' ? 40 : 8,
+                    setupTicks: oreProfile === 'heroes-runite' ? 120 : 70,
+                    minBatchUnits: oreProfile === 'heroes-runite' ? 2 : 10,
+                    riskPerHour: 0.01,
+                    confidence: 'practice',
+                    outputsPerUnit: { [outId]: 1 },
                 };
             }
             const profName = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'PROFILE') ?? 'iron_rock_table';

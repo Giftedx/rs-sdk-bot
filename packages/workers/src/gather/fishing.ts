@@ -3316,8 +3316,231 @@ function parseVillageOrder(cfg: NormalizedGatherConfig): VillageOrder {
     };
 }
 
+export const KARAMBWANJI_LAKE = { x: 2799, z: 3014, level: 0 } as const;
+export const KARAMBWAN_POINT = { x: 2901, z: 3113, level: 0 } as const;
+export const SHILO_FISH_BANK = { x: 2852, z: 2955, level: 0 } as const;
+export const DRAYNOR_FISH_BANK = { x: 3092, z: 3243, level: 0 } as const;
+
+export function karambwanBankTile(
+    completedQuests: ReadonlySet<string> = new Set(),
+    bankOverride?: string,
+): { x: number; z: number; level: number } {
+    const override = bankOverride?.trim().toLowerCase();
+    if (override === 'draynor') return { ...DRAYNOR_FISH_BANK };
+    if (override === 'shilo') return { ...SHILO_FISH_BANK };
+    for (const q of completedQuests) {
+        if (/shilo|zombiequeen/i.test(q)) return { ...SHILO_FISH_BANK };
+    }
+    return { ...DRAYNOR_FISH_BANK };
+}
+
+export function karambwanTripCapacity(freeSlots: number, hasLoadedVessel: boolean): number {
+    return Math.max(0, freeSlots - (hasLoadedVessel ? 1 : 0));
+}
+
+export async function runBankedKarambwanFishing(
+    s: Session,
+    method: 'karambwanji' | 'karambwan',
+    cfg: NormalizedGatherConfig,
+    stop: () => boolean,
+): Promise<GatherOutcome> {
+    const rawTarget =
+        cfg.target?.count ??
+        (cfg.args[1] !== undefined && /^[0-9]+$/.test(cfg.args[1]) ? Number(cfg.args[1]) : undefined) ??
+        Number(resolveSetting(cfg, 'AMOUNT') ?? resolveSetting(cfg, 'TARGET_COUNT') ?? resolveSetting(cfg, 'BATCH_UNITS') ?? 27);
+    const target = Number(rawTarget);
+    const cap =
+        cfg.target?.capTicks ??
+        (cfg.args[2] !== undefined && /^[0-9]+$/.test(cfg.args[2]) ? Number(cfg.args[2]) : undefined) ??
+        Number(resolveSetting(cfg, 'CAP') ?? 3000);
+    if (!Number.isSafeInteger(target) || target < 1 || !Number.isSafeInteger(cap) || cap < 1) {
+        throw Error(`invalid banked ${method} fishing target/cap`);
+    }
+    const profile = FISH_PROFILES[method];
+    const primaryId = profile.products[0]!;
+    const start = s.tick();
+    const used = () => s.tick() - start;
+    let ended = false;
+    void s.ended?.then(() => { ended = true; });
+    const firstPlayer = s.sdk.getState()?.player;
+    const over = () => ended || stop() || sessionDied(firstPlayer, s.sdk.getState()?.player) || used() >= cap;
+    const pos = () => s.sdk.getState()?.player;
+    const inv = () => s.sdk.getInventory();
+    const held = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const freeSpace = () => 28 - inv().length;
+    const bankCount = (id: number) =>
+        (s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [])
+            .filter(i => i.id === id)
+            .reduce((n, i) => n + i.count, 0);
+
+    await waitUntil(s, () => over() || (!!pos() && (s.sdk.getSkill('Fishing')?.level ?? 0) > 0), { timeoutTicks: 20 });
+    const fishingLevel = s.sdk.getSkill('Fishing')?.level ?? 0;
+    if (fishingLevel < profile.level) {
+        const msg = `no fishing progress: ${method} requires Fishing ${profile.level}, observed ${fishingLevel}`;
+        return { ok: false, kind: 'refused', detail: msg, delta: { elapsedTicks: used() }, recoverable: false, resultLine: msg };
+    }
+    const completedQuests = new Set<string>(
+        (((s.sdk.getState() as { quests?: readonly { name?: string; state?: string }[] } | undefined)?.quests) ?? [])
+            .filter(q => typeof q.name === 'string' && q.state === 'complete')
+            .map(q => q.name!.toLowerCase()),
+    );
+    const bankSpot = karambwanBankTile(completedQuests, resolveSetting(cfg, 'KARAMBWAN_BANK'));
+    const fishSpot = method === 'karambwanji' ? KARAMBWANJI_LAKE : KARAMBWAN_POINT;
+    const xpRate = Number(resolveSetting(cfg, 'FISHING_XP_RATE') ?? 25);
+    const progressTicks = Number(resolveSetting(cfg, 'PROGRESS_TICKS') ?? 420);
+
+    const travel = async (to: { x: number; z: number; level: number }, label: string) => {
+        if (over()) throw Error(`banked ${method} stopped before travel to ${label}`);
+        const p = pos();
+        if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 3) return;
+        if (cfg.deps?.walkTargetPersist) {
+            const res = await cfg.deps.walkTargetPersist(s, to);
+            if (!res.ok) throw Error(`banked ${method} walk to ${label} failed: ${res.detail ?? res.reason ?? 'unreachable'}`);
+            return;
+        }
+        if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 20) {
+            const res = await walkPath(await sessionWalker(s), [{ x: to.x, z: to.z, tol: 2 }], { stop: over });
+            if (res.ok) return;
+        }
+        const world = await getWorld();
+        const res = await goTo(s, world, to, accountOf(s));
+        if (!res.ok) throw Error(`banked ${method} route to ${label} failed: ${res.detail ?? 'unreachable'}`);
+    };
+
+    const openBank = async () => {
+        const gen = s.bankObservation?.()?.generation ?? 0;
+        if (!(await s.bot.openBank()).success) throw Error(`banked ${method}: openBank failed`);
+        await waitUntil(
+            s,
+            () => over() || (!!s.sdk.getState()?.bank?.isOpen && (!s.bankObservation || (s.bankObservation()?.generation ?? 0) > gen)),
+            { timeoutTicks: 15 },
+        );
+        if (!s.sdk.getState()?.bank?.isOpen) throw Error(`banked ${method}: bank did not open`);
+    };
+
+    const closeBank = async () => {
+        await s.bot.closeBank();
+        await waitUntil(s, () => over() || !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 });
+    };
+
+    const withdrawOne = async (id: number, n: number) => {
+        if (n < 1) return;
+        const row = (s.sdk.getState()?.bank?.items ?? []).find(i => i.id === id);
+        const before = held(id);
+        if (!row || bankCount(id) < n) throw Error(`next acquisition: item ${id} needs ${n}, bank holds ${bankCount(id)}`);
+        if (!(await s.bot.withdrawItem(row, n, { asNote: false })).success) {
+            throw Error(`banked ${method}: withdraw item ${id} refused`);
+        }
+        await waitUntil(s, () => over() || held(id) >= before + n, { timeoutTicks: 10 });
+    };
+
+    let banked = 0;
+    let trips = 0;
+    let failure = '';
+    const keepSet = method === 'karambwanji' ? new Set([303]) : new Set([3157, 3159, 3150]);
+    try {
+        while (banked < target && !over()) {
+            await travel(bankSpot, 'bank');
+            await openBank();
+            const primaryBeforeDeposit = held(primaryId);
+            for (const id of new Set(inv().map(i => i.id))) {
+                if (keepSet.has(id)) continue;
+                const item = inv().find(i => i.id === id);
+                if (item) await depositObserved(s, item);
+            }
+            if (method === 'karambwanji') {
+                // Also deposit any pre-existing karambwanji before starting a fresh trip.
+                const heldBait = inv().find(i => i.id === 3150);
+                if (heldBait) await depositObserved(s, heldBait);
+            }
+            banked += Math.max(0, primaryBeforeDeposit - held(primaryId));
+            if (banked >= target || over()) {
+                await closeBank();
+                break;
+            }
+            if (method === 'karambwanji') {
+                if (held(303) < 1) {
+                    if (bankCount(303) < 1) throw Error('next acquisition: small fishing net 303 required for karambwanji');
+                    await withdrawOne(303, 1);
+                }
+            } else {
+                if (held(3157) < 1 && held(3159) < 1) {
+                    if (bankCount(3159) > 0) await withdrawOne(3159, 1);
+                    else if (bankCount(3157) > 0) await withdrawOne(3157, 1);
+                    else throw Error('next acquisition: karambwan vessel 3157 required for karambwan');
+                }
+                const hasLoaded = held(3159) > 0;
+                const capSlots = karambwanTripCapacity(freeSpace(), hasLoaded);
+                const remaining = Math.max(0, target - banked - (hasLoaded ? 1 : 0) - held(3150));
+                const wantBait = Math.min(capSlots, remaining, bankCount(3150));
+                if (wantBait > 0) await withdrawOne(3150, wantBait);
+                if (held(3150) === 0 && !hasLoaded) {
+                    await closeBank();
+                    if (banked > 0) break;
+                    throw Error('next acquisition: raw karambwanji 3150 required for karambwan');
+                }
+            }
+            await closeBank();
+
+            const tripAmount =
+                method === 'karambwanji'
+                    ? Math.min(target - banked, freeSpace())
+                    : Math.min(target - banked, held(3150) + (held(3159) > 0 ? 1 : 0));
+            if (tripAmount < 1) break;
+
+            await travel(fishSpot, `${method} fishing spot`);
+            const remainingTicks = Math.max(1, cap - used());
+            try {
+                await runStagedFishing(createFishingDriver(s, over), {
+                    method,
+                    amount: tripAmount,
+                    cap: remainingTicks,
+                    maxAttempts: Math.max(40, tripAmount * 4),
+                    progressTicks,
+                    xpRate,
+                });
+            } catch (fishErr) {
+                // Karambwan casts can miss and consume bait before hitting tripAmount; bank the caught fish and resupply.
+                if (!(method === 'karambwan' && /fishing bait exhausted/i.test(String(fishErr)) && held(primaryId) > 0)) {
+                    throw fishErr;
+                }
+            }
+
+            await travel(bankSpot, 'bank');
+            await openBank();
+            const beforeBank = held(primaryId);
+            for (const id of new Set(inv().map(i => i.id))) {
+                if (method === 'karambwanji' && id === 303) continue;
+                if (method === 'karambwan' && (id === 3157 || id === 3159)) continue;
+                const item = inv().find(i => i.id === id);
+                if (item) await depositObserved(s, item);
+            }
+            const deposited = Math.max(0, beforeBank - held(primaryId));
+            banked += deposited;
+            trips++;
+            await closeBank();
+        }
+    } catch (e) {
+        failure = e instanceof Error ? e.message : String(e);
+    }
+    const ok = !failure && banked > 0 && !sessionDied(firstPlayer, s.sdk.getState()?.player);
+    const line = `banked_${method} ok=${ok} banked=${banked} target=${target} trips=${trips} ticks=${used()}${failure ? ` failure=${failure}` : ''}`;
+    return {
+        ok,
+        kind: ok ? 'completed' : sessionDied(firstPlayer, s.sdk.getState()?.player) ? 'died' : 'failed',
+        detail: line,
+        delta: { items: { [primaryId]: banked }, elapsedTicks: used() },
+        recoverable: !ok,
+        summary: { method, banked, target, trips, ticks: used(), ...(failure ? { failure } : {}) },
+        resultLine: line,
+    };
+}
+
 export async function runFishingSession(s: Session, cfg: NormalizedGatherConfig, stop: () => boolean): Promise<GatherOutcome> {
     switch (cfg.method) {
+        case 'karambwanji':
+        case 'karambwan':
+            return runBankedKarambwanFishing(s, cfg.method, cfg, stop);
         case 'shark': {
             const r = await supplySharks(s, {
                 ...effectiveSharkOrder(cfg),
@@ -3363,6 +3586,9 @@ export async function runFishingSession(s: Session, cfg: NormalizedGatherConfig,
         }
         case 'staged': {
             const rawMethod = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'METHOD') ?? 'fly';
+            if ((rawMethod === 'karambwanji' || rawMethod === 'karambwan') && (resolveSetting(cfg, 'BANKED') === '1' || cfg.handling === 'bank')) {
+                return runBankedKarambwanFishing(s, rawMethod, cfg, stop);
+            }
             const amount = cfg.target?.count ?? Number(cfg.args[1] ?? resolveSetting(cfg, 'AMOUNT') ?? 10);
             const cap = cfg.target?.capTicks ?? Number(cfg.args[2] ?? resolveSetting(cfg, 'CAP') ?? 1000);
             if (!(rawMethod in FISH_PROFILES) && rawMethod !== 'shark') throw Error('account method amount cap required');

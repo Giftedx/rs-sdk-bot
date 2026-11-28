@@ -622,13 +622,74 @@ export async function runProgressiveMining(
 }
 
 // ---------------------------------------------------------------------------
-// 3. Varrock / Lumbridge Ore & Clay Mining (`mining:ore`)
+// 3. Banked Ore, Clay, Coal, Gold & Heroes' Runite Mining (`mining:ore`)
 // ---------------------------------------------------------------------------
-const ROCK_IDS = { copper: [2090, 2091], tin: [2094, 2095], iron: [2092, 2093] };
-const ORE_AREAS = {
-    mixed: { mine: { x: 3286, z: 3368 }, bank: { x: 3253, z: 3420 } },
-    clay: { mine: { x: 3180, z: 3372 }, bank: { x: 3185, z: 3436 } },
+export const ORE_PROFILES = ['mixed', 'clay', 'coal', 'gold', 'heroes-runite'] as const;
+export type OreProfile = (typeof ORE_PROFILES)[number];
+
+const ROCK_IDS = {
+    copper: [2090, 2091],
+    tin: [2094, 2095],
+    iron: [2092, 2093],
+    clay: [2108, 2109],
+    coal: [2096, 2097, 4985, 4986],
+    gold: [2098, 2099],
+    runite: [2106, 2107],
 };
+export const ORE_AREAS = {
+    mixed: { mine: { x: 3286, z: 3368, level: 0 }, bank: { x: 3253, z: 3420, level: 0 } },
+    clay: { mine: { x: 3180, z: 3372, level: 0 }, bank: { x: 3185, z: 3436, level: 0 } },
+    coal: { mine: { x: 3088, z: 3432, level: 0 }, bank: { x: 3094, z: 3491, level: 0 } },
+    'coal-guild': { mine: { x: 3032, z: 9737, level: 0 }, bank: { x: 3013, z: 3355, level: 0 } },
+    gold: { mine: { x: 2976, z: 3234, level: 0 }, bank: { x: 2946, z: 3368, level: 0 } },
+    'gold-crafting': { mine: { x: 2940, z: 3278, level: 0 }, bank: { x: 2946, z: 3368, level: 0 } },
+    'gold-alkharid': { mine: { x: 3294, z: 3288, level: 0 }, bank: { x: 3269, z: 3167, level: 0 } },
+    'heroes-runite': { mine: { x: 2939, z: 9883, level: 0 }, bank: { x: 2946, z: 3368, level: 0 } },
+} as const;
+
+export function oreProductRegex(profile: string): RegExp {
+    if (profile === 'clay') return /^clay$/i;
+    if (profile === 'coal') return /^coal$/i;
+    if (profile === 'gold') return /^gold ore$/i;
+    if (profile === 'heroes-runite') return /^runite ore$/i;
+    return /ore$/i;
+}
+
+export function oreProfileMinLevel(profile: OreProfile): number {
+    if (profile === 'coal') return 30;
+    if (profile === 'gold') return 40;
+    if (profile === 'heroes-runite') return 85;
+    return 1;
+}
+
+export function oreProfileItemId(profile: OreProfile): number | undefined {
+    if (profile === 'clay') return 434;
+    if (profile === 'coal') return 453;
+    if (profile === 'gold') return 444;
+    if (profile === 'heroes-runite') return 451;
+    return undefined;
+}
+
+export function resolveOreArea(
+    profile: OreProfile,
+    opts: { miningLevel?: number; craftingLevel?: number; hasBrownApron?: boolean; siteOverride?: string } = {},
+): { mine: { x: number; z: number; level: number }; bank: { x: number; z: number; level: number } } {
+    const site = opts.siteOverride?.trim().toLowerCase();
+    if (profile === 'mixed') return ORE_AREAS.mixed;
+    if (profile === 'clay') return ORE_AREAS.clay;
+    if (profile === 'coal') {
+        if (site === 'barbarian') return ORE_AREAS.coal;
+        if (site === 'mining-guild' || site === 'falador' || (opts.miningLevel ?? 0) >= 60) return ORE_AREAS['coal-guild'];
+        return ORE_AREAS.coal;
+    }
+    if (profile === 'gold') {
+        if (site === 'alkharid' || site === 'al-kharid') return ORE_AREAS['gold-alkharid'];
+        if (site === 'rimmington') return ORE_AREAS.gold;
+        if (site === 'crafting-guild' || ((opts.craftingLevel ?? 0) >= 40 && opts.hasBrownApron)) return ORE_AREAS['gold-crafting'];
+        return ORE_AREAS.gold;
+    }
+    return ORE_AREAS['heroes-runite'];
+}
 
 export function mixedOreCombatProblem(combat: unknown): string | null {
     return Number.isSafeInteger(combat) && (combat as number) >= 13
@@ -642,7 +703,7 @@ export function selectRock(
     attempt: number,
     floor: number,
     profile = 'mixed',
-    players: readonly { x: number; z: number }[] = [],
+    players: readonly { x: number; z: number; name?: string }[] = [],
 ): NearbyLoc | undefined {
     if (profile === 'clay') {
         return rocks
@@ -650,10 +711,36 @@ export function selectRock(
                 l =>
                     l.level === floor &&
                     l.reachable !== false &&
-                    [2108, 2109].includes(l.id) &&
+                    ROCK_IDS.clay.includes(l.id) &&
                     l.optionsWithIndex.some(o => /^mine$/i.test(o.text)),
             )
             .sort((a, b) => a.distance - b.distance)[0];
+    }
+    if (profile === 'coal' || profile === 'gold') {
+        const minLevel = profile === 'coal' ? 30 : 40;
+        if (level < minLevel) return undefined;
+        const ids = ROCK_IDS[profile];
+        return rocks
+            .filter(
+                l =>
+                    l.level === floor &&
+                    l.reachable !== false &&
+                    ids.includes(l.id) &&
+                    l.optionsWithIndex.some(o => /^mine$/i.test(o.text)),
+            )
+            .map(rock => ({
+                rock,
+                pressure: players.filter(p => Math.max(Math.abs(p.x - rock.x), Math.abs(p.z - rock.z)) <= 1).length,
+            }))
+            .sort((a, b) => a.pressure - b.pressure || a.rock.distance - b.rock.distance)[0]?.rock;
+    }
+    if (profile === 'heroes-runite') {
+        if (level < 85) return undefined;
+        return selectAvailableRuniteRock(
+            rocks,
+            HEROES_RUNITE_ROCKS,
+            players.map(p => ({ name: p.name ?? '', x: p.x, z: p.z })),
+        );
     }
     const kinds = level >= 15 ? (['copper', 'tin', 'iron'] as const) : (['copper', 'tin'] as const);
     const candidates: { rock: NearbyLoc; pressure: number; priority: number }[] = [];
@@ -954,13 +1041,19 @@ async function runOreGathererSession(
     cfg: NormalizedGatherConfig,
     stopState: () => string,
 ): Promise<GatherOutcome> {
-    const PROFILE = cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed';
-    if (!['mixed', 'clay'].includes(PROFILE)) throw new Error('invalid ORE_PROFILE');
-    const ORE = PROFILE === 'clay' ? /^clay$/i : /ore$/i;
-    const { mine: MINE_SPOT, bank: BANK_SPOT } = ORE_AREAS[PROFILE as keyof typeof ORE_AREAS];
+    const rawProfile = (cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed').trim().toLowerCase();
+    if (!(ORE_PROFILES as readonly string[]).includes(rawProfile)) throw new Error('invalid ORE_PROFILE');
+    const PROFILE = rawProfile as OreProfile;
+    const ORE = oreProductRegex(PROFILE);
+    const isExtendedProfile = PROFILE !== 'mixed' && PROFILE !== 'clay';
     const CAP = cfg.target?.capTicks ?? Number(cfg.args[0] ?? resolveSetting(cfg, 'CAP') ?? 15000);
-    const BANK_AT = Number(cfg.args[1] ?? resolveSetting(cfg, 'BANK_AT') ?? 27);
-    const NO_ORE_TICKS = Number(resolveSetting(cfg, 'NO_ORE_TICKS') ?? 120);
+    const rawTarget = cfg.target?.count ?? (resolveSetting(cfg, 'MAX_ORE') ?? resolveSetting(cfg, 'TARGET_COUNT') ?? resolveSetting(cfg, 'BATCH_UNITS'));
+    const TARGET_ORE = rawTarget !== undefined && rawTarget !== '' ? Number(rawTarget) : Infinity;
+    if (TARGET_ORE !== Infinity && (!Number.isSafeInteger(TARGET_ORE) || TARGET_ORE < 1)) throw new Error('invalid MAX_ORE');
+    const rawBankAt = Number(cfg.args[1] ?? resolveSetting(cfg, 'BANK_AT') ?? 27);
+    const BANK_AT = Math.max(1, Math.min(27, rawBankAt, Number.isFinite(TARGET_ORE) ? TARGET_ORE : 27));
+    const defaultNoOreTicks = PROFILE === 'heroes-runite' ? 300 : 120;
+    const NO_ORE_TICKS = Number(resolveSetting(cfg, 'NO_ORE_TICKS') ?? defaultNoOreTicks);
     if (!Number.isSafeInteger(NO_ORE_TICKS) || NO_ORE_TICKS < 1) throw new Error('invalid NO_ORE_TICKS');
 
     let damage: ReturnType<typeof oreDamageEvidence>;
@@ -978,6 +1071,20 @@ async function runOreGathererSession(
         await waitTicks(s, 3);
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
+        const miningLevel = s.sdk.getSkill('Mining')?.level ?? 1;
+        const minLevel = oreProfileMinLevel(PROFILE);
+        if (miningLevel < minLevel) {
+            throw Error(`no ore progress: ${PROFILE} requires Mining ${minLevel}, observed ${miningLevel}`);
+        }
+        const craftingLevel = s.sdk.getSkill('Crafting')?.level ?? 1;
+        const wornEq = s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
+        const hasBrownApron = wornEq.some(e => e.id === 1757) || s.sdk.getInventory().some(i => i.id === 1757);
+        const { mine: MINE_SPOT, bank: BANK_SPOT } = resolveOreArea(PROFILE, {
+            miningLevel,
+            craftingLevel,
+            hasBrownApron,
+            siteOverride: resolveSetting(cfg, 'ORE_SITE'),
+        });
         const oreCount = () => countItems(s, ORE);
         const freeSpace = () => 28 - s.sdk.getInventory().length;
         const t0 = s.tick();
@@ -1007,6 +1114,7 @@ async function runOreGathererSession(
         let bankTrips = 0;
         let walkTicks = 0;
         let tries = 0;
+        let lastDepletedRunite: { x: number; z: number } | undefined;
         const counters = () => `mined=${mined} banked=${banked} held=${oreCount()} bankTrips=${bankTrips} walkTicks=${walkTicks} hpMin=${hpMin}`;
         const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
             const a = s.tick();
@@ -1025,13 +1133,40 @@ async function runOreGathererSession(
         };
         const refusedPickWields = new Set<number>();
         let toolLevels = readSkillLevels(s.sdk);
-        const travel = async (destination: 'bank' | 'mine') => {
+        const travel = async (destination: 'bank' | 'mine', stopFn: () => boolean = over) => {
             const p = destination === 'bank' ? BANK_SPOT : MINE_SPOT;
-            return walk(p.x, p.z, destination === 'bank' ? 2 : 3);
+            const tol = destination === 'bank' ? 2 : 3;
+            const cur = pos();
+            if (cur && cur.level === p.level && Math.max(Math.abs(cur.worldX - p.x), Math.abs(cur.worldZ - p.z)) <= tol) {
+                return true;
+            }
+            if (!isExtendedProfile) {
+                return walk(p.x, p.z, tol);
+            }
+            const a = s.tick();
+            if (cfg.deps?.walkTargetPersist) {
+                const res = await cfg.deps.walkTargetPersist(s, p);
+                walkTicks += s.tick() - a;
+                return res.ok;
+            }
+            const samePlaneNear = !!cur && cur.level === p.level && Math.max(Math.abs(cur.worldX - p.x), Math.abs(cur.worldZ - p.z)) <= 24;
+            if (samePlaneNear) {
+                const res = await walkPath(await sessionWalker(s), [{ x: p.x, z: p.z, tol }], { stop: stopFn });
+                walkTicks += s.tick() - a;
+                const after = pos();
+                return res.ok || (!!after && after.level === p.level && Math.max(Math.abs(after.worldX - p.x), Math.abs(after.worldZ - p.z)) <= tol);
+            }
+            const world = await getWorld();
+            const res = await goTo(s, world, p, accountOf(s));
+            walkTicks += s.tick() - a;
+            if (res.ok) return true;
+            const after = pos();
+            return !!after && after.level === p.level && Math.max(Math.abs(after.worldX - p.x), Math.abs(after.worldZ - p.z)) <= Math.max(tol, 4);
         };
         const bank = async (forceToolCheck = false) => {
             const n = oreCount();
-            if (n === 0 && !forceToolCheck) return;
+            const hasGem = isExtendedProfile && s.sdk.getInventory().some(i => incidentalMiningGems.includes(i.id));
+            if (n === 0 && !hasGem && !forceToolCheck) return;
             if (!(await travel('bank'))) return;
             if (damage || stopState() || ended || died) return;
             const b = await s.bot.openBank();
@@ -1040,14 +1175,20 @@ async function runOreGathererSession(
                 await waitTicks(s, 2);
                 return;
             }
-            if (n > 0) {
-                for (const id of new Set(s.sdk.getInventory().filter(i => ORE.test(i.name)).map(i => i.id))) {
+            if (n > 0 || hasGem) {
+                const depositIds = new Set(
+                    s.sdk
+                        .getInventory()
+                        .filter(i => ORE.test(i.name) || (isExtendedProfile && incidentalMiningGems.includes(i.id)))
+                        .map(i => i.id),
+                );
+                for (const id of depositIds) {
                     const item = s.sdk.getInventory().find(i => i.id === id);
                     if (item) await s.bot.depositItem(item, -1);
                 }
                 await waitTicks(s, 1);
                 const after = oreCount();
-                banked += n - after;
+                banked += Math.max(0, n - after);
                 bankTrips++;
                 if (!over()) await bankCargo(s, [ORE], 0, { stopped: over });
             }
@@ -1071,7 +1212,13 @@ async function runOreGathererSession(
                 const line = `died=true ${counters()} stop=safety`;
                 return { ok: false, kind: 'died', detail: line, delta: { elapsedTicks: used() }, recoverable: true, resultLine: line };
             }
-            const recovered = await retreatOre(s, BANK_SPOT, ORE, () => ended || died);
+            const recovered = await retreatOre(
+                s,
+                BANK_SPOT,
+                ORE,
+                () => ended || died,
+                isExtendedProfile ? stopFn => travel('bank', stopFn) : undefined,
+            );
             banked += recovered.banked;
             console.log('ORE_RECOVERY ' + JSON.stringify({ ...recovered, reason, damage: damage ?? null, initialOre, mined, hpMin }));
             off();
@@ -1080,7 +1227,7 @@ async function runOreGathererSession(
         };
         cleanup = safetyExit;
 
-        console.log(`START ore gatherer ${s.name} at=${pos()?.worldX},${pos()?.worldZ}`);
+        console.log(`START ore gatherer ${s.name} at=${pos()?.worldX},${pos()?.worldZ} profile=${PROFILE}`);
         const pickLine = () => {
             const worn = (s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).find(
                 e => e.slot === 3 && (MINING_PICKAXES_DESC as readonly number[]).includes(e.id),
@@ -1095,7 +1242,7 @@ async function runOreGathererSession(
             const problem = mixedOreCombatProblem(pos()?.combatLevel);
             if (problem) throw Error(problem);
         }
-        if ((pos()?.worldZ ?? 0) < 3330 && !selectActiveOrePickaxe(s).current) {
+        if (!isExtendedProfile && (pos()?.worldZ ?? 0) < 3330 && !selectActiveOrePickaxe(s).current) {
             await walk(3222, 3218, 3);
             for (let i = 0; i < 8 && countItems(s, /^coins$/i) < 2; i++) {
                 if (hp() < 5) throw new Error('low HP during pickaxe bootstrap');
@@ -1109,7 +1256,7 @@ async function runOreGathererSession(
             if (!buy.success) throw new Error(`bronze pickaxe bootstrap: ${buy.message}`);
             console.log(`MILESTONE pickaxe bootstrap t=${used()} hp=${hp()}`);
         }
-        if ((pos()?.worldZ ?? 0) < 3330) {
+        if (!isExtendedProfile && (pos()?.worldZ ?? 0) < 3330) {
             for (const [x, z] of [
                 [3242, 3248],
                 [3255, 3295],
@@ -1120,9 +1267,12 @@ async function runOreGathererSession(
             }
         }
         const initialPick = selectActiveOrePickaxe(s).current;
-        const atMineNow = !!pos() && Math.max(Math.abs(pos()!.worldX - MINE_SPOT.x), Math.abs(pos()!.worldZ - MINE_SPOT.z)) <= 15;
+        const atMineNow = !!pos() && pos()!.level === MINE_SPOT.level && Math.max(Math.abs(pos()!.worldX - MINE_SPOT.x), Math.abs(pos()!.worldZ - MINE_SPOT.z)) <= 15;
+        const keepPackRe = PROFILE === 'gold'
+            ? /pickaxe$|^(shrimps|bread|trout|salmon|shark|lobster|brown apron)$/i
+            : /pickaxe$|^(shrimps|bread|trout|salmon|shark|lobster)$/i;
         if (
-            s.sdk.getInventory().some(i => !/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)) ||
+            s.sdk.getInventory().some(i => !keepPackRe.test(i.name)) ||
             !initialPick ||
             !atMineNow ||
             (initialPick.item.id === 1265 && (s.sdk.getSkill('Mining')?.level ?? 1) >= 6)
@@ -1130,13 +1280,13 @@ async function runOreGathererSession(
             if (!(await travel('bank'))) throw Error('no ore progress: cannot reach bank route');
             const opened = await s.bot.openBank();
             if (!opened.success) throw new Error(`initial bank: ${opened.message}`);
-            const junkIds = new Set(s.sdk.getInventory().filter(i => !/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)).map(i => i.id));
+            const junkIds = new Set(s.sdk.getInventory().filter(i => !keepPackRe.test(i.name)).map(i => i.id));
             const oreBeforeInitialBank = oreCount();
             for (const id of junkIds) {
                 const item = s.sdk.getInventory().find(i => i.id === id);
                 if (item) await s.bot.depositItem(item, -1);
             }
-            banked += oreBeforeInitialBank - oreCount();
+            banked += Math.max(0, oreBeforeInitialBank - oreCount());
             const pickRes = await reconcileOrePickaxeAtBank(s, {
                 bankSpot: BANK_SPOT,
                 stop: over,
@@ -1160,12 +1310,18 @@ async function runOreGathererSession(
             if (!back.ok) throw new Error(`return from Bob: ${back.detail}`);
         }
         if (damage || stopState()) return safetyExit(damage ? 'damage' : stopState());
+        const ownNames = new Set([s.name.toLowerCase()]);
         while (!over() && bankTrips < maxTrips) {
+            if (Number.isFinite(TARGET_ORE) && banked + oreCount() >= TARGET_ORE) {
+                stopReason = 'target';
+                break;
+            }
             if (oreStalled(oreWaitTicks, NO_ORE_TICKS)) {
                 stopReason = 'no-progress';
                 break;
             }
-            if (oreCount() >= BANK_AT || (oreCount() > 0 && freeSpace() === 0)) {
+            const tripGoal = Number.isFinite(TARGET_ORE) ? Math.min(BANK_AT, Math.max(1, TARGET_ORE - banked)) : BANK_AT;
+            if (oreCount() >= tripGoal || (oreCount() > 0 && freeSpace() === 0)) {
                 await bank();
                 continue;
             }
@@ -1175,21 +1331,52 @@ async function runOreGathererSession(
                 continue;
             }
             if (hp() < 7) {
-                const food = s.sdk.getInventory().find(i => /^(shrimps|bread|trout|salmon)$/i.test(i.name));
+                const food = s.sdk.getInventory().find(i => /^(shrimps|bread|trout|salmon|lobster|shark)$/i.test(i.name));
                 if (food) await s.bot.eatFood(food.name);
                 else if (hp() < 4) throw new Error('low HP: no food');
             }
-            if (Math.max(Math.abs(p.worldX - MINE_SPOT.x), Math.abs(p.worldZ - MINE_SPOT.z)) > 15) {
+            if (p.level !== MINE_SPOT.level || Math.max(Math.abs(p.worldX - MINE_SPOT.x), Math.abs(p.worldZ - MINE_SPOT.z)) > 15) {
                 if (!(await travel('mine'))) throw Error('no ore progress: cannot reach mine route');
                 continue;
             }
             const attempt = tries++;
             const frame = s.sdk.getState();
             const peers = frame?.nearbyPlayers ?? [];
-            const rock = selectRock(frame?.nearbyLocs ?? [], s.sdk.getSkill('Mining')?.level ?? 1, attempt, p.level, PROFILE, peers);
+            let rock: NearbyLoc | undefined;
+            if (PROFILE === 'heroes-runite') {
+                const peerViews = peers.map(peer => ({ name: peer.name, x: peer.x, z: peer.z }));
+                const activeRock = selectAvailableRuniteRock(frame?.nearbyLocs ?? [], HEROES_RUNITE_ROCKS, peerViews, ownNames, lastDepletedRunite);
+                const fallbackRock = activeRock
+                    ? undefined
+                    : selectAvailableRuniteRock(frame?.nearbyLocs ?? [], HEROES_RUNITE_ROCKS, peerViews, ownNames);
+                const decision = runiteDepletionAction({
+                    activeRock,
+                    fallbackRock,
+                    heldOre: oreCount(),
+                    targetOre: tripGoal,
+                    wilderness: false,
+                });
+                if (decision.action === 'bank') {
+                    await bank();
+                    continue;
+                }
+                if (decision.action === 'rotate-or-hop') {
+                    if (oreCount() > 0) {
+                        await bank();
+                        continue;
+                    }
+                    const a = s.tick();
+                    await waitTicks(s, 1);
+                    oreWaitTicks += Math.max(1, s.tick() - a);
+                    continue;
+                }
+                rock = decision.rock;
+            } else {
+                rock = selectRock(frame?.nearbyLocs ?? [], s.sdk.getSkill('Mining')?.level ?? 1, attempt, p.level, PROFILE, peers);
+            }
             if (!rock) {
                 const a = s.tick();
-                await waitTicks(s, 2);
+                await waitTicks(s, PROFILE === 'heroes-runite' ? 1 : 2);
                 oreWaitTicks += s.tick() - a;
                 continue;
             }
@@ -1198,12 +1385,17 @@ async function runOreGathererSession(
             if (r.reason === 'mined') {
                 mined += r.ore;
                 oreWaitTicks = 0;
+                if (PROFILE === 'heroes-runite') lastDepletedRunite = { x: rock.x, z: rock.z };
                 const curToolLevels = readSkillLevels(s.sdk);
                 if (crossedTierBoundary(toolLevels, curToolLevels, ['mining', 'attack'], 'mining-pickaxe')) {
                     toolLevels = curToolLevels;
                     await bank(true);
                 }
             } else {
+                if (PROFILE === 'heroes-runite' && r.reason === 'rock-gone') {
+                    lastDepletedRunite = { x: rock.x, z: rock.z };
+                    continue;
+                }
                 const adjacent = peers.filter(peer => Math.max(Math.abs(peer.x - rock.x), Math.abs(peer.z - rock.z)) <= 1).length;
                 console.log(
                     `WARN mine attempt=${attempt} rock=${rock.id}@${rock.x},${rock.z} players=${peers.length} adjacent=${adjacent} reason=${r.reason} ticks=${r.ticks} observedOre=${r.ore} observedXp=${r.xp}`,
@@ -1233,6 +1425,7 @@ async function runOreGathererSession(
         const perK = ((mined * 1000) / Math.max(1, used())).toFixed(2);
         const xpGain = (s.sdk.getSkillXp('mining') ?? 0) - xp0;
         const ok = total > 0 && oreCount() === 0 && !died && !ended && !stopState() && !damage && stopReason !== 'no-progress' && (softClay?.ok ?? true);
+        const itemId = oreProfileItemId(PROFILE);
         const line = `ticks=${used()} died=${died} ${counters()} ${pickLine()} profile=${PROFILE} softMade=${softClay?.made ?? 0} softBanked=${softClay?.banked ?? 0} softPreserved=${softClay?.preserved ?? true} initialOre=${initialOre} recovered=${total} xpGain=${xpGain} stop=${stopReason} ${stopState()} oreWaitTicks=${oreWaitTicks} ${
             stopReason === 'no-progress' ? 'no ore progress: bounded mining wait exhausted' : ''
         } ${softClay && !softClay.ok ? `no soft clay progress: ${softClay.failure}` : ''} orePer1kTicks=${perK}`;
@@ -1240,7 +1433,7 @@ async function runOreGathererSession(
             ok,
             kind: ok ? 'completed' : died ? 'died' : 'failed',
             detail: line,
-            delta: { xp: { Mining: xpGain }, elapsedTicks: used() },
+            delta: { ...(itemId !== undefined ? { items: { [itemId]: banked } } : {}), xp: { Mining: xpGain }, elapsedTicks: used() },
             recoverable: !ok,
             summary: { mined, banked, total, xpGain, profile: PROFILE, ticks: used() },
             resultLine: line,

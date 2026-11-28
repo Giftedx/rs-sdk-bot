@@ -202,6 +202,45 @@ export function runeBankOk(p: {
 
 const tile = (x: number, z: number, level = 0): Tile => ({ x, z, level });
 
+export async function unequipAndDepositEntranaContraband(
+    s: Session,
+    opts: {
+        stop: () => boolean;
+        open: () => Promise<void>;
+        close: () => Promise<unknown>;
+        secure: () => Promise<void>;
+    },
+): Promise<number> {
+    const state = () => s.sdk.getState();
+    const wornBanned = () => entranaContraband([], state()?.equipment ?? []);
+    const initial = wornBanned();
+    if (initial.length === 0) return 0;
+    if (state()?.bank?.isOpen) await opts.close();
+    let unequipped = 0;
+    for (const banned of initial) {
+        if (opts.stop()) break;
+        const eq = (state()?.equipment ?? []).find(e => e.id === banned.id);
+        if (!eq) continue;
+        const res = await s.bot.unequipItem(eq);
+        if (!res.success) {
+            throw Error(`law altar Entrana contraband unequip failed for ${banned.name}: ${res.message ?? 'refused'}`);
+        }
+        await waitUntil(
+            s,
+            () => opts.stop() || !(state()?.equipment ?? []).some(e => e.slot === eq.slot && e.id === eq.id),
+            { timeoutTicks: 8 },
+        );
+        unequipped++;
+    }
+    const remaining = wornBanned();
+    if (remaining.length > 0) {
+        throw Error(`law altar Entrana contraband still worn after unequip: ${remaining.map(i => i.name).join(', ')}`);
+    }
+    await opts.open();
+    await opts.secure();
+    return unequipped;
+}
+
 export async function runRuneBankCraft(s: Session, target = 99, options: RuneBankOptions = {}) {
     runeBankTarget(target);
     const { cap, altar: forced, essenceTarget, deps } = runeBankOptions(options);
@@ -537,6 +576,9 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
             chosen = selection.altar;
             for (const name of selection.wanted) console.log(`TALISMAN_WANTED ${name}`);
             await secure();
+            if (chosen?.name === 'law') {
+                await unequipAndDepositEntranaContraband(s, { stop, open, close, secure });
+            }
             bankEssence = bankCount(ESSENCE);
             if (runeBankDone(level(), target, bankEssence, essenceTarget, consumed)) {
                 if (level() < target && consumed === 0) throw Error('next acquisition: rune essence1436 exhausted before any crafting');

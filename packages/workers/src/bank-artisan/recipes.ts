@@ -360,6 +360,7 @@ export function inventoryRecipes(): InventoryRecipe[] {
         ['magic_potion', '1magic'],
         ['zamorak_potion', 'potionofzamorak'],
         ['restore_potion', 'statrestore'],
+        ['antipoison', 'antipoison'],
     ] as const) {
         add('decant:' + key, ['3dose' + base], '4dose' + base, 'Herblore', 1, false, decant, [], true);
         recipes.at(-1)!.inputs[0]!.units = 2;

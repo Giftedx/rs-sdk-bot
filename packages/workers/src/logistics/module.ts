@@ -843,7 +843,10 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 }
                 if (role === 'charge-glory') {
                     const { runChargeGlory } = await import('./recover');
-                    const r = await runChargeGlory(s, { cap: cfg.capTicks ?? 2000, maxGlories: cfg.count ?? 0, stop: isStopped });
+                    const envMaxGlories = env.MAX_GLORIES !== undefined && env.MAX_GLORIES !== '' ? Number(env.MAX_GLORIES) : undefined;
+                    const maxGlories = envMaxGlories !== undefined ? envMaxGlories : (cfg.count ?? 0);
+                    const cap = cfg.capTicks ?? (env.CAP !== undefined && env.CAP !== '' ? Number(env.CAP) : 2000);
+                    const r = await runChargeGlory(s, { cap, maxGlories, stop: isStopped });
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return r.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.charged }
