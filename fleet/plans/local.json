@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850152668,
+ "at": 1795850209341,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,21 +206,6 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army"
-  },
-  {
    "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
@@ -234,6 +219,21 @@
    "repeat": false,
    "goal": "goal:supply_chain:377",
    "role": "helper"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army"
   },
   {
    "account": "SporranBulge",
@@ -266,21 +266,6 @@
    "role": "army"
   },
   {
-   "account": "YewGotWood",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "auto"
-  },
-  {
    "account": "ChaosInPants",
    "script": "scripts/chain.ts",
    "args": [
@@ -297,23 +282,50 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "chicken"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "auto"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
   },
   {
    "account": "Quickhandjob",
@@ -427,38 +439,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "auto"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "helper"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
   }
  ],
  "army": [
