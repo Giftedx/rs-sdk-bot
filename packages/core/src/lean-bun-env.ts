@@ -16,8 +16,6 @@ export const LEAN_BUN_ENV: Readonly<Record<string, string>> = {
     BUN_JSC_useFTLJIT: '0',
     BUN_JSC_forceMiniVMMode: '1',
     BUN_JSC_useConcurrentGC: '0',
-    BUN_JSC_decommitUnusedMarkedBlockPagesAfterEdenCollections: '1',
-    BUN_JSC_releaseIdleRegExpCodeWhenShrinkingFootprint: '1',
     BUN_JSC_jitMemoryReservationSize: '8388608',
     BUN_JSC_maxPerThreadStackUsage: '524288',
     BUN_JSC_forceRAMSize: '268435456',

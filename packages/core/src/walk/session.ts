@@ -1,7 +1,7 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
-import { queryRouteService, serviceWanted } from '../route-plan';
+import { queryRouteService, serviceWanted } from '../route-query';
 import type { WalkDangerResult } from '../route-worker';
 import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
 import { topUpFareFloat } from './fare-float';

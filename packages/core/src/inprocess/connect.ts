@@ -133,7 +133,7 @@ export async function connectInProcess(opts: {
     };
     const sdk = new BotSDK(inProcessSdkConfig(opts));
     if (useService) {
-        const pathMod = await import('../world/pathfinding') as { installRemoteSendFindPath?: (sdk: BotSDK) => void };
+        const pathMod = await import('../world') as { installRemoteSendFindPath?: (sdk: BotSDK) => void };
         pathMod.installRemoteSendFindPath?.(sdk);
     }
     return startInProcessSession(opts, {

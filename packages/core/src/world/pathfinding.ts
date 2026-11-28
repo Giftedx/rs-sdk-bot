@@ -4,8 +4,7 @@ import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } f
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
 import { activeDanger, closedOf, combatLevel, escapeTiles, routeHarmKeep, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
-import { queryRouteService, serviceWanted } from '../route-plan';
-import type { SdkFindPathResult } from '../route-worker';
+import { queryRouteService, serviceWanted, type SdkFindPathResult } from '../route-query';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
 import { NO_CHANGES, WAYPOINT_LIMIT, changeBuilder, hintLengths, legKey, tileTable, windowKey, withHint, type ChangeTable } from './leg-key';

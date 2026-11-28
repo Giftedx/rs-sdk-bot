@@ -3,22 +3,23 @@
 // bounds access". This worker owns a separate pathfinder (its own rsmod wasm instance) and answers trip plans plus
 // lightweight walk/SDK/harm/approach queries by message, so live bot processes never initialize rsmod WASM locally.
 // Pattern follows rs2b0t src/bot/event/webwalk/NavWorker.ts (commit ae56ccc9, MIT License, Copyright (c) 2026 N64Jive).
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { InteractionTarget } from '../../knowledge/src/transports';
 import type { DoorInfo } from '../../../vendor/rs-sdk/sdk/pathfinding';
 import type { SharedLabels } from './components';
 import {
     dangerSummary, guardWalk, npcReach, planAroundHarm, routeExposure, setDangerDoorAt, walkExposure, walkVerdict,
-    withDanger, type NpcReach, type WalkExposure, type WalkProfile,
+    withDanger, type NpcReach, type RouteLegLike, type WalkExposure, type WalkProfile,
 } from './danger';
-import type { RouteLegLike } from './danger/exposure';
 import { withDoorPolicy } from './door-policy';
 import { loadPathfinding } from './pathcache';
 import { planTrip, type BankStock } from './trip';
-import { createWorld, rsPathLength, type Account, type DoorBlock, type Tile, type World } from './world';
-import { doorBlock, doorBlocks, getKnownDoorFacts } from './world/filters';
-import { worldRepoRoot } from './world/model';
-import { withNpcBlocks } from './world/npc-blocks';
+import {
+    createWorld, doorBlock, doorBlocks, getKnownDoorFacts, rsPathLength, withNpcBlocks,
+    type Account, type DoorBlock, type Tile, type World,
+} from './world';
+
+const worldRepoRoot = resolve(import.meta.dir, '..', '..', '..');
 
 export type PlanRequest = {
     id: number;

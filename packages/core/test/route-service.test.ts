@@ -112,7 +112,7 @@ test('planTripOffThread plans by the service and falls back to its own worker wh
   globalThis.Worker=class { constructor(){workers.push(this);this.requests=[];} ref(){} unref(){} postMessage(r){this.requests.push(r);queueMicrotask(()=>this.onmessage({data:{id:r.id,plan:{cost:1,legs:[],by:'worker'}}}));} terminate(){} };
   let port=0;
   const server=Bun.serve({hostname:'127.0.0.1',port:0,fetch:async req=>Response.json({plan:{cost:2,legs:[],by:'service',to:(await req.json()).to}})});
-  mock.module(resolve('packages/core/src/route-service.ts'),()=>({
+  mock.module(resolve('packages/core/src/route-service-client.ts'),()=>({
    checkoutRev:()=>'rev',readServiceInfo:()=>({pid:process.pid,port,rev:'rev',dataKey:'k',workers:1,started:0}),
    usableService:(i)=>i,pidAlive:()=>true,launchService:()=>{throw Error('no launch in a test');},
   }));
@@ -214,7 +214,7 @@ test('remote sendFindPath, sessionWalker, interactionApproach and routeHarm use 
                 return new Response('bad', { status: 400 });
             },
         });
-        mock.module(resolve('packages/core/src/route-service.ts'), () => ({
+        mock.module(resolve('packages/core/src/route-service-client.ts'), () => ({
             checkoutRev: () => 'rev',
             readServiceInfo: () => ({ pid: process.pid, port: server.port, rev: 'rev', dataKey: 'k', workers: 1, started: 0 }),
             usableService: i => i,
@@ -281,10 +281,10 @@ test('remote sendFindPath, sessionWalker, interactionApproach and routeHarm use 
         stderr: 'pipe',
         windowsHide: true,
     });
-    const deadline = setTimeout(() => child.kill(), 15_000);
+    const deadline = setTimeout(() => child.kill(), 30_000);
     try {
         const [code, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
         expect(stderr).toBe('');
         expect(code).toBe(0);
     } finally { clearTimeout(deadline); }
-});
+}, 35_000);

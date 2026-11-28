@@ -47,7 +47,7 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
         at = leg.to;
     }
     if (!near) return { action: 'clear', plan: r };
-    const { queryRouteService, serviceWanted } = await import('../route-plan');
+    const { queryRouteService, serviceWanted } = await import('../route-query');
     let localEnv: { pf: any; reach: ReturnType<typeof npcReach> } | null = null;
     const measureExposure = async (legs: ReturnType<typeof legsOf>) => {
         if (serviceWanted()) {

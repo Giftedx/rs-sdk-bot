@@ -5,17 +5,20 @@
 // with no live service of the same commit and route data it falls back locally.
 // Usage: bun packages/core/src/route-service.ts [--workers N] [--idle-ms N]   (run in the foreground)
 //        bun packages/core/src/route-service.ts --launch                       (start one detached service, then exit)
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { renameRetry } from './atomic-file';
 import { cachedMapAreas, shareLabels, type SharedLabels } from './components';
-import { leanBunEnv } from './lean-bun-env';
 import { pathfindingDataKey } from './pathcache';
+import {
+    SERVICE_FILE, checkoutRev, clearCheckoutRevMemo, launchService, pidAlive, readServiceInfo, routeServiceEnv,
+    usableService, type ServiceInfo,
+} from './route-service-client';
 import type { PlanRequest, RouteQuery } from './route-worker';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
-export const SERVICE_FILE = join(repoRoot, '.practice', 'cache', 'route-service.json');
+export { SERVICE_FILE, checkoutRev, launchService, pidAlive, readServiceInfo, routeServiceEnv, usableService, type ServiceInfo };
 export const SERVICE_LOG = join(repoRoot, '.practice', 'route-service', 'service.log');
 // Two workers: one cold search (up to about a minute) does not hold every other bot's plan or walk query.
 // Overflow workers (slot >= 1) open only on concurrency spikes and close after OVERFLOW_WORKER_IDLE_MS idle.
@@ -26,46 +29,8 @@ export const DEFAULT_IDLE_MS = 15 * 60_000;
 const REV_POLL_MS = 30_000;
 const QUERY_KINDS = new Set(['sdk-find-path', 'walk-plan', 'walk-danger', 'route-exposure', 'approach']);
 
-export type ServiceInfo = { pid: number; port: number; rev: string; dataKey: string; workers: number; started: number };
 export type ServicePlan = Omit<PlanRequest, 'id' | 'sharedAreas'>;
 export type ServiceQuery = RouteQuery;
-
-// The commit of this checkout. A service of another commit plans with other code, so a bot does not use it.
-let revMemo: string | null = null;
-export function checkoutRev(root = repoRoot): string {
-    if (root === repoRoot && revMemo !== null) return revMemo;
-    const r = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
-    const rev = r.status === 0 ? r.stdout.trim() : '';
-    if (root === repoRoot) revMemo = rev;
-    return rev;
-}
-
-export const pidAlive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException)?.code === 'EPERM'; } };
-
-export function readServiceInfo(file = SERVICE_FILE): ServiceInfo | null {
-    try {
-        const v = JSON.parse(readFileSync(file, 'utf8')) as ServiceInfo;
-        return Number.isInteger(v?.pid) && Number.isInteger(v?.port) && typeof v.rev === 'string' && typeof v.dataKey === 'string' ? v : null;
-    } catch { return null; }
-}
-
-// The info of a live service that plans with this process's code and route data, or null.
-export function usableService(info: ServiceInfo | null, rev: string, dataKey: string, alive = pidAlive): ServiceInfo | null {
-    return info && rev && info.rev === rev && info.dataKey === dataKey && alive(info.pid) ? info : null;
-}
-
-// Route service runs lean GC/WASM thread settings while keeping DFG JIT enabled and avoiding a low bot RAM cap.
-export function routeServiceEnv(env: Record<string, string | undefined> = process.env): Record<string, string | undefined> {
-    const out = leanBunEnv({ ...env, BUN_JSC_useDFGJIT: '1' });
-    delete out.BUN_JSC_forceRAMSize;
-    return out;
-}
-
-// Starts one detached service through a launcher that exits at once. The service's parent is then a dead process, so
-// a tree kill of the bot that asked for it (taskkill /T) does not stop the service that other bots use.
-export function launchService(root = repoRoot): void {
-    spawn(process.execPath, [join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], { cwd: root, detached: true, windowsHide: true, stdio: 'ignore', env: routeServiceEnv(process.env) }).unref();
-}
 // One launch at a time for each checkout: the launcher creates the lock with the exclusive flag, and the service it
 // starts removes it once its record is written. A lock older than LAUNCH_LOCK_MS (a service that died while it
 // started) is removed and taken again. Bots that ask together therefore start one service, not one each.
@@ -263,7 +228,7 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowI
     const timer = setInterval(() => {
         if (readServiceInfo(file)?.pid !== process.pid) return stop('another service owns the record');
         if (pool.inFlight() === 0 && Date.now() - last > idleMs) return stop('idle');
-        revMemo = null;
+        clearCheckoutRevMemo();
         if (checkoutRev() !== info.rev) return stop('checkout moved to another commit');
     }, Math.min(REV_POLL_MS, idleMs));
     return { info, stop, pool };

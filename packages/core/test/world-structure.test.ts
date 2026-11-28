@@ -183,12 +183,15 @@ test('world facade preserves the public runtime export surface', async () => {
         'createWorld',
         'doorBlock',
         'doorBlocks',
+        'getKnownDoorFacts',
         'goalReachable',
         'installDoorPolicy',
+        'installRemoteSendFindPath',
         'interactionApproach',
         'npcBlockTiles',
         'routeFares',
         'rsPathLength',
         'transportAllowed',
+        'withNpcBlocks',
     ]);
 });
