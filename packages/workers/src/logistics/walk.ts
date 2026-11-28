@@ -603,7 +603,6 @@ export async function relocateKnight(s: Session, name: string, options: { stop?:
 export async function runArriveDraynor(s: Session): Promise<{ ok: boolean; detail: string; ticks: number }> {
     const start = s.tick();
     await leaveRuneStarter(s, () => false);
-    await waitTicks(s, 3);
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     let hpMin = hp();
     const off = s.onTick(() => { hpMin = Math.min(hpMin, hp()); });
@@ -627,7 +626,6 @@ export async function runArriveDraynor(s: Session): Promise<{ ok: boolean; detai
             const item = s.sdk.getInventory().find(i => i.id === id);
             if (item) await s.bot.depositItem(item, -1);
         }
-        await waitTicks(s, 1);
         const bank = s.sdk.getState()?.bank?.items ?? [];
         const remaining = s.sdk.getInventory();
         if (remaining.some(i => !/^(coins|bread|shrimps)$/i.test(i.name))) throw new Error('starter kit deposit incomplete');

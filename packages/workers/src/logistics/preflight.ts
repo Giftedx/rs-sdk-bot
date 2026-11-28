@@ -183,7 +183,7 @@ export const PRAYER_ALTARS: readonly Altar[] = [
 ];
 
 export const inWilderness = (a: Pick<Altar, 'x' | 'z'>): boolean =>
-    a.x >= 2944 && a.x <= 3391 && a.z >= 3520 && a.z <= 3967;
+    a.x >= 2944 && a.x <= 3391 && ((a.z >= 3520 && a.z <= 3967) || (a.z >= 9918 && a.z < 12800));
 
 export const SAFE_ALTARS: readonly Altar[] = PRAYER_ALTARS.filter(a => !inWilderness(a));
 

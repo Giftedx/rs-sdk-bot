@@ -61,6 +61,16 @@ export function combatSquares(at: Tile, npcs: readonly SeenNpc[], skills: Record
 const RING_COS = Array.from({ length: 16 }, (_, i) => Math.cos(i * Math.PI / 8));
 const RING_SIN = Array.from({ length: 16 }, (_, i) => Math.sin(i * Math.PI / 8));
 
+// Surface Wilderness (z 3520..6399) and Edgeville Dungeon Wilderness north of the gate (z 9918..12799).
+export const inWilderness = (t: { x: number; z: number }): boolean =>
+    t.x >= 2944 && t.x < 3392 && ((t.z >= 3520 && t.z < 6400) || (t.z >= 9918 && t.z < 12800));
+
+// Safe-tile retreats never cross into Wilderness from non-Wilderness and never walk deeper north inside Wilderness.
+export function crossesWildernessCeiling(from: { x: number; z: number }, to: { x: number; z: number }): boolean {
+    if (!inWilderness(to)) return false;
+    return !inWilderness(from) || to.z > from.z;
+}
+
 // Tiles outside every square, the nearest ring first: 16 directions on each ring around `at`, out to `maxRing` tiles.
 export function safeCandidates(at: Tile, squares: readonly Square[], maxRing = 96): Tile[] {
     if (outside(at, squares)) return [at];
@@ -71,7 +81,7 @@ export function safeCandidates(at: Tile, squares: readonly Square[], maxRing = 9
             const key = (x + 131072) * 262144 + (z + 131072);
             if (seen.has(key)) continue;
             const t = { x, z, level: at.level };
-            if (!outside(t, squares)) continue;
+            if (!outside(t, squares) || crossesWildernessCeiling(at, t)) continue;
             seen.add(key); out.push(t);
         }
     }

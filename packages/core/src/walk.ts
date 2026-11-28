@@ -7,7 +7,15 @@ export {
     MINE_JAIL_ROCKS, MINE_JAIL_WINDOW, inMineJail, leaveMineJail, mineJailRock, onMineJailCliff,
 } from './walk/mine-jail';
 export {
-    DETOUR_MARGIN, TELEPORT_JEWELRY_RE, fareDetour, goTo, withoutJewelry, withoutSpells, withoutTeleports,
+    IKOV_SECRET_DOOR, IKOV_SHACK_LADDER_DOWN, IKOV_SHINY_KEY_ID, IKOV_SHINY_KEY_TILE,
+    inIkovArmadylPocket, inIkovShack, leaveIkovArmadyl, needsIkovShinyKeyExit,
+} from './walk/ikov-exit';
+export {
+    KARAMJA_BANANA_ID, KARAMJA_CRATE, KARAMJA_GROVE_TILE, KARAMJA_LUTHAS_TILE, KARAMJA_SHIP_FARE,
+    earnKaramjaFare, inKaramjaIsland, needsKaramjaFareEscape,
+} from './walk/karamja-fare';
+export {
+    DETOUR_MARGIN, TELEPORT_JEWELRY_RE, fareDetour, goTo, unreadJournalQuests, withoutJewelry, withoutSpells, withoutTeleports,
 } from './walk/goto';
 export { FLOAT_BANK_TILES, FLOAT_WALK_TILES, fareFloatNeed, topUpFareFloat, unpaidFaresNear } from './walk/fare-float';
 export type {

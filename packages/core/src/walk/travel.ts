@@ -40,6 +40,7 @@ async function answerTravelDialog(
         if (d?.isOpen && !d.isWaiting) {
             const opt = d.options.find(o => choices.some(c => norm(o.text) === norm(c)));
             await b.sdk.sendClickDialog(opt ? opt.index : 0);
+            if (until() || stop()) break;
         }
         await waitTicks(s, 1);
     }
