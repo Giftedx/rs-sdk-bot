@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869066780,
+ "at": 1795869156142,
  "jobs": [
   {
    "account": "Balls",
@@ -45,90 +45,20 @@
    "role": "pvp"
   },
   {
-   "account": "pocketpython",
-   "script": "scripts/aio-market.ts",
+   "account": "mineyourbiz",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=80 STALL_TICKS=280 -- cooking stock",
+    "scripts/aio-market.ts ITEM_ID=311 ITEMS=Harpoon MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop2 3000",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=389 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark"
    ],
    "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "193",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "193"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:43",
+   "goal": "mission:mission:pk-squad:item:385",
    "role": "army"
-  },
-  {
-   "account": "oreelse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "abracadickra",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-gather"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:abracadickra",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:abracadickra",
-   "role": "auto"
-  },
-  {
-   "account": "knightrider",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights-stable"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "773"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
   },
   {
    "account": "meatntwoveg",
@@ -149,20 +79,48 @@
    "role": "auto"
   },
   {
-   "account": "mineyourbiz",
-   "script": "scripts/chain.ts",
+   "account": "abracadickra",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=80 STALL_TICKS=255 -- cooking batch",
-    "scripts/aio-market.ts ITEM_ID=311 ITEMS=Harpoon MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop2 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=389 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
+  },
+  {
+   "account": "pickpockdick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "777"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   }
  ],
  "army": [
@@ -186,11 +144,13 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "pickpockdick",
+  "oreelse",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
