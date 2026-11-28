@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795863875828,
+ "at": 1795863917160,
  "jobs": [
   {
    "account": "Balls",
@@ -45,164 +45,26 @@
    "role": "pvp"
   },
   {
-   "account": "dropmyload",
+   "account": "shaftmaker",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "wool"
+    "crafting",
+    "inventory",
+    "cut-bow:unstrung_magic_shortbow"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:72",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "helper"
-  },
-  {
-   "account": "knightrider",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
+   "goal": "goal:supply_chain:72",
    "role": "auto"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
-  },
-  {
-   "account": "mineyourbiz",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "army"
   },
   {
    "account": "fishandchips",
@@ -228,6 +90,224 @@
    "repeat": false,
    "goal": "campaign:haggis:item:42",
    "role": "auto"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "47",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20800",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "47"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "mineyourbiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "3",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "3"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-35-o0-p97 ITEM_ID=440 QUANTITY=35 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "dropmyload",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "helper",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "knightrider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto",
+   "resources": [
+    "chaos-druids"
+   ]
   },
   {
    "account": "Masterbaiter",
@@ -375,24 +455,22 @@
   },
   {
    "account": "pullmybow",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "chicken"
    ],
    "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:pullmybow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1511",
+   "goal": "goal:pk_army:pullmybow",
    "role": "auto",
    "resources": [
-    "draynor-normal-trees"
+    "chickens"
    ]
   }
  ],
