@@ -8,7 +8,7 @@
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../../../core/src/inprocess';
 import { RETALIATE_OFF } from '../../../core/src/combat-end';
-import { createNeverSkullGuard, fightPlayer, getObjNames, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
+import { createNeverSkullGuard, ENEMY_WEAPON_IDS, fightPlayer, getObjNames, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, PRAYER, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
 import { TRIBRID_KIT } from './hunt-kits';
 import { kitOptions, kitSwitches } from '../../../core/src/pk-kits/kits';
 import { sparOptions } from './pk-spar';
@@ -22,7 +22,7 @@ export const BAIT_3PLUS1_OPTIONS: Partial<FightOptions> = {
     zeroDrainFlick: true,
     freeze: 'flee',
     eatAt: 62,
-    chase: true,
+    chase: false,
     protectItem: true,
 };
 
@@ -342,11 +342,17 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             // default 3; scripts/pk-gang.ts pickUp). It runs on after the meeting ends: the last kill ends it.
             // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
             if (killed && pickup && key === 'a') {
-                const got = await pickUp(s, pickup, {
+                const enemiesLeft = foes.some(f => !isOut(f));
+                const stLoot = s.sdk.getState();
+                if (enemiesLeft && stLoot && stLoot.prayers.prayerPoints > 0 && !stLoot.prayers.activePrayers[PRAYER.melee] && typeof s.sdk.sendTogglePrayer === 'function') {
+                    void s.sdk.sendTogglePrayer(PRAYER.melee);
+                }
+                const lootIds = sideDagger && enemiesLeft ? ENEMY_WEAPON_IDS : pickup;
+                const got = await pickUp(s, lootIds, {
                     radius: pickupRadius,
-                    maxTicks: sideDagger ? 18 : 30,
+                    maxTicks: sideDagger && enemiesLeft ? 10 : 30,
                     wait: 6,
-                    stop: () => over || halt() || (s.sdk.getState()?.player?.hp ?? 99) < 50,
+                    stop: () => over || halt() || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 65),
                 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;

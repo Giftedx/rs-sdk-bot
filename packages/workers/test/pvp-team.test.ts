@@ -205,8 +205,9 @@ test('extra:team-{24,25}v49-gang-bait-3plus1-x1 bench cases wire 49 skulled Prot
         expect(args).toContain('SPAR_B_OPTS={"protectItem":true}');
         expect(args).toContain('NEVER_SKULL=1');
         expect(args).toContain('SPAR_PICKUP=1');
-        expect(args).toContain('SPAR_PICKUP_RADIUS=10');
+        expect(args).toContain('SPAR_PICKUP_RADIUS=4');
         expect(args).toContain('SQUAD_DAGGER=1');
+        expect(args).toContain('STALL_TICKS=3000');
     }
 });
 
@@ -328,7 +329,7 @@ test('buildTeamSideOptions applies gang-bait-3plus1 options above gang-hunter pr
     });
     expect(base.eatAt).toBe(62);
     expect(base.freeze).toBe('flee');
-    expect(base.chase).toBe(true);
+    expect(base.chase).toBe(false);
     expect(base.comboFood).toBe(true);
     expect(base.zeroDrainFlick).toBe(true);
     expect(base.protectItem).toBe(true);
