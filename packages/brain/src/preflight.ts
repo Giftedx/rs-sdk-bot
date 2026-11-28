@@ -1524,6 +1524,7 @@ interface StaticActivityPreflight {
     readonly startedQuestRefused: string | undefined;
     readonly wearableItemIds: readonly number[];
     readonly staticRequiredItems: readonly RequiredItemSpec[];
+    readonly requiredToolAnyOf: readonly (readonly number[])[];
     readonly coinsRequired: number | undefined;
     readonly operatingCoinFloat: number;
     readonly ferryFareHint: number | undefined;
@@ -1610,6 +1611,14 @@ function extractStaticActivityPreflight(activity: {
             }
         }
     }
+    const requiredToolAnyOf: (readonly number[])[] = [];
+    if (Array.isArray(cfg.requiredToolAnyOf)) {
+        for (const rawGroup of cfg.requiredToolAnyOf as unknown[]) {
+            if (!Array.isArray(rawGroup)) continue;
+            const group = rawGroup.filter((id): id is number => Number.isSafeInteger(id) && (id as number) >= 0);
+            if (group.length > 0) requiredToolAnyOf.push(group);
+        }
+    }
     if (Array.isArray(cfg.requiredItems)) {
         for (const r of cfg.requiredItems as unknown[]) {
             if (!r || typeof r !== 'object') continue;
@@ -1651,6 +1660,7 @@ function extractStaticActivityPreflight(activity: {
             : undefined,
         wearableItemIds,
         staticRequiredItems,
+        requiredToolAnyOf,
         coinsRequired: typeof cfg.coinsRequired === 'number' && cfg.coinsRequired > 0 ? Math.ceil(cfg.coinsRequired) : undefined,
         operatingCoinFloat: typeof cfg.operatingCoinFloat === 'number' ? cfg.operatingCoinFloat : DEFAULT_PREFLIGHT_COIN_FLOAT,
         ferryFareHint: typeof cfg.ferryFareHint === 'number' ? cfg.ferryFareHint : undefined,
@@ -1693,9 +1703,20 @@ export function activityPreflightFromConfig(
 ): PreflightResult {
     const base = extractStaticActivityPreflight(activity);
     let requiredItems: readonly RequiredItemSpec[] = base.staticRequiredItems;
+    if (base.requiredToolAnyOf.length > 0) {
+        const missingToolGroups: RequiredItemSpec[] = [];
+        for (const group of base.requiredToolAnyOf) {
+            if (!group.some(id => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }) > 0)) {
+                missingToolGroups.push({ itemId: group[0]!, count: 1 });
+            }
+        }
+        if (missingToolGroups.length > 0) {
+            requiredItems = [...requiredItems, ...missingToolGroups];
+        }
+    }
     if (activity.inputs && activity.inputs.length > 0) {
         const clampedBatch = Math.max(1, batchUnits);
-        const mutableItems: RequiredItemSpec[] = [...base.staticRequiredItems];
+        const mutableItems: RequiredItemSpec[] = [...requiredItems];
         for (const io of activity.inputs) {
             if (io.unlessOwned?.some(id => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }) > 0)) continue;
             const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch)) + Math.max(0, io.reserve ?? 0);

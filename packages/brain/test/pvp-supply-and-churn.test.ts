@@ -133,10 +133,10 @@ describe('PvP BiS missions and self-sustaining supply chain', () => {
             (itemId) => catalog.findByOutputItem(itemId).filter((a) => a.trust !== 'experimental').length === 0,
         );
         expect(missing).toEqual([]);
-        // Magic log gathering must pass WOOD_GROVE=native-processing to select Seers magic trees and require an axe.
+        // Magic log gathering must pass WOOD_GROVE=native-processing to select Seers magic trees and accept any usable axe.
         const magicWc = catalog.get('gather:woodcutting-magic')!;
         expect((magicWc.config.defaultEnv as Record<string, string>)?.WOOD_GROVE).toBe('native-processing');
-        expect(magicWc.config.requiredTools).toEqual([1359]);
+        expect(magicWc.config.requiredToolAnyOf).toEqual([[1359, 1357, 1355, 1361, 1353, 1349, 1351]]);
         // Banked Wave-3 supply routes are practice_passed; at-site / job-file routes remain experimental.
         const bankedSupplyIds = [
             'gather:mining-coal',
@@ -282,8 +282,16 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
         expect(rawSharkRoute.env.MAX_COOKED).toBe('30');
 
         const cookRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:cooking-karambwan'), { BATCH_UNITS: '60' });
+        expect(cookRoute.args).toEqual(['cooking', 'food']);
         expect(cookRoute.env.FOOD_TYPE).toBe('karambwan');
         expect(cookRoute.env.MAX_MAKE).toBe('60');
+        expect(cookRoute.env.CAP).toMatch(/^\d+$/);
+
+        const cookSharkRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:cooking-shark'), { BATCH_UNITS: '40' });
+        expect(cookSharkRoute.args).toEqual(['cooking', 'food']);
+        expect(cookSharkRoute.env.FOOD_TYPE).toBe('shark');
+        expect(cookSharkRoute.env.MAX_MAKE).toBe('40');
+        expect(cookSharkRoute.env.CAP).toMatch(/^\d+$/);
 
         const dhideSetsRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:crafting-black-dhide-sets'), { BATCH_UNITS: '75' });
         expect(dhideSetsRoute.env.SETS).toBe('50');
@@ -381,6 +389,22 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
         expect(activityPreflightFromConfig(lowHpGlory, gloryAct, makeWorld([lowHpGlory])).blockers.some((b) => b.kind === 'skill_level' && b.skill === 'Hitpoints' && b.required === 75)).toBe(true);
         const partialGlory = makeAccount({ skills: { ...makeAccount().skills, Hitpoints: { level: 75, xp: 1_210_421 } }, bank: { items: { 995: 5000, 1706: 1 }, observedAt: NOW - 5_000, trusted: true } });
         expect(activityPreflightFromConfig(partialGlory, gloryAct, makeWorld([partialGlory])).ok).toBe(true);
+
+        // requiredToolAnyOf: gather:fishing-karambwan accepts empty (3157) OR loaded (3159) vessel; woodcutting-magic accepts any axe.
+        const kbAct = catalog.require('gather:fishing-karambwan');
+        const kbEmpty = makeAccount({ bank: { items: { 995: 5000, 3150: 30, 3157: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        const kbLoaded = makeAccount({ bank: { items: { 995: 5000, 3150: 30, 3159: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        const kbMissing = makeAccount({ bank: { items: { 995: 5000, 3150: 30 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(kbEmpty, kbAct, makeWorld([kbEmpty]), 26).ok).toBe(true);
+        expect(activityPreflightFromConfig(kbLoaded, kbAct, makeWorld([kbLoaded]), 26).ok).toBe(true);
+        expect(activityPreflightFromConfig(kbMissing, kbAct, makeWorld([kbMissing]), 26).missingItems?.some((m) => m.itemId === 3157)).toBe(true);
+
+        const magicAct = catalog.require('gather:woodcutting-magic');
+        const wc75 = { ...makeAccount().skills, Woodcutting: { level: 75, xp: 1_210_421 } };
+        const addyAxe = makeAccount({ skills: wc75, bank: { items: { 995: 5000, 1357: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        const noAxe = makeAccount({ skills: wc75, bank: { items: { 995: 5000 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(addyAxe, magicAct, makeWorld([addyAxe])).ok).toBe(true);
+        expect(activityPreflightFromConfig(noAxe, magicAct, makeWorld([noAxe])).missingItems?.some((m) => m.itemId === 1359)).toBe(true);
     });
 
     test('preflight blocks woodcutting-fresh45 at WC >= 45, fishing-village below Fishing 20, and ranged-camp without BLUE_KIT', () => {
