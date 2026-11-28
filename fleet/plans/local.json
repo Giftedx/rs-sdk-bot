@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795846213394,
+ "at": 1795846304967,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -277,25 +277,26 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
     "inventory",
-    "cut-sapphire"
+    "cut-bow:unstrung_magic_shortbow"
    ],
    "env": {
-    "MAX_MAKE": "1",
+    "MAX_MAKE": "18",
     "CAP": "1000",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:72",
+    "BATCH_UNITS": "18",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "auto"
+   "goal": "goal:supply_chain:72",
+   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -332,6 +333,31 @@
    "resources": [
     "catherby-lobsters"
    ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
   },
   {
    "account": "SporranBulge",
@@ -374,66 +400,25 @@
    "role": "auto"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "unicorn"
+    "crafting",
+    "inventory",
+    "cut-sapphire"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:237",
-    "BATCH_UNITS": "56",
-    "BANK_PACK": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "DEMAND_ID": "goal:supply_chain:1607",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:237",
-   "role": "auto",
-   "resources": [
-    "edgeville-unicorns"
-   ]
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1783"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
+   "goal": "goal:supply_chain:1607",
+   "role": "auto"
   },
   {
    "account": "Nockitoff",
@@ -453,6 +438,21 @@
   },
   {
    "account": "TackleBox",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1664 -- thieving knights-stable"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
+   "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "thieving",
@@ -482,12 +482,11 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
-  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "woodpecker"
