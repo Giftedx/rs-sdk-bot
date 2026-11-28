@@ -159,11 +159,25 @@ export async function depositPack(s: Session, keep: (item: { id: number; name: s
                 return true;
             };
             if (!await waitUntil(s, allMatched, { timeoutTicks: 10 }) || !allMatched()) {
-                // Fall back to per-item observed deposit for any remaining items so partial failures remain explicit.
+                // Verify each already-debited item against a newer bank generation and matching credit; never silently
+                // accept an uncredited pack debit. Retry only items that are still in the pack.
+                const after = s.bankObservation?.();
+                const nowInv = s.sdk.getState()?.inventory;
                 for (const c of chunk) {
-                    const remaining = s.sdk.getInventory().find(i => i.id === c.id);
-                    if (remaining) { await depositObserved(s, remaining); deposited++; }
-                    else deposited++;
+                    const remaining = Array.isArray(nowInv) ? nowInv.find(i => i.id === c.id) : undefined;
+                    if (remaining) {
+                        await depositObserved(s, remaining);
+                        deposited++;
+                        continue;
+                    }
+                    if (!after || after.generation <= generation || countBankByName(after.items, c.nameLower) !== c.bankBefore + c.amount)
+                        throw Error(`no deposit progress: pack debit/bank credit unobserved ${c.id}`);
+                    console.log('DEPOSIT_RECEIPT ' + JSON.stringify({
+                        account: s.name, itemId: c.id, name: c.name, amount: c.amount,
+                        packBefore: c.amount, packAfter: 0, bankBefore: c.bankBefore, bankAfter: c.bankBefore + c.amount,
+                        generationBefore: generation, generationAfter: after.generation, at: after.at, tick: s.tick(), sdkSuccess: true,
+                    }));
+                    deposited++;
                 }
             } else {
                 const after = s.bankObservation!()!;

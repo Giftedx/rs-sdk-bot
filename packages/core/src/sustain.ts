@@ -324,7 +324,9 @@ export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{succ
    if(combo){picks=[combo.primary,combo.combo];setsDelay=true;}
   }
   if(!picks.length){
-   const choice=delayReady?selectQuestFood(state,policy):(options.comboFood?.length?selectQuestFood(state,{...policy,food:options.comboFood.filter(isComboFood)}):null);
+   const choice=delayReady
+    ? selectQuestFood(state,policy)
+    : (options.comboFood?.length?selectQuestFood(state,{...policy,food:options.comboFood.filter(isComboFood),eatAt:policy.comboAt??policy.eatAt}):null);
    if(!choice)return;
    picks=[choice];
    setsDelay=!isComboFood(choice.item.id);

@@ -650,3 +650,116 @@ test('lootRoom O(N) preserves exact cheap-slot drop selection on full pack', () 
     const pack = Array.from({ length: 28 }, (_, slot) => ({ slot, id: 100, count: 1 }));
     expect(lootRoom(pack, { id: 1231, count: 1, x: 0, z: 0, distance: 0 }, t, () => false, id => ({ stackable: id === 995 }))).toBe(27);
 });
+
+test('depositPack throws when a batched pack debit lacks matching bank credit', async () => {
+    let tick = 0;
+    const inv = [
+        { slot: 0, id: 385, name: 'Shark', count: 2 },
+        { slot: 1, id: 379, name: 'Lobster', count: 3 },
+    ];
+    const bank = new Map<string, number>([['Shark', 10], ['Lobster', 10]]);
+    const listeners = new Set<() => void>();
+    const s: any = {
+        name: 'fixture',
+        tick: () => tick,
+        sdk: { getState: () => ({ inventory: [...inv] }), getInventory: () => [...inv] },
+        // Generation stays stale and bank never credits Lobster even though both leave the pack.
+        bankObservation: () => ({ generation: 1, at: 1000 + tick, items: [...bank].map(([name, count], id) => ({ id, name, count })) }),
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        direct: async () => { inv.length = 0; return { success: true }; },
+        bot: { depositItem: async () => ({ success: true }) },
+    };
+    const work = depositPack(s).then(() => 'ok', e => String(e));
+    for (let i = 0; i < 15; i++) {
+        await Promise.resolve();
+        tick++;
+        for (const cb of [...listeners]) cb();
+    }
+    expect(await work).toContain('no deposit progress: pack debit/bank credit unobserved');
+});
+
+test('withdrawBatchFast refreshes live bank stock across duplicate-ID batches on partial depletion', async () => {
+    let tick = 0;
+    const bankItems = [{ slot: 0, id: 385, count: 8 }];
+    const inv: { slot: number; id: number; count: number }[] = [];
+    const inbox: any[] = [];
+    const listeners = new Set<() => void>();
+    const s = {
+        tick: () => tick,
+        sdk: { getState: () => ({ bank: { isOpen: true, items: bankItems }, inventory: inv }) },
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        direct: async (a: any) => { inbox.push(a); return { success: true }; },
+    };
+    const flushTick = () => {
+        tick++;
+        for (const a of inbox.splice(0, BANK_BATCH_MAX)) {
+            if (a.type === 'bankWithdraw') {
+                const row = bankItems.find(b => b.slot === a.slot)!;
+                const amt = Math.min(a.amount, row.count);
+                row.count -= amt;
+                if (amt > 0) inv.push({ slot: inv.length, id: row.id, count: amt });
+            }
+        }
+        for (const cb of [...listeners]) cb();
+    };
+    const waitUntilFn = (pred: () => boolean, limit: number) => new Promise<boolean>(resolve => {
+        if (pred()) return resolve(true);
+        let seen = 0;
+        const off = s.onTick(() => {
+            seen++;
+            if (pred()) { off(); resolve(true); }
+            else if (seen >= limit) { off(); resolve(false); }
+        });
+    });
+
+    const work = withdrawBatchFast(s, [{ id: 385, amount: 5 }, { id: 385, amount: 5 }], waitUntilFn);
+    for (let m = 0; m < 4; m++) await Promise.resolve();
+    flushTick(); // Batch 1 withdraws 5 (3 remaining in bank)
+    for (let m = 0; m < 4; m++) await Promise.resolve();
+    flushTick(); // Batch 2 sees live remaining count 3 and settles immediately instead of timing out expecting 5
+    const res = await work;
+    expect(res.ok).toBe(true);
+    expect(res.ticks).toBe(2);
+    expect(res.withdrawn).toEqual({ 385: 8 });
+});
+
+test('startQuestSustain honors comboAt during eat_delay instead of burning karambwans at eatAt', async () => {
+    let tick = 0;
+    let state: any = {
+        skills: [{ name: 'Hitpoints', level: 55, baseLevel: 99 }],
+        inventory: [
+            { id: 385, slot: 0, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+            { id: COOKED_KARAMBWAN_ID, slot: 1, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        ],
+    };
+    const listeners = new Set<() => void>();
+    const sent: number[] = [];
+    const s: any = {
+        tick: () => tick,
+        sdk: { getState: () => state },
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        direct: async (a: any) => { sent.push(a.slot); return { success: true }; },
+    };
+    const eater = startQuestSustain(s, { food: [385], comboFood: [COOKED_KARAMBWAN_ID], eatAt: 60, comboAt: 30 });
+    // Tick 1: HP 55 <= eatAt(60) but > comboAt(30) -> eats shark (slot 0) only, not karambwan.
+    tick++; for (const cb of [...listeners]) cb();
+    for (let i = 0; i < 4; i++) await Promise.resolve();
+    expect(sent).toEqual([0]);
+    // Tick 2 (inside 3-tick eat_delay): HP is 55 (> comboAt 30) after shark debit -> must NOT burn karambwan!
+    state = {
+        skills: [{ name: 'Hitpoints', level: 55, baseLevel: 99 }],
+        inventory: [{ id: COOKED_KARAMBWAN_ID, slot: 1, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }],
+    };
+    tick++; for (const cb of [...listeners]) cb();
+    for (let i = 0; i < 4; i++) await Promise.resolve();
+    expect(sent).toEqual([0]);
+    // Tick 3 (still inside eat_delay): HP drops to 25 <= comboAt(30) -> NOW eats karambwan immediately!
+    state = {
+        skills: [{ name: 'Hitpoints', level: 25, baseLevel: 99 }],
+        inventory: [{ id: COOKED_KARAMBWAN_ID, slot: 1, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }],
+    };
+    tick++; for (const cb of [...listeners]) cb();
+    for (let i = 0; i < 4; i++) await Promise.resolve();
+    expect(sent).toEqual([0, 1]);
+    eater.stop();
+});

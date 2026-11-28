@@ -141,25 +141,31 @@ export async function withdrawBatchFast(
  if (!requests.length) return { ok: true, withdrawn, ticks: 0 };
  const state0 = s.sdk.getState();
  if (!state0?.bank?.isOpen) return { ok: false, withdrawn, ticks: s.tick() - start };
- // Build O(N) id -> slot map once: bank slots stay stable while open.
- const byId = new Map<number, { slot: number; id: number; count: number }>();
- const bankItems: { slot: number; id: number; count: number }[] = state0.bank.items ?? [];
- for (let i = 0; i < bankItems.length; i++) {
-  const row = bankItems[i]!;
-  if (!byId.has(row.id)) byId.set(row.id, row);
- }
+ const indexBank = (items: readonly { slot: number; id: number; count: number }[]) => {
+  const map = new Map<number, { slot: number; id: number; count: number }>();
+  for (let k = 0; k < items.length; k++) {
+   const row = items[k]!;
+   if (row.count > 0 && !map.has(row.id)) map.set(row.id, row);
+  }
+  return map;
+ };
+ const initialById = indexBank(state0.bank.items ?? []);
  for (const req of requests) {
-  if (!byId.has(req.id)) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
+  if (!initialById.has(req.id)) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
  }
  let i = 0;
  while (i < requests.length) {
+  const liveState = s.sdk.getState();
+  if (!liveState?.bank?.isOpen) return { ok: false, withdrawn, ticks: s.tick() - start };
+  const byId = indexBank(liveState.bank.items ?? []);
   const batch: { id: number; slot: number; amount: number; before: number; expectedMin: number }[] = [];
-  const curInv = s.sdk.getState()?.inventory;
+  const curInv = liveState.inventory;
   if (isInstantBankAmount(requests[i]!.amount)) {
    const seenIds = new Set<number>();
    while (i < requests.length && batch.length < BANK_BATCH_MAX && isInstantBankAmount(requests[i]!.amount) && !seenIds.has(requests[i]!.id)) {
     const req = requests[i]!;
-    const row = byId.get(req.id)!;
+    const row = byId.get(req.id);
+    if (!row || row.count <= 0) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
     const before = countById(curInv, req.id);
     const expectedMin = req.amount === -1 ? 1 : Math.min(req.amount, row.count);
     seenIds.add(req.id);
@@ -168,7 +174,8 @@ export async function withdrawBatchFast(
    }
   } else {
    const req = requests[i]!;
-   const row = byId.get(req.id)!;
+   const row = byId.get(req.id);
+   if (!row || row.count <= 0) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
    batch.push({ id: req.id, slot: row.slot, amount: req.amount, before: countById(curInv, req.id), expectedMin: Math.min(req.amount, row.count) });
    i++;
   }
