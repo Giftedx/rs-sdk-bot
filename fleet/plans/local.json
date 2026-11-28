@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834159961,
+ "at": 1795834183341,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -201,38 +201,61 @@
    "role": "woodcutting"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "Abracadickra",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army",
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
    "resources": [
-    "edgeville-yews"
+    "varrock-se-mine"
    ]
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/chain.ts",
+   "account": "Ballbag",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Unsheathed",
@@ -255,41 +278,34 @@
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
   },
   {
    "account": "Pullmybow",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "mining",
-    "ore"
+    "sweep",
+    "elena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
   },
   {
    "account": "Fingersmith",
@@ -326,38 +342,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
   }
  ],
  "army": [
@@ -372,6 +356,7 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
+  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
   "mineyourbiz",

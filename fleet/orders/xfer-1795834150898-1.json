@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795834150898-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewGotWood",
+  "to": "BowBeforeMe",
+  "item": "Copper ore",
+  "count": 1,
+  "itemId": 436,
+  "start": 1795834150898,
+  "end": 1795835050898,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
