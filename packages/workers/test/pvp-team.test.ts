@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, createTeamFocus, pickEnemy, resolveTeamKit, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopUnseen, team } from '../src/pvp/pk-team';
 import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
 import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
@@ -313,6 +313,114 @@ test('team() under neverSkull refuses unprovoked attacks, disables auto-retaliat
         expect(res.skulled.a).toBe(0);
         expect(res.skulled.b).toBe(1);
         expect(res.weapons).toBe(0);
+    } finally {
+        clearInterval(timer);
+    }
+});
+
+test('buildTeamSideOptions applies gang-bait-3plus1 options above gang-hunter profile and below explicit SPAR_A_OPTS', () => {
+    const base = buildTeamSideOptions({
+        profileName: 'gang-hunter',
+        kit: 'gang-bait-3plus1',
+        cap: 3000,
+        neverSkull: false,
+    });
+    expect(base.eatAt).toBe(62);
+    expect(base.freeze).toBe('flee');
+    expect(base.comboFood).toBe(true);
+    expect(base.zeroDrainFlick).toBe(true);
+    expect(base.protectItem).toBe(true);
+    expect(base.rotation).toEqual(['ranged', 'melee']);
+    expect(base.kit).toEqual(BAIT_3PLUS1_SWITCHES);
+
+    const overridden = buildTeamSideOptions({
+        profileName: 'gang-hunter',
+        kit: 'gang-bait-3plus1',
+        extraJson: '{"eatAt":72,"freeze":"low"}',
+        cap: 3000,
+        neverSkull: true,
+    });
+    expect(overridden.eatAt).toBe(72);
+    expect(overridden.freeze).toBe('low');
+    expect(overridden.neverSkull).toBe(true);
+    expect(overridden.protectItem).toBe(true);
+    expect(overridden.comboFood).toBe(true);
+});
+
+test('preferUnheldTargets picks open unheld enemies before low-HP held enemies and falls back when all are held', () => {
+    const live = [
+        { f: 'heldLow', p: { distance: 1 }, h: 0.2 },
+        { f: 'openHigh', p: { distance: 2 }, h: 0.9 },
+    ];
+    const pool = preferUnheldTargets(live, x => x.f === 'heldLow');
+    expect(pool.map(x => x.f)).toEqual(['openHigh']);
+    expect(pickEnemy(pool, undefined as string | undefined, 'low', x => x.h)?.f).toBe('openHigh');
+    const allHeld = preferUnheldTargets(live, () => true);
+    expect(allHeld.map(x => x.f)).toEqual(['heldLow', 'openHigh']);
+});
+
+test('team() with SQUAD_DAGGER=1 and NEVER_SKULL=0 does not spin-loop when the sole enemy is held', async () => {
+    const logs: string[] = [];
+    let curTick = 0;
+    const mk = (name: string, x: number, enemyName: string, enemyIdx: number, headicons: number, hp: number) => {
+        const listeners = new Set<() => void>();
+        const players: ({ headicons: number; appearance: number[]; health: number; totalHealth: number; spotanimId: number } | null)[] = [];
+        players[enemyIdx] = { headicons, appearance: [], health: hp, totalHealth: 99, spotanimId: -1 };
+        return {
+            name,
+            ended: new Promise<void>(() => {}),
+            tick: () => curTick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+            direct: async () => ({ ok: true }),
+            client: { localPlayer: { headicons: 0 }, players },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: x, worldZ: 3602, level: 0, hp: 99, maxHp: 99, lifeId: 1, combatLevel: 126 },
+                    nearbyPlayers: [{ name: enemyName, index: enemyIdx, x: x === 3137 ? 3135 : 3137, z: 3602, distance: 2, combatLevel: 126, inCombat: true, combatTargetType: 'player', combatTargetIndex: 0 }],
+                    gameMessages: [],
+                    combatEvents: [],
+                    inventory: [],
+                    equipment: [{ id: 1231, count: 1, slot: 3 }],
+                    skills: [{ name: 'Hitpoints', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                    prayers: { prayerPoints: 99, activePrayers: [] },
+                    autoRetaliateEnabled: false,
+                }),
+                getInventory: () => [],
+                sendWalk: () => {},
+                sendInteractPlayer: () => {},
+                sendTogglePrayer: () => {},
+            },
+            waitForCondition: async () => true,
+            advance: () => { for (const fn of [...listeners]) fn(); },
+        };
+    };
+    // Enemy is skulled (bit 0) + Protect from Melee (bit 1 -> headicons = 3) at 50/99 HP (<= 0.7 holdBelow).
+    const a1 = mk('Ours1', 3137, 'Skulled1', 2, 3, 50);
+    const b1 = mk('Skulled1', 3135, 'Ours1', 1, 0, 99);
+    const timer = setInterval(() => {
+        curTick++;
+        a1.advance();
+        b1.advance();
+        if (curTick > 40) clearInterval(timer);
+    }, 1);
+    try {
+        await team(
+            [a1 as never],
+            [b1 as never],
+            { kit: { melee: [1231] }, neverSkull: false },
+            { kit: { melee: [1231] } },
+            15,
+            l => logs.push(l),
+            () => curTick >= 25,
+            { a: 'pair', b: 'pair' },
+            10,
+            undefined,
+            3,
+            { offReads: 6, holdBelow: 0.7, holdTicks: 300 },
+        );
+        // Should enter fightPlayer once (not stop & re-enter every tick in a spin-loop).
+        const stoppedLines = logs.filter(l => /\[Ours1\] PK stopped against Skulled1/.test(l));
+        expect(stoppedLines.length).toBeLessThanOrEqual(1);
     } finally {
         clearInterval(timer);
     }

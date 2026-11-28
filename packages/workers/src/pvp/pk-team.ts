@@ -32,6 +32,34 @@ export function resolveTeamKit(kit: string | undefined): { switches: Kit; option
     return { switches: kitSwitches(kit), options: kitOptions(kit) };
 }
 
+/** Builds effective FightOptions for one team side; gang-bait-3plus1 options sit above profile defaults and below explicit SPAR_*_OPTS. */
+export function buildTeamSideOptions(opts: {
+    profileName: string;
+    extraJson?: string;
+    kit?: string;
+    cap: number;
+    neverSkull?: boolean;
+    mixSeed?: number;
+}): FightOptions {
+    const resolved = resolveTeamKit(opts.kit);
+    const isBaitKit = opts.kit === 'gang-bait-3plus1';
+    const explicitExtra = isBaitKit && opts.extraJson ? JSON.parse(opts.extraJson) as Record<string, unknown> : undefined;
+    const mergedExtra = isBaitKit ? JSON.stringify({ ...resolved.options, ...(explicitExtra ?? {}) }) : opts.extraJson;
+    const scenario = isBaitKit ? {} : resolved.options;
+    return {
+        ...sparOptions(opts.profileName, mergedExtra, resolved.switches, opts.cap, scenario),
+        ...(opts.neverSkull ? { neverSkull: true, protectItem: true } : {}),
+        ...(opts.mixSeed !== undefined ? { mixSeed: opts.mixSeed } : {}),
+    };
+}
+
+/** Prefers unheld targets over prayer-drain-held targets whenever any unheld candidate is available. */
+export function preferUnheldTargets<X>(live: readonly X[], isHeld?: (x: X) => boolean): readonly X[] {
+    if (!isHeld) return live;
+    const unheld = live.filter(x => !isHeld(x));
+    return unheld.length ? unheld : live;
+}
+
 /** Maximum simultaneous attackers assigned to a wounded target before overflow rolls to the secondary focus (eliminates 24v49 overkill waste). */
 export function maxOverkillAttackers(hpFrac: number): number {
     if (hpFrac <= 0) return 0;
@@ -222,7 +250,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                         wornIds: seen.worn,
                     });
                 }
-                if (activeTarget && sideDagger.held(activeTarget, now)) {
+                if (activeTarget && skullGuard && sideDagger.held(activeTarget, now)) {
                     if (holdCancelledFor !== activeTarget) {
                         holdCancelledFor = activeTarget;
                         const me = st.player;
@@ -233,6 +261,18 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 }
             }
         });
+        const hasUnheldAlternative = (currentFoe: Session): boolean => {
+            if (!sideDagger) return false;
+            const nowTick = s.tick();
+            const curView = s.sdk.getState()?.nearbyPlayers ?? [];
+            return foes.some(f => {
+                if (f === currentFoe || isOut(f) || (skip.get(f) ?? -100) >= nowTick) return false;
+                const p = curView.find(v => v.name.toLowerCase() === f.name.toLowerCase());
+                if (!p || isDying(observePlayer(s.client, p.index))) return false;
+                if (skullGuard && !skullGuard.canAttackSafely(f.name, nowTick)) return false;
+                return !sideDagger.held(f.name, nowTick);
+            });
+        };
         try {
         while (!ended() && !isOut(s)) {
             // The enemy with the lowest health bar in view, the nearest on a tie.
@@ -241,8 +281,9 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 .map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) }))
                 .filter(x => x.p && !isDying(observePlayer(s.client, x.p.index)));
             const live = skullGuard ? liveAll.filter(x => skullGuard.canAttackSafely(x.f.name, s.tick())) : liveAll;
+            const pool = preferUnheldTargets(live, sideDagger ? x => sideDagger.held(x.f.name, s.tick()) : undefined);
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
-            const pick = pickEnemy(live, foes[member], picks[key], health, teamFocus ? {
+            const pick = pickEnemy(pool, foes[member], picks[key], health, teamFocus ? {
                 focus: teamFocus,
                 memberName: s.name,
                 nameOf: x => x.f.name,
@@ -269,7 +310,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 stopOnDying: teamFocus !== undefined && liveAll.length > 1,
                 allies,
                 cap: Math.max(1, cap - (s.tick() - start)),
-                stop: () => ended() || isOut(pick.f) || refusedAt > began || (!skullGuard && !!sideDagger?.held(pick.f.name, s.tick())),
+                stop: () => ended() || isOut(pick.f) || refusedAt > began || (!!sideDagger?.held(pick.f.name, s.tick()) && hasUnheldAlternative(pick.f)),
                 log: l => log(`[${s.name}] ${l}`),
             });
             activeTarget = null;
@@ -337,13 +378,14 @@ export async function runPkTeamCli(
     const options = (sideB: boolean, group: number) => (member: number): FightOptions => {
         const kits = (sideB ? kitB : kitA)?.split('+').filter(Boolean) ?? [];
         const kit = kits.length ? kits[member % kits.length] : undefined;
-        const resolved = resolveTeamKit(kit);
-        const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + (sideB ? 1 : 0) };
-        return {
-            ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, resolved.switches, cap, resolved.options),
-            ...(!sideB && neverSkullA ? { neverSkull: true, protectItem: true } : {}),
-            ...seed,
-        };
+        return buildTeamSideOptions({
+            profileName: sideB ? nameB : nameA,
+            extraJson: sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS,
+            kit,
+            cap,
+            neverSkull: !sideB && neverSkullA,
+            mixSeed: env.BENCH_SEED === undefined ? undefined : Number(env.BENCH_SEED) * 1000 + group * 2 + (sideB ? 1 : 0),
+        });
     };
     let halted: string | undefined;
     const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
