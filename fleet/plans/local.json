@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795838587650,
+ "at": 1795838656036,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -324,7 +324,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "runeshop",
     "3000"
    ],
    "env": {
@@ -361,18 +361,27 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 STALL_TICKS=255 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 PRODUCT_TARGET=229 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=229 STALL_TICKS=255 -- cooking food"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "17",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "17"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -429,15 +438,15 @@
    "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 PRODUCT_TARGET=229 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=229 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
+   "goal": "campaign:haggis:item:379",
    "role": "helper"
   },
   {
