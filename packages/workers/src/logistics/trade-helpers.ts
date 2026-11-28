@@ -878,6 +878,9 @@ export function releaseWatch(read: () => string, pin: string | undefined, { now 
     };
 }
 
+export const TAKER_WAIT_POLL_MS = 250;
+export const TRADE_REQUEST_TIMEOUT_MS = 8_000;
+
 export async function waitForGiver(
     order: Order,
     { ready, failed, now = Date.now, sleep = (ms: number) => Bun.sleep(ms), maxMs = Number(process.env.TAKER_WAIT_MS ?? 30 * 60_000) }:
@@ -888,7 +891,7 @@ export async function waitForGiver(
         if (ready()) return 'ready';
         if (failed()) return 'failed';
         if (now() >= deadline) return 'deadline';
-        await sleep(2000);
+        await sleep(Math.min(TAKER_WAIT_POLL_MS, Math.max(1, deadline - now())));
     }
 }
 
@@ -1083,6 +1086,13 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
         void s.ended.then(() => { ended = true; });
         for (let round = 0; !ended && left() > 0; round++) {
             if (gone()) throw Error('partner failed: no trade');
+            // Avoid sending trade requests and pacing when the partner is not yet visible on screen.
+            if (typeof s.sdk.findNearbyPlayer === 'function' && !s.sdk.findNearbyPlayer(peer)) {
+                await wait(s, () => ended || gone() || left() <= 0 || !!s.sdk.findNearbyPlayer(peer), { timeoutTicks: 10 });
+                if (ended || left() <= 0) break;
+                if (gone()) throw Error('partner failed: no trade');
+                if (!s.sdk.findNearbyPlayer(peer)) continue;
+            }
             progress.uncertain = true;
             result = await s.bot.trade(peer, {
                 accept: offer => {
@@ -1095,7 +1105,7 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
                     } catch (error) { capacityDetail = String(error); }
                     return false;
                 },
-                requestTimeout: Math.min(30_000, left()), timeout: Math.min(60_000, left()),
+                requestTimeout: Math.min(TRADE_REQUEST_TIMEOUT_MS, left()), timeout: Math.min(60_000, left()),
             });
             if (!requestRefusal(result) || !still()) break;
             progress.uncertain = false;

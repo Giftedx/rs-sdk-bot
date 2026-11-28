@@ -304,8 +304,8 @@ export async function trainChickens(
     if (!Number.isSafeInteger(cap) || cap < 1) throw Error('invalid training cap');
     const rawTarget = options.rawChicken ?? 0;
     if (!Number.isSafeInteger(rawTarget) || rawTarget < 0 || rawTarget > 12) throw Error('raw chicken target must be0..12');
-    await waitTicks(s, 3);
     const state = () => s.sdk.getState();
+    if (!state()?.player) await waitUntil(s, () => !!state()?.player, { timeoutTicks: 5 });
     const pos = () => state()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const combat = () => pos()?.combatLevel ?? 0;
@@ -394,7 +394,7 @@ export async function trainChickens(
     try {
         if (goal() && rawTarget === 0) return { ok: true, combat: combat(), ticks: 0, kills: 0, hpMin, preserved: true };
         if (!(await s.bot.openBank()).success) throw Error('training bank unavailable');
-        await waitTicks(s, 2);
+        if (!state()?.bank?.isOpen) await waitUntil(s, () => !!state()?.bank?.isOpen, { timeoutTicks: 5 });
         const before = assets();
         const { gearLevelWatch, readSkillLevels, reconcileCombatLoadout } = loadGearMod();
         const levels = readSkillLevels(n => s.sdk.getSkill(n));
@@ -542,10 +542,12 @@ export async function trainChickens(
             throw Error('training pickaxe not returned to inventory');
         }
         if (!(await s.bot.openBank()).success) throw Error('training return bank unavailable');
-        await waitTicks(s, 2);
+        if (!state()?.bank?.isOpen) await waitUntil(s, () => !!state()?.bank?.isOpen, { timeoutTicks: 5 });
         const tool = state()?.bank.items.find(i => i.id === 1265);
-        if (tool && !s.sdk.getInventory().some(i => i.id === 1265)) await s.bot.withdrawItem(tool, 1);
-        await waitTicks(s, 2);
+        if (tool && !s.sdk.getInventory().some(i => i.id === 1265)) {
+            await s.bot.withdrawItem(tool, 1);
+            if (!s.sdk.getInventory().some(i => i.id === 1265)) await waitUntil(s, () => s.sdk.getInventory().some(i => i.id === 1265), { timeoutTicks: 5 });
+        }
         const after = assets();
         const preserved = [...before].every(([id, n]) => (after.get(id) ?? 0) >= n);
         await s.bot.closeBank();

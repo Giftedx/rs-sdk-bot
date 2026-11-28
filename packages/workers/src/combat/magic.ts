@@ -886,6 +886,7 @@ export async function runSplash(
                 continue;
             }
             const { target: cow, spell } = pick;
+            const castTick = s.tick();
             const before = xp();
             const runes = runesHeld();
             const said = refusals();
@@ -895,7 +896,9 @@ export async function runSplash(
                 casts++;
                 quiet = s.tick();
                 rest.set(`${cow.index}:${spell.component}`, s.tick() + WEAK_TICKS);
-                await waitTicks(s, CAST_GAP);
+                // %action_delay = map_clock + 5 (player_magic.rs2:188); count ticks already elapsed during cast confirmation.
+                const rem = CAST_GAP - (s.tick() - castTick);
+                if (rem > 0) await waitTicks(s, rem);
             } else if (refusals() > said) {
                 refused++;
                 rest.set(`${cow.index}:${spell.component}`, s.tick() + WEAK_TICKS);

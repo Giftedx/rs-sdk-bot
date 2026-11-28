@@ -1490,10 +1490,11 @@ test('entry travels from an owned location and stages banked melee weapon and fo
         expect(selectGiantWeapon([{id:1333,count:1},{id:1331,count:1}],99)).toBe(1333);
     }finally{f.dispose();}
 });
-test('surface config names Giant117 and Ardougne south bank, leaving the druid target intact',()=>{
+test('surface config names Giant117 and Ardougne south bank, routing druid to non-Wilderness Taverley Dungeon',()=>{
     expect(CONFIGS.giant!.npc.test('Giant')).toBe(true);expect(CONFIGS.giant!.npc.test('Hill Giant')).toBe(true);
     expect(CONFIGS.giant!.spot).toEqual({x:2545,z:3144});expect(CONFIGS.giant!.bankSpot).toEqual({x:2655,z:3283});
-    expect(CONFIGS.druid!.spot).toEqual({x:3115,z:9928});expect(CONFIGS.druid!.bankSpot).toEqual({x:3092,z:3496});
+    expect(CONFIGS.druid!.spot).toEqual({x:2933,z:9849});expect(CONFIGS.druid!.bankSpot).toEqual({x:2946,z:3368});
+    expect(CONFIGS.druid!.taverley).toBe(true);
 });
 test('Herb drops are picked up and banked with exact credits, including carried outputs staged before combat',async()=>{
     expect(CONFIGS.giant!.drops.test('Herb')).toBe(true);

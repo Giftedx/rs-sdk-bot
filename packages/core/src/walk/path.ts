@@ -64,7 +64,7 @@ interface HunterSquare { x: number; z: number; r: number }
 
 export const DEFAULT_RUN_THRESHOLD = 20;
 const RUN_TOGGLE_COOLDOWN = 2;
-const DETOUR = 15, HOLD = 50, SHORT = 4;
+const DETOUR = 15, HOLD = 30, SHORT = 4;
 const d8 = (a: PathTile, b: PathTile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 const tileKey = (x: number, z: number) => (x + 131072) * 262144 + (z + 131072);
 // Open chests and cupboards are not route edges. Legacy path adapters omit names;

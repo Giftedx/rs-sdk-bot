@@ -1073,7 +1073,7 @@ const COINS = 995;
 const BONES = 526;
 
 export function roamTarget<T extends { index: number; distance: number }>(account: string, free: readonly T[], company: boolean): T | undefined {
-    if (!company) return free[0];
+    if (!company) return [...free].sort((a, b) => a.distance - b.distance)[0];
     const offset = (index: number) => {
         let h = 2166136261;
         for (const c of `${account}:${index}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
@@ -1229,7 +1229,7 @@ export async function runGiants(
             eaten += Math.max(0, before - heldFood());
             if (heldFood() < before) {
                 lastEat = s.tick();
-                await waitUntil(s, () => hp() > beforeHp || over(), { timeoutTicks: 3 });
+                if (hp() <= beforeHp) await waitUntil(s, () => hp() > beforeHp || over(), { timeoutTicks: 3 });
                 return true;
             }
             if (over()) return true;
@@ -1609,6 +1609,7 @@ export async function runGiants(
             let z = target.tileZ ?? target.z;
             let observedXp = beforeXp;
             let gone = false;
+            let goneAt = 0;
             let dry = false;
             let released = false;
             let hungry = false;
@@ -1628,7 +1629,10 @@ export async function runGiants(
                 if (current) {
                     x = current.tileX ?? current.x;
                     z = current.tileZ ?? current.z;
-                } else gone = true;
+                } else if (!gone) {
+                    gone = true;
+                    goneAt = s.tick();
+                }
                 if (selectedXp() > observedXp) {
                     observedXp = selectedXp();
                     lastProgress = s.tick();
@@ -1639,17 +1643,18 @@ export async function runGiants(
                     dry = true;
                     break;
                 }
-                if (roam && !gone && s.tick() - lastXp >= 40) {
-                    retry.set(target.index, s.tick() + 50);
+                // Release stolen, stalled, or drop-missed targets across all sites (including GIANT_SITE) rather than idling to noProgress.
+                if (selectedXp() === beforeXp && anothersFight(current, selfSlot)) {
+                    retry.set(target.index, s.tick() + 15);
                     released = true;
                     break;
                 }
-                if (roam && selectedXp() === beforeXp && anothersFight(current, selfSlot)) {
-                    retry.set(target.index, s.tick() + 20);
+                if (!gone && s.tick() - lastXp >= (roam ? 40 : 25)) {
+                    retry.set(target.index, s.tick() + (roam ? 50 : 30));
                     released = true;
                     break;
                 }
-                if (roam && gone) {
+                if (gone && (roam || selectedXp() === beforeXp || s.tick() - goneAt >= 4)) {
                     released = true;
                     break;
                 }
@@ -1669,7 +1674,7 @@ export async function runGiants(
                 const amount = fresh(id);
                 const item = state()?.groundItems.find(i => i.id === id && i.x === x && i.z === z);
                 const before = held(id);
-                if (!item || !(await s.bot.pickupItem(item)).success || !(await waitUntil(s, () => held(id) === before + amount, { timeoutTicks: 10 }))) {
+                if (!item || !(await s.bot.pickupItem(item)).success || (held(id) < before + amount && !(await waitUntil(s, () => held(id) === before + amount, { timeoutTicks: 10 })))) {
                     throw Error(`no ${label} progress: credited loot pickup mismatch`);
                 }
                 picked[id] = (picked[id] ?? 0) + amount;
@@ -1804,7 +1809,7 @@ export const TAVERLEY_ROUTE = {
 
 export function isNonWildernessGatherGoal(x: number, z: number): boolean {
     if (x >= 2944 && x <= 3391 && z >= 3520 && z < 6400) return false;
-    if (x >= 2944 && x <= 3391 && z >= 9920) return false;
+    if (x >= 2944 && x <= 3391 && z >= 9918) return false;
     return true;
 }
 
@@ -1940,9 +1945,10 @@ export const CONFIGS: Record<
 > = {
     druid: {
         npc: /^chaos druid$/i,
-        spot: { x: 3115, z: 9928 },
-        bankSpot: { x: 3092, z: 3496 },
+        spot: { x: 2933, z: 9849 },
+        bankSpot: { x: 2946, z: 3368 },
         drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut |half of a key)/i,
+        taverley: true,
     },
     trooper: {
         npc: /^khazard trooper$/i,
@@ -2112,12 +2118,13 @@ export async function runGenericCombatSession(
         return { ok: false, kills: 0, itemsLooted: 0, bankTrips: 0, walkTicks: 0, detail: `no combat progress: UNTIL_ITEM ${opts.untilItemName} is no drop that target ${TARGET_KEY} picks up` };
     }
     const untilId = untilItem ? objId(opts.untilItemName!.trim().toLowerCase()) : undefined;
-    if (TARGET_KEY !== 'druid' && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
+    const allowWild = env.ALLOW_WILDERNESS === '1';
+    if (!allowWild && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
         throw Error(`Wilderness destination forbidden for ${TARGET_KEY}`);
     }
     const stopCheck = () => !!opts.stop?.();
     const dungeonTravel =
-        (TARGET_KEY === 'druid' || dungeonGiant) && !alch?.route
+        dungeonGiant && !alch?.route
             ? createEdgevilleTravel(ownedSession)
             : targetConf.taverley && !alch?.route
                 ? createTaverleyTravel()
@@ -2206,26 +2213,26 @@ export async function runGenericCombatSession(
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                     await s.bot.withdrawItem(TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID, 1);
-                    await waitTicks(s, 1);
+                    if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) await waitTicks(s, 1);
                 }
                 const shield = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID);
                 if (!shield) throw Error('Anti-dragon shield (1540) required');
                 await s.bot.closeInterface();
                 await s.bot.equipItem(shield);
-                await waitTicks(s, 1);
+                if (!(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) await waitTicks(s, 1);
                 await s.bot.openBank();
-                await waitTicks(s, 1);
+                if (!s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
             }
             if (targetConf.dustyKey && !s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) {
                 await s.bot.withdrawItem(TAVERLEY_ROUTE.DUSTY_KEY_ID, 1);
-                await waitTicks(s, 1);
+                if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) await waitTicks(s, 1);
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) throw Error('Dusty key (1590) required');
             }
             if (targetConf.requireTelegrab) {
                 if (countItems(s as Session, /^law rune$/i) < 10) await s.bot.withdrawItem(563, 25);
                 const hasAirStaff = (s.sdk.getState()?.equipment ?? []).some(i => i.id === 1381 || i.id === 1397 || i.id === 1405);
                 if (!hasAirStaff && countItems(s as Session, /^air rune$/i) < 10) await s.bot.withdrawItem(556, 25);
-                await waitTicks(s, 1);
+                if (!s.sdk.getInventory().some(i => i.id === 563) || (!hasAirStaff && !s.sdk.getInventory().some(i => i.id === 556))) await waitTicks(s, 1);
                 const hasLaw = s.sdk.getInventory().some(i => i.id === 563);
                 const hasAir = hasAirStaff || s.sdk.getInventory().some(i => i.id === 556);
                 if (!hasLaw || !hasAir) throw Error('Law and Air runes required for Telekinetic Grab');
@@ -2236,7 +2243,7 @@ export async function runGenericCombatSession(
             bankTrips++;
             justBanked = true;
             await s.bot.closeInterface();
-            await waitTicks(s, 1);
+            if (s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
             if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
             return true;
@@ -2318,8 +2325,8 @@ export async function runGenericCombatSession(
                 continue;
             }
             if (invSpace > 0) {
-                const candidate = effectiveTelegrab || alch ? s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0] : undefined;
-                const r = effectiveTelegrab || alch ? (candidate ? await loot.pickup(candidate) : { success: false }) : await s.bot.pickupItem(conf.drops);
+                const candidate = s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0];
+                const r = candidate ? (effectiveTelegrab || alch ? await loot.pickup(candidate) : await s.bot.pickupItem(candidate)) : { success: false };
                 if (r.success) {
                     itemsLooted++;
                     if (alch && itemsLooted >= alch.maximum) break;
@@ -2327,7 +2334,6 @@ export async function runGenericCombatSession(
                         await bankUntil();
                         break;
                     }
-                    await waitTicks(s, 1);
                     if (untilInPack()) break;
                     continue;
                 }
@@ -2337,14 +2343,14 @@ export async function runGenericCombatSession(
                     if (s.sdk.getInventory().some(i => conf.drops.test(i.name))) await bankUntil();
                     break;
                 }
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             if (maximum !== undefined && kills >= maximum) break;
             const selfSlot = (s.client as { selfSlot?: number }).selfSlot;
             const monster = genericCombatNpc(TARGET_KEY, s.sdk.getState()?.nearbyNpcs ?? [], selfSlot);
             if (!monster) {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             const admit = admissionGuard?.beforeAttack(justBanked, monster);
@@ -2365,7 +2371,7 @@ export async function runGenericCombatSession(
                     const st = s.sdk.getState();
                     const npc = st?.nearbyNpcs.find(n => n.index === monster.index);
                     if (npc && ((st?.player?.combat?.targetType === 'npc' && st.player.combat.targetIndex === monster.index) || npc.inCombat)) engaged = true;
-                    const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks);
+                    const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks, 2);
                     if (outcome.done) {
                         dead = outcome.dead;
                         break;
@@ -2391,13 +2397,10 @@ export async function runGenericCombatSession(
                     }
                     await waitTicks(s, 1);
                 }
-                if (dead) {
-                    kills++;
-                    await waitTicks(s, 1);
-                }
+                if (dead) kills++;
                 if (leaveFight) await bankUntil();
             } else {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
             }
         }
         if (untilInPack()) untilDeposited = true;
@@ -2494,7 +2497,8 @@ export async function runMeleeGatherCli(
         await finish([], false, `no combat progress: UNTIL_ITEM ${env.UNTIL_ITEM} is no drop that target ${TARGET_KEY} picks up`);
         return;
     }
-    if (TARGET_KEY !== 'cow' && TARGET_KEY !== 'druid' && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
+    const allowWild = env.ALLOW_WILDERNESS === '1';
+    if (!allowWild && TARGET_KEY !== 'cow' && !dungeonGiant && !isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)) {
         throw Error(`Wilderness destination forbidden for ${TARGET_KEY}`);
     }
     if (!botName) throw Error('Usage: aio-fighter <account> <target> [CAP] [KEY=value...]');
@@ -2581,7 +2585,7 @@ export async function runMeleeGatherCli(
             return;
         }
     }
-    const dungeonTravel = (TARGET_KEY === 'druid' || dungeonGiant) && !alch?.route ? createEdgevilleTravel(ownedSession) : targetConf.taverley && !alch?.route ? createTaverleyTravel() : undefined;
+    const dungeonTravel = dungeonGiant && !alch?.route ? createEdgevilleTravel(ownedSession) : targetConf.taverley && !alch?.route ? createTaverleyTravel() : undefined;
     const cleanupScope = (potionPolicy || maximum !== undefined) && TARGET_KEY !== 'cow' ? combatPotionSession(ownedSession, cowStop.stop, CAP) : undefined;
     const s = cleanupScope ?? ownedSession;
     if (TARGET_KEY === 'cow') {
@@ -2711,26 +2715,26 @@ export async function runMeleeGatherCli(
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                     await s.bot.withdrawItem(TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID, 1);
-                    await waitTicks(s, 1);
+                    if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) await waitTicks(s, 1);
                 }
                 const shield = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID);
                 if (!shield) throw Error('Anti-dragon shield (1540) required');
                 await s.bot.closeInterface();
                 await s.bot.equipItem(shield);
-                await waitTicks(s, 1);
+                if (!(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) await waitTicks(s, 1);
                 await s.bot.openBank();
-                await waitTicks(s, 1);
+                if (!s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
             }
             if (targetConf.dustyKey && !s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) {
                 await s.bot.withdrawItem(TAVERLEY_ROUTE.DUSTY_KEY_ID, 1);
-                await waitTicks(s, 1);
+                if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) await waitTicks(s, 1);
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) throw Error('Dusty key (1590) required');
             }
             if (targetConf.requireTelegrab) {
                 if (countItems(s as Session, /^law rune$/i) < 10) await s.bot.withdrawItem(563, 25);
                 const hasAirStaff = (s.sdk.getState()?.equipment ?? []).some(i => i.id === 1381 || i.id === 1397 || i.id === 1405);
                 if (!hasAirStaff && countItems(s as Session, /^air rune$/i) < 10) await s.bot.withdrawItem(556, 25);
-                await waitTicks(s, 1);
+                if (!s.sdk.getInventory().some(i => i.id === 563) || (!hasAirStaff && !s.sdk.getInventory().some(i => i.id === 556))) await waitTicks(s, 1);
                 const hasLaw = s.sdk.getInventory().some(i => i.id === 563);
                 const hasAir = hasAirStaff || s.sdk.getInventory().some(i => i.id === 556);
                 if (!hasLaw || !hasAir) throw Error('Law and Air runes required for Telekinetic Grab');
@@ -2743,7 +2747,7 @@ export async function runMeleeGatherCli(
             bankTrips++;
             justBanked = true;
             await s.bot.closeInterface();
-            await waitTicks(s, 1);
+            if (s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
             if (!fed) throw Error(combatPackFull(s.sdk.getInventory()) ?? combatNoFood(TARGET_KEY, foodWant));
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
             return true;
@@ -2829,9 +2833,8 @@ export async function runMeleeGatherCli(
                 continue;
             }
             if (invSpace > 0) {
-                const candidate =
-                    effectiveTelegrab || alch ? s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0] : undefined;
-                const r = effectiveTelegrab || alch ? (candidate ? await loot.pickup(candidate) : { success: false }) : await s.bot.pickupItem(conf.drops);
+                const candidate = s.sdk.getState()?.groundItems.filter(i => conf.drops.test(i.name)).sort((a, b) => a.distance - b.distance)[0];
+                const r = candidate ? (effectiveTelegrab || alch ? await loot.pickup(candidate) : await s.bot.pickupItem(candidate)) : { success: false };
                 if (r.success) {
                     itemsLooted++;
                     if (alch && itemsLooted >= alch.maximum) break;
@@ -2839,7 +2842,6 @@ export async function runMeleeGatherCli(
                         await bankUntil();
                         break;
                     }
-                    await waitTicks(s, 1);
                     if (untilInPack()) break;
                     continue;
                 }
@@ -2849,7 +2851,7 @@ export async function runMeleeGatherCli(
                     if (s.sdk.getInventory().some(i => conf.drops.test(i.name))) await bankUntil();
                     break;
                 }
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             if (maximum !== undefined && kills >= maximum) break;
@@ -2857,7 +2859,7 @@ export async function runMeleeGatherCli(
             const selfSlot = (s.client as { selfSlot?: number }).selfSlot;
             const monster = genericCombatNpc(TARGET_KEY, s.sdk.getState()?.nearbyNpcs ?? [], selfSlot);
             if (!monster) {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             const admit = admissionGuard?.beforeAttack(justBanked, monster);
@@ -2878,7 +2880,7 @@ export async function runMeleeGatherCli(
                     const st = s.sdk.getState();
                     const npc = st?.nearbyNpcs.find(n => n.index === monster.index);
                     if (npc && ((st?.player?.combat?.targetType === 'npc' && st.player.combat.targetIndex === monster.index) || npc.inCombat)) engaged = true;
-                    const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks);
+                    const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks, 2);
                     if (outcome.done) {
                         dead = outcome.dead;
                         break;
@@ -2904,13 +2906,10 @@ export async function runMeleeGatherCli(
                     }
                     await waitTicks(s, 1);
                 }
-                if (dead) {
-                    kills++;
-                    await waitTicks(s, 1);
-                }
+                if (dead) kills++;
                 if (leaveFight) await bankUntil();
             } else {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
             }
         }
 

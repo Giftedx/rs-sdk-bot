@@ -7,9 +7,20 @@ import { topUpFareFloat, unpaidFaresNear } from './fare-float';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
 import { eatBeforeWalk, routeDangerText, routeHarm, stageFood } from './harm';
+import { leaveIkovArmadyl, needsIkovShinyKeyExit } from './ikov-exit';
+import { earnKaramjaFare, needsKaramjaFareEscape } from './karamja-fare';
 import { walkRoute } from './legs';
 import { leaveMineJail } from './mine-jail';
 import { leaveDeck } from './travel';
+
+// Tracks quest journals already inspected for a client session so repeated fallback walk attempts
+// do not reopen the same quest journal and replan identically on every target.
+const journalCheckedByClient = new WeakMap<object, Set<string>>();
+
+export function unreadJournalQuests(client: object | undefined, quests: readonly string[], stages: Readonly<Record<string, number>> | undefined): string[] {
+    const checked = client ? journalCheckedByClient.get(client) : undefined;
+    return quests.filter(q => stages?.[q] === undefined && !checked?.has(q));
+}
 
 // The account with no law rune: no teleport spell is castable, so a route planned for it keeps to the ground.
 export const withoutSpells = (a: Account): Account => ({ ...a, items: a.items.filter(i => i !== 'lawrune'), counts: { ...a.counts, lawrune: 0 } });
@@ -83,7 +94,7 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // The prayer probe may itself climb. Capture start and actor after it returns.
     const p = s.sdk.getState()?.player;
     if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };
-    const from = { x: p.worldX, z: p.worldZ, level: p.level };
+    let from = { x: p.worldX, z: p.worldZ, level: p.level };
     // A guarded first entry has already asked the server. A refusal cannot
     // become a global portal search, and missing publication is still unknown.
     const observedInside = from.level === 0 && from.x >= 2728 && from.x <= 2729 && from.z >= 3350 && from.z <= 3351;
@@ -116,17 +127,48 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     };
     let r = await plan(acct);
     // Quest varps never reach the client, so a gate that opens from a quest stage stays shut while the stage is unknown.
-    // With no route, the journals that name such a stage (guild-facts.ts JOURNAL_STAGES) are read and the trip planned once more.
+    // With no route, only unread journals that name such a stage (guild-facts.ts JOURNAL_STAGES) are read once per session,
+    // and the trip is replanned only when a stage value changed.
     if (!r && s.client) {
         const { refreshGuildEvidence, startedJournalQuests } = await import('../guild-observation');
-        const quests = startedJournalQuests(s.client);
-        if (quests.length) {
-            await refreshGuildEvidence(s as any, quests);
+        const unread = unreadJournalQuests(s.client, startedJournalQuests(s.client), acct.questStages);
+        if (unread.length) {
+            let checked = journalCheckedByClient.get(s.client);
+            if (!checked) {
+                checked = new Set<string>();
+                journalCheckedByClient.set(s.client, checked);
+            }
+            for (const q of unread) checked.add(q);
+            const prevStages = JSON.stringify(acct.questStages ?? {});
+            await refreshGuildEvidence(s as any, unread);
+            acct = accountForSdk(s.sdk);
+            if (opts.noJewelry) acct = withoutJewelry(acct);
+            const seen = acct.questStages ?? {};
+            if (JSON.stringify(seen) !== prevStages) r = await plan(acct);
+            console.log(`WALK_JOURNAL_REPLAN ${JSON.stringify({ quests: unread, stages: Object.fromEntries(unread.map(q => [q, seen[q] ?? null])), ok: !!r })}`);
+        }
+    }
+    // Pocket escapes that unlock a missing route item/fare when no route exists:
+    // 1. Temple of Ikov Armadyl room / McGrubor shack without Shiny key (85): fetch key at 2628,9859.
+    // 2. Karamja island with < 30 coins: earn 30 coins via Luthas's banana crate job at Musa Point.
+    if (!r && !opts.signal?.aborted && needsIkovShinyKeyExit(from, to, acct)) {
+        const escaped = await leaveIkovArmadyl(s, to, acct, () => opts.signal?.aborted === true);
+        if (escaped === 'picked') {
+            const after = s.sdk.getState()?.player;
+            if (after) from = { x: after.worldX, z: after.worldZ, level: after.level };
             acct = accountForSdk(s.sdk);
             if (opts.noJewelry) acct = withoutJewelry(acct);
             r = await plan(acct);
-            const seen = acct.questStages ?? {};
-            console.log(`WALK_JOURNAL_REPLAN ${JSON.stringify({ quests, stages: Object.fromEntries(quests.map(q => [q, seen[q] ?? null])), ok: !!r })}`);
+        }
+    }
+    if (!r && !opts.signal?.aborted && needsKaramjaFareEscape(from, to, acct.coins ?? 0)) {
+        const earned = await earnKaramjaFare(s, to, () => opts.signal?.aborted === true);
+        if (earned === 'earned') {
+            const after = s.sdk.getState()?.player;
+            if (after) from = { x: after.worldX, z: after.worldZ, level: after.level };
+            acct = accountForSdk(s.sdk);
+            if (opts.noJewelry) acct = withoutJewelry(acct);
+            r = await plan(acct);
         }
     }
     // A slow plan that found a route: the live logs show how often a walk waits on a cold search (tools/route-prewarm.ts

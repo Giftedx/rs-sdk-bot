@@ -2403,12 +2403,15 @@ type EdgeStep = ({ kind: 'walk'; tol: number } & CombatTile) | { kind: 'enter' |
 const inEdgeDungeon = (p: CombatTile) => p.z >= 9000;
 const inKnownEdgeDungeon = (p: CombatTile) => p.x >= 3070 && p.x <= 3145 && p.z >= 9830 && p.z <= 9950;
 
-export function edgevilleRoute(from: CombatTile, to: CombatTile, target: 'druid' | 'giant', tol = 2): EdgeStep[] {
+export function edgevilleRoute(from: CombatTile, to: CombatTile, target: 'druid' | 'giant', tol = 2, allowWilderness = false): EdgeStep[] {
     if (from.level !== 0 || to.level !== 0) {
         throw Error(`combat travel needs observed native ground (level !== 0: from=${from.level} to=${to.level})`);
     }
     if (![from.x, from.z, to.x, to.z, tol].every(Number.isSafeInteger) || tol < 0) {
         throw Error('combat travel needs observed native ground');
+    }
+    if (!allowWilderness && to.x >= 2944 && to.x <= 3391 && (to.z >= 9918 || (to.z >= 3520 && to.z < 6400))) {
+        throw Error(`Wilderness destination forbidden in Edgeville dungeon route: ${to.x},${to.z}`);
     }
     const goal: EdgeStep = { kind: 'walk', ...to, tol };
     if (inEdgeDungeon(from) === inEdgeDungeon(to)) return [goal];
@@ -2417,9 +2420,9 @@ export function edgevilleRoute(from: CombatTile, to: CombatTile, target: 'druid'
     }
     const point = (x: number, z: number, t = 1): EdgeStep => ({ kind: 'walk', x, z, level: 0, tol: t });
     if (!inEdgeDungeon(from)) {
-        return [point(3097, 3468), { kind: 'enter' }, ...(target === 'druid' ? [point(3131, 9916), point(3131, 9921)] : []), goal];
+        return [point(3097, 3468), { kind: 'enter' }, ...(target === 'druid' && allowWilderness ? [point(3131, 9916), point(3131, 9921)] : []), goal];
     }
-    return [...(target === 'druid' && from.z >= 9919 ? [point(3131, 9921), point(3131, 9916)] : []), point(3096, 9867), { kind: 'exit' }, goal];
+    return [...(from.z >= 9918 ? [point(3131, 9921), point(3131, 9916)] : []), point(3096, 9867), { kind: 'exit' }, goal];
 }
 
 export function createEdgevilleTravel(original: CombatSession) {
@@ -2549,7 +2552,6 @@ export function createEdgevilleTravel(original: CombatSession) {
                 }, { timeoutTicks: 12 }))) {
                     throw Error('combat travel animation did not settle');
                 }
-                await waitTicks(s, 3);
                 guard();
             }
             return near(to, tol);
@@ -2727,7 +2729,6 @@ export async function runCombatBankProfile(
             const actual = await p.run(amount, j.cap - j.returnTicks - (s.tick() - start), stop);
             completed += actual ?? amount;
             trips++;
-            await waitTicks(s, 3);
             await travel(p.bank, true);
             await secure(true);
         }

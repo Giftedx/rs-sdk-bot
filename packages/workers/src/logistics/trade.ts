@@ -1166,11 +1166,23 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
             const exited = await leaveElementalWorkshop(s);
             if (exited && !exited.ok) throw Error(`elemental workshop exit: ${exited.reason} ${exited.detail}`);
             await exitLumberYard(s);
+            // Signal a waiting same-side taker as soon as the giver is near the meet so taker login overlaps with
+            // final approach and bank withdrawal instead of leaving the giver idle at the bank.
+            let readyMarked = false;
+            const p0 = s.sdk.getState()?.player;
+            if (role === 'from' && order.takerWaits && p0 && p0.level === tile.level && Math.max(Math.abs(p0.worldX - tile.x), Math.abs(p0.worldZ - tile.z)) <= 30) {
+                markGiverReady(REPO_ROOT, order.id);
+                readyMarked = true;
+            }
             const there = await walkTarget(s, tile, false, undefined, { noJewelry: true }) as Outcome;
             if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
-            await s.bot.walkTo(tile.x, tile.z, 0);
+            const p1 = s.sdk.getState()?.player;
+            if (!p1 || p1.worldX !== tile.x || p1.worldZ !== tile.z) await s.bot.walkTo(tile.x, tile.z, 0);
+            if (role === 'from' && order.takerWaits && !readyMarked) {
+                markGiverReady(REPO_ROOT, order.id);
+                readyMarked = true;
+            }
             if (role === 'from') await prepareFleetSender(s, order, progress);
-            if (role === 'from' && order.takerWaits) markGiverReady(REPO_ROOT, order.id);
             takerWatch?.arrived();
             await performFleetTransfer(s, order, role, progress, { gone: () => failed() || releaseMoved() || !!takerWatch?.why() });
         });

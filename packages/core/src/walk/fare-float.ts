@@ -9,7 +9,7 @@ import type { Walker } from '../walk-leg';
 
 // DETOUR_PAD: the box of goTo's WALK_DETOUR check. FLOAT_PAD: the tighter box of the float, so a fare well off the walk
 // (a Shantay carpet south of Al Kharid on a walk from the Al Kharid bank to Varrock) takes no coins out.
-export const FLOAT_BANK_TILES = 6, FLOAT_WALK_TILES = 30, DETOUR_PAD = 40, FLOAT_PAD = 15;
+export const FLOAT_BANK_TILES = 12, FLOAT_WALK_TILES = 30, DETOUR_PAD = 40, FLOAT_PAD = 25;
 const cheb = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 // Paid edges (travel.ts: tolls, boats, carts) inside the box of a walk that this account cannot pay now.

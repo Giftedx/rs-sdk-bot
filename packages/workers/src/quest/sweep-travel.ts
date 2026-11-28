@@ -855,15 +855,13 @@ export async function prayBefore(s: Session, world: World, quest: string): Promi
     return prayerShort(points(), level, wanted) ? `prayer points ${points()} of ${level} after the Seers' Village altar` : null;
 }
 
-// Whether the straight line between two surface tiles enters the Wilderness (x 2944-3391, z 3520-3967 on the
-// surface). The corridor walk follows that line, and a dungeon goal walked as a surface tile from Lumbridge went into
-// Wilderness level 56; such a goal goes to the world router, which keeps to its danger rule.
+// Whether the straight line between two tiles enters surface Wilderness (z 3520..3967) or Edgeville Dungeon Wilderness (z 9918..12799).
 export const WILDERNESS = { minX: 2944, maxX: 3391, minZ: 3520, maxZ: 3967 };
 export function crossesWilderness(a: { x: number; z: number }, b: { x: number; z: number }): boolean {
     const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.z - a.z), 1);
     for (let i = 0; i <= n; i++) {
         const x = Math.round(a.x + ((b.x - a.x) * i) / n), z = Math.round(a.z + ((b.z - a.z) * i) / n);
-        if (x >= WILDERNESS.minX && x <= WILDERNESS.maxX && z >= WILDERNESS.minZ && z <= WILDERNESS.maxZ) return true;
+        if (x >= WILDERNESS.minX && x <= WILDERNESS.maxX && ((z >= WILDERNESS.minZ && z <= WILDERNESS.maxZ) || (z >= 9918 && z < 12800))) return true;
     }
     return false;
 }
@@ -1120,93 +1118,126 @@ export async function buyFromShops(
         return { x: q?.worldX ?? 0, z: q?.worldZ ?? 0, level: q?.level ?? 0 };
     };
     const left = [...buys];
-    while (left.length) {
-        const b = left.sort((x, y) => travelDistance(here(), x.tile) - travelDistance(here(), y.tile)).shift()!;
-        const before = held(b.id);
-        const target = before + b.count;
-        const sellers = [b, ...(b.alts ?? [])];
-        let walked: { ok: boolean; reason?: string; detail?: string } = { ok: false };
-        let tried = 0;
-        for (const [k, c] of sellers.entries()) {
-            if (held(b.id) >= target) break;
-            const cure = observeScorpionTravel && scorpionCureJourney(here(), { ...b, ...c });
-            if (!cure && travelDistance(here(), c.tile) > FAR_SELLER) {
-                console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({ npc: c.npc, tile: c.tile, from: here() })}`);
-                continue;
-            }
-            const guild = magicGuildApproach(c.tile, here(), s.sdk.getSkill('Magic')?.level ?? 1);
-            if (guild.refused || guild.door) {
-                walked = guild.door ? await enterMagicGuild(s, world, guild.door) : { ok: false, reason: 'precondition', detail: guild.refused };
-                console.log(`QUEST_SWEEP_GUILD ${JSON.stringify({ npc: c.npc, door: guild.door, at: here(), ...walked })}`);
-                if (!walked.ok) continue;
-            }
-            const coinsBeforeTravel = held(COINS);
-            const from = here();
-            if (cure) {
-                await approach(s, world, c.tile, 'scorpion');
-                walked = { ok: true };
-            } else {
-                walked = await walkFar(s, world, c.tile, 100);
-            }
-            if (!walked.ok) continue;
-            if (observeScorpionTravel && b.id === 175) {
-                console.log(`QUEST_SWEEP_TRAVEL_COST ${JSON.stringify({ phase: 'shop', item: b.id, coinsBefore: coinsBeforeTravel, coins: held(COINS), from, at: here(), observed: true })}`);
-            }
-            tried++;
-            const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.id === c.npcId).sort((x: any, y: any) => x.distance - y.distance)[0];
-            if (!npc) return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
-            const shopOpen = () => waitUntil(s, () => !!st()?.shop?.isOpen, { timeoutTicks: 10 });
-            const talked = async () => {
-                const choices = SHOP_TALK[c.npcId]!;
-                const t: any = await s.bot.talkTo(npc);
-                if (!t?.success) return false;
-                for (let i = 0, next = 0; i < 30 && !st()?.shop?.isOpen; i++) {
-                    const dlg: any = s.sdk.getDialog();
-                    if (dlg?.isOpen && !dlg.isWaiting) {
-                        const opts: any[] = dlg.options ?? [];
-                        const idx = next < choices.length && opts.some((o) => choices[next]!.test(o.text)) ? next : undefined;
-                        if (idx !== undefined) {
-                            await s.sdk.clickDialogByText(choices[idx]!);
-                            next = idx + 1;
-                        } else {
-                            await s.sdk.sendClickDialog(0);
-                        }
+    let openNpcId: number | null = null;
+    try {
+        while (left.length) {
+            // Keep buying from the currently open shop first to avoid closing, re-walking, and reopening.
+            const nextIdx: number = openNpcId !== null && st()?.shop?.isOpen ? left.findIndex(x => x.npcId === openNpcId) : -1;
+            const b: Buy = nextIdx >= 0
+                ? left.splice(nextIdx, 1)[0]!
+                : left.sort((x, y) => travelDistance(here(), x.tile) - travelDistance(here(), y.tile)).shift()!;
+            const before = held(b.id);
+            const target = before + b.count;
+            const sellers = [b, ...(b.alts ?? [])];
+            let walked: { ok: boolean; reason?: string; detail?: string } = { ok: false };
+            let tried = 0;
+            for (const [k, c] of sellers.entries()) {
+                if (held(b.id) >= target) break;
+                const reuseOpen = openNpcId === c.npcId && !!st()?.shop?.isOpen;
+                if (!reuseOpen) {
+                    if (openNpcId !== null) {
+                        if (st()?.shop?.isOpen) await s.bot.closeShop();
+                        openNpcId = null;
                     }
-                    await waitTicks(s, 1);
+                    const cure = observeScorpionTravel && scorpionCureJourney(here(), { ...b, ...c });
+                    if (!cure && travelDistance(here(), c.tile) > FAR_SELLER) {
+                        console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({ npc: c.npc, tile: c.tile, from: here() })}`);
+                        continue;
+                    }
+                    const guild = magicGuildApproach(c.tile, here(), s.sdk.getSkill('Magic')?.level ?? 1);
+                    if (guild.refused || guild.door) {
+                        walked = guild.door ? await enterMagicGuild(s, world, guild.door) : { ok: false, reason: 'precondition', detail: guild.refused };
+                        console.log(`QUEST_SWEEP_GUILD ${JSON.stringify({ npc: c.npc, door: guild.door, at: here(), ...walked })}`);
+                        if (!walked.ok) continue;
+                    }
+                    const coinsBeforeTravel = held(COINS);
+                    const from = here();
+                    if (cure) {
+                        await approach(s, world, c.tile, 'scorpion');
+                        walked = { ok: true };
+                    } else {
+                        walked = await walkFar(s, world, c.tile, 100);
+                    }
+                    if (!walked.ok) continue;
+                    if (observeScorpionTravel && b.id === 175) {
+                        console.log(`QUEST_SWEEP_TRAVEL_COST ${JSON.stringify({ phase: 'shop', item: b.id, coinsBefore: coinsBeforeTravel, coins: held(COINS), from, at: here(), observed: true })}`);
+                    }
+                    const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.id === c.npcId).sort((x: any, y: any) => x.distance - y.distance)[0];
+                    if (!npc) return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
+                    const shopOpen = () => (st()?.shop?.isOpen ? Promise.resolve(true) : waitUntil(s, () => !!st()?.shop?.isOpen, { timeoutTicks: 10 }));
+                    const talked = async () => {
+                        const choices = SHOP_TALK[c.npcId]!;
+                        const t: any = await s.bot.talkTo(npc);
+                        if (!t?.success) return false;
+                        for (let i = 0, next = 0; i < 30 && !st()?.shop?.isOpen; i++) {
+                            const dlg: any = s.sdk.getDialog();
+                            if (dlg?.isOpen && !dlg.isWaiting) {
+                                const opts: any[] = dlg.options ?? [];
+                                const idx = next < choices.length && opts.some((o) => choices[next]!.test(o.text)) ? next : undefined;
+                                if (idx !== undefined) {
+                                    await s.sdk.clickDialogByText(choices[idx]!);
+                                    next = idx + 1;
+                                } else {
+                                    await s.sdk.sendClickDialog(0);
+                                }
+                                if (st()?.shop?.isOpen) break;
+                            }
+                            await waitTicks(s, 1);
+                        }
+                        return !!st()?.shop?.isOpen;
+                    };
+                    const opened = async () => (SHOP_TALK[c.npcId] ? talked() : (await s.bot.openShop(npc)).success && (await shopOpen()));
+                    if (!(await opened())) {
+                        const door = (await s.bot.openDoor(/door/i)).success;
+                        console.log(`QUEST_SWEEP_SHOP_DOOR ${JSON.stringify({ npc: c.npc, at: here(), door })}`);
+                        if (!door || !(await opened())) return `${c.npc} shop did not open`;
+                    }
+                    openNpcId = c.npcId;
                 }
-                return !!st()?.shop?.isOpen;
-            };
-            const opened = async () => (SHOP_TALK[c.npcId] ? talked() : (await s.bot.openShop(npc)).success && (await shopOpen()));
-            if (!(await opened())) {
-                const door = (await s.bot.openDoor(/door/i)).success;
-                console.log(`QUEST_SWEEP_SHOP_DOOR ${JSON.stringify({ npc: c.npc, at: here(), door })}`);
-                if (!door || !(await opened())) return `${c.npc} shop did not open`;
-            }
-            const rounds = k === sellers.length - 1 ? 12 : 3;
-            const had0 = held(b.id);
-            const coinsBefore = held(COINS);
-            let stock: number | null = null;
-            for (let i = 0; i < rounds && held(b.id) < target; i++) {
-                const row = (st()?.shop?.shopItems ?? []).find((x: any) => x.id === b.id);
-                stock = row?.count ?? null;
-                if (!row || row.count < 1) {
-                    await waitTicks(s, 50);
-                    continue;
+                tried++;
+                const rounds = k === sellers.length - 1 ? 12 : 3;
+                const had0 = held(b.id);
+                const coinsBefore = held(COINS);
+                let stock: number | null = null;
+                for (let i = 0; i < rounds && held(b.id) < target; i++) {
+                    const row = (st()?.shop?.shopItems ?? []).find((x: any) => x.id === b.id);
+                    stock = row?.count ?? null;
+                    if (!row || row.count < 1) {
+                        // Wake on the exact tick stock replenishes (or shop closes) instead of sleeping 50 ticks blindly.
+                        await waitUntil(
+                            s,
+                            () => !st()?.shop?.isOpen || ((st()?.shop?.shopItems ?? []).find((x: any) => x.id === b.id)?.count ?? 0) > 0,
+                            { timeoutTicks: 50 },
+                        );
+                        if (!st()?.shop?.isOpen) {
+                            openNpcId = null;
+                            break;
+                        }
+                        continue;
+                    }
+                    const want = Math.min(target - held(b.id), row.count);
+                    const had = held(b.id);
+                    const bought = await s.bot.buyFromShop(row, want);
+                    if (bought?.success !== false && held(b.id) < had + want) {
+                        await waitUntil(s, () => held(b.id) >= had + want, { timeoutTicks: 10 });
+                    }
                 }
-                const want = Math.min(target - held(b.id), row.count);
-                const had = held(b.id);
-                await s.bot.buyFromShop(row, want);
-                await waitUntil(s, () => held(b.id) >= had + want, { timeoutTicks: 10 });
+                console.log(`QUEST_SWEEP_BUY ${JSON.stringify({ item: b.id, name: b.name, count: b.count, npc: c.npc, before: had0, after: held(b.id), coinsBefore, coins: held(COINS), stock })}`);
+                const moreAtSameShop = held(b.id) >= target && left.some(x => x.npcId === c.npcId);
+                if (!moreAtSameShop) {
+                    if (st()?.shop?.isOpen) await s.bot.closeShop();
+                    openNpcId = null;
+                }
             }
-            console.log(`QUEST_SWEEP_BUY ${JSON.stringify({ item: b.id, name: b.name, count: b.count, npc: c.npc, before: had0, after: held(b.id), coinsBefore, coins: held(COINS), stock })}`);
-            await s.bot.closeShop();
+            if (!tried) {
+                return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length ?? 0} more failed: ${walked.reason ? `${walked.reason} ${walked.detail}` : `no seller within ${FAR_SELLER} tiles`}`;
+            }
+            if (held(b.id) - before < (b.atLeast ?? b.count)) {
+                return `bought ${held(b.id) - before} of ${b.count} ${b.name} from ${tried} sellers`;
+            }
         }
-        if (!tried) {
-            return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length ?? 0} more failed: ${walked.reason ? `${walked.reason} ${walked.detail}` : `no seller within ${FAR_SELLER} tiles`}`;
-        }
-        if (held(b.id) - before < (b.atLeast ?? b.count)) {
-            return `bought ${held(b.id) - before} of ${b.count} ${b.name} from ${tried} sellers`;
-        }
+    } finally {
+        if (openNpcId !== null && st()?.shop?.isOpen) await s.bot.closeShop();
     }
     return null;
 }
