@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795828056797,
+ "at": 1795828160210,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,26 +185,19 @@
    "role": "pvp"
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Swordswallow",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "iron"
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
-    "BAR_TYPE": "iron",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "7",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
   },
   {
    "account": "BoneToPick",
@@ -224,21 +217,19 @@
    ]
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto"
   },
   {
    "account": "MeatNTwoVeg",

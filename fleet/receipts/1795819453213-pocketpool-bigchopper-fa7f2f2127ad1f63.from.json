@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819453213-pocketpool-bigchopper-fa7f2f2127ad1f63",
+ "account": "PocketPool",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "49b608b6-2a49-4939-9551-0a9bae2fb9e7",
+ "count": 0,
+ "ok": false,
+ "at": 1795828105542,
+ "detail": "trade claimed"
+}
