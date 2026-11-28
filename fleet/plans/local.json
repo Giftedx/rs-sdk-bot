@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795848820052,
+ "at": 1795848840624,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -211,7 +211,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "47"
+    "BATCH_UNITS": "46"
    },
    "enabled": true,
    "repeat": false,
@@ -226,7 +226,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=47 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=46 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -241,7 +241,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=47 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=46 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -256,7 +256,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=47 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=46 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -271,7 +271,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing staged",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=47 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=46 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -282,11 +282,11 @@
    "role": "army"
   },
   {
-   "account": "BackdoorMan",
+   "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing staged",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=47 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=46 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -294,7 +294,25 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:377",
-   "role": "helper"
+   "role": "auto"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1798"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "BoneToPick",
@@ -327,6 +345,31 @@
    "role": "auto"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "87",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "87"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "auto"
+  },
+  {
    "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -347,38 +390,34 @@
    ]
   },
   {
-   "account": "Woodenstaff",
+   "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- chicken"
+    "scripts/aio-skiller.ts CAP=2230 TARGET_COUNT=223 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:vampire BATCH_UNITS=1 -- sweep vampire"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
+   "goal": "goal:quest_board:vampire",
    "role": "auto"
   },
   {
    "account": "TackleBox",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "foraging",
-    "flax"
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=2000 -- foraging flax"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "seers-flax"
-   ]
+   "role": "helper"
   },
   {
    "account": "Quickhandjob",
@@ -453,31 +492,6 @@
    "role": "auto"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "43",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "43"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -524,21 +538,6 @@
    "resources": [
     "karambwanji-lake"
    ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=5 -- fishing staged",
-    "scripts/aio-skiller.ts METHOD=karambwanji BANKED=1 CAP=3000 DEMAND_ID=goal:supply_chain:3150 BATCH_UNITS=480 AMOUNT=480 -- fishing staged"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:3150",
-   "role": "auto"
   }
  ],
  "army": [

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795848441677-1",
  "account": "MineYourBiz",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Ruby",
  "requested": 1,
  "claim": "ef1faf38-5222-4c43-912d-42ffce30d437",
- "count": 0,
- "ok": false,
- "at": 1795848806926,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795848838271,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795848812334
+ },
+ "logout": {
+  "attemptId": "1795848806934-0000022796-0000000001",
+  "at": 1795848838261,
+  "sha256": "8a75ab325f79867f050271649790f522b27b517ffc581f436735ebb75ab80d2e"
+ },
+ "screen": true
 }
