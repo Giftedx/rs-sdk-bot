@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795868997762-1",
+ "account": "coincock",
+ "partner": "knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "e6fd7ed2-59d9-4623-9260-77df1ddb6579",
+ "count": 0,
+ "ok": false,
+ "at": 1795869211678,
+ "detail": "trade claimed"
+}
