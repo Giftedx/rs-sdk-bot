@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795845503970-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballbag",
+  "to": "Shaftsinker",
+  "item": "Uncut sapphire",
+  "count": 1,
+  "itemId": 1623,
+  "start": 1795845503970,
+  "end": 1795846403970,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
