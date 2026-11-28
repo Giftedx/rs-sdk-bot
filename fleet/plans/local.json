@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795862900294,
+ "at": 1795862909919,
  "jobs": [
   {
    "account": "Balls",
@@ -136,7 +136,7 @@
    ]
   },
   {
-   "account": "TackleBox",
+   "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -156,6 +156,21 @@
    ]
   },
   {
+   "account": "TackleBox",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=827 -- thieving knights-stable"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
    "account": "Fatstack",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -172,25 +187,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights-stable"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "827"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "ardougne-knights"
-   ]
   },
   {
    "account": "backdoorman",
