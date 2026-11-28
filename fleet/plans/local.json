@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795871999113,
+ "at": 1795872074690,
  "jobs": [
   {
    "account": "Balls",
@@ -43,6 +43,31 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "yewfirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "247",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "51400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "247"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
   },
   {
    "account": "bigpackage",
@@ -186,28 +211,47 @@
    "role": "auto"
   },
   {
-   "account": "yewfirst",
+   "account": "bonetopick",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "247",
+    "ORDER_KEY": "brain-436-2-o0-p23",
+    "ITEM_ID": "436",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "51400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "247"
+    "LIMIT_PRICE": "23",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:436",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:436",
+   "role": "auto"
+  },
+  {
+   "account": "billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "1",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
    "role": "army"
   }
  ],
@@ -223,7 +267,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "ballspinner",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
