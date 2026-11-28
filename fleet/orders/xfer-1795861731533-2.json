@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795861731533-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Nockitoff",
+  "to": "Hocuspokeus",
+  "item": "Sapphire ring",
+  "count": 1,
+  "itemId": 1637,
+  "start": 1795861731533,
+  "end": 1795862631533,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
