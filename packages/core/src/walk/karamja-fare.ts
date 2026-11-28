@@ -30,7 +30,7 @@ export const KARAMJA_MAX_DISPENSABLE_COST = 50;
 export const KARAMJA_MAX_DISPENSABLE_VALUE = 250;
 export const KARAMJA_MAX_STACKABLE_DISPENSABLE = 5;
 const BANANA_TREE_IDS = new Set([2073, 2074, 2075, 2076, 2077]);
-const PROTECTED_ITEM_NAME_RE = /\b(?:coins?|rune|talisman|tiara|key|teleport|clue|casket|lamp|ring|amulet|necklace|pickaxe|axe|hatchet|tinderbox|knife|chisel|hammer|spade|rope|net|rod|harpoon|cage|staff|wand|scimitar|sword|dagger|bow|arrow|bolt|shield|helm|plate|chain|robe|cape|boot|glove|herb|seed|gem|diamond|ruby|emerald|sapphire|dragonstone|onyx)\b/i;
+const PROTECTED_ITEM_NAME_RE = /\b(?:coins?|rune|talisman|tiara|key|teleport|clue|casket|lamp|ring|amulet|necklace|pickaxe|axe|hatchet|tinderbox|knife|chisel|hammer|spade|rope|net|rod|harpoon|cage|staff|wand|scimitar|sword|dagger|bow|arrow|bolt|shield|helm|plate|chain|robe|cape|boot|glove|herb|seed|gem|diamond|ruby|emerald|sapphire|dragonstone)\b/i;
 
 let itemMetaMap: Map<number, ItemMeta> | null = null;
 let gearIdSet: Set<number> | null = null;

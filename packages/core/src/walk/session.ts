@@ -1,7 +1,7 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
-import { offThreadRouteWanted } from '../route-query';
+import { offThreadRouteWanted, queryRouteOffThread } from '../route-query';
 import type { WalkDangerResult } from '../route-worker';
 import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
 import { topUpFareFloat } from './fare-float';
@@ -93,7 +93,6 @@ export async function sessionWalker(s: {
                 const acct = accountForSdk(s.sdk);
                 const blocks = applyKnownDoorBlocks(s.sdk, level, from, to);
                 const tempDoors = s.sdk.temporaryDoorBlocks?.active?.() ?? [];
-                const { queryRouteOffThread } = await import('../route-plan');
                 return queryRouteOffThread<PathTile[]>({
                     kind: 'walk-plan',
                     level,
@@ -119,7 +118,6 @@ export async function sessionWalker(s: {
                 return { verdict: 'clear', start: false, summary: dangerSummary(noExposure, walkVerdict(p, noExposure)) };
             }
             if (offThreadRouteWanted()) {
-                const { queryRouteOffThread } = await import('../route-plan');
                 return queryRouteOffThread<WalkDangerResult>({ kind: 'walk-danger', level, tiles: [...tiles], profile: p });
             }
             return dangerLocal(level, tiles);

@@ -2,70 +2,21 @@
 // Requests queue in the worker, so two bots planning at once wait their turn without blocking either game loop.
 import type { BankStock, TripPlan } from './trip';
 import type { Account, Tile } from './world-types';
-import type { SharedLabels } from './components';
-import type { RouteQuery } from './route-worker';
 import {
-    discoverRouteService, markRouteServiceFailed, offThreadRouteWanted, pendingRemoteRouteWork, queryRouteService,
-    serviceWanted, trackRemoteRouteWork,
+    WORKER_IDLE_MS, discoverRouteService, markRouteServiceFailed, offThreadRouteWanted, pendingLocalRouteWork,
+    pendingRemoteRouteWork, postToRouteWorker, queryRouteOffThread, queryRouteService, serviceWanted,
+    trackRemoteRouteWork,
 } from './route-query';
 import type { ServiceInfo } from './route-service-client';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
-export { offThreadRouteWanted, queryRouteService, serviceWanted };
+export { WORKER_IDLE_MS, offThreadRouteWanted, queryRouteOffThread, queryRouteService, serviceWanted };
 
-// Bun workers have ref/unref: an idle worker does not keep the process alive.
-type BunWorker = Worker & { ref(): void; unref(): void };
-let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeout> | null = null, workerSentAreas = false;
-// An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last plan.
-export const WORKER_IDLE_MS = 30_000;
-const pending = new Map<number, { started: number; resolve(v: any): void; reject(e: unknown): void }>();
 // The searches in flight that started under `youngerThanMs` ago. A lockstep bot holds its tick for these only: a
 // search past the bound is hung and holds no tick, so one hung search costs a case one bound and not one bound for
 // each later tick.
-export const pendingRouteWork = (youngerThanMs = Infinity): number => {
-    const remoteCount = pendingRemoteRouteWork(youngerThanMs);
-    if (pending.size === 0 || youngerThanMs === Infinity) return pending.size + remoteCount;
-    const now = performance.now();
-    let count = remoteCount;
-    for (const p of pending.values()) if (now - p.started < youngerThanMs) count++;
-    return count;
-};
-
-function stopWorker(w: BunWorker) {
-    if (worker !== w) return;
-    worker = null;
-    workerSentAreas = false;
-    if (idle) clearTimeout(idle);
-    idle = null;
-    w.unref();
-    void w.terminate();
-}
-
-function start(): BunWorker {
-    if (worker) return worker;
-    // bunfig.toml preloads do not reach a Worker: it gets collision-lazy.ts itself (about 300 MB less heap).
-    const w = new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions) as BunWorker;
-    w.onmessage = (e: MessageEvent<{ id: number; plan?: TripPlan | null; result?: unknown; error?: string }>) => {
-        if (worker !== w) return;
-        const p = pending.get(e.data.id);
-        if (!p) return;
-        pending.delete(e.data.id);
-        if (e.data.error) p.reject(Error(`route worker: ${e.data.error}`));
-        else if ('result' in e.data) p.resolve(e.data.result);
-        else p.resolve(e.data.plan ?? null);
-        if (!pending.size) { w.unref(); idle = setTimeout(() => { if (!pending.size) stopWorker(w); }, WORKER_IDLE_MS); (idle as { unref?(): void }).unref?.(); }
-    };
-    const failAll = (reason: string) => {
-        if (worker !== w) return;
-        for (const p of pending.values()) p.reject(Error(reason));
-        pending.clear();
-        stopWorker(w);
-    };
-    w.onerror = (e: ErrorEvent) => failAll(`route worker failed: ${e.message}`);
-    w.onmessageerror = () => failAll('route worker message unreadable');
-    w.addEventListener?.('close', () => failAll('route worker closed unexpectedly'));
-    return worker = w;
-}
+export const pendingRouteWork = (youngerThanMs = Infinity): number =>
+    pendingLocalRouteWork(youngerThanMs) + pendingRemoteRouteWork(youngerThanMs);
 
 // The plan from the service, or undefined when the service cannot answer (the caller plans with its own worker).
 async function planByService(info: ServiceInfo, body: object, signal: AbortSignal | undefined): Promise<TripPlan | null | undefined> {
@@ -100,50 +51,8 @@ export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: B
     return planLocally(from, to, acct, stock, budgetMs, signal);
 }
 
-function postToWorker<T>(buildMsg: (id: number) => object, signal: AbortSignal | undefined): Promise<T> {
-    if (signal?.aborted) return Promise.reject(signal.reason);
-    if (idle) { clearTimeout(idle); idle = null; }
-    const w = start(), id = ++next;
-    w.ref();
-    return new Promise<T>((resolve, reject) => {
-        const cleanup = () => signal?.removeEventListener('abort', abort);
-        const fail = (error: unknown) => {
-            if (!pending.delete(id)) return;
-            cleanup();
-            reject(error);
-            if (!pending.size) stopWorker(w);
-        };
-        const abort = () => fail(signal?.reason);
-        pending.set(id, {
-            started: performance.now(),
-            resolve: value => { cleanup(); resolve(value as T); },
-            reject: error => { cleanup(); reject(error); },
-        });
-        signal?.addEventListener('abort', abort, { once: true });
-        try {
-            w.postMessage(buildMsg(id));
-        } catch (error) { fail(error); }
-    });
-}
-
 function planLocally(from: Tile, to: Tile, acct: Account, stock: BankStock | undefined, budgetMs: number | undefined, signal: AbortSignal | undefined): Promise<TripPlan | null> {
-    return postToWorker<TripPlan | null>(id => {
-        const sharedAreas = workerSentAreas
-            ? undefined
-            : (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels?.() ?? undefined;
-        if (sharedAreas) workerSentAreas = true;
-        return { id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}) };
-    }, signal);
-}
-
-// Answers a single-plane path/harm/approach query through route-service when enabled, falling back to this process's
-// off-thread route-worker.ts instead of synchronous in-process WASM on the caller's event loop.
-export async function queryRouteOffThread<T>(body: RouteQuery, opts: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<T> {
-    const signal = opts.signal ?? executionContext.getStore()?.signal;
-    if (signal?.aborted) throw signal.reason;
-    if (serviceWanted()) {
-        const remote = await queryRouteService<T>(body, opts);
-        if (remote !== undefined) return remote;
-    }
-    return postToWorker<T>(id => ({ ...body, id }), signal);
+    return postToRouteWorker<TripPlan | null>((id, sharedAreas) => ({
+        id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}),
+    }), signal, true);
 }

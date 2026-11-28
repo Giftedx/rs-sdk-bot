@@ -1,4 +1,4 @@
-// Lightweight HTTP query and discovery state for the checkout's shared route-service.ts process.
+// Lightweight HTTP query, discovery state, and shared off-thread route-worker transport for this checkout.
 // Kept free of world/trip/danger/route-worker imports so world/pathfinding.ts and walk/* stay acyclic.
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import type { ServiceInfo } from './route-service-client';
@@ -23,6 +23,87 @@ export const offThreadRouteWanted = (env: Record<string, string | undefined> = p
 const SERVICE_RETRY_MS = 30_000, SERVICE_START_WAIT_MS = 5_000, QUERY_TIMEOUT_MS = 15_000;
 let serviceDownUntil = 0, lastLaunch = -Infinity, failedService = '', remoteSeq = 0;
 const remoteInFlight = new Map<number, number>();
+
+// Bun workers have ref/unref: an idle worker does not keep the process alive.
+type BunWorker = Worker & { ref(): void; unref(): void };
+let worker: BunWorker | null = null, workerNext = 0, workerIdle: ReturnType<typeof setTimeout> | null = null, workerSentAreas = false;
+// An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last request.
+export const WORKER_IDLE_MS = 30_000;
+const workerPending = new Map<number, { started: number; resolve(v: any): void; reject(e: unknown): void }>();
+
+export function pendingLocalRouteWork(youngerThanMs = Infinity): number {
+    if (workerPending.size === 0 || youngerThanMs === Infinity) return workerPending.size;
+    const now = performance.now();
+    let count = 0;
+    for (const p of workerPending.values()) if (now - p.started < youngerThanMs) count++;
+    return count;
+}
+
+function stopWorker(w: BunWorker) {
+    if (worker !== w) return;
+    worker = null;
+    workerSentAreas = false;
+    if (workerIdle) clearTimeout(workerIdle);
+    workerIdle = null;
+    w.unref();
+    void w.terminate();
+}
+
+function startWorker(): BunWorker {
+    if (worker) return worker;
+    // bunfig.toml preloads do not reach a Worker: it gets collision-lazy.ts itself (about 300 MB less heap).
+    const w = new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions) as BunWorker;
+    w.onmessage = (e: MessageEvent<{ id: number; plan?: unknown; result?: unknown; error?: string }>) => {
+        if (worker !== w) return;
+        const p = workerPending.get(e.data.id);
+        if (!p) return;
+        workerPending.delete(e.data.id);
+        if (e.data.error) p.reject(Error(`route worker: ${e.data.error}`));
+        else if ('result' in e.data) p.resolve(e.data.result);
+        else p.resolve(e.data.plan ?? null);
+        if (!workerPending.size) { w.unref(); workerIdle = setTimeout(() => { if (!workerPending.size) stopWorker(w); }, WORKER_IDLE_MS); (workerIdle as { unref?(): void }).unref?.(); }
+    };
+    const failAll = (reason: string) => {
+        if (worker !== w) return;
+        for (const p of workerPending.values()) p.reject(Error(reason));
+        workerPending.clear();
+        stopWorker(w);
+    };
+    w.onerror = (e: ErrorEvent) => failAll(`route worker failed: ${e.message}`);
+    w.onmessageerror = () => failAll('route worker message unreadable');
+    w.addEventListener?.('close', () => failAll('route worker closed unexpectedly'));
+    return worker = w;
+}
+
+export function postToRouteWorker<T>(buildMsg: (id: number, sharedAreas: unknown) => object, signal: AbortSignal | undefined, attachSharedAreas = false): Promise<T> {
+    if (signal?.aborted) return Promise.reject(signal.reason);
+    if (workerIdle) { clearTimeout(workerIdle); workerIdle = null; }
+    const w = startWorker(), id = ++workerNext;
+    w.ref();
+    return new Promise<T>((resolve, reject) => {
+        const cleanup = () => signal?.removeEventListener('abort', abort);
+        const fail = (error: unknown) => {
+            if (!workerPending.delete(id)) return;
+            cleanup();
+            reject(error);
+            if (!workerPending.size) stopWorker(w);
+        };
+        const abort = () => fail(signal?.reason);
+        workerPending.set(id, {
+            started: performance.now(),
+            resolve: value => { cleanup(); resolve(value as T); },
+            reject: error => { cleanup(); reject(error); },
+        });
+        signal?.addEventListener('abort', abort, { once: true });
+        const sharedAreas = attachSharedAreas && !workerSentAreas
+            ? (globalThis as { __rsGetSharedLabels?: () => unknown }).__rsGetSharedLabels?.() ?? undefined
+            : undefined;
+        try {
+            w.postMessage(buildMsg(id, sharedAreas));
+            if (sharedAreas) workerSentAreas = true;
+        } catch (error) { fail(error); }
+    });
+}
 
 export const serviceId = (i: ServiceInfo) => `${i.pid}:${i.port}:${i.started}`;
 
@@ -102,4 +183,16 @@ export async function queryRouteService<T>(body: RouteQueryBody, opts: { signal?
         if (out.error) throw Error(`route worker: ${out.error}`);
         return out.result;
     });
+}
+
+// Answers a single-plane path/harm/approach query through route-service when enabled, falling back to this process's
+// off-thread route-worker.ts instead of synchronous in-process WASM on the caller's event loop.
+export async function queryRouteOffThread<T>(body: RouteQueryBody, opts: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<T> {
+    const signal = opts.signal ?? executionContext.getStore()?.signal;
+    if (signal?.aborted) throw signal.reason;
+    if (serviceWanted()) {
+        const remote = await queryRouteService<T>(body, opts);
+        if (remote !== undefined) return remote;
+    }
+    return postToRouteWorker<T>(id => ({ ...body, id }), signal);
 }

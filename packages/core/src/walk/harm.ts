@@ -47,11 +47,10 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
         at = leg.to;
     }
     if (!near) return { action: 'clear', plan: r };
-    const { offThreadRouteWanted } = await import('../route-query');
+    const { offThreadRouteWanted, queryRouteOffThread } = await import('../route-query');
     let localEnv: { pf: any; grid: any; reach: ReturnType<typeof npcReach> } | null = null;
     const measureExposure = async (legs: ReturnType<typeof legsOf>) => {
         if (offThreadRouteWanted()) {
-            const { queryRouteOffThread } = await import('../route-plan');
             return queryRouteOffThread<import('../danger').WalkExposure>({ kind: 'route-exposure', from, legs, profile: p });
         }
         if (!localEnv) {

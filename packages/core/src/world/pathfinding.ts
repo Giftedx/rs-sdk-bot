@@ -4,7 +4,7 @@ import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } f
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
 import { activeDanger, closedOf, combatLevel, escapeTiles, routeHarmKeep, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
-import { offThreadRouteWanted, type SdkFindPathResult } from '../route-query';
+import { offThreadRouteWanted, queryRouteOffThread, type SdkFindPathResult } from '../route-query';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
 import { NO_CHANGES, WAYPOINT_LIMIT, changeBuilder, hintLengths, legKey, tileTable, windowKey, withHint, type ChangeTable } from './leg-key';
@@ -54,7 +54,6 @@ export function installRemoteSendFindPath(sdk: any): void {
                 npcTiles: npcBlockTiles(Array.isArray(state.nearbyNpcs) ? state.nearbyNpcs : [], from, { x: destX, z: destZ, level: p.level }),
             };
         }
-        const { queryRouteOffThread } = await import('../route-plan');
         return queryRouteOffThread<SdkFindPathResult>({
             kind: 'sdk-find-path',
             from,
@@ -586,7 +585,6 @@ export async function interactionApproach(sdk: any, at: Tile, q: InteractionTarg
     const from: Tile = { x: p.worldX, z: p.worldZ, level: p.level };
     const acct = accountForSdk(sdk);
     if (offThreadRouteWanted()) {
-        const { queryRouteOffThread } = await import('../route-plan');
         return queryRouteOffThread<Tile | null>({ kind: 'approach', from, at, q, acct: JSON.parse(JSON.stringify(acct)) });
     }
     const pf = await loadPathfinding(), grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
