@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842913439,
+ "at": 1795842941214,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -239,24 +239,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "magic_guild",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "18",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "71",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "18"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "71"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
