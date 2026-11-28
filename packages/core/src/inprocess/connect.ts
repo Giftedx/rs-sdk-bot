@@ -4,7 +4,7 @@ import type { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import type { BotSDK } from '../../../../vendor/rs-sdk/sdk/index';
 import { mySide } from '../fleet';
 import { fleetLeaseAllowsWorker } from '../fleet-lease';
-import { acquireFleetSwarmClaim, acquireFleetTradeClaim } from '../fleet-trade-claim';
+import { acquireFleetSwarmClaimAsync, acquireFleetTradeClaimAsync } from '../fleet-trade-claim';
 import { assertLoginAllowed } from '../haggisgate';
 import { shareLocIndex } from '../loc-index-share';
 import { isLocalServer } from '../localserver';
@@ -24,7 +24,7 @@ import type { ClientLike, Session, Shim, StartSession, TradeAdmission } from './
 let pathfindingReady = false;
 
 // Bots of this process that log in or are logged in. A host job (packages/core/src/host.ts) and a squad job hold
-// several. Each Git call of a login claim is synchronous, so a claim that waits stalls each bot of its process.
+// several; multi-bot processes keep the short claim window while solo processes use the patient retry budget.
 let botsInProcess = 0;
 export const botsInThisProcess = () => botsInProcess;
 
@@ -113,6 +113,18 @@ export async function connectInProcess(opts: {
     });
 }
 
+type SwarmClaimHandle = {
+    nonce: string;
+    armNetwork: () => void;
+    abortBeforeNetwork: () => void | Promise<void>;
+    releaseAfterLogout: (attemptId: string) => void | Promise<void>;
+};
+type SwarmClaimFn = (
+    root: string,
+    input: { account: string; server: string; side: string },
+    options?: Parameters<typeof acquireFleetSwarmClaimAsync>[2],
+) => SwarmClaimHandle | Promise<SwarmClaimHandle>;
+
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(
@@ -127,7 +139,7 @@ export async function startInProcessSession(
         beforeConnect?: () => void;
         planLock?: string;
         sharedAccount?: { root: string; side: string; recover?: boolean; admission?: RecoveryConnectionAdmission; trade?: TradeAdmission };
-        claimSwarm?: typeof acquireFleetSwarmClaim;
+        claimSwarm?: SwarmClaimFn;
         soloProcess?: boolean;
         countBots?: () => number;
         patientClaim?: boolean;
@@ -143,19 +155,19 @@ export async function startInProcessSession(
     void ended.then(leave);
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
-    let sharedClaim: ReturnType<typeof acquireFleetSwarmClaim> | undefined;
-    let tradeClaim: ReturnType<typeof acquireFleetTradeClaim> | undefined;
-    const admit = () => {
+    let sharedClaim: SwarmClaimHandle | undefined;
+    let tradeClaim: Awaited<ReturnType<typeof acquireFleetTradeClaimAsync>> | undefined;
+    const admit = async () => {
         // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
         deps.beforeConnect?.();
         if (deps.sharedAccount) {
             const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
-            if (trade) tradeClaim = acquireFleetTradeClaim(root, { ...target, orderId: trade.orderId, role: trade.role });
+            if (trade) tradeClaim = await acquireFleetTradeClaimAsync(root, { ...target, orderId: trade.orderId, role: trade.role });
             // The one bot of a process, outside the plan lock, waits for a slow Git authority (about 130 s at most), and
             // so does a login that asked for it (patientClaim). A bot of a process with several bots and a login under the
-            // lock keep the short window: the wait would stall the other bots or hold the lock.
-            else sharedClaim = (deps.claimSwarm ?? acquireFleetSwarmClaim)(root, target, {
+            // lock keep the short window so logins fail fast instead of holding the queue or plan lock.
+            else sharedClaim = await (deps.claimSwarm ?? acquireFleetSwarmClaimAsync)(root, target, {
                 recover,
                 admission,
                 patient: !deps.planLock && (deps.patientClaim === true || ((deps.soloProcess ?? soloProcess()) && (deps.countBots ?? botsInThisProcess)() === 1)),
@@ -174,22 +186,22 @@ export async function startInProcessSession(
     };
     // Plan-locked callers publish intent before another plan writer may proceed.
     let attempt: SessionAttempt;
-    try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit(); }
+    try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : await admit(); }
     catch (error) {
         // No call to startSession has run. A failed release leaves the shared hold in place.
         leave();
         try {
-            tradeClaim?.release();
-            sharedClaim?.abortBeforeNetwork();
+            await tradeClaim?.release();
+            await sharedClaim?.abortBeforeNetwork();
         } catch { console.error('fleet account claim retained after admission refusal'); }
         throw error;
     }
     let session: Awaited<ReturnType<StartSession>>;
     let confirmedLogout = false;
     const http = observeFetch();
-    const releaseConfirmed = () => {
+    const releaseConfirmed = async () => {
         if (!sharedClaim || !confirmedLogout) return;
-        try { sharedClaim.releaseAfterLogout(attempt.attemptId); }
+        try { await sharedClaim.releaseAfterLogout(attempt.attemptId); }
         catch { console.error('fleet swarm claim retained after logout'); }
     };
     try {
@@ -225,7 +237,7 @@ export async function startInProcessSession(
     } catch (e) {
         (shim as Shim | null)?.stop('connect-failed');
         attempt.record('connect-failed', connectFailedDetail(e, http.rows));
-        releaseConfirmed();
+        await releaseConfirmed();
         leave();
         throw e;
     } finally { http.restore(); }
@@ -233,7 +245,7 @@ export async function startInProcessSession(
     const sh = shim as Shim | null;
     if (!sh) {
         attempt.record('connect-failed', 'no packet observer');
-        releaseConfirmed();
+        await releaseConfirmed();
         leave();
         throw new Error('Session did not install its packet observer');
     }
@@ -259,7 +271,7 @@ export async function startInProcessSession(
             await session.stopped;
             releaseSessionClient(session.client);
             attempt.record('closed');
-            releaseConfirmed();
+            await releaseConfirmed();
         },
     };
     // Every session gets the HP floor (hp-floor.ts) here, before any script or guard holds it: a script that starts

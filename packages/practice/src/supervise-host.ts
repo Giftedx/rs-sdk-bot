@@ -172,6 +172,8 @@ export const DEFAULT_POOL_MAX_BOTS = 8;
 export const DEFAULT_POOL_MAX_LAUNCHES = 64;
 export const DEFAULT_POOL_IDLE_EXIT_MS = 30_000;
 export const DEFAULT_POOL_POLL_MS = 500;
+export const DEFAULT_POOL_START_STAGGER_MS = 1500;
+export const DEFAULT_POOL_MAX_STARTS_PER_BURST = 2;
 
 export type PoolCommand =
     | {
@@ -203,6 +205,8 @@ export interface PoolArgs {
     maxLaunches: number;
     idleExitMs: number;
     source: string;
+    startStaggerMs?: number;
+    maxStartsPerBurst?: number;
 }
 
 export function poolDir(root: string, poolId: string): string {
@@ -233,6 +237,8 @@ export function parsePoolArgs(argv: readonly string[]): PoolArgs | null {
     let maxLaunches = DEFAULT_POOL_MAX_LAUNCHES;
     let idleExitMs = DEFAULT_POOL_IDLE_EXIT_MS;
     let source = '';
+    let startStaggerMs: number | undefined;
+    let maxStartsPerBurst: number | undefined;
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]!;
         if (a === '--pool') { poolId = argv[++i] ?? ''; continue; }
@@ -240,13 +246,21 @@ export function parsePoolArgs(argv: readonly string[]): PoolArgs | null {
         if (a === '--max-launches') { maxLaunches = Number(argv[++i]); continue; }
         if (a === '--idle-exit-ms') { idleExitMs = Number(argv[++i]); continue; }
         if (a === '--source') { source = argv[++i] ?? ''; continue; }
+        if (a === '--start-stagger-ms') { startStaggerMs = Number(argv[++i]); continue; }
+        if (a === '--max-starts-per-burst') { maxStartsPerBurst = Number(argv[++i]); continue; }
         throw Error(`unknown pool option ${a}`);
     }
     if (!poolId || !/^[A-Za-z0-9_.-]{1,64}$/.test(poolId)) throw Error('invalid --pool id');
     if (!Number.isSafeInteger(maxBots) || maxBots < 1) throw Error(`invalid --max-bots: ${maxBots}`);
     if (!Number.isSafeInteger(maxLaunches) || maxLaunches < 1) throw Error(`invalid --max-launches: ${maxLaunches}`);
     if (!Number.isSafeInteger(idleExitMs) || idleExitMs < 0) throw Error(`invalid --idle-exit-ms: ${idleExitMs}`);
-    return { poolId, maxBots, maxLaunches, idleExitMs, source };
+    if (startStaggerMs !== undefined && (!Number.isSafeInteger(startStaggerMs) || startStaggerMs < 0)) throw Error(`invalid --start-stagger-ms: ${startStaggerMs}`);
+    if (maxStartsPerBurst !== undefined && (!Number.isSafeInteger(maxStartsPerBurst) || maxStartsPerBurst < 1)) throw Error(`invalid --max-starts-per-burst: ${maxStartsPerBurst}`);
+    return {
+        poolId, maxBots, maxLaunches, idleExitMs, source,
+        ...(startStaggerMs !== undefined ? { startStaggerMs } : {}),
+        ...(maxStartsPerBurst !== undefined ? { maxStartsPerBurst } : {}),
+    };
 }
 
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -264,6 +278,8 @@ export interface HostPoolDeps {
     pollMs?: number;
     stallMs?: number;
     stallCheckMs?: number;
+    startStaggerMs?: number;
+    maxStartsPerBurst?: number;
     runBot?: (bot: HostedBot, opts: RunHostedBotOpts) => Promise<{ name: string; ok: boolean; code: number; result: string; stalled: boolean }>;
     assertRelease?: (env: Record<string, string | undefined>, root: string) => void;
     leaseAllows?: (root: string) => boolean;
@@ -308,10 +324,25 @@ export async function runHostPool(args: PoolArgs, deps: HostPoolDeps = {}): Prom
     log(`HOST-POOL start id=${args.poolId} pid=${process.pid} maxBots=${args.maxBots} maxLaunches=${args.maxLaunches}`);
 
     const active = new Map<string, { bot: string; cancel: AbortController; task: Promise<void> }>();
+    const pendingStarts: Extract<PoolCommand, { op: 'start' }>[] = [];
+    const pendingKeys = new Set<string>();
+    const startStaggerMs = deps.startStaggerMs ?? args.startStaggerMs ?? DEFAULT_POOL_START_STAGGER_MS;
+    const maxStartsPerBurst = Math.max(1, deps.maxStartsPerBurst ?? args.maxStartsPerBurst ?? DEFAULT_POOL_MAX_STARTS_PER_BURST);
     const ends: Record<string, string> = Object.create(null);
     let totalLaunches = 0;
     let draining = false;
     let lastActiveAt = Date.now();
+    let lastBurstAt = -Infinity;
+
+    const cancelPendingStart = (cmd: Extract<PoolCommand, { op: 'start' }>) => {
+        try {
+            mkdirSync(dirname(cmd.logPath), { recursive: true });
+            if (cmd.header) appendFileSync(cmd.logPath, cmd.header.endsWith('\n') ? cmd.header : cmd.header + '\n');
+            appendFileSync(cmd.logPath, 'SUPERVISE end stopped after 0 runs\n');
+        } catch { /* log file is optional */ }
+        ends[cmd.bot] = 'stopped after 0 runs';
+        log(`HOST-POOL account ${cmd.bot} stopped after 0 runs`);
+    };
 
     const startBot = (cmd: Extract<PoolCommand, { op: 'start' }>) => {
         const key = cmd.bot.toLowerCase();
@@ -430,18 +461,66 @@ export async function runHostPool(args: PoolArgs, deps: HostPoolDeps = {}): Prom
                 continue;
             }
             if (cmd.op === 'start') {
-                startBot(cmd);
+                const key = cmd.bot.toLowerCase();
+                if (!active.has(key) && !pendingKeys.has(key)) {
+                    pendingKeys.add(key);
+                    pendingStarts.push(cmd);
+                }
             } else if (cmd.op === 'cancel') {
-                const entry = active.get(cmd.bot.toLowerCase());
-                if (entry) entry.cancel.abort(cmd.reason ?? 'stop file');
+                const key = cmd.bot.toLowerCase();
+                const entry = active.get(key);
+                if (entry) {
+                    entry.cancel.abort(cmd.reason ?? 'stop file');
+                } else if (pendingKeys.has(key)) {
+                    const idx = pendingStarts.findIndex(p => p.bot.toLowerCase() === key);
+                    if (idx >= 0) {
+                        const [removed] = pendingStarts.splice(idx, 1);
+                        pendingKeys.delete(key);
+                        if (removed) cancelPendingStart(removed);
+                    }
+                }
             } else if (cmd.op === 'drain') {
                 draining = true;
             }
         }
     };
 
+    const dispatchPendingStarts = (now: number) => {
+        if (pendingStarts.length === 0) return;
+        if (swarmStoppedCheck(root) || !leaseAllows(root)) {
+            while (pendingStarts.length > 0) {
+                const next = pendingStarts.shift()!;
+                pendingKeys.delete(next.bot.toLowerCase());
+                cancelPendingStart(next);
+            }
+            return;
+        }
+        if (startStaggerMs <= 0) {
+            while (pendingStarts.length > 0) {
+                const next = pendingStarts.shift()!;
+                pendingKeys.delete(next.bot.toLowerCase());
+                startBot(next);
+            }
+            return;
+        }
+        if (now - lastBurstAt < startStaggerMs) return;
+        let launched = 0;
+        while (pendingStarts.length > 0 && launched < maxStartsPerBurst) {
+            const next = pendingStarts.shift()!;
+            pendingKeys.delete(next.bot.toLowerCase());
+            startBot(next);
+            launched++;
+        }
+        if (launched > 0) lastBurstAt = now;
+    };
+
     const onSignal = () => {
         draining = true;
+        while (pendingStarts.length > 0) {
+            const next = pendingStarts.shift()!;
+            pendingKeys.delete(next.bot.toLowerCase());
+            cancelPendingStart(next);
+        }
         for (const entry of active.values()) entry.cancel.abort('stop file');
     };
     if (deps.registerSignals) {
@@ -452,7 +531,8 @@ export async function runHostPool(args: PoolArgs, deps: HostPoolDeps = {}): Prom
     try {
         for (;;) {
             drainInbox();
-            if (active.size > 0) {
+            dispatchPendingStarts(Date.now());
+            if (active.size > 0 || pendingStarts.length > 0) {
                 lastActiveAt = Date.now();
             } else {
                 const shouldExit = draining

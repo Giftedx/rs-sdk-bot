@@ -15,7 +15,7 @@ async function trace(reject:boolean,lateStop=false,direct=false,accountStop=fals
  if(${direct})delete process.env.SWARM_LEASE_HOLDER;
  if(${direct}){
   const claims=await import(${JSON.stringify(resolve(root,'packages/core/src/fleet-trade-claim.ts'))});
-  mock.module(${JSON.stringify(resolve(root,'packages/core/src/fleet-trade-claim.ts'))},()=>({...claims,acquireFleetSwarmClaim:()=>{events.push('account-claim');throw Error('fixture trade holds the account');}}));
+  mock.module(${JSON.stringify(resolve(root,'packages/core/src/fleet-trade-claim.ts'))},()=>({...claims,acquireFleetSwarmClaim:()=>{events.push('account-claim');throw Error('fixture trade holds the account');},acquireFleetSwarmClaimAsync:async()=>{events.push('account-claim');throw Error('fixture trade holds the account');}}));
   const lifecycle=await import(${JSON.stringify(resolve(root,'packages/core/src/session-lifecycle.ts'))});
   mock.module(${JSON.stringify(resolve(root,'packages/core/src/session-lifecycle.ts'))},()=>({...lifecycle,beginSessionAttempt:()=>{events.push('intent');throw Error('fixture intent');}}));
  }

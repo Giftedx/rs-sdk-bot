@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { commitFleetGitRecord, fleetGitRetryable, fleetPushRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
+import { commitFleetGitRecord, commitFleetGitRecordAsync, fleetGitRetryable, fleetPushRetryable, pushFleetGitRecord, pushFleetGitRecordAsync, fleetCheckoutId, fleetCheckoutLastSeen, fleetCheckoutLastSeenAsync, fleetGitWindow, fleetGitWindowAsync, fleetLeaseLastSeen, fleetLeaseLastSeenAsync, readFleetGitRefs, readFleetGitRefsAsync, recoveryHostLease, recoveryHostLeaseAsync, fleetLeaseAllowsWorker, FLEET_LEASE_TTL_MS, type FleetGitAsync } from './fleet-lease';
 import {assertSpentRecoveryConnection,type RecoveryConnectionAdmission} from './session-recovery-permit';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
@@ -26,9 +26,28 @@ export const SWARM_CLAIM_READ_MS = 15_000, SWARM_CLAIM_PUSH_MS = 20_000, SWARM_C
 const REMOTE_BUSY_PAUSE_MS = 200;
 const TRADE_AUTHORITY = 'fleet trade claim authority';
 const claimPause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
+const asyncClaimPause = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 const gitForTrade = (root: string, budgetMs?: number, gitWindow = fleetGitWindow) => gitWindow(root, TRADE_AUTHORITY, budgetMs);
+const gitForTradeAsync = (root: string, budgetMs?: number, gitWindow = fleetGitWindowAsync) => gitWindow(root, TRADE_AUTHORITY, budgetMs);
 const isRemoteBusyPush = (error: unknown) => fleetPushRetryable(error) && !fleetGitRetryable(error);
 type TradePushOptions = { wait?: (ms: number) => void; gitWindow?: typeof fleetGitWindow };
+type TradePushAsyncOptions = { wait?: (ms: number) => void | Promise<void>; gitWindow?: typeof fleetGitWindowAsync };
+
+// Serializes concurrent async claim Git operations within one process per checkout root so pooled bots
+// never contend on the same local Git lockfiles or stampede remote refs while keeping the event loop free.
+const rootClaimQueues = new Map<string, Promise<void>>();
+function serializeRootClaim<T>(root: string, fn: () => Promise<T>): Promise<T> {
+    const key = resolve(root).toLowerCase();
+    const prev = rootClaimQueues.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>(r => { release = r; });
+    const tail = prev.then(() => gate);
+    rootClaimQueues.set(key, tail);
+    return prev.then(fn).finally(() => {
+        release();
+        if (rootClaimQueues.get(key) === tail) rootClaimQueues.delete(key);
+    });
+}
 
 function retryAttempt<T>(action: () => T, retryable: (error: unknown) => boolean, tries: number, wait: (ms: number) => void, pauseMs = SWARM_CLAIM_PAUSE_MS): T {
     for (let n = 1; ; n++) {
@@ -36,6 +55,16 @@ function retryAttempt<T>(action: () => T, retryable: (error: unknown) => boolean
         catch (error) {
             if (n >= tries || !retryable(error)) throw error;
             wait(pauseMs * (2 * n - 1));
+        }
+    }
+}
+
+async function retryAttemptAsync<T>(action: () => Promise<T>, retryable: (error: unknown) => boolean, tries: number, wait: (ms: number) => void | Promise<void>, pauseMs = SWARM_CLAIM_PAUSE_MS): Promise<T> {
+    for (let n = 1; ; n++) {
+        try { return await action(); }
+        catch (error) {
+            if (n >= tries || !retryable(error)) throw error;
+            await wait(pauseMs * (2 * n - 1));
         }
     }
 }
@@ -542,20 +571,287 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
             released = true;
             cleanPending(root, record.nonce);
         };
-        return {
-            nonce: record.nonce,
-            armNetwork: () => { armed = true; forgetPending(root, record.nonce); },
-            abortBeforeNetwork: () => {
-                if (armed) throw Error('fleet swarm claim already armed for network');
-                markPendingAbandoned(root, record.nonce, now);
-                release(inheritedHold);
-            },
-            releaseAfterLogout(attemptId: string) {
-                const latest = matchedWorkerProof(root, record, input);
-                if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
-                release();
-            },
-        };
+    return {
+        nonce: record.nonce,
+        armNetwork: () => { armed = true; forgetPending(root, record.nonce); },
+        abortBeforeNetwork: () => {
+            if (armed) throw Error('fleet swarm claim already armed for network');
+            markPendingAbandoned(root, record.nonce, now);
+            release(inheritedHold);
+        },
+        releaseAfterLogout(attemptId: string) {
+            const latest = matchedWorkerProof(root, record, input);
+            if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
+            release();
+        },
+    };
     }
     throw Error('fleet swarm claim attempts exhausted');
+}
+
+async function loadClaimAsync(git: FleetGitAsync, account: string, server: string) {
+    const ref = CLAIM_PREFIX + account, head = (await readFleetGitRefsAsync(git, [ref])).get(ref);
+    if (!head) return { ref, head, claim: null };
+    let body: string;
+    try { body = await git(['show', '-s', '--format=%b', head]); }
+    catch (error) {
+        if (!/bad object|unknown revision|not a valid object|does not exist/i.test(String(error))) throw error;
+        await git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
+        body = await git(['show', '-s', '--format=%b', head]);
+    }
+    const claim = parseClaim(body, account, server);
+    return { ref, head, claim };
+}
+
+async function commitClaimWithFallbackAsync(git: FleetGitAsync, head: string | undefined, message: string, cachedTree?: string) {
+    const tree = cachedTree ?? (head ? EMPTY_TREE : undefined);
+    if (tree) {
+        try { return await commitFleetGitRecordAsync(git, head, tree, message); }
+        catch (error) { if (!missingGitObject(error)) throw error; }
+    }
+    return commitFleetGitRecordAsync(git, head, await git(['hash-object', '-w', '-t', 'tree', '--stdin'], ''), message);
+}
+
+function commitClaimAsync(git: FleetGitAsync, head: string | undefined, subject: string, claim: FleetAccountClaim) {
+    return commitClaimWithFallbackAsync(git, head, subject + '\n\n' + JSON.stringify(claim));
+}
+
+async function commitAndPushTradeClaimAsync(
+    root: string,
+    git: FleetGitAsync,
+    ref: string,
+    head: string | undefined,
+    subject: string,
+    claim: FleetAccountClaim,
+    { wait = asyncClaimPause, gitWindow = fleetGitWindowAsync }: TradePushAsyncOptions,
+) {
+    const next = await commitClaimAsync(git, head, subject, claim);
+    await retryAttemptAsync(() => pushFleetGitRecordAsync(gitForTradeAsync(root, SWARM_CLAIM_PUSH_MS, gitWindow), ref, next), fleetPushRetryable, SWARM_CLAIM_TRIES, wait);
+    return next;
+}
+
+export async function releaseFleetTradeClaimAsync(root: string, target: Identity & { nonce: string }, now = Date.now, options: TradePushAsyncOptions = {}): Promise<void> {
+    const { account, server } = identity(target);
+    await serializeRootClaim(root, async () => {
+        const git = gitForTradeAsync(root, undefined, options.gitWindow);
+        const { ref, head, claim } = await loadClaimAsync(git, account, server);
+        if (!claim || isSwarmClaim(claim) || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
+        if (claim.phase === 'released') return;
+        await commitAndPushTradeClaimAsync(root, git, ref, head, 'Fleet trade released', { ...claim, phase: 'released', at: now() }, options);
+    });
+}
+
+export async function acquireFleetTradeClaimAsync(root: string, input: TradeClaimInput, now = Date.now, options: TradePushAsyncOptions = {}) {
+    const { account, server } = identity(input);
+    const { side, orderId, role } = input;
+    if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
+    const record = await serializeRootClaim(root, async () => {
+        const git = gitForTradeAsync(root, undefined, options.gitWindow), { ref, head, claim } = await loadClaimAsync(git, account, server);
+        const pending = claim?.phase === 'held' ? abandonedPending(root, claim, input) : undefined;
+        const refused = claimRefusal(root, claim, input, pending);
+        if (refused) throw Error(refused);
+        const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
+        const subject = 'Fleet trade attempt ' + key;
+        const sameAbandoned = !!pending && !pending.inherited && !!claim && !isSwarmClaim(claim)
+            && claim.orderId.toLowerCase() === orderId.toLowerCase() && claim.role === role;
+        const earlier = head ? await git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head]) : '';
+        if (earlier && !(sameAbandoned && earlier === head)) throw Error('fleet trade order role already claimed');
+        const nextRecord: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now(), ...claimOwner(root) };
+        writePending(root, nextRecord);
+        try {
+            await commitAndPushTradeClaimAsync(root, git, ref, head, subject, nextRecord, options);
+        } catch (error) {
+            markPendingAbandoned(root, nextRecord.nonce, now);
+            throw error;
+        }
+        if (pending && claim) cleanPending(root, claim.nonce);
+        return nextRecord;
+    });
+    return {
+        ...record,
+        armNetwork: () => forgetPending(root, record.nonce),
+        release: async () => {
+            markPendingAbandoned(root, record.nonce, now);
+            await releaseFleetTradeClaimAsync(root, record, now, options);
+            cleanPending(root, record.nonce);
+        },
+    };
+}
+
+async function orphanedSwarmClaimAsync(git: FleetGitAsync, claim: FleetSwarmClaim, side: string, now: number, checkout: string): Promise<boolean> {
+    if (now - claim.at < ORPHAN_CLAIM_MS) return false;
+    if (claim.side === side) {
+        if (claim.checkout === checkout) return false;
+        const { head, seen } = await fleetCheckoutLastSeenAsync(git, side, claim.checkout);
+        if (!head) return false;
+        return seen === null ? head.holder !== claim.checkout : now - seen >= ORPHAN_CLAIM_MS;
+    }
+    const seen = await fleetLeaseLastSeenAsync(git, claim.side);
+    return seen !== null && now - seen >= ORPHAN_CLAIM_MS;
+}
+
+async function qualifiedHostProofAsync(root: string, claim: FleetSwarmClaim, target: ClaimIdentity, authorized: ReturnType<typeof assertSpentRecoveryConnection>, git: FleetGitAsync, now: number) {
+    if (claim.side !== target.side || claim.checkout !== fleetCheckoutId(root) || claim.host === hostname()) return;
+    const proof = readLogoutProof(target.account, target.server, lifecycleOptions(root));
+    const producer = proof.state === 'held' ? listAttempts(target.account, target.server, lifecycleOptions(root)).find(a => a.attemptId === proof.attemptId) : undefined;
+    if (proof.state !== 'held' || authorized.previous?.attemptId !== proof.attemptId || authorized.previous.sha256 !== producer?.sha256
+        || producer?.receipt?.owner.sharedClaimNonce !== claim.nonce || producer.receipt.owner.pid !== claim.pid) return;
+    const lease = await recoveryHostLeaseAsync(git, target.side, claim.checkout, claim.host, now);
+    if (lease && claim.at <= lease.previous.at + FLEET_LEASE_TTL_MS && producer.receipt.createdAt <= lease.previous.at + FLEET_LEASE_TTL_MS
+        && fleetLeaseAllowsWorker(root, target.side + ':' + lease.current.epoch, now)) return proof;
+}
+
+async function pendingHostWitnessAsync(root: string, head: string, inherited: FleetSwarmClaim, witness: string | undefined, target: ClaimIdentity, git: FleetGitAsync) {
+    const { account, server } = identity(target);
+    const parents = (await git(['show', '-s', '--format=%P', head])).split(/\s+/);
+    witness ??= parents.length === 1 ? parents[0] : undefined;
+    if (!witness || !/^[0-9a-f]{40}$/.test(witness) || await git(['show', '-s', '--format=%b', witness]) !== JSON.stringify(inherited)) return;
+    await git(['merge-base', '--is-ancestor', witness, head]);
+    const attempts = listAttempts(target.account, target.server, lifecycleOptions(root));
+    if (attempts.some(a => !a.receipt)) return;
+    const rows = (await git(['rev-list', '--parents', head, '^' + witness])).split('\n'), seen = new Set<string>();
+    let cursor = head;
+    for (const row of rows) {
+        const [commit, parent, ...extra] = row.split(/\s+/);
+        if (commit !== cursor || !parent || extra.length) return;
+        const claim = parseClaim(await git(['show', '-s', '--format=%b', commit!]), account, server);
+        if (!isSwarmClaim(claim) || claim.phase !== 'held' || !owningCheckout(root, claim, target.side) || claim.nonce === inherited.nonce || seen.has(claim.nonce)
+            || savedProcessAlive(claim.pid, claim.at) || attempts.some(a => a.receipt!.owner.sharedClaimNonce === claim.nonce)) return;
+        seen.add(claim.nonce); cursor = parent;
+    }
+    if (cursor === witness) return witness;
+}
+
+// Non-blocking swarm login claim using fleetGitWindowAsync and an in-process per-root serializer queue.
+export async function acquireFleetSwarmClaimAsync(
+    root: string,
+    input: ClaimIdentity,
+    {
+        recover = false,
+        admission = undefined as RecoveryConnectionAdmission | undefined,
+        now = Date.now,
+        ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean,
+        patient = false,
+        gitWindow = fleetGitWindowAsync,
+        wait = asyncClaimPause as (ms: number) => void | Promise<void>,
+    } = {},
+) {
+    const { account, server } = identity(input), { side } = input;
+    if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
+    const authorized = admission ? assertSpentRecoveryConnection(admission, account, server, root) : undefined;
+    const authority = 'fleet swarm claim authority', tries = patient ? SWARM_CLAIM_TRIES : 1;
+    const again = <T>(action: () => Promise<T>, retryable = fleetGitRetryable): Promise<T> => retryAttemptAsync(action, retryable, tries, wait);
+    return serializeRootClaim(root, async () => {
+        let git = gitWindow(root, authority, patient ? SWARM_CLAIM_READ_MS : undefined);
+        const read = async (runGit: FleetGitAsync) => {
+            const { ref, head, claim: current } = await loadClaimAsync(runGit, account, server);
+            let pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
+            if (!pending && recover && authorized && current?.phase === 'held' && isSwarmClaim(current)) {
+                const marker = abandonedBeforeNetwork(root, current, input);
+                if (marker?.inherited) {
+                    const inherited = parseClaim(JSON.stringify(marker.inherited), account, server);
+                    if (head && isSwarmClaim(inherited) && inherited.phase === 'held' && inherited.nonce !== current.nonce
+                        && await qualifiedHostProofAsync(root, inherited, input, authorized, runGit, now())) {
+                        const inheritedHead = await pendingHostWitnessAsync(root, head, inherited, marker.inheritedHead, input, runGit);
+                        if (inheritedHead) pending = { inherited, inheritedHead };
+                    }
+                }
+            }
+            const claim = pending ? pending.inherited : current;
+            let inheritedHold: FleetSwarmClaim | undefined, inheritedHead: string | undefined, orphan: FleetSwarmClaim | undefined;
+            if (claim?.phase === 'held') {
+                if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
+                let prior = matchedWorkerProof(root, claim, input), continuedHost = false;
+                if (!prior && recover && authorized) { prior = await qualifiedHostProofAsync(root, claim, input, authorized, runGit, now()); continuedHost = !!prior; }
+                if (authorized && !prior) throw Error('qualified recovery claim identity or host continuation unavailable');
+                if (!prior && await orphanedSwarmClaimAsync(runGit, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
+                else if (!prior && orphanedConfirmedPreNetworkClaim(root, claim, input, ownerAlive)) orphan = claim;
+                else if (!prior || (prior.state !== 'confirmed' && !(recover && (continuedHost || !ownerAlive(claim.pid, claim.at))))) {
+                    throw Error('fleet account claim held by swarm');
+                }
+                if (prior?.state === 'held') inheritedHold = claim;
+                if (continuedHost) inheritedHead = pending?.inheritedHead ?? head;
+            }
+            return { ref, head, current, pending, orphan, inheritedHold, inheritedHead };
+        };
+        for (let casAttempt = 1; casAttempt <= tries; casAttempt++) {
+            if (casAttempt > 1) git = gitWindow(root, authority, SWARM_CLAIM_READ_MS);
+            const { ref, head, current, pending, orphan, inheritedHold, inheritedHead } = await again(async () => {
+                try { return await read(git); }
+                catch (error) { git = gitWindow(root, authority, SWARM_CLAIM_READ_MS); throw error; }
+            });
+            const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
+            writePending(root, record, inheritedHold, inheritedHead);
+            const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
+            let owned: string;
+            if (!patient) {
+                try {
+                    owned = await commitClaimAsync(git, head, subject, record);
+                    await retryAttemptAsync(() => pushFleetGitRecordAsync(git, ref, owned), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+                } catch (error) {
+                    markPendingAbandoned(root, record.nonce, now);
+                    throw error;
+                }
+            } else {
+                try {
+                    owned = await commitClaimAsync(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
+                } catch (error) {
+                    markPendingAbandoned(root, record.nonce, now);
+                    throw error;
+                }
+                try {
+                    await again(() => pushFleetGitRecordAsync(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned), fleetPushRetryable);
+                } catch (error) {
+                    if (casAttempt >= tries || fleetPushRetryable(error)) {
+                        markPendingAbandoned(root, record.nonce, now);
+                        throw error;
+                    }
+                    cleanPending(root, record.nonce);
+                    await wait(SWARM_CLAIM_PAUSE_MS);
+                    const after = await again(() => loadClaimAsync(gitWindow(root, authority, SWARM_CLAIM_READ_MS), account, server));
+                    if (after.head !== head && after.claim && isSwarmClaim(after.claim) && after.claim.phase === 'released'
+                        && owningCheckout(root, after.claim, side) && current && isSwarmClaim(current) && after.claim.nonce === current.nonce) {
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            if (pending && current) cleanPending(root, current.nonce);
+            let released = false;
+            let armed = false;
+            const release = async (restore?: FleetSwarmClaim): Promise<void> => {
+                if (released) return;
+                await serializeRootClaim(root, async () => {
+                    if (released) return;
+                    const releaseSubject = restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released';
+                    const releaseBody = restore ?? { ...record, phase: 'released', at: now() };
+                    if (!patient) {
+                        const releaseGit = gitWindow(root, authority, 4000);
+                        const rel = await commitClaimAsync(releaseGit, owned, releaseSubject, releaseBody);
+                        await retryAttemptAsync(() => pushFleetGitRecordAsync(releaseGit, ref, rel), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+                    } else {
+                        const rel = await commitClaimAsync(gitWindow(root, authority, SWARM_CLAIM_READ_MS), owned, releaseSubject, releaseBody);
+                        await again(() => pushFleetGitRecordAsync(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, rel), fleetPushRetryable);
+                    }
+                    released = true;
+                    cleanPending(root, record.nonce);
+                });
+            };
+            return {
+                nonce: record.nonce,
+                armNetwork: () => { armed = true; forgetPending(root, record.nonce); },
+                abortBeforeNetwork: async () => {
+                    if (armed) throw Error('fleet swarm claim already armed for network');
+                    markPendingAbandoned(root, record.nonce, now);
+                    await release(inheritedHold);
+                },
+                releaseAfterLogout: async (attemptId: string) => {
+                    const latest = matchedWorkerProof(root, record, input);
+                    if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
+                    await release();
+                },
+            };
+        }
+        throw Error('fleet swarm claim attempts exhausted');
+    });
 }

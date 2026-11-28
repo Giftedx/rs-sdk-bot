@@ -287,6 +287,7 @@ await finish([], true, 'never');\n`);
                 root,
                 pollMs: 25,
                 stallMs: 0,
+                startStaggerMs: 0,
                 pause: async () => {},
                 leaseAllows: () => true,
                 stopped: bot => stopFiles.has(bot.toLowerCase()),
@@ -344,6 +345,84 @@ await finish([], true, 'never');\n`);
         expect(readFileSync(cancelLog, 'utf8')).toContain('SUPERVISE end stopped after 1 runs');
         expect(readFileSync(drainLog, 'utf8')).toContain('SUPERVISE end release-paused after 1 runs');
         expect(readFileSync(relLog, 'utf8')).toContain('SUPERVISE end release-paused after 1 runs');
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('runHostPool staggers burst starts without deadlocking and cancels queued bots cleanly', async () => {
+    const { mkdirSync, mkdtempSync, readFileSync, rmSync } = await import('node:fs');
+    const { join, resolve } = await import('node:path');
+    const { parsePoolArgs, runHostPool, writePoolCommand } = await import('../src/supervise-host');
+
+    expect(parsePoolArgs([
+        '--pool', 'pool-stagger', '--max-bots', '16', '--max-launches', '64', '--idle-exit-ms', '5000',
+        '--start-stagger-ms', '1500', '--max-starts-per-burst', '2',
+    ])).toEqual({
+        poolId: 'pool-stagger', maxBots: 16, maxLaunches: 64, idleExitMs: 5000, source: '',
+        startStaggerMs: 1500, maxStartsPerBurst: 2,
+    });
+
+    const prac = resolve(import.meta.dir, '..', '..', '..', '.practice');
+    mkdirSync(prac, { recursive: true });
+    const root = mkdtempSync(join(prac, 'host-pool-stagger-'));
+    const logDir = join(root, 'logs');
+    const startTimes: { bot: string; at: number }[] = [];
+    let currentInFlight = 0;
+    let peakStartsInBurst = 0;
+    const t0 = performance.now();
+
+    try {
+        const poolPromise = runHostPool(
+            { poolId: 'p-stagger', maxBots: 16, maxLaunches: 32, idleExitMs: 5000, source: 'rev-1', startStaggerMs: 80, maxStartsPerBurst: 2 },
+            {
+                root,
+                pollMs: 15,
+                stallMs: 0,
+                pause: async () => {},
+                leaseAllows: () => true,
+                stopped: () => false,
+                drainStopped: () => false,
+                drained: () => [],
+                swarmStopped: () => false,
+                log: () => {},
+                runBot: async (bot, opts) => {
+                    const at = performance.now() - t0;
+                    startTimes.push({ bot: bot.name, at });
+                    currentInFlight++;
+                    peakStartsInBurst = Math.max(peakStartsInBurst, currentInFlight);
+                    await Bun.sleep(30);
+                    currentInFlight--;
+                    opts.out?.(`RESULT ok bot=${bot.name}`);
+                    return { name: bot.name, ok: true, code: 0, result: `RESULT ok bot=${bot.name}`, stalled: false };
+                },
+            },
+        );
+
+        const bots = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
+        for (const [i, bot] of bots.entries()) {
+            writePoolCommand(root, 'p-stagger', {
+                op: 'start', id: `s-${i + 1}`, bot, script: 'scripts/noop.ts', args: [], maxRestarts: 1, env: {},
+                logPath: join(logDir, `${bot}.log`),
+            });
+        }
+        // Cancel b6 while it is still queued behind the first two bursts.
+        await Bun.sleep(25);
+        writePoolCommand(root, 'p-stagger', { op: 'cancel', id: 'c-b6', bot: 'b6', reason: 'stop file' });
+        writePoolCommand(root, 'p-stagger', { op: 'drain', id: 'd-stagger' });
+
+        const summary = await poolPromise;
+        expect(summary.launches).toBe(5);
+        expect(summary.ends.b6).toBe('stopped after 0 runs');
+        for (const bot of ['b1', 'b2', 'b3', 'b4', 'b5']) {
+            expect(summary.ends[bot]).toBe('done after 1 runs');
+        }
+        expect(readFileSync(join(logDir, 'b6.log'), 'utf8')).toContain('SUPERVISE end stopped after 0 runs');
+        // Burst 1 (b1, b2) starts near t=0, burst 2 (b3, b4) starts >= 70 ms later, burst 3 (b5) >= 140 ms later.
+        expect(startTimes.map(s => s.bot)).toEqual(['b1', 'b2', 'b3', 'b4', 'b5']);
+        expect(startTimes[2]!.at - startTimes[0]!.at).toBeGreaterThanOrEqual(65);
+        expect(startTimes[4]!.at - startTimes[2]!.at).toBeGreaterThanOrEqual(65);
+        expect(peakStartsInBurst).toBeLessThanOrEqual(2);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

@@ -1,8 +1,9 @@
 import { expect, test } from 'bun:test';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetGitRetryable, fleetPushRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, writeFence, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitRetryable, fleetPushRetryable, fleetGitWindow, fleetGitWindowAsync, fleetLeaseAllowsWorker, gitErrorDetail, writeFence, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
 
 const git = (cwd: string, ...args: string[]) => fleetGitWindow(cwd, 'fleet lease fixture', 5000)(args);
 
@@ -321,3 +322,81 @@ test('writeFence retries transient EPERM/EBUSY renames and removes temp files on
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 });
+
+test('fleetGitWindowAsync preserves retry, ref-rejection, and credential redaction without blocking the event loop', async () => {
+    const fail = (stderr: string) => Object.assign(Error('Command failed'), { stderr });
+    let ticks = 0;
+    const interval = setInterval(() => { ticks++; }, 25);
+    try {
+        let calls = 0;
+        const flaky = fleetGitWindowAsync('.', 'fleet swarm claim authority', 5000, async () => {
+            await Bun.sleep(60);
+            if (++calls === 1) throw fail("fatal: unable to access 'https://user:secret@github.com/x/y.git/': Could not resolve host: github.com");
+            return 'ok\n';
+        });
+        expect(await flaky(['ls-remote'])).toBe('ok');
+        expect(calls).toBe(2);
+        // The 25 ms timer fires repeatedly across the 60 ms async run + 300 ms async retry pause.
+        expect(ticks).toBeGreaterThanOrEqual(8);
+    } finally {
+        clearInterval(interval);
+    }
+
+    let pushes = 0;
+    const rejected = fleetGitWindowAsync('.', 'fleet swarm claim authority', 5000, async () => {
+        pushes++;
+        throw fail(" ! [rejected] HEAD -> fleet-trade-claim/a (fetch first)\nerror: failed to push to 'https://tok:pw@github.com/x/y.git'");
+    });
+    const err = await rejected(['push']).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    if (!(err instanceof Error)) throw Error('expected Error');
+    expect(err.message).toContain('fetch first');
+    expect(err.message).not.toContain('tok:pw');
+    expect(pushes).toBe(1);
+}, 15_000);
+
+test('fleetGitWindowAsync executes real git commands concurrently while keeping a 25 ms timer responsive and kills timed-out git', async () => {
+    let ticks = 0;
+    let maxGapMs = 0;
+    let last = performance.now();
+    const interval = setInterval(() => {
+        const now = performance.now();
+        maxGapMs = Math.max(maxGapMs, now - last);
+        last = now;
+        ticks++;
+    }, 25);
+    const tag = `fleet-git-timeout-${randomUUID()}`;
+    try {
+        const results = await Promise.all(Array.from({ length: 6 }, (_, i) =>
+            fleetGitWindowAsync(process.cwd(), 'async-git-test', 10_000)(['hash-object', '--stdin'], `payload-${i}`)));
+        expect(results).toHaveLength(6);
+        for (const sha of results) expect(sha).toMatch(/^[0-9a-f]{40}$/);
+
+        // Timeout enforcement on a real git subprocess with nested shell+bun descendants:
+        // must abort near budgetMs, keep the 25 ms timer ticking throughout, and leave zero surviving descendants.
+        const t0 = performance.now();
+        const slow = fleetGitWindowAsync(process.cwd(), 'timeout-test', 1200);
+        await expect(slow(['-c', `alias.hang=!bun -e "await Bun.sleep(20000)" -- ${tag}`, 'hang'])).rejects.toThrow(/ETIMEDOUT|timed out|unavailable or changed/);
+        const elapsed = performance.now() - t0;
+        expect(elapsed).toBeLessThan(6000);
+        expect(ticks).toBeGreaterThanOrEqual(10);
+        expect(maxGapMs).toBeLessThan(1000);
+    } finally {
+        clearInterval(interval);
+    }
+
+    if (process.platform === 'win32') {
+        const probe = Bun.spawn(
+            ['powershell', '-NoProfile', '-Command', `@(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${tag}*' -and $_.ProcessId -ne $PID }).Count`],
+            { stdout: 'pipe', stderr: 'pipe', windowsHide: true },
+        );
+        const [code, stdout] = await Promise.all([probe.exited, new Response(probe.stdout).text()]);
+        expect(code).toBe(0);
+        expect(Number(stdout.trim())).toBe(0);
+    } else {
+        const probe = Bun.spawn(['ps', '-ax', '-o', 'args='], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        const [code, stdout] = await Promise.all([probe.exited, new Response(probe.stdout).text()]);
+        expect(code).toBe(0);
+        expect(stdout).not.toContain(tag);
+    }
+}, 25_000);

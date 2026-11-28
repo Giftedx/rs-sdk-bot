@@ -20,6 +20,8 @@ import { currentHostedScope } from './host-scope';
 
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
 const RECORD_FLUSH_MS = 3000;
+// Bounds session close including async claim release under pooled concurrency while staying inside the 30 s exit backstop.
+const CLOSE_TIMEOUT_MS = 15_000;
 
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail, opts: Pick<SettlementOptions, 'logout'> = {}): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
@@ -79,7 +81,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         log(`LOGOUT ${outs.join(' ')}`);
         // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
         if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
-        const c = await closeWithin(sessions, 5000);
+        const c = await closeWithin(sessions, CLOSE_TIMEOUT_MS);
         if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
         if (c.timedOut > 0) ok = false;
         // The session end normally ends its record; a close that timed out may not have. Then wait for the file.
