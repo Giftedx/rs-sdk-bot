@@ -17,8 +17,9 @@ export const KARAMJA_LUTHAS_TILE: Tile = { x: 2939, z: 3154, level: 0 };
 export const KARAMJA_GROVE_TILE: Tile = { x: 2925, z: 3156, level: 0 };
 const BANANA_TREE_IDS = new Set([2073, 2074, 2075, 2076, 2077]);
 
+// Covers Brimhaven (x <= 2825, z <= 3240) and Musa Point / Jiminua / Shilo (z <= 3190), excluding Rimmington and Crandor.
 export const inKaramjaIsland = (p: Pos): boolean =>
-    p.level === 0 && p.x >= 2750 && p.x <= 2965 && p.z >= 2880 && p.z <= 3240;
+    p.level === 0 && p.x >= 2750 && p.x <= 2965 && p.z >= 2880 && (p.z <= 3190 || (p.x <= 2825 && p.z <= 3240));
 
 export function needsKaramjaFareEscape(from: Tile, to: Tile, coins: number): boolean {
     return inKaramjaIsland(from) && !inKaramjaIsland(to) && coins < KARAMJA_SHIP_FARE;

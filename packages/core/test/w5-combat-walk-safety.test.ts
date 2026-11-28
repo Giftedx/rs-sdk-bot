@@ -117,9 +117,17 @@ test('Temple of Ikov pocket detection and goTo Shiny key acquisition escape 2645
 
 test('Karamja < 30 gp detection and goTo Luthas banana crate escape from Jiminua shop', async () => {
     const jiminua: Tile = { x: 2767, z: 3123, level: 0 };
+    const brimhaven: Tile = { x: 2772, z: 3225, level: 0 };
+    const rimmington: Tile = { x: 2932, z: 3214, level: 0 };
+    const crandor: Tile = { x: 2851, z: 3235, level: 0 };
     const bank: Tile = { x: 3092, z: 3243, level: 0 };
     expect(inKaramjaIsland(jiminua)).toBe(true);
+    expect(inKaramjaIsland(brimhaven)).toBe(true);
+    expect(inKaramjaIsland(rimmington)).toBe(false);
+    expect(inKaramjaIsland(crandor)).toBe(false);
     expect(needsKaramjaFareEscape(jiminua, bank, 12)).toBe(true);
+    expect(needsKaramjaFareEscape(jiminua, rimmington, 12)).toBe(true);
+    expect(needsKaramjaFareEscape(rimmington, bank, 12)).toBe(false);
     expect(needsKaramjaFareEscape(jiminua, bank, 30)).toBe(false);
     expect(needsKaramjaFareEscape(jiminua, { x: 2939, z: 3154, level: 0 }, 12)).toBe(false);
 
