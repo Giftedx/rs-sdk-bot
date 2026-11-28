@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795860748976-1",
+ "account": "Ballspinner",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 2,
+ "claim": "8c755228-6e47-482e-9be3-f92b96def3aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795861340157,
+ "detail": "trade claimed"
+}
