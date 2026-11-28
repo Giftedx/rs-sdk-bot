@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795845165166-1",
+ "account": "Nockitoff",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 1,
+ "claim": "9c68235e-a9f0-4105-adb0-c03363dab567",
+ "count": 0,
+ "ok": false,
+ "at": 1795845293644,
+ "detail": "trade claimed"
+}
