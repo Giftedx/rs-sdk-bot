@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795857263852-5",
+ "account": "Shaftsinker",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "0d0f25a1-2eb9-4fb9-ac02-dbf866179649",
+ "count": 0,
+ "ok": false,
+ "at": 1795857798984,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Lobster",
+   "requested": 5,
+   "count": 0
+  },
+  {
+   "item": "Iron arrow",
+   "requested": 28,
+   "count": 0
+  }
+ ]
+}

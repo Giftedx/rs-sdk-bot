@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795857823379-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "KnightRider",
+  "to": "Mightyrod",
+  "item": "Rune arrowtips",
+  "count": 745,
+  "itemId": 44,
+  "start": 1795857823379,
+  "end": 1795858723379,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
