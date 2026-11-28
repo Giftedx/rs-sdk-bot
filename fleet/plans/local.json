@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795872372546,
+ "at": 1795872443585,
  "jobs": [
   {
    "account": "Balls",
@@ -45,120 +45,6 @@
    "role": "pvp"
   },
   {
-   "account": "bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "15",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "15"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "bigchopper",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "105",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "105"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "army"
-  },
-  {
-   "account": "backdoorman",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper"
-  },
-  {
-   "account": "ballbag",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper"
-  },
-  {
-   "account": "abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "chaosinpants",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "wool"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
    "account": "meatntwoveg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -185,20 +71,37 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "247",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "123",
     "COIN_RESERVE": "1000",
-    "FLOAT": "51400",
-    "NO_BUY_TICKS": "25",
+    "FLOAT": "51200",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "247"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "123"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -206,20 +109,20 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "magicshop",
     "3000"
    ],
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "15",
+    "MAX_ITEMS": "30",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "15"
+    "BATCH_UNITS": "30"
    },
    "enabled": true,
    "repeat": false,
@@ -252,6 +155,25 @@
    "role": "auto"
   },
   {
+   "account": "kiltlifter",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "wizard"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "wizards-tower"
+   ]
+  },
+  {
    "account": "fishandchips",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -275,6 +197,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:221",
    "role": "auto"
+  },
+  {
+   "account": "tacklebox",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "pickpocket"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1896"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
   }
  ],
  "army": [
@@ -289,13 +227,12 @@
   "Deeppockets",
   "UnderMyKilt",
   "ballspinner",
+  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
-  "fingerblastr",
   "hocuspokeus",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
