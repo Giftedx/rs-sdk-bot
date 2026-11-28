@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795854604656,
+ "at": 1795854617068,
  "jobs": [
   {
    "account": "Balls",
@@ -63,6 +63,36 @@
    ]
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=35 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=35 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=6 PRODUCT_TARGET=6 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=6 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -83,21 +113,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=5 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -106,7 +121,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1116"
+    "BATCH_UNITS": "1109"
    },
    "enabled": true,
    "repeat": false,
@@ -115,6 +130,27 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1188",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -188,25 +224,25 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
+   "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "brew:3dose2strength"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "MAX_MAKE": "2",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:157",
-    "BATCH_UNITS": "2",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "41",
+    "MAX_MAKE": "4",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:41",
+    "BATCH_UNITS": "4",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:157",
+   "goal": "campaign:haggis:item:41",
    "role": "army"
   },
   {
@@ -230,25 +266,25 @@
    "role": "auto"
   },
   {
-   "account": "Billionaire",
+   "account": "TrouserSnake",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "crafting",
+    "inventory",
+    "brew:unf_ranarr_potion"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "4",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "4",
-    "STALL_TICKS": "280"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:99",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "campaign:haggis:item:99",
    "role": "army"
   }
  ],
@@ -272,7 +308,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pocketpool",
   "pocketpython",
