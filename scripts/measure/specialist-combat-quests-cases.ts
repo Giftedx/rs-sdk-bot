@@ -11,6 +11,7 @@ import { ATTACK_PVP_SPECIALIST_KIT } from '../attack-specialist';
 import {
     DEFENCE_SPECIALIST_KIT,
     HP_SPECIALIST_KIT,
+    MELEE_PVP_SCIM_KIT,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     runCompanionRole,
@@ -103,9 +104,13 @@ export function tankPostPresetConfig(offsetX = 0, skills: SaveConfig['skills'] =
 export type CombatBenchMode =
     | 'hp'
     | 'hp-pvp'
+    | 'hp-pvp-scim'
     | 'attack-pvp'
+    | 'attack-pvp-scim'
     | 'strength'
+    | 'strength-scim'
     | 'defence'
+    | 'defence-scim'
     | 'ranged-pvp'
     | 'ranged-pvp-glory';
 
@@ -119,9 +124,13 @@ interface CombatModeSpec {
 export const COMBAT_BENCH_MODES: Readonly<Record<CombatBenchMode, CombatModeSpec>> = {
     hp: { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HP_SPECIALIST_KIT, env: {} },
     'hp-pvp': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HITPOINTS_PVP_SPECIALIST_KIT, env: { HP_MODE: 'pvp' } },
+    'hp-pvp-scim': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: MELEE_PVP_SCIM_KIT, env: { HP_MODE: 'pvp', WEAPON_ID: '1333' } },
     'attack-pvp': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: ATTACK_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
+    'attack-pvp-scim': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: MELEE_PVP_SCIM_KIT, env: { VARIANT: 'pvp', WEAPON_ID: '1333' } },
     strength: { script: 'scripts/strength-specialist.ts', board: 'strength', kit: STRENGTH_SPECIALIST_KIT, env: {} },
+    'strength-scim': { script: 'scripts/strength-specialist.ts', board: 'strength', kit: MELEE_PVP_SCIM_KIT, env: { WEAPON_ID: '1333' } },
     defence: { script: 'scripts/defence-specialist.ts', board: 'defence', kit: DEFENCE_SPECIALIST_KIT, env: {} },
+    'defence-scim': { script: 'scripts/defence-specialist.ts', board: 'defence', kit: MELEE_PVP_SCIM_KIT, env: { WEAPON_ID: '1333' } },
     'ranged-pvp': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
     'ranged-pvp-glory': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_GLORY_KIT, env: { VARIANT: 'pvp-glory' } },
 };

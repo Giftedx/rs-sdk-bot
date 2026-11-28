@@ -262,6 +262,21 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
         CAP: '150',
     });
     expect(() => parseCliArgs(['TipMyShaft', '--env', 'bad=1'])).toThrow('KEY=VALUE');
+
+    expect(parseCliArgs(['BigSwinger', '--weapon=1333']).weapon).toBe(1333);
+    expect(parseCliArgs(['RockSolid', '--weapon', '1319']).weapon).toBe(1319);
+    expect(() => parseCliArgs(['BigSwinger', '--weapon=1303'])).toThrow('1319 or 1333');
+
+    for (const acct of ['HiltsDeep', 'RockSolid', 'BigSwinger', 'FullBlooded'] as const) {
+        const scim = resolveSpecialistSegment(acct, { weapon: 1333 });
+        expect(scim.env?.WEAPON_ID).toBe('1333');
+        expect(scim.suppliers).toHaveLength(3);
+        expect(scim.suppliers![0]!.args![3]).toMatch(/-scim$/);
+        expect(scim.suppliers![0]!.save.inventory?.some(i => i.id === 1333)).toBe(true);
+        expect(scim.suppliers![0]!.save.inventory?.some(i => i.id === 1319)).toBe(false);
+    }
+    expect(resolveSpecialistSegment('BigSwinger', { env: { WEAPON_ID: '1333' } }).env?.WEAPON_ID).toBe('1333');
+    expect(() => resolveSpecialistSegment('Shaftshooter', { weapon: 1333 })).toThrow('only supported for melee combat specialists');
 });
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {

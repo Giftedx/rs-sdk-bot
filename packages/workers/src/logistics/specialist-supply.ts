@@ -307,6 +307,10 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
+export const MELEE_PVP_SCIM_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT.map(item =>
+    item.id === 1319 ? { id: 1333, name: 'Rune scimitar', count: 1, stackable: false } : item,
+);
+
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const ATTACK_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
@@ -678,11 +682,15 @@ export const FIREMAKING_SPECIALIST_KIT: readonly KitSpecItem[] = [
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
     'attack-pvp': ATTACK_PVP_SPECIALIST_KIT,
+    'attack-pvp-scim': MELEE_PVP_SCIM_KIT,
     agility: AGILITY_SPECIALIST_KIT,
     hitpoints: HP_SPECIALIST_KIT,
     'hitpoints-pvp': HITPOINTS_PVP_SPECIALIST_KIT,
+    'hitpoints-pvp-scim': MELEE_PVP_SCIM_KIT,
     strength: STRENGTH_SPECIALIST_KIT,
+    'strength-scim': MELEE_PVP_SCIM_KIT,
     defence: DEFENCE_SPECIALIST_KIT,
+    'defence-scim': MELEE_PVP_SCIM_KIT,
     ranged: RANGED_SPECIALIST_KIT,
     'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
     'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
@@ -714,7 +722,10 @@ export type SupplierKitName = SpecialistKitName;
 
 const normalizeKitAlias = (rawInput: string | undefined): string | undefined => {
     const k = rawInput?.trim().toLowerCase();
-    return k === 'hp' ? 'hitpoints' : k === 'hp-pvp' ? 'hitpoints-pvp' : k;
+    if (k === 'hp') return 'hitpoints';
+    if (k === 'hp-pvp') return 'hitpoints-pvp';
+    if (k === 'hp-pvp-scim') return 'hitpoints-pvp-scim';
+    return k;
 };
 
 export function parseKitOption(args: readonly string[]): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null;

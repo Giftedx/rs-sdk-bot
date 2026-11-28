@@ -112,19 +112,40 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// 21 slots: Waterfall (83 Atk/Str) + 1-tick Rune 2h relog Keep PvP (infinite run enabled -> no Super energy(4)).
-export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
-    { id: 556, name: 'Air rune', count: 6, stackable: true },
-    { id: 557, name: 'Earth rune', count: 6, stackable: true },
-    { id: 555, name: 'Water rune', count: 6, stackable: true },
-    { id: 1319, name: 'Rune 2h sword', count: 1, stackable: false },
-    { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 954, name: 'Rope', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
-    { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-] as const;
+export const DEFAULT_MELEE_WEAPON_ID = 1319;
+export const SCIMITAR_MELEE_WEAPON_ID = 1333;
+export type MeleeWeaponId = typeof DEFAULT_MELEE_WEAPON_ID | typeof SCIMITAR_MELEE_WEAPON_ID;
+
+export function resolveMeleeWeaponId(raw = process.env.WEAPON_ID): MeleeWeaponId {
+    const trimmed = raw?.trim();
+    if (!trimmed) return DEFAULT_MELEE_WEAPON_ID;
+    const n = Number(trimmed);
+    if (n === DEFAULT_MELEE_WEAPON_ID || n === SCIMITAR_MELEE_WEAPON_ID) return n;
+    throw Error(`invalid WEAPON_ID=${raw} (expected 1319|1333)`);
+}
+
+export function meleeWeaponName(weaponId: MeleeWeaponId): string {
+    return weaponId === SCIMITAR_MELEE_WEAPON_ID ? 'Rune scimitar' : 'Rune 2h sword';
+}
+
+export function meleePvpCoreKit(weaponId: MeleeWeaponId = DEFAULT_MELEE_WEAPON_ID): readonly KitSpecItem[] {
+    return [
+        { id: 556, name: 'Air rune', count: 6, stackable: true },
+        { id: 557, name: 'Earth rune', count: 6, stackable: true },
+        { id: 555, name: 'Water rune', count: 6, stackable: true },
+        { id: weaponId, name: meleeWeaponName(weaponId), count: 1, stackable: false },
+        { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
+        { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+        { id: 954, name: 'Rope', count: 1, stackable: false },
+        { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+        { id: 385, name: 'Shark', count: 1, stackable: false },
+        { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    ] as const;
+}
+
+// 21 slots: Waterfall (83 Atk/Str) + 1-tick melee relog Keep PvP (infinite run enabled -> no Super energy(4)).
+export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = meleePvpCoreKit(DEFAULT_MELEE_WEAPON_ID);
+export const MELEE_PVP_SCIM_KIT: readonly KitSpecItem[] = meleePvpCoreKit(SCIMITAR_MELEE_WEAPON_ID);
 
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
@@ -804,6 +825,26 @@ export async function connectWithTransientRetry<T>(
     }
 }
 
+export function meleeStyleComponent(
+    board: 'attack' | 'strength' | 'defence' | 'hitpoints',
+    weaponId: MeleeWeaponId,
+    strengthBaseLevel: number,
+): number | null {
+    const style: 'aggressive' | 'defensive' | null =
+        board === 'strength'
+            ? 'aggressive'
+            : board === 'defence'
+              ? 'defensive'
+              : board === 'hitpoints' && strengthBaseLevel < 99
+                ? 'aggressive'
+                : null;
+    if (!style) return null;
+    if (weaponId === SCIMITAR_MELEE_WEAPON_ID) {
+        return componentId(style === 'aggressive' ? 'combat_hacksword:hack1' : 'combat_hacksword:hack3');
+    }
+    return componentId(style === 'aggressive' ? 'combat_heavysword:heavy1' : 'combat_heavysword:heavy3');
+}
+
 export async function runWildyPvpRelogLoop(
     initSess: Session,
     opts: {
@@ -839,10 +880,10 @@ export async function runWildyPvpRelogLoop(
     const logoutCom = componentId('logout:try_logout');
     const ultStrCom = componentId('prayer:prayer_ultimatestrength');
     const incRefCom = componentId('prayer:prayer_incrediblereflexes');
-    const aggressiveStyleCom = componentId('combat_heavysword:heavy1');
-    const defensiveStyleCom = componentId('combat_heavysword:heavy3');
     const useMeleePrayers = opts.useMeleePrayers ?? opts.board !== 'ranged';
-    const requiredWeaponId = opts.requiredWeaponId ?? (opts.board === 'ranged' ? undefined : 1319);
+    const requiredWeaponId = opts.requiredWeaponId ?? (opts.board === 'ranged' ? undefined : DEFAULT_MELEE_WEAPON_ID);
+    const meleeWeaponId: MeleeWeaponId =
+        requiredWeaponId === SCIMITAR_MELEE_WEAPON_ID ? SCIMITAR_MELEE_WEAPON_ID : DEFAULT_MELEE_WEAPON_ID;
 
     let totalTicks = opts.setupTicks;
     let swings = 0;
@@ -929,13 +970,9 @@ export async function runWildyPvpRelogLoop(
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
             const styleCom = opts.styleForState
                 ? opts.styleForState(sess)
-                : opts.board === 'strength'
-                  ? aggressiveStyleCom
-                  : opts.board === 'defence'
-                    ? defensiveStyleCom
-                    : opts.board === 'hitpoints'
-                      ? (skillInfo(sess, 'Strength').baseLevel < 99 ? aggressiveStyleCom : null)
-                      : null;
+                : opts.board === 'ranged'
+                  ? null
+                  : meleeStyleComponent(opts.board, meleeWeaponId, skillInfo(sess, 'Strength').baseLevel);
             lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
             const lowPrayerPot =
                 useMeleePrayers && prayPts <= 2
@@ -1668,12 +1705,14 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
+        weaponId?: MeleeWeaponId;
         onRetireSession?: (sess: Session) => void;
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
     const skill = opts.board === 'attack' ? 'Attack' : opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
-    const kit = MELEE_PVP_CORE_KIT;
+    const weaponId = opts.weaponId ?? resolveMeleeWeaponId();
+    const kit = meleePvpCoreKit(weaponId);
     const targetTicks = opts.board === 'attack' ? 2554 : SPECIALIST_TARGETS[opts.board].targetTicks;
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
@@ -1735,12 +1774,15 @@ export async function runMeleePvpSpecialist(
             exitFalls: true,
             keepAlive: true,
             protectMelee: true,
-            tombHoldIds: [1319],
+            tombHoldIds: [weaponId],
             looseRailing: true,
             superEnergy: true,
         });
     } else {
-        wfPhases = (await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy })).phases;
+        wfPhases = (await runSpecialistWaterfall(s, opts.stop, {
+            onEnergy: ensureRunAndEnergy,
+            ...(weaponId === DEFAULT_MELEE_WEAPON_ID ? {} : { extraTombDropIds: [weaponId] }),
+        })).phases;
     }
     const tWaterfall = elapsed();
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
@@ -1757,7 +1799,7 @@ export async function runMeleePvpSpecialist(
             ensureRunAndEnergy();
             syncCwPfm(true);
             if (s.tick() - preEquippedWait >= 2) {
-                const gear = s.sdk.getInventory().find(i => i.id === 1319);
+                const gear = s.sdk.getInventory().find(i => i.id === weaponId);
                 if (gear) {
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();
@@ -1774,7 +1816,7 @@ export async function runMeleePvpSpecialist(
 
     await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to keep post');
     await setAutoRetaliate(s, false);
-    await equipItemById(s, 1319, opts.stop, 'Rune 2h sword');
+    await equipItemById(s, weaponId, opts.stop, meleeWeaponName(weaponId));
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
 
     const setupTicks = elapsed();
@@ -1797,6 +1839,7 @@ export async function runMeleePvpSpecialist(
         setupTicks,
         cap: opts.cap,
         shouldStop: opts.stop,
+        requiredWeaponId: weaponId,
         onRetireSession: opts.onRetireSession,
     });
 
@@ -1811,7 +1854,7 @@ export async function runMeleePvpSpecialist(
             : '';
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} almStep=${almStep} wf=${tWaterfall - tAlmera}${wfStep} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings}(lvl=${nzLvlCount},w=${nzWaitCount}) nz=[${nzSamples.join(';')}] to=${timeoutSwings} rec=${recenterSwings}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} weapon=${weaponId} setup=${setupTicks} alm=${tAlmera} almStep=${almStep} wf=${tWaterfall - tAlmera}${wfStep} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings}(lvl=${nzLvlCount},w=${nzWaitCount}) nz=[${nzSamples.join(';')}] to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});
