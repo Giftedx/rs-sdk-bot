@@ -1,0 +1,16 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795843321602-1",
+ "account": "Shaftmaker",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 118,
+ "claim": "dac174e8-c4be-4457-96d7-ecefe228c729",
+ "count": 118,
+ "ok": true,
+ "at": 1795843713372,
+ "detail": "transfer observed

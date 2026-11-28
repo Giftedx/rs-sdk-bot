@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795843321602-1",
+ "account": "Shaftsinker",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 118,
+ "claim": "9e38d56e-4343-4fcb-9d1b-e20fa12fe3d5",
+ "count": 118,
+ "ok": true,
+ "at": 1795843711747,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 118,
+  "after": 0
+ },
+ "bank": {
+  "count": 118,
+  "at": 1795843671361
+ },
+ "logout": {
+  "attemptId": "1795843661225-0000019620-0000000001",
+  "at": 1795843711739,
+  "sha256": "d70c98f915aa3f29d190f75cfa729aa7bcdf508909b72968aeb40f8a9e621665"
+ },
+ "screen": true
+}

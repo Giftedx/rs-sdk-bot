@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795843486638-1",
+ "account": "Spitroaster",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 2,
+ "claim": "a417e641-1ff7-4e74-b9ff-8b8e7e5d2f7d",
+ "count": 0,
+ "ok": false,
+ "at": 1795843686165,
+ "detail": "trade claimed"
+}
