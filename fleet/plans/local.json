@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856657269,
+ "at": 1795856684506,
  "jobs": [
   {
    "account": "Balls",
@@ -195,6 +195,22 @@
    "role": "army"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "zanaris"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -334,7 +350,6 @@
   "mmthv2350",
   "oreelse",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "sporrandip",
