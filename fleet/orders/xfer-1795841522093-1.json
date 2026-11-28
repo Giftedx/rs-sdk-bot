@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795841522093-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "BowBeforeMe",
+  "item": "Coins",
+  "count": 9,
+  "itemId": 995,
+  "start": 1795841522093,
+  "end": 1795842422093,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
