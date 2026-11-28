@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840980645-2",
+ "account": "Spitroaster",
+ "partner": "Pullmybow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 103,
+ "claim": "37dbeeeb-f30e-48b3-b5f8-15adc387ce41",
+ "count": 0,
+ "ok": false,
+ "at": 1795841375595,
+ "detail": "trade claimed"
+}
