@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795823655099-quickhandjob-moneyshot-246b1bfb7bfb1371",
+ "account": "Quickhandjob",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 8,
+ "claim": "603865d7-09d8-4dd7-a6ae-3b1293aa0d36",
+ "count": 0,
+ "ok": false,
+ "at": 1795828730762,
+ "detail": "Error: route to 2727, 3492: precondition no route to 2727,3492,0",
+ "lines": [
+  {
+   "item": "Earth rune",
+   "requested": 28,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795828722725-0000013260-0000000001",
+  "at": 1795828730755,
+  "sha256": "f6e939235a8d1772b1abd6a24ff82fd29216a5392bb58211d601032d92ce6bcb"
+ },
+ "screen": false
+}
