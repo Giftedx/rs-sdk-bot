@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795823739688,
+ "at": 1795824889452,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -87,6 +87,104 @@
    "role": "pvp"
   },
   {
+   "account": "TheFullMonty",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Dipstick",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Billionaire",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "PocketPool",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "YewFirst",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "OreElse",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "SporranDip",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Fatstack",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "KnightRider",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -116,33 +214,19 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "ballspinner",
   "bigpackage",
-  "billionaire",
   "bowbeforeme",
-  "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
-  "oreelse",
-  "pickpockdick",
-  "pocketpool",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
-  "swordinhand",
-  "thefullmonty",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
