@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795857937874-1",
+ "account": "PickpockDick",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ruby",
+ "requested": 3,
+ "claim": "31255497-e3d8-4755-b28a-e9f8161287d5",
+ "count": 0,
+ "ok": false,
+ "at": 1795858291674,
+ "detail": "trade claimed"
+}
