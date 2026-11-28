@@ -66,7 +66,7 @@ const FLY_TO_SARIM: Pt[] = [[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [
 
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
-    await waitTicks(s, 5);
+    await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Fishing')?.baseLevel ?? 0) > 0, { timeoutTicks: 5 });
     // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
     const p0 = s.sdk.getState()?.player;
     if (onStarterIsland(p0)) {
@@ -398,18 +398,27 @@ try {
     };
 
     let chain: { index: number; x: number; z: number } | null = null;
-    let lastXp = xp(), lastGain = now();
+    let lastXp = xp(), lastGain = now(), animIdle = 0;
     // One step of a click-once chain (net, or fly fishing without a knife or logs).
     const chainStep = async (opt: RegExp, anchor: { x: number; z: number }, idle: number, maxZ = 99999) => {
         const x = xp();
-        if (x > lastXp) { lastXp = x; lastGain = now(); }
-        if (await closeDialog()) { chain = null; return; }
+        if (x > lastXp) { lastXp = x; lastGain = now(); animIdle = 0; }
+        if (await closeDialog()) { chain = null; animIdle = 0; }
         const c = chain;
-        const alive = !!c && (st()?.nearbyNpcs ?? []).some((n: any) => n.index === c.index && n.x === c.x && n.z === c.z && !WHIRLPOOL.has(n.id) && /fishing spot/i.test(n.name));
-        if (!alive || now() - lastGain > idle) {
+        const activeNpc = c
+            ? (st()?.nearbyNpcs ?? []).find((n: any) => n.index === c.index && n.x === c.x && n.z === c.z && !WHIRLPOOL.has(n.id) && /fishing spot/i.test(n.name))
+            : undefined;
+        const alive = !!activeNpc;
+        if (alive && activeNpc.distance <= 1) {
+            animIdle = (pos()?.animId ?? -1) === -1 ? animIdle + 1 : 0;
+        } else {
+            animIdle = 0;
+        }
+        if (!alive || now() - lastGain > idle || animIdle >= 4) {
             const sp = spot(opt, maxZ);
             if (!sp) {
                 chain = null;
+                animIdle = 0;
                 const p = pos();
                 if (!p || cheb(anchor, p) > 2) await walk([[anchor.x, anchor.z, 1]]);
                 await waitTicks(s, 1);
@@ -419,6 +428,7 @@ try {
             clicks++;
             chain = { index: sp.index, x: sp.x, z: sp.z };
             lastGain = now();
+            animIdle = 0;
         }
         await waitTicks(s, 1);
     };
@@ -561,6 +571,7 @@ try {
             await waitUntil(s, () => (spot(LURE)?.distance ?? 99) <= 1, { timeoutTicks: 10 });
             continue;
         }
+        if (s.sdk.getDialog()?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
         const c0 = now();
         await s.direct({ type: 'useItemOnItem', sourceSlot: knife, targetSlot: log, reason: 'SDK' });
         await s.direct({ type: 'clickComponent', componentId: make1, reason: 'SDK' });

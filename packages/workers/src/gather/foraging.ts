@@ -185,7 +185,14 @@ export async function runFlax(s: Session, o: FlaxOptions) {
             }
             const before = flaxCount();
             await s.bot.interactLoc(loc, 'Pick');
-            await waitUntil(s, () => flaxCount() > before, { timeoutTicks: 6 });
+            await waitUntil(
+                s,
+                st =>
+                    over()
+                    || flaxCount() > before
+                    || !(st?.nearbyLocs ?? []).some((l: any) => l.id === loc.id && l.x === loc.x && l.z === loc.z),
+                { timeoutTicks: 6 },
+            );
             if (flaxCount() > before) picks++;
         }
     } catch (e) {
@@ -232,7 +239,7 @@ export async function runWool(
     const CAP = opts.cap ?? 15000;
     const MAX_TRIPS = opts.maxTrips ?? Infinity;
     if (opts.deps?.leaveRuneStarter) await opts.deps.leaveRuneStarter(s, () => !!opts.stop?.());
-    await waitTicks(s, 3);
+    await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 3 });
     const t0 = s.tick();
     let ended = false;
     let died = false;
@@ -277,7 +284,7 @@ export async function runWool(
             const item = inv().find(i => i.id === id);
             if (item) await s.bot.depositItem(item, -1);
         }
-        await waitTicks(s, 1);
+        if (inv().some(i => !/^(shears|bread|shrimps)$/i.test(i.name))) await waitTicks(s, 1);
         rawBanked = s.sdk.getState()?.bank?.items.find(i => /^wool$/i.test(i.name))?.count ?? 0;
         if (!over()) await bankCargo(s, [/^wool$/i, /^ball of wool$/i], 0, { stopped: over });
         await s.bot.closeBank();
@@ -365,7 +372,6 @@ export async function runWool(
                 if (made) {
                     spun++;
                     failed = 0;
-                    await waitTicks(s, 3);
                 } else if (++failed > 4) {
                     throw new Error('spinning made no progress');
                 }
@@ -743,7 +749,6 @@ export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: numbe
             await s.bot.withdrawItem(item!, 1, { asNote: false });
             await waitUntil(s, () => hatHeld(), { timeoutTicks: 8 });
             await s.bot.closeInterface();
-            await waitTicks(s, 1);
             if (!hatHeld()) fail('chef hat withdraw');
         }
         await s.bot.equipItem(/^chef's hat$/i);
@@ -778,7 +783,7 @@ export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: numbe
         await goUp();
     };
     try {
-        await waitTicks(s, 1);
+        await waitUntil(s, () => hp() > 0, { timeoutTicks: 2 });
         hp0 = hp();
         hpMin = hp0;
         console.log(`HP start ${hp0}`);

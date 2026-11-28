@@ -75,7 +75,7 @@ export async function exitAirAltar(s: Session, stop: () => boolean = () => false
             check();
             throw Error(reason);
         };
-        await settle(() => insideAirAltar(s.sdk.getState()?.player), 'air craft/modal did not settle', 4);
+        await settle(() => insideAirAltar(s.sdk.getState()?.player), 'air craft/modal did not settle', 2);
         const edges = [{ x: 2841, z: 4829 }, { x: 2842, z: 4828 }, { x: 2841, z: 4827 }, { x: 2840, z: 4828 }];
         let edge: typeof edges[number] | undefined;
         for (const candidate of edges) {

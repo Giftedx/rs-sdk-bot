@@ -2607,7 +2607,6 @@ export async function stageAlch(
     }
     await s.bot.closeBank();
     if (!await waitUntil(s, () => !state()?.bank?.isOpen, { timeoutTicks: 10 })) throw new Error('alch stage: bank did not close');
-    await waitTicks(s, 1);
     if (!deps?.reconcileLoadout && plan.staff !== undefined && !(state()?.equipment ?? []).some(i => FIRE_STAVES.includes(i.id))) {
         const heldStaff = inv().find(i => i.id === plan.staff);
         if (heldStaff && typeof s.bot.equipItem === 'function') {
@@ -2671,7 +2670,13 @@ export async function strikeStart(s: Session, o: { target: number; cap: number; 
                         )}`,
                     );
                 }
-                await waitTicks(s, 3);
+                await waitUntil(
+                    s,
+                    () =>
+                        !!o.stop?.() ||
+                        (state()?.nearbyNpcs ?? []).some(n => n.id === STRIKE.npc && n.reachable === false && n.distance <= 8),
+                    { timeoutTicks: 3 },
+                );
                 continue;
             }
             const before = xp();
@@ -2686,14 +2691,14 @@ export async function strikeStart(s: Session, o: { target: number; cap: number; 
         await walkPath(walker, [{ x: COW_NORTH_BANK.x, z: COW_NORTH_BANK.z, tol: 2 }], { maxTicks: 80 });
         for (let n = 0; n < 5 && state()?.dialog?.isOpen; n++) {
             await s.bot.dismissBlockingUI();
-            await waitTicks(s, 2);
+            await waitUntil(s, () => !state()?.dialog?.isOpen, { timeoutTicks: 2 });
         }
     }
     if (!atNorthBank(state()?.player)) throw new Error('alch: walk back to the bank from the strike tile failed');
     for (let n = 0, last = ''; n < 10; n++) {
         const p = state()?.player;
         const here = `${p?.worldX},${p?.worldZ}`;
-        await waitTicks(s, 2);
+        await waitTicks(s, 1);
         const q = state()?.player;
         if (here === `${q?.worldX},${q?.worldZ}` && here === last) break;
         last = here;
@@ -2752,12 +2757,14 @@ export async function runAlch(
                 stop = r.stop;
                 break;
             }
-            await waitUntil(s, () => !!s.sdk.getState()?.dialog?.isOpen, { timeoutTicks: 2 });
-            for (let k = 0; k < 5 && s.sdk.getState()?.dialog?.isOpen; k++) {
-                await s.bot.dismissBlockingUI();
-                await waitTicks(s, 2);
+            if (level() < o.target || s.sdk.getState()?.dialog?.isOpen) {
+                await waitUntil(s, () => !!s.sdk.getState()?.dialog?.isOpen, { timeoutTicks: 2 });
+                for (let k = 0; k < 5 && s.sdk.getState()?.dialog?.isOpen; k++) {
+                    await s.bot.dismissBlockingUI();
+                    await waitUntil(s, () => !s.sdk.getState()?.dialog?.isOpen, { timeoutTicks: 2 });
+                }
+                if (s.sdk.getState()?.dialog?.isOpen) throw new Error('alch: level-up dialog stayed open');
             }
-            if (s.sdk.getState()?.dialog?.isOpen) throw new Error('alch: level-up dialog stayed open');
         }
     } catch (e) {
         if (e instanceof AlchStopError) stop = 'stopped';

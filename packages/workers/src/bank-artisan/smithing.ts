@@ -1462,7 +1462,7 @@ export async function runBronze(
             if (d?.isOpen) {
                 if (d.options.length === 1 && /continue/i.test(d.options[0]!.text)) {
                     await s.sdk.sendClickDialog(d.options[0]!.index);
-                    await waitTicks(s, 1);
+                    await waitUntil(s, () => !s.sdk.getDialog()?.isOpen || over(), { timeoutTicks: 2 });
                     continue;
                 }
                 throw new Error('unexpected bronze dialog');
@@ -1811,7 +1811,7 @@ export async function runSmithBatch(
         if (!near(SMITH_BANK.x, SMITH_BANK.z)) throw Error('smith bank arrival unobserved');
         arrival = true;
         while (made < o.maximum && !over()) {
-            if (!await walk(SMITH_BANK.x, SMITH_BANK.z)) throw Error('smith bank route incomplete');
+            if (!near(SMITH_BANK.x, SMITH_BANK.z, 2) && !await walk(SMITH_BANK.x, SMITH_BANK.z)) throw Error('smith bank route incomplete');
             await openBank();
             await depositMaterial();
             if (!held(HAMMER)) {
@@ -1836,7 +1836,7 @@ export async function runSmithBatch(
                     const option = dialog.options.find(v => /continue/i.test(v.text));
                     if (!option) throw Error('smith unexpected dialog: ' + (dialog.text ?? ''));
                     if (!(await s.sdk.sendClickDialog(option.index)).success) throw Error('smith dialog click refused');
-                    await waitTicks(s, 1);
+                    await waitUntil(s, () => ended || died || !s.sdk.getDialog()?.isOpen, { timeoutTicks: 2 });
                     continue;
                 }
                 attempts++;

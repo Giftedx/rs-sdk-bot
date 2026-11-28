@@ -361,7 +361,7 @@ export async function runCookFood(
                 break;
             }
             if (rawCount() === 0) {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
         }

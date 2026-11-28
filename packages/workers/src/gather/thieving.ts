@@ -957,7 +957,7 @@ export async function stealStall(s: Session, name: string, maximum: number, cap:
             });
             if (!stallEffect(r, before, inv(), beforeXp, xp())) {
                 if (!r.questGate && !over() && attempts < maximum * 4 + 8) {
-                    await waitTicks(s, 2);
+                    await waitTicks(s, 1);
                     continue;
                 }
                 throw Error(r.questGate ? 'stall no progress; check Fremennik Trials gate/owner/guard visibility' : 'stall no progress; owner/guard state did not settle');
@@ -967,7 +967,6 @@ export async function stealStall(s: Session, name: string, maximum: number, cap:
                 if (n) loot[id] = (loot[id] ?? 0) + n;
             }
             made++;
-            if (made < maximum && !over()) await waitTicks(s, Math.min(2, Math.max(1, cap - (s.tick() - start))));
         }
         if (made !== maximum) throw Error(life.reason() || 'stall tick budget');
     } catch (error) {
@@ -2000,7 +1999,7 @@ export async function runGoldfarmKnights(s: Session, cfg: NormalizedGatherConfig
     const farmServer = FOOD_FROM ? serverFromEnv(readFileSync(resolveBotEnvPath(s.name, ROOT), 'utf8')) : '';
 
     console.log(`KNIGHT_SPOT ${knightSpot.x},${knightSpot.z}`);
-    await waitTicks(s, 5);
+    await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0, { timeoutTicks: 5 });
     const p0 = s.sdk.getState()?.player;
     if (!p0 || p0.level !== 0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
         const there = await defaultWalkTargetPersist(s, { x: 2654, z: 3283, level: 0 }, 4, cfg.deps);
@@ -2223,6 +2222,22 @@ export async function runGoldfarmKnights(s: Session, cfg: NormalizedGatherConfig
     };
 
     const steal = async (range = RANGE) => {
+        if (st()?.dialog?.isOpen || st()?.modalOpen) {
+            await s.direct({ type: 'closeModal', reason: 'SDK' });
+            await waitUntil(s, () => died || stop() || (!st()?.dialog?.isOpen && !st()?.modalOpen), { timeoutTicks: 2 });
+        }
+        if (s.tick() < stunUntil) {
+            if (food() > 0 && hp() <= eatAt()) {
+                await eat();
+                return;
+            }
+            await waitUntil(
+                s,
+                () => died || stop() || now() >= TICKS || existsSync(stopFile) || s.tick() >= stunUntil || (food() > 0 && hp() <= eatAt()),
+                { timeoutTicks: Math.max(1, stunUntil - s.tick()) },
+            );
+            return;
+        }
         const p = pos();
         const avoid = randomEventsOf(s)?.avoid().npcs;
         const away = (n: any) => (p ? Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) : 0);
@@ -2263,7 +2278,16 @@ export async function runGoldfarmKnights(s: Session, cfg: NormalizedGatherConfig
         const c0 = coins();
         const gap = away(npc);
         await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
-        await waitTicks(s, PICK_TICKS);
+        if (gap > 1) {
+            await waitUntil(s, () => died || stop() || coins() > c0 || hp() < hp0, {
+                timeoutTicks: Math.min(7, gap + PICK_TICKS + 1),
+            });
+        } else {
+            await waitTicks(s, PICK_TICKS);
+            if (coins() === c0 && hp() === hp0 && ((pos()?.spotanimId ?? -1) > 0 || (pos()?.animId ?? -1) > 0)) {
+                await waitUntil(s, () => died || stop() || hp() < hp0 || coins() > c0, { timeoutTicks: 1 });
+            }
+        }
         if (hp() < hp0) {
             picks++;
             fails++;
@@ -2651,6 +2675,7 @@ export async function runGoldfarmStableSession(
     let picks = 0;
     let unsettledChecks = 0;
     let fails = 0;
+    let stunUntil = 0;
     let eaten = 0;
     let bankTrips = 0;
     let bankTicks = 0;
@@ -2816,6 +2841,10 @@ export async function runGoldfarmStableSession(
 
     const steal = async () => {
         if (stoppingPicks) return;
+        if (st()?.dialog?.isOpen || st()?.modalOpen) {
+            await s.direct({ type: 'closeModal', reason: 'SDK' });
+            await waitUntil(s, () => stoppingPicks || died || stop() || (!st()?.dialog?.isOpen && !st()?.modalOpen), { timeoutTicks: 2 });
+        }
         if (hp() <= DMG) {
             if (foodCount() > 0) {
                 await eat();
@@ -2823,6 +2852,18 @@ export async function runGoldfarmStableSession(
             }
             await replenishFood();
             if (foodCount() === 0) await walk(BANK_SPOT, 2);
+            return;
+        }
+        if (s.tick() < stunUntil) {
+            if (foodCount() > 0 && hp() <= eatAt()) {
+                await eat();
+                return;
+            }
+            await waitUntil(
+                s,
+                () => stoppingPicks || died || stop() || existsSync(stopFile) || s.tick() >= stunUntil || (foodCount() > 0 && hp() <= eatAt()),
+                { timeoutTicks: Math.max(1, stunUntil - s.tick()) },
+            );
             return;
         }
         const p = pos();
@@ -2846,15 +2887,26 @@ export async function runGoldfarmStableSession(
         }
         const hp0 = hp();
         const c0 = coins();
+        const gap = p ? Math.max(Math.abs(npc.x - p.worldX), Math.abs(npc.z - p.worldZ)) : 0;
         if (stoppingPicks) return;
         pickInFlight = true;
         trace('pick-dispatch');
         try {
             await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
-            await waitTicks(s, 2);
+            if (gap > 1) {
+                await waitUntil(s, () => stoppingPicks || died || stop() || coins() > c0 || hp() < hp0, {
+                    timeoutTicks: Math.min(7, gap + 3),
+                });
+            } else {
+                await waitTicks(s, 2);
+                if (coins() === c0 && hp() === hp0 && ((pos()?.spotanimId ?? -1) > 0 || (pos()?.animId ?? -1) > 0)) {
+                    await waitUntil(s, () => stoppingPicks || died || stop() || hp() < hp0 || coins() > c0, { timeoutTicks: 1 });
+                }
+            }
             if (hp() < hp0) {
                 picks++;
                 fails++;
+                stunUntil = s.tick() + 8;
                 await onStun();
             } else if (coins() > c0) {
                 picks++;

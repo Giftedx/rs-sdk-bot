@@ -287,7 +287,7 @@ export async function runInventoryBank(
                     const before = count(need.id);
                     if (stopped()) return false;
                     await s.bot.withdrawItem(target, missing, { asNote: false }).catch(() => undefined);
-                    let got = await waitUntil(s, () => count(need.id) === before + missing, { timeoutTicks: 8 });
+                    let got = await waitUntil(s, () => count(need.id) === before + missing, { timeoutTicks: 3 });
                     if (!got && !stopped() && s.sdk.getState()?.bank?.isOpen && count(need.id) === before) {
                         const retryTarget = s.sdk.getState()?.bank?.items.find(i => i.id === need.id);
                         if (retryTarget && Number.isSafeInteger(retryTarget.slot)) {
@@ -299,7 +299,7 @@ export async function runInventoryBank(
                 }
                 if (stopped() || (r.extraSlot && inv().length >= 28)) return false;
                 await s.bot.closeBank();
-                let closed = await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+                let closed = await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 2 });
                 if (!closed && !stopped()) {
                     await s.direct({ type: 'closeModal', reason: 'production bank close' });
                     closed = await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });

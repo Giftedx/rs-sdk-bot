@@ -578,7 +578,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank: ${b.message}`);
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
             return;
         }
         const desiredFloat = Math.min(FLOAT, COIN_RESERVE + MAX_SPEND - spentTotal);
@@ -595,7 +595,6 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                 if (quantity() > 0) throw new Error(`shop deposit incomplete: ${item.name}`);
             }
         }
-        await waitTicks(s, 1);
         await bankCargo(s, conf.items.map(i => i.re));
         stock.clear();
         for (const item of s.sdk.getState()?.bank?.items ?? []) stock.set(item.name.toLowerCase(), item.count);
@@ -704,7 +703,6 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
     if (BANK_PACK) {
         await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
         if ((await s.bot.openBank()).success) {
-            await waitTicks(s, 1);
             await depositPack(s, i => /^coins$/i.test(i.name));
             await s.bot.closeInterface();
         }
@@ -764,6 +762,7 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
         }
 
         if (over() || ended) break;
+        const roundStartTick = s.tick();
         let boughtInRound = 0;
         let blindWaits = false;
         let blindUnit = 0;
@@ -798,7 +797,9 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                 }
                 if (!s.sdk.getState()?.shop?.isOpen && !shopRes.success) {
                     console.log(`WARN openShop failed: ${shopRes.message}`);
-                    await waitTicks(s, 5);
+                    const ui = s.sdk.getState();
+                    if (ui?.dialog?.isOpen || ui?.modalOpen) await s.bot.dismissBlockingUI?.();
+                    await waitTicks(s, 1);
                     continue;
                 }
                 if (s.sdk.getState()?.shop?.isOpen) shopTrips++;
@@ -936,10 +937,31 @@ export async function runShopBuy(s: Session, cfg: ShopBuyConfig, stop: () => boo
                 stopReason = 'stock-wait';
                 break;
             }
-            await waitTicks(s, waiting.waitTicks);
+            if (!blindWaits && waiting.waitTicks > 1 && planTargets.length > 0 && s.sdk.getState()?.shop?.isOpen) {
+                await waitUntil(
+                    s,
+                    () =>
+                        over()
+                        || ended
+                        || courierWaiting(s.name)
+                        || !s.sdk.getState()?.shop?.isOpen
+                        || planShopPurchases(
+                            planTargets,
+                            s.sdk.getState()?.shop?.shopItems ?? [],
+                            s.sdk.getInventory(),
+                            stock,
+                            Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)),
+                            stockTarget,
+                            MAX_ITEMS - boughtTotal,
+                        ).length > 0,
+                    { timeoutTicks: waiting.waitTicks },
+                );
+            } else {
+                await waitTicks(s, waiting.waitTicks);
+            }
         } else {
             noBuySince = undefined;
-            await waitTicks(s, blindWaits ? 1 : 2);
+            if (blindWaits || s.tick() === roundStartTick) await waitTicks(s, 1);
         }
     }
 

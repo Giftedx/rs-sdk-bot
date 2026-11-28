@@ -236,7 +236,6 @@ export async function searchNativeCatherbyFishing(s: Session, method: FishMethod
     console.log('FISH_SEARCH ' + JSON.stringify({ method, pass, visible: visible?.index, target: { x: target.x, z: target.z }, shore: end }));
     const result = await walkPath(await sessionWalker(s), [{ ...end, tol: 0 }], { maxTicks: 20, stop });
     if (!result.ok || stop()) return false;
-    await waitTicks(s, 1);
     return true;
 }
 
@@ -285,6 +284,7 @@ export interface FishDriver {
     search?: (pass: number, stop: () => boolean) => Promise<boolean>;
     send?: (actions: FishAction[]) => Promise<void>;
     stand?: (spot: NearbyNpc) => Promise<boolean>;
+    closeDialog?: () => Promise<unknown>;
 }
 
 export function karambwanLoadEffect(before: BotWorldState, after: BotWorldState) {
@@ -446,6 +446,7 @@ export function createFishingDriver(s: Session, stopped: () => boolean): FishDri
         combine: (a, b) => s.sdk.sendUseItemOnItem(a, b),
         wait: (test, ticks) => waitUntil(s, test, { timeoutTicks: ticks }),
         step: () => waitTicks(s, 1),
+        closeDialog: () => s.direct({ type: 'closeModal', reason: 'SDK' }),
         send: async acts => {
             for (const a of acts) await s.direct({ ...a, reason: 'SDK' });
         },
@@ -529,6 +530,22 @@ export async function runStagedFishing(d: FishDriver, o: FishBatchOptions): Prom
     while (last - base < o.amount) {
         let s = state();
         if (d.tick() - progress >= o.progressTicks) throw Error('fishing no progress');
+        if (s.dialog?.isOpen || s.modalOpen) {
+            active = undefined;
+            const dialogTick = d.tick();
+            if (d.closeDialog) {
+                await d.closeDialog();
+                await d.wait(
+                    () => {
+                        const now = state();
+                        return !now.dialog?.isOpen && !now.modalOpen;
+                    },
+                    Math.min(2, Math.max(1, o.cap - (d.tick() - start))),
+                );
+            }
+            if (d.tick() === dialogTick) await d.step();
+            continue;
+        }
         if (28 - s.inventory.length < freeRequired) throw Error('fishing pack capacity before next native roll');
         if (profile.bait && stateItemCount(s, profile.bait) < 1 && !(o.method === 'karambwan' && stateItemCount(s, 3159))) {
             throw Error('fishing bait exhausted');
@@ -581,6 +598,8 @@ export async function runStagedFishing(d: FishDriver, o: FishBatchOptions): Prom
             await d.wait(() => {
                 const now = state();
                 return (
+                    !!now.dialog?.isOpen ||
+                    !!now.modalOpen ||
                     fishingOutputs('bigNet').some(id => stateItemCount(now, id) > (before.items[id] ?? 0)) ||
                     !now.nearbyNpcs.some(n => n.index === active && n.x === x && n.z === z)
                 );
@@ -589,6 +608,23 @@ export async function runStagedFishing(d: FishDriver, o: FishBatchOptions): Prom
                 bigNetReceipt(before, bigNetSnapshot(state()), netRawXp, initialXp, Math.max(1, Math.ceil((d.tick() - began) / 5)), xpRate);
             let effect = receipt();
             if (effect.kind === 'pending') {
+                const nowState = state();
+                if (nowState.dialog?.isOpen || nowState.modalOpen) {
+                    active = undefined;
+                    const dialogTick = d.tick();
+                    if (d.closeDialog) {
+                        await d.closeDialog();
+                        await d.wait(
+                            () => {
+                                const now = state();
+                                return !now.dialog?.isOpen && !now.modalOpen;
+                            },
+                            Math.min(2, Math.max(1, o.cap - (d.tick() - start))),
+                        );
+                    }
+                    if (d.tick() === dialogTick) await d.step();
+                    continue;
+                }
                 await d.wait(() => receipt().kind !== 'pending', Math.min(3, o.cap - (d.tick() - start)));
                 effect = receipt();
             }
@@ -608,7 +644,12 @@ export async function runStagedFishing(d: FishDriver, o: FishBatchOptions): Prom
             const beforeXp = fishingStateXp(s);
             await d.wait(() => {
                 const now = state();
-                return fishCount(now, o.method) > last || !now.nearbyNpcs.some(n => n.index === active && n.x === spot.x && n.z === spot.z);
+                return (
+                    !!now.dialog?.isOpen ||
+                    !!now.modalOpen ||
+                    fishCount(now, o.method) > last ||
+                    !now.nearbyNpcs.some(n => n.index === active && n.x === spot.x && n.z === spot.z)
+                );
             }, Math.min(40, o.progressTicks - (d.tick() - progress), o.cap - (d.tick() - start)));
             const after = state();
             const delta = fishCount(after, o.method) - (o.method === 'lava' ? beforeCatch : fishCount(before, o.method));
@@ -632,7 +673,23 @@ export async function runStagedFishing(d: FishDriver, o: FishBatchOptions): Prom
             const pendingCatch = last;
             const pendingBait = profile.bait ? stateItemCount(after, profile.bait) : 0;
             const pendingXp = fishingStateXp(after);
-            await d.step();
+            if (after.dialog?.isOpen || after.modalOpen) {
+                active = undefined;
+                const dialogTick = d.tick();
+                if (d.closeDialog) {
+                    await d.closeDialog();
+                    await d.wait(
+                        () => {
+                            const now = state();
+                            return !now.dialog?.isOpen && !now.modalOpen;
+                        },
+                        Math.min(2, Math.max(1, o.cap - (d.tick() - start))),
+                    );
+                }
+                if (d.tick() === dialogTick) await d.step();
+            } else {
+                await d.step();
+            }
             if (o.method !== 'bigNet' && o.method !== 'karambwan') {
                 const next = state();
                 const received = fishCount(next, o.method) - pendingCatch;
@@ -1133,7 +1190,7 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
                 }
                 const anim = st.player?.animId ?? -1;
                 if (anim !== -1) idleStreak = 0;
-                else if (++idleStreak >= 6) {
+                else if (++idleStreak >= (spot.distance <= 1 ? 3 : 6)) {
                     activeSpot = undefined;
                     return true;
                 }
@@ -1967,6 +2024,7 @@ export async function runVillageFishing(
                         combine: (a, b) => s.sdk.sendUseItemOnItem(a, b),
                         wait: (test, ticks) => waitUntil(s, test, { timeoutTicks: ticks }),
                         step: () => waitTicks(s, 1),
+                        closeDialog: () => s.direct({ type: 'closeModal', reason: 'SDK' }),
                     },
                     { method: o.method, amount: n, cap, maxAttempts: 10, progressTicks: Math.min(300, cap), xpRate: o.xpRate },
                 );
@@ -2467,7 +2525,7 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
     const TICK3 = !FINITE && resolveSetting(cfg, 'TICK3') !== '0';
     const cookMode = resolveSetting(cfg, 'COOK_MODE') ?? 'wait';
 
-    await waitTicks(s, 3);
+    await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0, { timeoutTicks: 3 });
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
     const inv = () => (st()?.inventory ?? []) as any[];
@@ -2793,7 +2851,9 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
                 });
                 if (gone) {
                     kills++;
-                    await waitTicks(s, 1);
+                    await waitUntil(s, x => (x?.groundItems ?? []).some((g: any) => FEATHER.test(g.name) && g.distance <= 8), {
+                        timeoutTicks: 1,
+                    });
                 }
             }
         } finally {
@@ -2982,15 +3042,24 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
         }
         if (countItems(s, /^small fishing net$/i) === 0) end(false, 'no small fishing net');
         let stall = 0;
+        let activeNet: { index: number; x: number; z: number } | undefined;
         while (!over() && fish() < 20 && (!FINITE || finiteFoodCanCatch(FINITE, netCaught, flyCaught, 'net'))) {
             if (FINITE && s.tick() - lastCatchTick > FINITE.noProgressTicks) end(false, 'finite net no progress');
             if (randomEventsOf(s)?.busy()) {
+                activeNet = undefined;
                 await waitTicks(s, 1);
                 continue;
             }
-            if (await eatIfLow()) continue;
-            if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
+            if (await eatIfLow()) {
+                activeNet = undefined;
+                continue;
+            }
+            if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) {
+                activeNet = undefined;
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
             if (invLen() >= 28) {
+                activeNet = undefined;
                 await go(NET_TO_BANK, 'to Draynor bank');
                 const ob = await s.bot.openBank();
                 if (FINITE && !ob.success) end(false, 'finite net deposit bank unavailable');
@@ -3006,12 +3075,18 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
                 continue;
             }
             const curPos = pos();
-            if (!curPos || cheb(NET_STAND, curPos) > 4) await go(BANK_TO_NET, 'to Draynor net spot');
+            if (!curPos || cheb(NET_STAND, curPos) > 4) {
+                activeNet = undefined;
+                await go(BANK_TO_NET, 'to Draynor net spot');
+            }
             const wiz = (st()?.nearbyNpcs ?? []).some((n: any) => /dark wizard/i.test(n.name) && n.distance <= 4);
             if (wiz) {
+                activeNet = undefined;
                 lastFail = 'dark wizard near net spot';
                 await walk([[3093, 3228, 1]]);
-                await waitTicks(s, 3);
+                await waitUntil(s, () => over() || !(st()?.nearbyNpcs ?? []).some((n: any) => /dark wizard/i.test(n.name) && n.distance <= 4), {
+                    timeoutTicks: 3,
+                });
                 continue;
             }
             const sp = (st()?.nearbyNpcs ?? [])
@@ -3024,6 +3099,7 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
                 )
                 .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
             if (!sp) {
+                activeNet = undefined;
                 stall++;
                 if (stall % 5 === 0) await walk([[NET_STAND.x, NET_STAND.z, 1]]);
                 await waitTicks(s, 1);
@@ -3032,15 +3108,29 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
             stall = 0;
             const netOp = sp.optionsWithIndex.find((op: any) => /^net$/i.test(op.text))?.opIndex ?? 1;
             const invBefore = invLen();
-            await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: netOp, reason: 'SDK' });
+            const sameNet = !!activeNet && activeNet.index === sp.index && activeNet.x === sp.x && activeNet.z === sp.z;
+            if (!sameNet) {
+                await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: netOp, reason: 'SDK' });
+                activeNet = { index: sp.index, x: sp.x, z: sp.z };
+            }
+            let idleNet = 0;
             for (let t = 0; t < 12 && !over() && fish() < 20; t++) {
                 await waitTicks(s, 1);
                 if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) {
+                    activeNet = undefined;
                     await s.direct({ type: 'closeModal', reason: 'SDK' });
                     break;
                 }
                 if (invLen() > invBefore || invLen() >= 28) break;
-                if (!(st()?.nearbyNpcs ?? []).some((n: any) => n.index === sp.index)) break;
+                if (!(st()?.nearbyNpcs ?? []).some((n: any) => n.index === sp.index && n.x === sp.x && n.z === sp.z)) {
+                    activeNet = undefined;
+                    break;
+                }
+                if ((pos()?.animId ?? -1) !== -1) idleNet = 0;
+                else if (++idleNet >= (sp.distance <= 1 ? 3 : 6)) {
+                    activeNet = undefined;
+                    break;
+                }
             }
         }
         if (FINITE && fish() < 20) end(false, 'finite net bootstrap budget/stop');
@@ -3253,6 +3343,7 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
             }
             noSpot = 0;
             const lure = sp.optionsWithIndex.find((o: any) => LURE.test(o.text)).opIndex;
+            if (s.sdk.getDialog()?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
             if (sp.distance > 1) {
                 activeFishingIndex = sp.index;
                 await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
@@ -3263,7 +3354,6 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
             } else {
                 const knife = slotOf(/^knife$/i);
                 const log = slotOf(/^logs$/i);
-                if (s.sdk.getDialog()?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
                 if (TICK3 && knife !== undefined && log !== undefined) {
                     await s.direct({ type: 'useItemOnItem', sourceSlot: knife, targetSlot: log, reason: 'SDK' });
                     await s.direct({ type: 'clickComponent', componentId: make1, reason: 'SDK' });
