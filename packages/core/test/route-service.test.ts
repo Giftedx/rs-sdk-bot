@@ -1,9 +1,21 @@
 import { expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { readServiceInfo, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
+import { claimLaunch, LAUNCH_LOCK_MS, readServiceInfo, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
 import { serviceWanted } from '../src/route-plan';
+
+test('one launcher at a time holds the launch lock; a stale lock is taken again', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'route-launch-')), lock = join(dir, 'route-service.json.lock');
+    try {
+        expect(claimLaunch(lock, 1_000_000)).toBe(true);
+        expect(claimLaunch(lock, 1_000_000 + LAUNCH_LOCK_MS - 1)).toBe(false);
+        expect(claimLaunch(lock, 1_000_000 + LAUNCH_LOCK_MS)).toBe(true);
+        writeFileSync(lock, 'damaged');
+        expect(claimLaunch(lock, 1_000_000_000)).toBe(true);
+        expect(existsSync(lock)).toBe(true);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 
 class FakeWorker {
     static made: FakeWorker[] = [];
@@ -102,7 +114,7 @@ test('planTripOffThread plans by the service and falls back to its own worker wh
   const tile={x:1,z:1,level:0};
   port=server.port;
   const viaService=planTripOffThread(tile,{x:5,z:5,level:0},{});
-  await Bun.sleep(0);
+  assert.equal(pendingRouteWork(),1);
   assert.equal((await viaService).by,'service');
   assert.deepEqual((await viaService).to,{x:5,z:5,level:0});
   assert.equal(workers.length,0);

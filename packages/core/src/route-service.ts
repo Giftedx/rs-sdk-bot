@@ -53,6 +53,28 @@ export function usableService(info: ServiceInfo | null, rev: string, dataKey: st
 export function launchService(root = repoRoot): void {
     spawn(process.execPath, [join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], { cwd: root, detached: true, windowsHide: true, stdio: 'ignore', env: process.env }).unref();
 }
+// One launch at a time for each checkout: the launcher creates the lock with the exclusive flag, and the service it
+// starts removes it once its record is written. A lock older than LAUNCH_LOCK_MS (a service that died while it
+// started) is removed and taken again. Bots that ask together therefore start one service, not one each.
+export const LAUNCH_LOCK_MS = 60_000;
+export function claimLaunch(lock = `${SERVICE_FILE}.lock`, now = Date.now()): boolean {
+    mkdirSync(dirname(lock), { recursive: true });
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const fd = openSync(lock, 'wx');
+            try { writeFileSync(fd, JSON.stringify({ pid: process.pid, at: now })); } finally { closeSync(fd); }
+            return true;
+        } catch (e) {
+            if ((e as NodeJS.ErrnoException)?.code !== 'EEXIST') return false;
+            let seen = '', at = now;
+            try { seen = readFileSync(lock, 'utf8'); at = (JSON.parse(seen) as { at: number }).at; } catch { at = 0; }
+            if (now - at < LAUNCH_LOCK_MS) return false;
+            // Only the stale lock that was read is removed, never a newer launcher's.
+            try { if (readFileSync(lock, 'utf8') === seen) unlinkSync(lock); } catch { /* gone */ }
+        }
+    }
+    return false;
+}
 function launchDetached(): void {
     mkdirSync(dirname(SERVICE_LOG), { recursive: true });
     const out = openSync(SERVICE_LOG, 'a');
@@ -129,6 +151,8 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; file?: st
     const tmp = `${file}.${process.pid}.tmp`;
     writeFileSync(tmp, JSON.stringify(info));
     renameRetry(tmp, file);
+    // The record is there: the next launcher finds this service, so the launch lock is released.
+    try { unlinkSync(`${file}.lock`); } catch { /* none */ }
     console.log(`ROUTE_SERVICE_START ${JSON.stringify(info)}`);
     let stopped = false;
     const stop = (why: string) => {
@@ -158,7 +182,7 @@ if (import.meta.main) {
         // killed service whose pid another process has now does not answer.
         const found = usableService(readServiceInfo(), checkoutRev(), pathfindingDataKey());
         const answers = found ? await fetch(`http://127.0.0.1:${found.port}/health`, { signal: AbortSignal.timeout(2_000) }).then(r => r.ok, () => false) : false;
-        if (!answers) launchDetached();
+        if (!answers && claimLaunch()) launchDetached();
         process.exit(0);
     }
     const s = serveRoutes({ workers: arg('--workers'), idleMs: arg('--idle-ms'), onStop: () => process.exit(0) });

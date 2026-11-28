@@ -15,7 +15,7 @@ const step = async (label: string, f: () => unknown) => { const t = performance.
 const acct = { skills: { hitpoints: 10 }, coins: 20000, varps: {}, items: [], worn: [], unlocks: [], questStages: {} } as any;
 await step('base', () => 0);
 await step('import bot+walk', async () => { await import('../../packages/core/src/bot'); await import('../../packages/core/src/walk'); });
-await step('getWorld', async () => { const { getWorld } = await import('../../packages/core/src/bot/open'); await getWorld(); });
+await step('getWorld', async () => { const { getWorld } = await import('../../packages/core/src/bot'); await getWorld(); });
 await step('findLongPath 20 tiles', async () => { const pf: any = await import('../../vendor/rs-sdk/sdk/pathfinding'); pf.findLongPath(0, 3222, 3218, 3240, 3225); });
 const { planTripOffThread } = await import('../../packages/core/src/route-plan');
 const trips: [string, any, any][] = [

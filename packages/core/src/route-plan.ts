@@ -88,8 +88,6 @@ async function routeService(): Promise<ServiceInfo | null> {
 }
 // The plan from the service, or undefined when the service cannot answer (the caller plans with its own worker).
 async function planByService(info: ServiceInfo, body: object, signal: AbortSignal | undefined): Promise<TripPlan | null | undefined> {
-    const id = ++next;
-    remote.set(id, performance.now());
     let out: { plan?: TripPlan | null; error?: string };
     try {
         const res = await fetch(`http://127.0.0.1:${info.port}/plan`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), ...(signal ? { signal } : {}) });
@@ -101,7 +99,7 @@ async function planByService(info: ServiceInfo, body: object, signal: AbortSigna
         serviceDownUntil = performance.now() + SERVICE_RETRY_MS;
         failedService = serviceId(info);
         return undefined;
-    } finally { remote.delete(id); }
+    }
     if (out.error) throw Error(`route worker: ${out.error}`);
     return out.plan ?? null;
 }
@@ -109,10 +107,17 @@ async function planByService(info: ServiceInfo, body: object, signal: AbortSigna
 export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: BankStock, budgetMs?: number): Promise<TripPlan | null> {
     const signal = executionContext.getStore()?.signal;
     if (signal?.aborted) return Promise.reject(signal.reason);
+    // The search counts as pending route work from the service lookup on (a lookup can wait for a new service), until
+    // the service answers or the plan goes to this process's own worker, which counts it from then.
     if (serviceWanted()) return (async () => {
-        const info = await routeService();
-        if (signal?.aborted) throw signal.reason;
-        const plan = info ? await planByService(info, { from, to, acct, stock, budgetMs }, signal) : undefined;
+        const id = ++next;
+        remote.set(id, performance.now());
+        let plan: TripPlan | null | undefined;
+        try {
+            const info = await routeService();
+            if (signal?.aborted) throw signal.reason;
+            plan = info ? await planByService(info, { from, to, acct, stock, budgetMs }, signal) : undefined;
+        } finally { remote.delete(id); }
         return plan !== undefined ? plan : planLocally(from, to, acct, stock, budgetMs, signal);
     })();
     return planLocally(from, to, acct, stock, budgetMs, signal);
