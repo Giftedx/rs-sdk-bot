@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795868126962,
+ "at": 1795868173831,
  "jobs": [
   {
    "account": "Balls",
@@ -70,29 +70,51 @@
    "role": "army"
   },
   {
-   "account": "bigpackage",
-   "script": "scripts/aio-market.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "240",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "240"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
+   "goal": "goal:supply_chain:1607",
    "role": "army"
+  },
+  {
+   "account": "bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:556",
+   "role": "army"
+  },
+  {
+   "account": "chaosinpants",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:chaosinpants",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:chaosinpants",
+   "role": "auto"
   },
   {
    "account": "fingersmith",
@@ -120,43 +142,49 @@
    "role": "army"
   },
   {
-   "account": "chaosinpants",
+   "account": "masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts RAW_ONLY=1 CAP=4000 TARGET_COUNT=400 PRODUCT_TARGET=400 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark",
+    "scripts/aio-skiller.ts FOOD_TYPE=shark DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 MAX_MAKE=400 CAP=3600 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
+  },
+  {
+   "account": "bonetopick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "auto"
+  },
+  {
+   "account": "nockitoff",
    "script": "scripts/ranged-train.ts",
    "args": [],
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:chaosinpants",
+    "DEMAND_ID": "goal:pk_army:nockitoff",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:chaosinpants",
-   "role": "auto"
-  },
-  {
-   "account": "bonetopick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "alfonse",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "379",
-    "ITEMS": "Lobster",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:379",
-    "BATCH_UNITS": "3"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "goal:pk_army:nockitoff",
    "role": "auto"
   },
   {
@@ -176,6 +204,38 @@
    "role": "army"
   },
   {
+   "account": "ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
+   "account": "dropmyload",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
    "account": "backdoorman",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -184,7 +244,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "152"
+    "BATCH_UNITS": "376"
    },
    "enabled": true,
    "repeat": false,
@@ -193,21 +253,6 @@
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "ballbag",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=162 -- thieving knights"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper"
   },
   {
    "account": "ballspinner",
@@ -233,7 +278,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "152"
+    "BATCH_UNITS": "376"
    },
    "enabled": true,
    "repeat": false,
@@ -244,20 +289,23 @@
    ]
   },
   {
-   "account": "dropmyload",
+   "account": "hocuspokeus",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "376"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "billionaire",
@@ -267,7 +315,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "648"
+    "BATCH_UNITS": "1609"
    },
    "enabled": true,
    "repeat": false,
@@ -291,22 +339,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop3 3000",
-    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "army"
   },
   {
    "account": "moneyshot",
@@ -347,7 +379,6 @@
   "UnderMyKilt",
   "bowbeforeme",
   "fatstack",
-  "hocuspokeus",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
