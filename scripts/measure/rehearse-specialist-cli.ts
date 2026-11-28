@@ -153,30 +153,32 @@ type CombatPvpMode =
 function combatPvpSuppliers(mode: CombatPvpMode, rangedTank = false): readonly SpecialistSupplierDef[] {
     const {
         COMBAT_BENCH_MODES,
+        RANGED_MID_TANK_SKILLS,
         RANGED_TANK_SKILLS,
         tankPostPresetConfig,
         tankSupplierPresetConfig,
     } = loadMod<typeof import('./specialist-combat-quests-cases')>('./specialist-combat-quests-cases');
     const kit = COMBAT_BENCH_MODES[mode].kit;
-    const skills = rangedTank ? RANGED_TANK_SKILLS : undefined;
+    const supSkills = rangedTank ? RANGED_TANK_SKILLS : undefined;
+    const midSkills = rangedTank ? RANGED_MID_TANK_SKILLS : undefined;
     return [
         {
             script: 'scripts/measure/specialist-combat-quests-cases.ts',
             args: ['--companion', '{ACTOR}', 'supplier-tank', mode, '1'],
             env: PVP_COMPANION_GUARD_ENV,
-            save: () => tankSupplierPresetConfig(kit, skills),
+            save: () => tankSupplierPresetConfig(kit, supSkills),
         },
         {
             script: 'scripts/measure/specialist-combat-quests-cases.ts',
             args: ['--companion', '{ACTOR}', 'tank', mode, '0'],
             env: PVP_COMPANION_GUARD_ENV,
-            save: () => tankPostPresetConfig(0, skills),
+            save: () => tankPostPresetConfig(0, midSkills),
         },
         {
             script: 'scripts/measure/specialist-combat-quests-cases.ts',
             args: ['--companion', '{ACTOR}', 'tank', mode, '2'],
             env: PVP_COMPANION_GUARD_ENV,
-            save: () => tankPostPresetConfig(2, skills),
+            save: () => tankPostPresetConfig(2),
         },
     ];
 }

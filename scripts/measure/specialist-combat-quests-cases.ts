@@ -41,7 +41,7 @@ export function kitToSaveInventory(kit: readonly KitSpecItem[]): { id: number; c
     return out;
 }
 
-const TANK_SKILLS = {
+export const TANK_SKILLS = {
     Attack: 99,
     Strength: 99,
     Defence: 1,
@@ -55,6 +55,17 @@ const TANK_SKILLS = {
 export const RANGED_TANK_SKILLS = {
     Attack: 44,
     Strength: 44,
+    Defence: 1,
+    Hitpoints: 99,
+    Prayer: 1,
+    Magic: 45,
+    Ranged: 1,
+} as const;
+
+// CB 80 bridge tank (1.10x PvP XP multiplier, reachable from CB 29 / Ranged ~44 in Wildy 51) before CB 101 (1.125x) unlocks at CB 50.
+export const RANGED_MID_TANK_SKILLS = {
+    Attack: 85,
+    Strength: 85,
     Defence: 1,
     Hitpoints: 99,
     Prayer: 1,
@@ -373,7 +384,8 @@ function makeCombatPvpRehearsalSegment(opts: {
     rangedTank?: boolean;
 }) {
     const kit = COMBAT_BENCH_MODES[opts.mode].kit;
-    const skills = opts.rangedTank ? RANGED_TANK_SKILLS : undefined;
+    const supSkills = opts.rangedTank ? RANGED_TANK_SKILLS : undefined;
+    const midSkills = opts.rangedTank ? RANGED_MID_TANK_SKILLS : undefined;
     return {
         specialist: opts.specialist,
         id: opts.id,
@@ -385,19 +397,19 @@ function makeCombatPvpRehearsalSegment(opts: {
                 script: 'scripts/measure/specialist-combat-quests-cases.ts',
                 args: ['--companion', '{ACTOR}', 'supplier-tank', opts.mode, '1'],
                 env: { ...REHEARSE_GUARD_ENV },
-                save: tankSupplierPresetConfig(kit, skills),
+                save: tankSupplierPresetConfig(kit, supSkills),
             },
             {
                 script: 'scripts/measure/specialist-combat-quests-cases.ts',
                 args: ['--companion', '{ACTOR}', 'tank', opts.mode, '0'],
                 env: { ...REHEARSE_GUARD_ENV },
-                save: tankPostPresetConfig(0, skills),
+                save: tankPostPresetConfig(0, midSkills),
             },
             {
                 script: 'scripts/measure/specialist-combat-quests-cases.ts',
                 args: ['--companion', '{ACTOR}', 'tank', opts.mode, '2'],
                 env: { ...REHEARSE_GUARD_ENV },
-                save: tankPostPresetConfig(2, skills),
+                save: tankPostPresetConfig(2),
             },
         ],
         plan: { ticks: opts.planTicks, source: opts.planSource },
