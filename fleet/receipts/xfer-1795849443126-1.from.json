@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795849443126-1",
+ "account": "SporranBulge",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 19,
+ "claim": "395f12b8-03dc-4738-936b-2875e34608a2",
+ "count": 0,
+ "ok": false,
+ "at": 1795849517292,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 19,
+   "count": 0
+  }
+ ]
+}
