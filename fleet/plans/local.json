@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864488978,
+ "at": 1795864578245,
  "jobs": [
   {
    "account": "Balls",
@@ -135,7 +135,7 @@
    ]
   },
   {
-   "account": "pocketpool",
+   "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -241,6 +241,27 @@
    ]
   },
   {
+   "account": "woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "cage",
+    "cage"
+   ],
+   "env": {
+    "CAP": "3000",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "catherby-lobsters"
+   ]
+  },
+  {
    "account": "bigchopper",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -331,20 +352,23 @@
    "role": "auto"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
+   "account": "pocketpool",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "giant"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1820",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   }
  ],
  "army": [
@@ -375,8 +399,7 @@
   "pocketpython",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
-  "woodpecker"
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
