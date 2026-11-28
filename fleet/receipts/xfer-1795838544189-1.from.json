@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795838544189-1",
  "account": "Swordswallow",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "1aab1873-1e13-4a5c-9f47-49114c1a5650",
- "count": 0,
- "ok": false,
- "at": 1795838626243,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795838883513,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795838810345
+ },
+ "logout": {
+  "attemptId": "1795838626253-0000023996-0000000001",
+  "at": 1795838883490,
+  "sha256": "2a6f622e3c9f04651cae0a82c8af439c846c7aec8e49eda03796d6b426f0b484"
+ },
+ "screen": true
 }
