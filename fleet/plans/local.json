@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832000354,
+ "at": 1795832085190,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,28 @@
    "role": "pvp"
   },
   {
+   "account": "Nockitoff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "iron"
+   ],
+   "env": {
+    "BAR_TYPE": "iron",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "9",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "auto"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -202,7 +224,7 @@
    ]
   },
   {
-   "account": "WellHung",
+   "account": "Pullmybow",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -215,24 +237,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "helper"
+   "role": "auto"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
@@ -250,43 +270,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "auto"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "iron"
-   ],
-   "env": {
-    "BAR_TYPE": "iron",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "7",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
    "role": "auto"
   }
  ],
