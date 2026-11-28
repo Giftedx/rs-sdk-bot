@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795849119413-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigpackage",
+  "to": "SporranBulge",
+  "item": "Arrow shaft",
+  "count": 475,
+  "itemId": 52,
+  "start": 1795849119413,
+  "end": 1795850019413,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
