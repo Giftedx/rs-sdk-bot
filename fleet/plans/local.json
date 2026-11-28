@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857283260,
+ "at": 1795857304373,
  "jobs": [
   {
    "account": "Balls",
@@ -205,6 +205,24 @@
    "role": "auto",
    "resources": [
     "chickens"
+   ]
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "imp"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1470",
+    "BATCH_UNITS": "13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "helper",
+   "resources": [
+    "ardougne-imps"
    ]
   },
   {
