@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795840934395-1",
  "account": "Pocketpython",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Molten glass",
  "requested": 1,
  "claim": "8b6b8c34-c513-4a7f-8c7c-a87f1e1cb26e",
- "count": 0,
- "ok": false,
- "at": 1795841247407,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795841387036,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795841313447
+ },
+ "logout": {
+  "attemptId": "1795841247415-0000010904-0000000001",
+  "at": 1795841387026,
+  "sha256": "305a9350a3b6dbc7f2eaf2dcef4e231ca7aae4b46c1f63096eb82761828a9c8c"
+ },
+ "screen": true
 }

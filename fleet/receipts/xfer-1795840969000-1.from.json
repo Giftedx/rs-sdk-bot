@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795840969000-1",
  "account": "Shaftmaker",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 484,
  "claim": "3069f67b-03ef-4c8a-a53a-5c9f2a032bf0",
- "count": 0,
- "ok": false,
- "at": 1795841185996,
- "detail": "trade claimed"
+ "count": 484,
+ "ok": true,
+ "at": 1795841392643,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 484,
+  "after": 0
+ },
+ "bank": {
+  "count": 484,
+  "at": 1795841377056
+ },
+ "logout": {
+  "attemptId": "1795841186031-0000022368-0000000001",
+  "at": 1795841392628,
+  "sha256": "835b9ec4324dbee16a63cddf15987a4c3da0dfe11460eefc9f78a38d3b769833"
+ },
+ "screen": true
 }

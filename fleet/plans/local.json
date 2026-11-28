@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795841368688,
+ "at": 1795841394038,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -210,6 +210,22 @@
    "role": "helper"
   },
   {
+   "account": "Spitroaster",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "vampire"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "auto"
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -383,22 +399,6 @@
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "helper"
-  },
-  {
-   "account": "BackdoorMan",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",

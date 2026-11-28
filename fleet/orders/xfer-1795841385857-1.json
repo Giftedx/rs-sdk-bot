@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795841385857-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pullmybow",
+  "to": "BackdoorMan",
+  "item": "Prayer potion(4)",
+  "count": 2,
+  "itemId": 2434,
+  "start": 1795841385857,
+  "end": 1795842285857,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

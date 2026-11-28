@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795840980645-2",
  "account": "Spitroaster",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 103,
  "claim": "37dbeeeb-f30e-48b3-b5f8-15adc387ce41",
- "count": 0,
- "ok": false,
- "at": 1795841375595,
- "detail": "trade claimed"
+ "count": 103,
+ "ok": true,
+ "at": 1795841386666,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 103
+ },
+ "bank": {
+  "count": 103,
+  "at": 1795841385839
+ },
+ "logout": {
+  "attemptId": "1795841375605-0000017804-0000000001",
+  "at": 1795841386655,
+  "sha256": "6d15c1483bb75d1970696a06be3bb9f28b6190ecacd03b78d2bc60eaa6499a71"
+ },
+ "screen": true
 }
