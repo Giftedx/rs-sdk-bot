@@ -105,6 +105,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
             eatGuards.delete(s);
             statuses.get(s)?.stop();
             statuses.delete(s);
+            (s.client as { interfaces?: { release?: () => void } } | undefined)?.interfaces?.release?.();
             stallWatches.get(s)?.stop();
             stallWatches.delete(s);
             randomEvents.get(s)?.stop();

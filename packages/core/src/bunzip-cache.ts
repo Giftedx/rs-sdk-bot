@@ -6,6 +6,7 @@
 // A later process reads the file (checked against its own SHA-256) and never runs the vendor function. Any cache
 // fault runs the vendor function. The vendor file is unchanged.
 import { plugin } from 'bun';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export const BUNZIP_MIN_BYTES = 16 * 1024;
@@ -56,8 +57,9 @@ plugin({
     setup(build) {
         // A throw in onLoad stops the web client from loading, so every bot would fail: on any fault serve the vendor
         // file as it is, or (when it cannot be read here) let Bun load it by its own path.
-        build.onLoad({ filter: /[\\/]webclient[\\/]src[\\/]io[\\/]BZip2\.js$/ }, async args => {
-            try { return { contents: cachedBunzipSource(await Bun.file(args.path).text(), CACHE_DIR), loader: 'js' }; }
+        // Read synchronously so loading BZip2.js does not wake Bun's async IO threadpool on Windows (~32 MiB private).
+        build.onLoad({ filter: /[\\/]webclient[\\/]src[\\/]io[\\/]BZip2\.js$/ }, args => {
+            try { return { contents: cachedBunzipSource(readFileSync(args.path, 'utf8'), CACHE_DIR), loader: 'js' }; }
             catch { return undefined; }
         });
     },

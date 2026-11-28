@@ -1,10 +1,11 @@
 // Engine options that cut the committed memory of every bun process of the fleet. On Windows each JSC helper thread
-// commits its stack, and a 16-core PC gets 15 wasm compiler threads, 7 FTL compiler threads, 3 baseline/worklist
-// threads, 2 DFG compiler threads, and 8 parallel GC markers; DFG/FTL JIT caches, non-mini VM heap growth, concurrent
-// GC headroom, and retained Eden pages add further committed pages. Baseline JIT and Wasm BBQ/OMG remain enabled so
-// `bun:ffi` and pathfinder WASM work at full speed (route-service overrides `BUN_JSC_useDFGJIT=1` for A*). A value
-// the environment sets already is kept.
+// and libuv async IO thread commits its stack (8 MiB per libuv thread by default), and a 16-core PC gets 15 wasm
+// compiler threads, 7 FTL compiler threads, 3 baseline/worklist threads, 2 DFG compiler threads, and 8 parallel GC
+// markers; DFG/FTL JIT caches, non-mini VM heap growth, concurrent GC headroom, and retained Eden pages add further
+// committed pages. Baseline JIT and Wasm BBQ/OMG remain enabled so `bun:ffi` and pathfinder WASM work at full speed
+// (route-service overrides `BUN_JSC_useDFGJIT=1` for A*). A value the environment sets already is kept.
 export const LEAN_BUN_ENV: Readonly<Record<string, string>> = {
+    UV_THREADPOOL_SIZE: '1',
     BUN_JSC_numberOfWasmCompilerThreads: '1',
     BUN_JSC_numberOfGCMarkers: '1',
     BUN_JSC_numberOfBaselineCompilerThreads: '1',
