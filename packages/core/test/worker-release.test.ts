@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {sourceScans,forgetSourceScans,workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
+import {sourceScans,forgetSourceScans,workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,assertLiveWorkerReleaseAsync,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
 test('the actual runtime source tree keeps controller tooling outside its import boundary',()=>{
  expect(()=>workerSourceRevision(resolve(import.meta.dir,'../../..'))).not.toThrow();
 });
@@ -464,5 +464,36 @@ test('assertLiveWorkerRelease resolves confirmed legacy logout proofs even when 
    name: 'LegacyPeer', server, result: '', at: Date.now() - 600_000, workRevision: pin, sessionAttemptId: legacyAttempt.attemptId,
   }));
   expect(() => assertLiveWorkerRelease(server, env, root)).not.toThrow();
+ } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('assertLiveWorkerReleaseAsync batches all stale peer PIDs into one async lookup without blocking', async () => {
+ const { beginSessionAttempt } = await import('../src/session-lifecycle');
+ const root = fixture(), server = 'rs-sdk-demo.fly.dev', now = 1_750_000_000_000;
+ try {
+  const pin = capabilityRevision(['scripts/worker.ts'], root), env = { WORKER_RELEASE: pin, WORKER_ENTRY: 'scripts/worker.ts' };
+  const lc = join(root, '.practice/live/session-lifecycle');
+  const statusDir = join(root, '.practice/live/status');
+  mkdirSync(statusDir, { recursive: true });
+  const a1 = beginSessionAttempt({ account: 'StaleA', server }, { root: lc, now: () => now - LOST_SESSION_DROP_MS - 60_000, owner: { pid: 51001, coordinatorRunId: null, workerRelease: null, script: 'scripts/worker.ts', role: null, participants: null } });
+  const a2 = beginSessionAttempt({ account: 'StaleB', server }, { root: lc, now: () => now - LOST_SESSION_DROP_MS - 60_000, owner: { pid: 51002, coordinatorRunId: null, workerRelease: null, script: 'scripts/worker.ts', role: null, participants: null } });
+  writeFileSync(join(statusDir, 'StaleA.json'), JSON.stringify({ name: 'StaleA', server, result: '', at: now - LOST_SESSION_DROP_MS - 10_000, workRevision: '0'.repeat(64), sessionAttemptId: a1.attemptId }));
+  writeFileSync(join(statusDir, 'StaleB.json'), JSON.stringify({ name: 'StaleB', server, result: '', at: now - LOST_SESSION_DROP_MS - 10_000, workRevision: '0'.repeat(64), sessionAttemptId: a2.attemptId }));
+  let calls = 0;
+  let seenPids: number[] = [];
+  await assertLiveWorkerReleaseAsync(server, env, root, {
+   now,
+   alive: () => true,
+   fetchProcessInfo: async pids => {
+    calls++;
+    seenPids = [...pids].sort((x, y) => x - y);
+    return new Map([
+     [51001, { createdAt: now - 5_000, commandLine: null }],
+     [51002, { createdAt: now - LOST_SESSION_DROP_MS - 90_000, commandLine: 'bun scripts/other-process.ts' }],
+    ]);
+   },
+  });
+  expect(calls).toBe(1);
+  expect(seenPids).toEqual([51001, 51002]);
  } finally { rmSync(root, { recursive: true, force: true }); }
 });

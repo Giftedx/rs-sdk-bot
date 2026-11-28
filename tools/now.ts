@@ -30,6 +30,14 @@ export type DashState={
     brain?:{available:boolean;at:number|null;fresh?:boolean;paused?:boolean;activeChains?:number;goals?:number;defects?:number;infraOpen?:boolean;chains?:BrainChain[]}|null;
     bots?:Bot[];
     alerts?:{name:string;kind:string;practice:boolean}[];
+    tickHealth?:{
+        liveBots:number;
+        standingStillNow:{name:string;streak:number;at:string|null;why:string|null;standStillPct:number;script:string|null}[];
+        dialogStalls?:{name:string;ticks:number;script:string|null}[];
+        windowStalls?:{name:string;ticks:number;kind:string;script:string|null}[];
+        moveStalls?:{name:string;ticks:number;script:string|null}[];
+        highWaste:{name:string;standStillPct:number;windowStandStillPct:number;windowTicks:number;maxStandStill:number;why:string|null;script:string|null}[];
+    }|null;
     scoreboard?:{available:boolean;at?:number|null;skills99?:number|null;remaining?:string[];goals?:{version:number;main:{rank:number|null;gapTicks:number|null};specialists:{rank1s:unknown[]};quests:{complete:number;total:number};collection:{scopeKnown:boolean};army:{maxed:number;roster:string[]}}|null}|null;
     fleetSides?:{sides:{side:string;at:number|null;late:boolean}[]}|null;
     prs?:{number:number;branch:string;draft:boolean;state:string}[];
@@ -43,7 +51,8 @@ export type Checkout={path:string;branch:string;head:string;dirty:number;behind:
 export type SyncedLease={side:string;pid:number|null;at:number|null};
 // `logins`: the status rows that make every live login fail "release peer state unknown" (worker-release/peers.ts
 // loginBlockers); null when they were not readable.
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;noops?:NoOpRecord[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null;logins?:LoginBlocker[]|null};
+export type LoopStallSummary={count:number;accounts:string[]};
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;repeats?:CrossAccountFault[]|null;noops?:NoOpRecord[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null;logins?:LoginBlocker[]|null;loopStalls?:LoopStallSummary|null};
 
 // Fleet-data mirrors are a saved observation, not a remote process or network health check.
 export function readSyncedLeases(dir:string):SyncedLease[]|null{
@@ -150,6 +159,32 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
             const alerts=(state.alerts??[]).filter(a=>!a.practice).map(a=>({key:a.kind,name:a.name}));
             return alerts.length?'alerts  '+tally(alerts):null;
         });
+        add('ticks',()=>{
+            const th=state.tickHealth;
+            if(!th)return null;
+            const parts:string[]=[];
+            if(th.standingStillNow.length){
+                const top=th.standingStillNow.slice(0,4).map(x=>`${x.name} ${x.streak}t${x.why?' '+x.why:''}`).join(', ');
+                parts.push(`${th.standingStillNow.length} standing still (${top}${th.standingStillNow.length>4?', ...':''})`);
+            }
+            if(th.dialogStalls?.length){
+                const top=th.dialogStalls.slice(0,3).map(x=>`${x.name} ${x.ticks}t`).join(', ');
+                parts.push(`${th.dialogStalls.length} dialog stall (${top}${th.dialogStalls.length>3?', ...':''})`);
+            }
+            if(th.windowStalls?.length){
+                const top=th.windowStalls.slice(0,3).map(x=>`${x.name} ${x.kind} ${x.ticks}t`).join(', ');
+                parts.push(`${th.windowStalls.length} window stall (${top}${th.windowStalls.length>3?', ...':''})`);
+            }
+            if(th.moveStalls?.length){
+                const top=th.moveStalls.slice(0,3).map(x=>`${x.name} ${x.ticks}t`).join(', ');
+                parts.push(`${th.moveStalls.length} move stall (${top}${th.moveStalls.length>3?', ...':''})`);
+            }
+            if(th.highWaste.length){
+                const top=th.highWaste.slice(0,4).map(x=>`${x.name} ${Math.round(x.windowStandStillPct)}%${x.why?' '+x.why:''}`).join(', ');
+                parts.push(`${th.highWaste.length} high-waste (${top}${th.highWaste.length>4?', ...':''})`);
+            }
+            return parts.length?`ticks   WARN ${parts.join('; ')}`:null;
+        });
         add('board',()=>{
             const sb=state.scoreboard;
             if(!sb?.available)return 'board   no state';
@@ -183,6 +218,11 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         const repeats=local.repeats;
         if(!repeats?.length)return null;
         return [`repeats ${repeats.length} errors ended short runs of 3 or more accounts in 24 h (bun tools/fail-loops.ts):`,...crossAccountLines(repeats,3).map(l=>`  fault ${l}`)];
+    });
+    add('stalls',()=>{
+        const ls=local.loopStalls;
+        if(!ls||ls.count<=0)return null;
+        return `stalls  WARN ${ls.count} LOOP_STALL event(s) in 24 h (${ls.accounts.slice(0,6).join(', ')}${ls.accounts.length>6?', ...':''})`;
     });
     // A job that ends ok with no change, again and again, is a login for nothing (packages/core/src/noop-runs.ts).
     add('noops',()=>{
@@ -312,12 +352,21 @@ if(import.meta.main){
     const same=main.toLowerCase()===here.toLowerCase();
     const mainPromise=same?Promise.resolve(null):readCheckoutAsync(main);
     const stops=readSwarmStops(main);
-    let loops:FailLoop[]|null=null,repeats:CrossAccountFault[]|null=null;
+    let loops:FailLoop[]|null=null,repeats:CrossAccountFault[]|null=null,loopStalls:LoopStallSummary|null=null;
     try{
         // The default 4 MB tail holds many days: 24 h of results is about 0.5 MB at the fleet rate.
         const rows=readRecentResults(join(main,'.practice','results.jsonl'));
         loops=failLoops(rows,now);
         repeats=crossAccountFaults(rows,now);
+        const stallAccounts=new Set<string>();
+        let stallCount=0;
+        for(const r of rows){
+            if(typeof r.at==='number'&&r.at>=now-86_400_000&&/\bLOOP_STALL\b|event loop blocked/i.test(r.text??'')){
+                stallCount++;
+                if(r.name)stallAccounts.add(r.name);
+            }
+        }
+        loopStalls={count:stallCount,accounts:[...stallAccounts].sort()};
     }catch{/* an unreadable results file hides only these lines */}
     let noops:NoOpRecord[]|null=null;
     try{noops=readNoOpRuns(noOpRunsFile(join(main,'.practice','live')));}catch{/* unreadable records hide only this line */}
@@ -326,5 +375,5 @@ if(import.meta.main){
     let logins:LoginBlocker[]|null=null;
     try{logins=loginBlockers('rs-sdk-demo.fly.dev',main,Date.now());}catch{/* unreadable rows print as not known */}
     const [state,procs,hereCheckout,mainCheckout,progress]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise,progressPromise]);
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,noops,syncedLeases,progress,logins},Date.now()))console.log(line);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,repeats,noops,syncedLeases,progress,logins,loopStalls},Date.now()))console.log(line);
 }

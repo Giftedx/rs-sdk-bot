@@ -32,8 +32,40 @@ function alerts(bots: any[], now: number): Alert[] {
         const meant = !b.remote && !b.snapshotOnly && (b.job ? /^(running|starting|external)/.test(js) : age < 15 * 60_000);
         if (!b.result && meant && age > 60_000) out.push({ at: b.at, name: b.name, kind: 'stuck', text: `no status for ${Math.round(age / 1000)} s while running` });
         if (b.fresh && !b.result) {
-            const tl = String(b.timeline ?? ''), m = tl.match(/i+$/);
-            if (m && m[0].length > 20) out.push({ at: b.at, name: b.name, kind: 'idle', text: `idle ${m[0].length} ticks now` });
+            const ts = b.tickStats && typeof b.tickStats === 'object' ? b.tickStats : null;
+            if (ts && Number.isFinite(ts.currentStandStill)) {
+                if (ts.currentStandStill > 20) {
+                    const why = typeof ts.currentStandStillWhy === 'string' && ts.currentStandStillWhy ? ts.currentStandStillWhy : 'none';
+                    const loc = typeof ts.currentStandStillAt === 'string' && ts.currentStandStillAt ? ` @ ${ts.currentStandStillAt}` : '';
+                    out.push({ at: b.at, name: b.name, kind: 'idle', text: `standing still ${ts.currentStandStill} ticks (${why}${loc})` });
+                } else if (Number.isFinite(ts.currentDialogTicks) && ts.currentDialogTicks > 20) {
+                    out.push({ at: b.at, name: b.name, kind: 'idle', text: `dialog open ${ts.currentDialogTicks} ticks` });
+                } else if (Number.isFinite(ts.currentWindowTicks) && ts.currentWindowTicks > 20) {
+                    out.push({ at: b.at, name: b.name, kind: 'idle', text: `${ts.currentWindowKind || 'window'} open ${ts.currentWindowTicks} ticks` });
+                } else if ((Number.isFinite(ts.windowTicks) && ts.windowTicks >= 100 && Number.isFinite(ts.windowStandStillPct) && ts.windowStandStillPct >= 60)
+                    || (Number.isFinite(ts.ticks) && ts.ticks >= 200 && Number.isFinite(ts.standStillPct) && ts.standStillPct >= 60)) {
+                    const top = Array.isArray(ts.topIdleBy) && ts.topIdleBy[0]?.[0] ? String(ts.topIdleBy[0][0]) : 'none';
+                    const pct = Number.isFinite(ts.windowTicks) && ts.windowTicks >= 100 ? ts.windowStandStillPct : ts.standStillPct;
+                    const span = Number.isFinite(ts.windowTicks) && ts.windowTicks >= 100 ? `${ts.windowTicks}t` : `${ts.ticks}t`;
+                    out.push({ at: b.at, name: b.name, kind: 'efficiency', text: `high standing-still ${Math.round(pct)}% over ${span} (${top})` });
+                } else if (Number.isFinite(ts.currentMoveStreak) && ts.currentMoveStreak > 120) {
+                    out.push({ at: b.at, name: b.name, kind: 'efficiency', text: `moving ${ts.currentMoveStreak} ticks without xp/item` });
+                }
+            } else {
+                const tl = String(b.timeline ?? '');
+                const mi = tl.match(/i+$/);
+                const md = tl.match(/d+$/);
+                const mm = tl.match(/m+$/);
+                if (mi && mi[0].length > 20) out.push({ at: b.at, name: b.name, kind: 'idle', text: `idle ${mi[0].length} ticks now` });
+                else if (md && md[0].length > 20) out.push({ at: b.at, name: b.name, kind: 'idle', text: `dialog open ${md[0].length} ticks` });
+                else if (mm && mm[0].length > 120) out.push({ at: b.at, name: b.name, kind: 'efficiency', text: `moving ${mm[0].length} ticks without xp/item` });
+                else if (tl.length >= 100) {
+                    let idleCount = 0;
+                    for (let i = 0; i < tl.length; i++) if (tl[i] === 'i') idleCount++;
+                    const pct = (100 * idleCount) / tl.length;
+                    if (pct >= 60) out.push({ at: b.at, name: b.name, kind: 'efficiency', text: `high idle ${Math.round(pct)}% over ${tl.length}t` });
+                }
+            }
             if (/logout fail/i.test(b.phase ?? '')) out.push({ at: b.at, name: b.name, kind: 'logout', text: b.phase });
         }
     }
@@ -241,10 +273,109 @@ function fleetSides(now: number, snapshots = snapshotFiles()) {
     return fleetSidesView(snapshots, orders, now, receipts);
 }
 
+// Live standing-still, dialog/window/move stall, and high-waste summary across fresh local bots for dashboard and tools/now.ts.
+function tickHealthView(bots: any[]) {
+    const standingStillNow: { name: string; streak: number; at: string | null; why: string | null; standStillPct: number; script: string | null }[] = [];
+    const dialogStalls: { name: string; ticks: number; script: string | null }[] = [];
+    const windowStalls: { name: string; ticks: number; kind: string; script: string | null }[] = [];
+    const moveStalls: { name: string; ticks: number; script: string | null }[] = [];
+    const highWaste: { name: string; standStillPct: number; windowStandStillPct: number; windowTicks: number; maxStandStill: number; why: string | null; script: string | null }[] = [];
+    let liveBots = 0;
+    for (const b of bots) {
+        if (!b?.fresh || b.practice || b.result || b.remote || b.snapshotOnly) continue;
+        liveBots++;
+        const ts = b.tickStats && typeof b.tickStats === 'object' ? b.tickStats : null;
+        if (ts && Number.isFinite(ts.ticks)) {
+            const streak = Number(ts.currentStandStill) || 0;
+            const winTicks = Number(ts.windowTicks) || 0;
+            const winPct = Number(ts.windowStandStillPct) || 0;
+            const standPct = Number(ts.standStillPct) || 0;
+            const dlgTicks = Number(ts.currentDialogTicks) || 0;
+            const winOpen = Number(ts.currentWindowTicks) || 0;
+            const mvStreak = Number(ts.currentMoveStreak) || 0;
+            const topWhy = typeof ts.currentStandStillWhy === 'string' && ts.currentStandStillWhy
+                ? ts.currentStandStillWhy
+                : (Array.isArray(ts.topIdleBy) && ts.topIdleBy[0]?.[0] ? String(ts.topIdleBy[0][0]) : null);
+            const script = typeof ts.script === 'string' ? ts.script : (typeof b.goal === 'string' ? b.goal : null);
+            if (streak >= 15) {
+                standingStillNow.push({
+                    name: b.name,
+                    streak,
+                    at: typeof ts.currentStandStillAt === 'string' ? ts.currentStandStillAt : (b.pos ? `${b.pos.x},${b.pos.z}` : null),
+                    why: topWhy,
+                    standStillPct: standPct,
+                    script,
+                });
+            }
+            if (dlgTicks > 20) dialogStalls.push({ name: b.name, ticks: dlgTicks, script });
+            if (winOpen > 20) windowStalls.push({ name: b.name, ticks: winOpen, kind: String(ts.currentWindowKind || 'window'), script });
+            if (mvStreak > 120) moveStalls.push({ name: b.name, ticks: mvStreak, script });
+            if ((winTicks >= 60 && winPct >= 40) || (ts.ticks >= 200 && standPct >= 50)) {
+                highWaste.push({
+                    name: b.name,
+                    standStillPct: standPct,
+                    windowStandStillPct: winTicks >= 60 ? winPct : standPct,
+                    windowTicks: winTicks >= 60 ? winTicks : ts.ticks,
+                    maxStandStill: Number(ts.maxStandStill) || streak,
+                    why: topWhy,
+                    script,
+                });
+            }
+            continue;
+        }
+        const tl = String(b.timeline ?? '');
+        if (!tl.length) continue;
+        let idle = 0;
+        for (let i = 0; i < tl.length; i++) if (tl[i] === 'i') idle++;
+        const streak = tl.match(/i+$/)?.[0].length ?? 0;
+        const dlg = tl.match(/d+$/)?.[0].length ?? 0;
+        const mv = tl.match(/m+$/)?.[0].length ?? 0;
+        const pct = Math.round((1000 * idle) / tl.length) / 10;
+        const script = typeof b.goal === 'string' ? b.goal : null;
+        if (streak >= 15) {
+            standingStillNow.push({
+                name: b.name,
+                streak,
+                at: b.pos ? `${b.pos.x},${b.pos.z}` : null,
+                why: null,
+                standStillPct: pct,
+                script,
+            });
+        }
+        if (dlg > 20) dialogStalls.push({ name: b.name, ticks: dlg, script });
+        if (mv > 120) moveStalls.push({ name: b.name, ticks: mv, script });
+        if (tl.length >= 60 && pct >= 40) {
+            highWaste.push({
+                name: b.name,
+                standStillPct: pct,
+                windowStandStillPct: pct,
+                windowTicks: tl.length,
+                maxStandStill: streak,
+                why: null,
+                script,
+            });
+        }
+    }
+    standingStillNow.sort((a, b) => b.streak - a.streak || a.name.localeCompare(b.name));
+    dialogStalls.sort((a, b) => b.ticks - a.ticks || a.name.localeCompare(b.name));
+    windowStalls.sort((a, b) => b.ticks - a.ticks || a.name.localeCompare(b.name));
+    moveStalls.sort((a, b) => b.ticks - a.ticks || a.name.localeCompare(b.name));
+    highWaste.sort((a, b) => b.windowStandStillPct - a.windowStandStillPct || a.name.localeCompare(b.name));
+    return {
+        liveBots,
+        standingStillNow: standingStillNow.slice(0, 15),
+        dialogStalls: dialogStalls.slice(0, 15),
+        windowStalls: windowStalls.slice(0, 15),
+        moveStalls: moveStalls.slice(0, 15),
+        highWaste: highWaste.slice(0, 15),
+    };
+}
+
 export {
     alerts,
     fleetSides,
     foodChain,
     roleView,
+    tickHealthView,
     vaultTrend,
 };

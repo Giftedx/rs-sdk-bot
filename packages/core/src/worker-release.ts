@@ -22,6 +22,7 @@ export {
     SILENT_SESSION_DROP_MS,
     assertCompatibleWorkers,
     assertLiveWorkerRelease,
+    assertLiveWorkerReleaseAsync,
     assertWorkerRelease,
     closedSessionRow,
     crashResidue,

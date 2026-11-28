@@ -4,9 +4,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { closeWithin, finish, logoutSession, openBot } from '../packages/core/src/bot';
 import { connectInProcess, type Session } from '../packages/core/src/inprocess';
+import { formatLedger, startLedger } from '../packages/core/src/ledger';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { simBotsDir } from '../packages/core/src/practice-paths';
+import { startStatus } from '../packages/core/src/status';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import {
     ARDY_NORTH_BANK,
@@ -468,6 +470,16 @@ async function runAttackerMain(args: string[]): Promise<void> {
 
     while (!isStopped()) {
         let s: Session | undefined;
+        let led: ReturnType<typeof startLedger> | undefined;
+        let status: ReturnType<typeof startStatus> | undefined;
+        const stopMonitors = (emitLedger: boolean) => {
+            if (led) {
+                const sum = led.stop();
+                led = undefined;
+                if (emitLedger && sum.ticks > 0) console.log(`${formatLedger(sum)} bot=${account}`);
+            }
+            if (status) { status.stop(); status = undefined; }
+        };
         try {
             s = await connectWithRetry(
                 () => connectInProcess({ name: account, password: creds.password, server: creds.server, members }),
@@ -482,7 +494,16 @@ async function runAttackerMain(args: string[]): Promise<void> {
                 isStopped,
             );
             await waitUntil(s, st => !!(st?.inGame && st?.player), { timeoutTicks: 30, idleMs: LOCKSTEP_WAIT_IDLE_MS });
+            led = startLedger(s as any, () => null, 300, { script: 'pvp-relog-combat' });
+            status = startStatus(
+                s as any,
+                creds.server,
+                led.counts,
+                () => led!.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join(''),
+                { tickStats: () => led!.snapshot() },
+            );
         } catch (err) {
+            stopMonitors(true);
             if (s) await closeWithin([s], 3000);
             if (isStopped()) break;
             stopTanks = true;
@@ -492,6 +513,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
 
         const tick0 = s.tick();
         if (s.sdk.getState()?.player?.isDead) {
+            stopMonitors(true);
             stopTanks = true;
             await logoutSession(s);
             await closeWithin([s], 5000);
@@ -504,6 +526,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
         }
         if (curStat.baseLevel >= targetLevel) {
             const finalXp = curStat.experience;
+            stopMonitors(true);
             await logoutSession(s);
             await closeWithin([s], 5000);
             totalTicks += 1;
@@ -512,6 +535,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
             await finish(tankSessions, true, elapsedStr);
         }
         if (swings >= 50 && curStat.experience === startXp) {
+            stopMonitors(true);
             stopTanks = true;
             await logoutSession(s);
             await closeWithin([s], 5000);
@@ -527,6 +551,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
             currentWeaponId = await equipBestGear(s, skill, isStopped);
             lastCheckedGearLevel = curStat.baseLevel;
             const maintEnd = s.tick();
+            stopMonitors(true);
             await logoutSession(s);
             await closeWithin([s], 5000);
             totalTicks += Math.max(0, maintEnd - tick0) + 1;
@@ -559,6 +584,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
         }
         if (!target) {
             const tOut = s.tick();
+            stopMonitors(true);
             await logoutSession(s);
             await closeWithin([s], 5000);
             totalTicks += Math.max(0, tOut - tick0) + 1;
@@ -585,6 +611,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
         } else if (endReason !== 'logged-out') {
             const endTick = s.tick();
             totalTicks += Math.max(0, endTick - tick0) + 1;
+            stopMonitors(true);
             stopTanks = true;
             await closeWithin([s], 5000);
             await finish(tankSessions, false, `unexpected end (${endReason}) skill=${skill} totalTicks=${totalTicks} swings=${swings}`);
@@ -594,6 +621,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
             const postXp = skillInfo(s, skill).experience;
             console.log(`DBG_SWING target=${target.name}(${target.index}) styleCom=${styleCom} end=${endReason} dt=${endTick - tick0} xp=${curStat.experience}->${postXp}`);
         }
+        stopMonitors(swings < 3 || (swings + 1) % 100 === 0 || endReason === 'timeout');
         await closeWithin([s], 5000);
         swings++;
         totalTicks += Math.max(0, endTick - tick0) + 1;

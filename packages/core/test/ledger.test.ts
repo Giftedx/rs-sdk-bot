@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { classifyTick, idleWhy, summarize, startLedger, formatLedger, stalled, DIALOG_TICKS, type TickRow, type TickKind } from '../src/ledger';
+import { classifyTick, idleWhy, isStandingStillReason, ledgerScriptId, setLedgerPhase, summarize, startLedger, formatLedger, stalled, DIALOG_TICKS, type TickRow, type TickKind, type StandStillStreak } from '../src/ledger';
 
 // The summary as it was computed over every row: the reference for the counters.
 function summarizeAllRows(rows: TickRow[], xpGain = 0) {
@@ -14,10 +14,35 @@ function summarizeAllRows(rows: TickRow[], xpGain = 0) {
         i = j;
     }
     streaks.sort((x, y) => y.length - x.length || x.start - y.start);
+    let standStill = 0;
+    let maxStandStill: StandStillStreak | null = null;
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]!;
+        if (r.kind !== 'idle' || !isStandingStillReason(r.why ?? 'none')) continue;
+        let j = i;
+        while (j + 1 < rows.length && rows[j + 1]!.kind === 'idle' && isStandingStillReason(rows[j + 1]!.why ?? 'none')) j++;
+        const len = j - i + 1;
+        standStill += len;
+        const cand: StandStillStreak = { start: r.tick, length: len, at: r.at, why: rows[j]!.why ?? 'none' };
+        if (!maxStandStill || cand.length > maxStandStill.length || (cand.length === maxStandStill.length && cand.start < maxStandStill.start)) {
+            maxStandStill = cand;
+        }
+        i = j;
+    }
     const why = new Map<string, number>();
     for (const r of rows) if (r.kind === 'idle') why.set(r.why ?? 'none', (why.get(r.why ?? 'none') ?? 0) + 1);
     const idleBy = [...why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
-    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain, idleBy };
+    return {
+        ticks: rows.length,
+        counts,
+        idlePct: rows.length ? (100 * counts.idle) / rows.length : 0,
+        standStill,
+        standStillPct: rows.length ? (100 * standStill) / rows.length : 0,
+        maxStandStill,
+        longestIdle: streaks.slice(0, 5),
+        xpGain,
+        idleBy,
+    };
 }
 
 test('the counters give the same summary as a pass over every row, for random runs', () => {
@@ -98,7 +123,10 @@ test('an idle tick has a reason: a fight, an open window, or the last script act
         { tick: 3, kind: 'xp', at: '0,0' }, { tick: 4, kind: 'idle', at: '0,0', why: 'after:walkTo' }, { tick: 5, kind: 'idle', at: '0,0' },
     ]);
     expect(s.idleBy).toEqual([['combat', 2], ['after:walkTo', 1], ['none', 1]]);
-    expect(formatLedger(s)).toMatch(/ longestIdle=2@t1\(0,0\),2@t4\(0,0\) idleBy=combat:2,after:walkTo:1,none:1$/);
+    expect(s.standStill).toBe(2);
+    expect(s.standStillPct).toBeCloseTo(40, 1);
+    expect(s.maxStandStill).toEqual({ start: 4, length: 2, at: '0,0', why: 'none' });
+    expect(formatLedger(s)).toMatch(/ longestIdle=2@t1\(0,0\),2@t4\(0,0\) idleBy=combat:2,after:walkTo:1,none:1 standStill=2 standStillPct=40\.0 maxStandStill=2@t4\(0,0\)$/);
 });
 
 test('startLedger names each idle tick from the state and the last action', () => {
@@ -235,4 +263,99 @@ test('a short dialog and a long talk with new words on each page are not a stall
     // Hand-built rows with no dialogTicks count as a new dialog.
     const row = (kind: any, tick: number) => ({ tick, kind, at: '0,0' });
     expect(stalled(Array.from({ length: 900 }, (_, i) => row('dialog', i)), 900)).toBe(false);
+});
+
+test('startLedger intercepts direct and sdk.send actions without randomEvents and restores wrappers on stop', () => {
+    let t = 0;
+    const cbs: (() => void)[] = [];
+    const state: any = { tick: 0, player: { worldX: 3200, worldZ: 3200, level: 0, animId: -1, combat: { lastDamageTick: -1 } }, skills: [], dialog: { isOpen: false } };
+    const origDirect = () => ({ success: true });
+    const origSend = () => {};
+    const sess: any = {
+        direct: origDirect,
+        sdk: { getState: () => state, send: origSend },
+        onTick: (cb: () => void) => { cbs.push(cb); return () => {}; },
+        tick: () => t,
+    };
+    const led = startLedger(sess, () => null, 100, { script: 'aio-skiller:rune-bank-craft' });
+    const step = () => { t++; state.tick = t; for (const cb of cbs) cb(); };
+
+    // Pre-action phase attribution avoids mystery `none`.
+    setLedgerPhase(sess, 'route-plan');
+    step();
+    setLedgerPhase(sess, null);
+
+    // sdk.send action is attributed even with no randomEvents gate.
+    sess.sdk.send({ type: 'sdk_action', action: { type: 'walkTo', x: 3205, z: 3205 } });
+    step();
+
+    // togglePrayer does not overwrite the real script action.
+    sess.direct({ type: 'togglePrayer', prayerIndex: 1 });
+    step();
+
+    // direct action updates lastAction; random-event reason tags as random-event.
+    sess.direct({ type: 'interactLoc', x: 3202, z: 3169 });
+    step();
+    sess.direct({ type: 'walkTo', reason: 'random-event' });
+    step();
+
+    const snap = led.snapshot();
+    expect(snap.script).toBe('aio-skiller:rune-bank-craft');
+    expect(snap.standStill).toBe(5);
+    expect(snap.currentStandStill).toBe(5);
+    expect(snap.currentStandStillWhy).toBe('after:random-event');
+    expect(snap.lastAction).toBe('random-event');
+    expect(led.rows.map(r => r.why)).toEqual(['route-plan', 'after:walkTo', 'after:walkTo', 'after:interactLoc', 'after:random-event']);
+
+    const sum = led.stop();
+    expect(sess.direct).toBe(origDirect);
+    expect(sess.sdk.send).toBe(origSend);
+    expect(formatLedger(sum)).toContain('standStill=5 standStillPct=100.0 maxStandStill=5@t1(3200,3200) script=aio-skiller:rune-bank-craft');
+});
+
+test('startLedger live snapshot tracks dialog, open window, move streaks, and excludes combat from standing-still', () => {
+    let t = 0;
+    const cbs: (() => void)[] = [];
+    const state: any = { tick: 0, player: { worldX: 3200, worldZ: 3200, level: 0, animId: -1, combat: { lastDamageTick: -1 } }, skills: [], dialog: { isOpen: false }, bank: { isOpen: false }, combatEvents: [] };
+    const sess: any = { sdk: { getState: () => state }, onTick: (cb: () => void) => { cbs.push(cb); return () => {}; }, tick: () => t };
+    const led = startLedger(sess, () => 'interactNpc', 50);
+    const step = () => { t++; state.tick = t; for (const cb of cbs) cb(); };
+
+    // 3 ticks in active combat: idle, NOT standing still.
+    state.combatEvents = [{ type: 'damage_dealt', tick: 1 }];
+    step(); step(); step();
+    expect(led.snapshot().idle).toBe(3);
+    expect(led.snapshot().standStill).toBe(0);
+    expect(led.snapshot().currentStandStill).toBe(0);
+
+    // 2 ticks standing at open bank.
+    state.combatEvents = [];
+    state.bank = { isOpen: true };
+    step(); step();
+    expect(led.snapshot().currentWindowTicks).toBe(2);
+    expect(led.snapshot().currentWindowKind).toBe('bank');
+    expect(led.snapshot().currentStandStill).toBe(2);
+
+    // 3 ticks with open dialog.
+    state.bank = { isOpen: false };
+    state.dialog = { isOpen: true, text: 'Continue?' };
+    step(); step(); step();
+    expect(led.snapshot().currentDialogTicks).toBe(3);
+    expect(led.snapshot().maxDialogTicks).toBe(3);
+    expect(led.snapshot().currentWindowTicks).toBe(0);
+
+    // 2 move ticks without xp/inventory.
+    state.dialog = { isOpen: false };
+    state.player.worldX++; step();
+    state.player.worldX++; step();
+    expect(led.snapshot().currentMoveStreak).toBe(2);
+    expect(led.snapshot().maxMoveStreak).toBe(2);
+    led.stop();
+});
+
+test('ledgerScriptId formats multi-dispatch AIO and standalone scripts cleanly', () => {
+    expect(ledgerScriptId('scripts/aio-skiller.ts', ['Worker', 'gather', 'yews'], 'Worker')).toBe('aio-skiller:gather/yews');
+    expect(ledgerScriptId('scripts/aio-logistics.ts', ['BotA', 'walk-to', '3200', '3200', '0'], 'BotA')).toBe('aio-logistics:walk-to');
+    expect(ledgerScriptId('scripts/goldfarm.ts', ['Dipstick'], 'Dipstick')).toBe('goldfarm');
+    expect(ledgerScriptId('', [])).toBeNull();
 });

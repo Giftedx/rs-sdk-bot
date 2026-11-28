@@ -5,10 +5,12 @@ import { accountOf, awaitBotReady, botWork, closeWithin, finish, getWorld, logou
 import { protectedFromMelee } from '../packages/core/src/danger';
 import { withDoorPolicy } from '../packages/core/src/door-policy';
 import { connectInProcess, type Session } from '../packages/core/src/inprocess';
+import { formatLedger, ledgerScriptId, startLedger } from '../packages/core/src/ledger';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { simBotsDir } from '../packages/core/src/practice-paths';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { startStatus } from '../packages/core/src/status';
 import { createTickRecorder } from '../packages/core/src/tick-record';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
@@ -916,6 +918,16 @@ export async function runWildyPvpRelogLoop(
     while (!opts.shouldStop() && totalTicks < opts.cap) {
         let sess: Session | undefined;
         let rec: ReturnType<typeof createTickRecorder> = null;
+        let led: ReturnType<typeof startLedger> | undefined;
+        let status: ReturnType<typeof startStatus> | undefined;
+        const stopMonitors = (emitLedger: boolean) => {
+            if (led) {
+                const sum = led.stop();
+                led = undefined;
+                if (emitLedger && sum.ticks > 0) console.log(`${formatLedger(sum)} bot=${opts.botName}`);
+            }
+            if (status) { status.stop(); status = undefined; }
+        };
         try {
             sess = await connectWithTransientRetry(
                 () => connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}) }),
@@ -927,11 +939,21 @@ export async function runWildyPvpRelogLoop(
             sess.lifecycle?.record('ready', `${p0?.worldX ?? 0} ${p0?.worldZ ?? 0} ${p0?.level ?? 0}`);
             rec = createTickRecorder({ account: opts.botName, server: creds.server, script: work.script, argv: work.args, startedAt: Date.now() });
             if (rec && sess.record) sess.record(rec);
+            const relogScript = ledgerScriptId(work.script, work.args, opts.botName) ?? 'combat-quest-specialists';
+            led = startLedger(sess as any, () => null, 300, { script: relogScript });
+            status = startStatus(
+                sess as any,
+                creds.server,
+                led.counts,
+                () => led!.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join(''),
+                { tickStats: () => led!.snapshot() },
+            );
 
             const tick0 = sess.tick();
             const curStat = skillInfo(sess, opts.skill);
             const curHp = skillInfo(sess, 'Hitpoints');
             if (curStat.baseLevel >= opts.targetLevel) {
+                stopMonitors(true);
                 await logoutSession(sess);
                 const doneTick = sess.tick();
                 await closeWithin([sess], 5000);
@@ -971,6 +993,7 @@ export async function runWildyPvpRelogLoop(
                 target = rankKeepRelogTanks(latest?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, (latest?.player as { combatLevel?: number } | undefined)?.combatLevel)[0];
             }
             if (!target) {
+                stopMonitors(true);
                 await logoutSession(sess);
                 const tOut = sess.tick();
                 await closeWithin([sess], 5000);
@@ -1019,6 +1042,7 @@ export async function runWildyPvpRelogLoop(
             const postHp = skillInfo(sess, 'Hitpoints');
             const endDlg = sess.sdk.getDialog()?.isOpen ? 1 : 0;
             const deadAfter = posOf(sess)?.isDead === true;
+            stopMonitors(swings < 3 || (swings + 1) % 100 === 0 || deadAfter || endReason === 'timeout');
             await closeWithin([sess], 5000);
             if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
             if (deadAfter) throw Error(`${opts.skill} relog PvP died during combat at swing ${swings}`);
@@ -1047,6 +1071,7 @@ export async function runWildyPvpRelogLoop(
                 console.log(`PVP_RELOG_PROGRESS tick=${totalTicks} ${opts.skill}=${curStat.baseLevel} xp=${curStat.experience} swings=${swings}`);
             }
         } catch (err) {
+            stopMonitors(true);
             if (sess) {
                 await logoutSession(sess).catch(() => {});
                 await closeWithin([sess], 3000).catch(() => {});

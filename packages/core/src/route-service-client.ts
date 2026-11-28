@@ -1,7 +1,7 @@
 // Discovery and launch helpers for the checkout's shared route-service.ts process.
 // Kept free of world/trip/danger/route-worker imports so route-query.ts and world/pathfinding.ts stay acyclic.
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { leanBunEnv } from './lean-bun-env';
 
@@ -10,14 +10,69 @@ export const SERVICE_FILE = join(repoRoot, '.practice', 'cache', 'route-service.
 
 export type ServiceInfo = { pid: number; port: number; rev: string; dataKey: string; workers: number; started: number };
 
+const SHA40_RE = /^[0-9a-f]{40}$/i;
+
+// Fast direct .git HEAD resolution without spawning git: supports normal checkouts, worktrees, and packed-refs.
+export function readCheckoutRevDirect(root: string): string | null {
+    try {
+        const dotGit = join(root, '.git');
+        if (!existsSync(dotGit)) return null;
+        let gitDir = dotGit;
+        if (statSync(dotGit).isFile()) {
+            const ptr = readFileSync(dotGit, 'utf8').match(/^gitdir:\s*(.+)$/m)?.[1]?.trim();
+            if (!ptr) return null;
+            gitDir = resolve(root, ptr);
+        }
+        const headText = readFileSync(join(gitDir, 'HEAD'), 'utf8').trim();
+        if (SHA40_RE.test(headText)) return headText.toLowerCase();
+        const refMatch = headText.match(/^ref:\s*(\S+)$/);
+        if (!refMatch) return null;
+        const refName = refMatch[1]!;
+        let commonDir = gitDir;
+        const commonPtr = join(gitDir, 'commondir');
+        if (existsSync(commonPtr)) {
+            const rel = readFileSync(commonPtr, 'utf8').trim();
+            if (rel) commonDir = resolve(gitDir, rel);
+        }
+        for (const base of commonDir === gitDir ? [gitDir] : [gitDir, commonDir]) {
+            const loose = join(base, ...refName.split('/'));
+            if (existsSync(loose)) {
+                const sha = readFileSync(loose, 'utf8').trim();
+                if (SHA40_RE.test(sha)) return sha.toLowerCase();
+            }
+        }
+        const packed = join(commonDir, 'packed-refs');
+        if (existsSync(packed)) {
+            for (const line of readFileSync(packed, 'utf8').split(/\r?\n/)) {
+                if (!line || line[0] === '#' || line[0] === '^') continue;
+                const sp = line.indexOf(' ');
+                if (sp === 40 && line.slice(sp + 1).trim() === refName) {
+                    const sha = line.slice(0, 40);
+                    if (SHA40_RE.test(sha)) return sha.toLowerCase();
+                }
+            }
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 // The commit of this checkout. A service of another commit plans with other code, so a bot does not use it.
-let revMemo: string | null = null;
-export function clearCheckoutRevMemo(): void { revMemo = null; }
+const revMemoByRoot = new Map<string, string>();
+export function clearCheckoutRevMemo(): void { revMemoByRoot.clear(); }
 export function checkoutRev(root = repoRoot): string {
-    if (root === repoRoot && revMemo !== null) return revMemo;
-    const r = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+    const key = resolve(root);
+    const cached = revMemoByRoot.get(key);
+    if (cached !== undefined) return cached;
+    const direct = readCheckoutRevDirect(root);
+    if (direct !== null) {
+        revMemoByRoot.set(key, direct);
+        return direct;
+    }
+    const r = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true, timeout: 3_000 });
     const rev = r.status === 0 ? r.stdout.trim() : '';
-    if (root === repoRoot) revMemo = rev;
+    revMemoByRoot.set(key, rev);
     return rev;
 }
 

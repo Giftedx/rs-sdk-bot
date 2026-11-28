@@ -242,7 +242,7 @@ test('facades preserve every external/test export and keep internal-only helpers
         'capabilityRevision', 'launchRevision', 'releaseEntries', 'forgetReleaseMemory',
         'cachedReleaseFor', 'cachedReleaseFiles', 'cachedLaunchRevision', 'assertWorkerRelease', 'standingPeer',
         'assertCompatibleWorkers', 'standingAccounts', 'isWorkerReleaseHold', 'crashResidue',
-        'assertLiveWorkerRelease', 'LOST_SESSION_DROP_MS', 'closedSessionRow',
+        'assertLiveWorkerRelease', 'assertLiveWorkerReleaseAsync', 'LOST_SESSION_DROP_MS', 'closedSessionRow',
         'PEER_STALE_MS', 'SILENT_SESSION_DROP_MS', 'silentSessionRow', 'readPeerStatuses', 'loginBlockers',
     ];
     for (const name of [...expectedReleaseRuntime, 'ReleaseMemo']) {

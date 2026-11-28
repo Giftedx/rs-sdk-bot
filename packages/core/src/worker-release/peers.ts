@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { isLocalServer } from '../localserver';
 import { lifecycleRootForRead, liveRoot, statusReadDirs } from '../practice-paths';
-import { commandLine, laterProcessHolds, processStartTimes } from '../proc';
+import { commandLine, laterProcessHolds, processInfoBatchAsync, processStartTimes, type ProcessTableInfo } from '../proc';
 import { listAttempts, readLogoutProof, resolveLifecycleRoot, type LogoutProof } from '../session-lifecycle';
 import { root, type ReleaseMemo } from './paths';
 import { cachedReleaseFor, releaseEntries } from './revision';
@@ -81,6 +81,53 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
         return releases.get(key)!;
     };
     assertCompatibleWorkers(pin, server, statuses, Date.now(), peerClosed(server, base), row => standingPeer(row, owners), current);
+}
+
+// Non-blocking sibling of assertLiveWorkerRelease for shared pool processes: pre-fetches process start times and
+// command lines for all stale peer rows in one async batch so openBot never blocks the event loop on PowerShell.
+export async function assertLiveWorkerReleaseAsync(
+    server: string,
+    env: Record<string, string | undefined> = process.env,
+    base = root,
+    opts: { fetchProcessInfo?: (pids: readonly number[]) => Promise<ReadonlyMap<number, ProcessTableInfo> | null>; alive?: (pid: number) => boolean; now?: number } = {},
+): Promise<void> {
+    if (isLocalServer(server)) return;
+    if (env.STANDING === '1') return;
+    if (existsSync(join(liveRoot(base), 'build-lock.json'))) throw Error('no worker progress: release build in progress; live starts paused');
+    const memo: ReleaseMemo = new Map(), pin = assertWorkerRelease(env, base, memo), statuses = readPeerStatuses(base).map(s => s.row);
+    const owners = standingAccounts(base);
+    const now = opts.now ?? Date.now();
+    const alive = opts.alive ?? pidAlive;
+    const candidatePids = new Set<number>();
+    for (const row of statuses) {
+        if (row?.server !== server || row.result || silentSessionRow(row, now)) continue;
+        if (typeof row.name !== 'string' || typeof row.sessionAttemptId !== 'string' || !row.sessionAttemptId) continue;
+        if (!Number.isFinite(row.at) || now - row.at < LOST_SESSION_DROP_MS) continue;
+        const lifeRoot = resolveLifecycleRoot(row.name, server, base);
+        let latest: LogoutProof;
+        try { latest = readLogoutProof(row.name, server, { root: lifeRoot }); } catch { continue; }
+        if (latest.state !== 'held' || latest.attemptId < row.sessionAttemptId) continue;
+        try {
+            const attempts = listAttempts(row.name, server, { root: lifeRoot }).filter(a => a.attemptId >= row.sessionAttemptId);
+            for (const a of attempts) {
+                const pid = a.receipt?.owner?.pid;
+                if (Number.isSafeInteger(pid) && pid! > 0 && alive(pid!)) candidatePids.add(pid!);
+            }
+        } catch { /* closedSessionRow handles unreadable attempts conservatively */ }
+    }
+    const infoMap = candidatePids.size ? await (opts.fetchProcessInfo ?? processInfoBatchAsync)([...candidatePids]) : new Map<number, ProcessTableInfo>();
+    const startsMap = infoMap ? new Map<number, number>([...infoMap].filter(([, v]) => v.createdAt !== null).map(([k, v]) => [k, v.createdAt!])) : null;
+    const closed = (row: any) => closedSessionRow(row, server, {
+        root: typeof row?.name === 'string' ? resolveLifecycleRoot(row.name, server, base) : lifecycleRootForRead(server, base),
+        starts: () => startsMap,
+        commandLine: pid => infoMap?.get(pid)?.commandLine ?? null,
+    }, alive, now);
+    const releases = new Map<string, string>(), current = (row: any) => {
+        const key = typeof row?.workEntry === 'string' ? row.workEntry : '';
+        if (!releases.has(key)) { let value = ''; try { value = cachedReleaseFor(releaseEntries(key), base); } catch { /* stale */ } releases.set(key, value); }
+        return releases.get(key)!;
+    };
+    assertCompatibleWorkers(pin, server, statuses, now, closed, row => standingPeer(row, owners), current);
 }
 // The status rows the release gate reads: the live directory first, then the legacy one; one row per account file.
 export function readPeerStatuses(base = root): { dir: string; row: any }[] {

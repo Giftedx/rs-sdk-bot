@@ -23,7 +23,7 @@ import { getBuildMs, getCpuPct, getPrRows, procs, viewerTimings } from './host';
 import { gapHistory, gates, haggisPlan, race, requests, swarm, type SwarmJob } from './plans';
 import { died, fleetDiagnostics, nativeProofs, newestDeath, newestRes, resultProof, results, scripts } from './results';
 import { events, flows, phaseSince, practiceNames, rate, readStatuses, spark } from './statuses';
-import { alerts, fleetSides, foodChain, roleView, vaultTrend } from './views';
+import { alerts, fleetSides, foodChain, roleView, tickHealthView, vaultTrend } from './views';
 
 const PAGE_VERSION_FILES = [
     PAGE_FILE,
@@ -323,7 +323,7 @@ function buildState() {
         coordination: brainState,
         brain: brainState,
         events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
-        results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
+        results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), tickHealth: tickHealthView(bots), requests: requests(), mainPlan: haggisPlan(),
         capacity: capacityState(sw,sys.freeGB,now),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, externalRunning: sw.externalRunning ?? null, pendingStartup: sw.pendingStartup ?? null, pendingReserveGB: sw.pendingReserveGB ?? null, minFreeGB: sw.minFreeGB ?? null, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
