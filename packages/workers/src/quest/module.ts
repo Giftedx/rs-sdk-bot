@@ -75,9 +75,10 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
                 break;
             }
             if (cfg.operation === 'tbwt-owned' || q === 'tbwt') {
-                const invReady = (acct.skills.Prayer?.level ?? 1) >= 43;
-                if (!invReady) {
-                    blockers.push({ kind: 'skill_level', skill: 'Prayer', required: 43, current: acct.skills.Prayer?.level ?? 1 });
+                const needSkills = { Prayer: 43, Agility: 15, Cooking: 30, Fishing: 5, Firemaking: 30 };
+                for (const [skill, req] of Object.entries(needSkills)) {
+                    const cur = acct.skills[skill]?.level ?? 1;
+                    if (cur < req) blockers.push({ kind: 'skill_level', skill, required: req, current: cur });
                 }
                 if (acct.quests['Jungle Potion'] !== 'complete' && acct.quests.junglepotion !== 'complete') {
                     blockers.push({ kind: 'quest_incomplete', quest: 'Jungle Potion', requiredState: 'complete' });

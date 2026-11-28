@@ -102,7 +102,7 @@ try {
     };
     const keepPrayer = async (): Promise<void> => {
         if (MODE !== 'pray') return;
-        if (points() <= 8) {
+        if (points() <= 10) {
             const pot = ITEM.prayerPot.find(id => q.has(id));
             if (pot) { const p0 = points(); potions++; await q.step('prayer potion', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }), () => points() > p0, 3, 2); }
         }
@@ -219,6 +219,7 @@ try {
     }
 
     // 1. Kolodion. At %magearena 0 to 5 he sends the player into the arena; at 6 or more he does not.
+    if (!inCellar() && !inArena()) await q.fail(`magearena: not in cellar at ${q.pos()?.worldX},${q.pos()?.worldZ},${q.lvl()}`);
     const anyCapeHeld = (Object.values(GOD_LOADOUTS)).some(g => held(g.capeId));
     const anyStaffHeld = (Object.values(GOD_LOADOUTS)).some(g => held(g.staffId));
     let fought = false;
@@ -226,7 +227,7 @@ try {
         await setPray(true);
         // Kolodion shuts the pages 4 ticks before the player lands in the arena, so the talk ends only on the landing.
         const told = () => inArena() || (q.sawText(/step into the magic pool|carrying weapons or armour/i) && !q.dialogOpen());
-        await q.step('kolodion', () => q.talkTo(npcs([NPC.kolodion])[0]), () => q.dialogOpen() || told(), 25, 3);
+        await q.step('kolodion', () => { const k = npcs([NPC.kolodion])[0]; return k ? q.talkTo(k) : q.waitTicks(1); }, () => q.dialogOpen() || told(), 25, 3);
         await q.converse([/can i fight here/i, /yes indeedy/i, /ok, let's fight/i], told, 120);
         if (q.sawText(/carrying weapons or armour/i)) await q.fail('Kolodion refuses the pack');
         if (inArena()) {
@@ -270,10 +271,14 @@ try {
     const web = (w: { x: number; z: number }): any => q.findLoc(l => l.x === w.x && l.z === w.z && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text)));
     const cutWebs = async (order: typeof WEBS): Promise<void> => {
         for (const w of order) {
-            for (let i = 0; i < 20 && web(w); i++) {
+            for (let i = 0; i < 20; i++) {
+                const target = web(w);
+                if (!target) break;
                 await q.guard('web');
-                await q.s.direct({ type: 'useItemOnLoc', itemSlot: q.slot(ITEM.knife)!, x: w.x, z: w.z, locId: web(w).id, reason: 'SDK' });
-                await q.waitTicks(3);
+                const knifeSlot = q.slot(ITEM.knife);
+                if (knifeSlot === undefined) await q.fail('web: no knife');
+                await q.s.direct({ type: 'useItemOnLoc', itemSlot: knifeSlot!, x: w.x, z: w.z, locId: target.id, reason: 'SDK' });
+                await q.waitUntil(() => !web(w), 3);
             }
             if (web(w)) await q.fail(`web ${w.x},${w.z}`);
         }

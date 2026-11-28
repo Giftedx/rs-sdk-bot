@@ -229,6 +229,8 @@ try {
         if (anti2) await q.step('drink antipoison', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(anti2)!, optionIndex: 1, reason: 'SDK' }), () => !q.has(anti2), 3, 2);
         const ARMOUR = [0, 4, 5, 7];                     // helm, body, shield, legs (equipment slots)
         for (const slot of ARMOUR) {
+            if (!(q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id > 0)) continue;
+            if (q.inv().length >= 28) break;
             await q.step(`remove ${slot}`, () => q.s.direct({ type: 'useEquipmentItem', slot, optionIndex: 1, reason: 'SDK' }), () => !(q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id > 0), 3, 3);
         }
         for (let b = 0; b < BLASTS.length; b++) {

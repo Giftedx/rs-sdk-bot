@@ -26,6 +26,7 @@ import {
     prayerCovers,
     PRAYER_POTIONS,
     presetFor,
+    QUEST_EXIT_RUNES,
     QUEST_FINDS,
     questGatherPlan,
     sellersByTravel,
@@ -33,6 +34,7 @@ import {
     STURDY,
     STURDY_OPTIONAL,
     travelDistance,
+    withExitRunes,
     WORN_KIT,
 } from './sweep-plan';
 
@@ -110,14 +112,16 @@ export function questSweepNeeds(quest: string, level: (skill: string) => number,
         return empty;
     }
     let base = needs(preset, false, quest);
+    const food = needs(preset, true, quest);
     const coins = base.get(COINS) ?? 0;
     base.delete(COINS);
-    if (started) for (const id of spentAtEveryStage(quest)) base.delete(id);
+    if (started) for (const id of spentAtEveryStage(quest)) { base.delete(id); food.delete(id); }
     if (lv('Hitpoints') >= STURDY && lv('Defence') >= STURDY) for (const id of STURDY_OPTIONAL[quest] ?? []) base.delete(id);
     if (prayerCovers(quest, lv('Prayer'))) for (const id of PRAYER_POTIONS) base.delete(id);
     for (const id of [...ANTIPOISONS, ...(QUEST_FINDS[quest] ?? [])]) base.delete(id);
     if (FIRE_QUESTS.has(quest)) base = fireRunesFor(base, lv('Magic'));
     for (const i of buildPack(quest, lv)) base.set(i.id, (base.get(i.id) ?? 0) + i.count);
+    if (QUEST_EXIT_RUNES[quest]) base = withExitRunes(base, food, quest, lv('Magic')).base;
     for (const i of WORN_KIT[quest] ?? []) if (i.required) base.set(i.id, Math.max(1, base.get(i.id) ?? 0));
 
     const at = preset.position;

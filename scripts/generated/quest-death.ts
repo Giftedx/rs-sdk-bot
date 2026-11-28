@@ -11,7 +11,9 @@
 // 187-210), Tenzing takes the food and boots 6 and draws the map 7 (death_sherpa.rs2:119-147,181-190), the zone on the
 // secret way 8 (quest_death.rs2:130-136). Denulth with the map and the combination completes the quest
 // (death_ig_commander.rs2:186-221).
-import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
+import { deathJournalStage } from '../../packages/workers/src/quest/resume';
+import { openQuest, readQuestJournalStage } from './quest-lib';
 
 const DENULTH = { x: 2896, z: 3528 };
 const EOHRIC = { x: 2902, z: 3565 };            // castle level 1
@@ -99,118 +101,179 @@ try {
         await q.step('tenzing door out', () => q.opLoc(loc(TENZING_DOOR), 1), () => (q.pos()?.worldX ?? 0) > TENZING_DOOR.x, 10, 6);
     };
 
+    // Resolve two-track stage (equip * 10 + map) from DEATH_FROM, sweep questFrom, or the live journal.
+    const resolveStage = async (): Promise<number> => {
+        if (process.env.DEATH_FROM !== undefined || (q.s as { questFrom?: number }).questFrom !== undefined) return q.stageFrom('DEATH_FROM');
+        const flag = () => questFlags((q.s as any).client)?.find(f => f.name === 'Death Plateau')?.state ?? 'unknown';
+        await q.waitUntil(() => flag() !== 'unknown', 20);
+        if (flag() === 'complete') return 800;
+        if (flag() !== 'started') return 0;
+        return readQuestJournalStage(q, 'death', /Death Plateau/i, deathJournalStage);
+    };
+    const FROM = await resolveStage();
+    const equip = Math.floor(FROM / 10);
+    const map = FROM % 10;
+    console.log(`DEATH_FROM ${FROM} equip=${equip} map=${map}`);
+    if (equip >= 80) await q.fail('refused: Death Plateau is complete');
+
     // 1. Denulth: "Do you have any quests for me?", "No but perhaps I could try and find one?" (10).
-    await npcTalk('denulth', /^denulth$/i, [/do you have any quests/i, /perhaps i could try and find one/i], () => q.sawText(/get on it right away/i), DENULTH);
-    q.milestone(10);
+    if (equip < 10) {
+        await npcTalk('denulth', /^denulth$/i, [/do you have any quests/i, /perhaps i could try and find one/i], () => q.sawText(/get on it right away/i), DENULTH);
+        q.milestone(10);
+    }
 
     // 2. Eohric in the castle (20), Harold at the inn (30), Eohric again (40).
-    await toCastleUp();
-    await npcTalk('eohric 1', /^eohric$/i, [/looking for the guard that was on last night/i], () => q.sawText(/staying at the toad and chicken/i), EOHRIC);
-    await castleDown();
-    await toHarold();
-    await npcTalk('harold 1', /^harold$/i, [/you're the guard that was on duty/i], () => q.sawText(/don't want to talk about it/i), HAROLD);
-    await innDown();
-    await toCastleUp();
-    await npcTalk('eohric 2', /^eohric$/i, [], () => q.sawText(/open up after a drink/i), EOHRIC);
-    await castleDown();
-    q.milestone(40);
+    if (equip < 20) {
+        await toCastleUp();
+        await npcTalk('eohric 1', /^eohric$/i, [/looking for the guard that was on last night/i], () => q.sawText(/staying at the toad and chicken/i), EOHRIC);
+        await castleDown();
+    }
+    if (equip < 30) {
+        await toHarold();
+        await npcTalk('harold 1', /^harold$/i, [/you're the guard that was on duty/i], () => q.sawText(/don't want to talk about it/i), HAROLD);
+        await innDown();
+    }
+    if (equip < 40) {
+        await toCastleUp();
+        await npcTalk('eohric 2', /^eohric$/i, [], () => q.sawText(/open up after a drink/i), EOHRIC);
+        await castleDown();
+        q.milestone(40);
+    }
 
     // 3. Harold: the ale (50), then the Blurberry Special (very drunk); the dice: bet 101, roll, win, the IOU (55).
-    await toHarold();
-    await npcTalk('harold ale', /^harold$/i, [/can i buy you a drink/i], () => !q.has(ITEM.blurberry) && q.sawText(/now that hit the spot/i), HAROLD, 120);
-    q.milestone(50);
-    for (let round = 0; round < 4 && !q.has(ITEM.iou); round++) {
-        console.log(`MILESTONE round${round} ${q.T()}`);
-        await npcTalk(`harold gamble ${round}`, /^harold$/i, [/would you like to gamble/i], () => !q.dialogOpen() && q.sawText(/place your betsh/i), HAROLD, 40);
-        await q.s.direct({ type: 'submitCountDialog', value: 101, reason: 'SDK' });
-        // "Right...er...here goes..." (a chat page), then harold_roll opens the dice and rolls for 6 ticks (:70-100).
-        await q.waitUntil(() => q.dialogOpen(), 4);
-        await q.converse([], () => !q.dialogOpen() && q.sawText(/here goes/i), 8);
-        // harold_roll holds the player in 3 p_delay(2) for about 9 ticks; a click inside them gets no protected access
-        // (Player.ts runScript), so trial 2 lost its roll at 7 ticks.
-        await q.waitTicks(12);
-        // One roll click: a second one would start player_roll again. The win sets harold_lostall (:134-138); the
-        // pause button closes the dice and the queued haroldgamble_end writes the IOU (:148-185).
-        await q.s.direct({ type: 'clickComponent', componentId: DICE_ROLL, reason: 'SDK' });
-        await q.waitTicks(6);
-        if (c?.writeOpcode) { c.writeOpcode(RESUME_PAUSEBUTTON); c.out.p2(DICE_PAUSE); }
-        // The resume alone left the dice open in trial 7, and the normal queue waits for a closed modal (Player.ts
-        // processQueue, canAccess), so the IOU only came when the next talk closed it. Close it here.
-        await q.waitTicks(1);
-        await q.s.direct({ type: 'closeModal', reason: 'SDK' });
-        await q.waitUntil(() => q.has(ITEM.iou) || q.dialogOpen(), 8);
-        await q.converse([], () => q.has(ITEM.iou) && !q.dialogOpen(), 20);
+    const needHarold = equip < 55 || (equip < 60 && !q.has(ITEM.iou) && !q.has(ITEM.combo)) || (equip >= 60 && !q.has(ITEM.combo));
+    if (needHarold) {
+        await toHarold();
+        if (equip < 50 || (equip === 50 && q.has(ITEM.blurberry))) {
+            await npcTalk('harold ale', /^harold$/i, [/can i buy you a drink/i], () => (!q.has(ITEM.blurberry) && q.sawText(/now that hit the spot/i)) || q.sawText(/i fink i've had enough/i), HAROLD, 120);
+            q.milestone(50);
+        }
+        if (equip < 55 && !q.has(ITEM.iou) && !q.has(ITEM.combo)) {
+            for (let round = 0; round < 4 && !q.has(ITEM.iou); round++) {
+                console.log(`MILESTONE round${round} ${q.T()}`);
+                const bet = Math.min(101, q.cnt(ITEM.coins));
+                if (bet < 1) await q.fail('no coins for harold gamble');
+                await npcTalk(`harold gamble ${round}`, /^harold$/i, [/would you like to gamble/i], () => !q.dialogOpen() && q.sawText(/place your betsh|how much do you want to offer/i), HAROLD, 40);
+                await q.s.direct({ type: 'submitCountDialog', value: bet, reason: 'SDK' });
+                // "Right...er...here goes..." (a chat page), then harold_roll opens the dice and rolls for 6 ticks (:70-100).
+                await q.waitUntil(() => q.dialogOpen(), 4);
+                await q.converse([], () => !q.dialogOpen() && q.sawText(/here goes|i'll roll first/i), 8);
+                // harold_roll holds the player in 3 p_delay(2) for about 9 ticks; a click inside them gets no protected access
+                // (Player.ts runScript), so trial 2 lost its roll at 7 ticks.
+                await q.waitTicks(12);
+                // One roll click: a second one would start player_roll again. The win sets harold_lostall (:134-138); the
+                // pause button closes the dice and the queued haroldgamble_end writes the IOU (:148-185).
+                await q.s.direct({ type: 'clickComponent', componentId: DICE_ROLL, reason: 'SDK' });
+                await q.waitTicks(6);
+                if (c?.writeOpcode) { c.writeOpcode(RESUME_PAUSEBUTTON); c.out.p2(DICE_PAUSE); }
+                // The resume alone left the dice open in trial 7, and the normal queue waits for a closed modal (Player.ts
+                // processQueue, canAccess), so the IOU only came when the next talk closed it. Close it here.
+                await q.waitTicks(1);
+                await q.s.direct({ type: 'closeModal', reason: 'SDK' });
+                await q.waitUntil(() => q.has(ITEM.iou) || q.dialogOpen(), 8);
+                await q.converse([], () => q.has(ITEM.iou) && !q.dialogOpen(), 20);
+            }
+            if (!q.has(ITEM.iou)) await q.fail('no IOU');
+            q.milestone(55);
+        } else if (!q.has(ITEM.iou) && !q.has(ITEM.combo)) {
+            // Reclaim lost IOU or combination from Harold (death_guard_equiproom.rs2:340).
+            await npcTalk('harold reclaim', /^harold$/i, [], () => q.has(ITEM.iou) || q.has(ITEM.combo), HAROLD, 40);
+        }
     }
-    if (!q.has(ITEM.iou)) await q.fail('no IOU');
-    q.milestone(55);
-    for (let i = 0; i < 5 && !q.has(ITEM.combo); i++) {
+    if (equip < 60 && !q.has(ITEM.combo)) {
+        for (let i = 0; i < 5 && !q.has(ITEM.combo); i++) {
+            await closeDlg();
+            await q.s.direct({ type: 'closeModal', reason: 'SDK' });
+            await q.waitTicks(1);
+            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.iou)!, optionIndex: 1, reason: 'SDK' });
+            await q.waitUntil(() => q.has(ITEM.combo) || q.dialogOpen(), 4);
+            await q.converse([], () => q.has(ITEM.combo) && !q.dialogOpen(), 12);
+        }
+        if (!q.has(ITEM.combo)) await q.fail('step read iou');
+        await q.s.direct({ type: 'closeModal', reason: 'SDK' });
         await closeDlg();
-        await q.s.direct({ type: 'closeModal', reason: 'SDK' });
-        await q.waitTicks(1);
-        await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.iou)!, optionIndex: 1, reason: 'SDK' });
-        await q.waitUntil(() => q.has(ITEM.combo) || q.dialogOpen(), 4);
-        await q.converse([], () => q.has(ITEM.combo) && !q.dialogOpen(), 12);
+        q.milestone(60);
     }
-    if (!q.has(ITEM.combo)) await q.fail('step read iou');
-    await q.s.direct({ type: 'closeModal', reason: 'SDK' });
-    await closeDlg();
-    q.milestone(60);
 
     // 4. The stone balls from the ground at x 2893 onto the mechanism (70).
     await innDown();
-    await q.walk('to balls', [{ x: 2898, z: 3547, tol: 2 }, { x: 2896, z: 3561, tol: 2 }, { x: 2893, z: 3561, tol: 1 }]);
-    for (const b of BALLS) {
-        await q.step(`take ball ${b.id}`, () => { const g = ground(b.id); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(b.id), 8, 4);
+    if (equip < 70) {
+        await q.walk('to balls', [{ x: 2898, z: 3547, tol: 2 }, { x: 2896, z: 3561, tol: 2 }, { x: 2893, z: 3561, tol: 1 }]);
+        for (const b of BALLS) {
+            await q.step(`take ball ${b.id}`, () => { const g = ground(b.id); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(b.id), 8, 4);
+        }
+        for (const b of BALLS) {
+            await q.step(`place ball ${b.id}`, () => q.useOnLoc(b.id, loc(b.to)), () => !q.has(b.id), 8, 4);
+        }
+        await q.waitUntil(() => q.msgCount(/equipment room door has unlocked/i) > 0, 4);
+        if (q.msgCount(/equipment room door has unlocked/i) === 0) await q.fail('door not unlocked');
+        q.milestone(70);
     }
-    for (const b of BALLS) {
-        await q.step(`place ball ${b.id}`, () => q.useOnLoc(b.id, loc(b.to)), () => !q.has(b.id), 8, 4);
-    }
-    await q.waitUntil(() => q.msgCount(/equipment room door has unlocked/i) > 0, 4);
-    if (q.msgCount(/equipment room door has unlocked/i) === 0) await q.fail('door not unlocked');
-    q.milestone(70);
 
     // 5. Saba in the hermit cave (map 1).
-    await q.walk('to cave', [{ x: CAVE_IN.x, z: CAVE_IN.z - 1, tol: 1 }]);
-    await q.step('cave in', () => q.opLoc(loc(CAVE_IN), 1), () => z() > 4000, 10, 4);
-    await npcTalk('saba', /^saba$/i, [/another way up death plateau/i], () => q.sawText(/where does this sherpa live/i), SABA);
-    await closeDlg();
-    await q.step('cave out', () => q.opLoc(loc(CAVE_OUT), 1), () => z() < 4000, 10, 4);
+    if (map < 1) {
+        await q.walk('to cave', [{ x: CAVE_IN.x, z: CAVE_IN.z - 1, tol: 1 }]);
+        await q.step('cave in', () => q.opLoc(loc(CAVE_IN), 1), () => z() > 4000, 10, 4);
+        await npcTalk('saba', /^saba$/i, [/another way up death plateau/i], () => q.sawText(/where does this sherpa live/i), SABA);
+        await closeDlg();
+        await q.step('cave out', () => q.opLoc(loc(CAVE_OUT), 1), () => z() < 4000, 10, 4);
+    }
 
     // 6. Tenzing (2, climbing boots), Dunstan (3), Denulth's certificate (4), Dunstan: certificate and spikes (5).
-    await toTenzing();
-    await npcTalk('tenzing 1', /^tenzing$/i, [/ok, i'll get those for you/i], () => q.has(ITEM.boots), TENZING);
-    await closeDlg();
-    await outTenzing();
-    await toDunstan();
-    await npcTalk('dunstan 1', /^dunstan$/i, [], () => q.sawText(/bring an iron bar for the spikes/i), DUNSTAN);
-    await npcTalk('denulth cert', /^denulth$/i, [], () => q.has(ITEM.cert), DENULTH);
-    await closeDlg();
-    await toDunstan();
-    await npcTalk('dunstan 2', /^dunstan$/i, [], () => q.has(ITEM.spiked), DUNSTAN);
-    await closeDlg();
-    q.milestone(5);
+    if (map < 2) {
+        await toTenzing();
+        await npcTalk('tenzing 1', /^tenzing$/i, [/ok, i'll get those for you/i], () => q.has(ITEM.boots), TENZING);
+        await closeDlg();
+        await outTenzing();
+    }
+    if (map < 3) {
+        await toDunstan();
+        await npcTalk('dunstan 1', /^dunstan$/i, [], () => q.sawText(/bring an iron bar for the spikes/i), DUNSTAN);
+    }
+    if (map < 4 || (map === 4 && !q.has(ITEM.cert))) {
+        await npcTalk('denulth cert', /^denulth$/i, [], () => q.has(ITEM.cert), DENULTH);
+        await closeDlg();
+    }
+    if (map < 6 && !q.has(ITEM.spiked)) {
+        if (map >= 5 && !q.has(ITEM.boots)) {
+            await toTenzing();
+            await npcTalk('tenzing reclaim boots', /^tenzing$/i, [], () => q.has(ITEM.boots), TENZING);
+            await closeDlg();
+            await outTenzing();
+        }
+        await toDunstan();
+        await npcTalk('dunstan 2', /^dunstan$/i, [], () => q.has(ITEM.spiked), DUNSTAN);
+        await closeDlg();
+        q.milestone(5);
+    }
 
     // 7. Tenzing takes the food and the spiked boots and draws the map (7); out the back door, the stile, the zone (8).
-    await toTenzing();
-    await npcTalk('tenzing 2', /^tenzing$/i, [], () => q.has(ITEM.map), TENZING);
-    await closeDlg();
-    await q.walk('to back door', [{ x: TENZING_BACK.x, z: TENZING_BACK.z, tol: 0 }]);
-    await q.step('back door', () => q.opLoc(loc(TENZING_BACK), 1), () => z() > TENZING_BACK.z, 10, 5);
-    await q.walk('to stile', [{ x: STILE.x, z: STILE.z - 1, tol: 0 }]);
-    await q.step('stile', () => q.opLoc(loc(STILE), 1), () => z() > STILE.z, 12, 5);
-    await q.walk('secret way', [{ x: 2817, z: 3586, tol: 2 }, { x: 2830, z: 3595, tol: 2 }, { x: 2843, z: 3606, tol: 2 }, { x: SCOUT.x, z: SCOUT.z, tol: 1 }]);
-    await q.waitUntil(() => q.msgCount(/no trolls on the secret path/i) > 0, 6);
-    if (q.msgCount(/no trolls on the secret path/i) === 0) await q.fail('secret way not scouted');
-    await closeDlg();
-    q.milestone(8);
+    if (map < 8 || !q.has(ITEM.map)) {
+        await toTenzing();
+        if (map < 7 || !q.has(ITEM.map)) {
+            await npcTalk('tenzing 2', /^tenzing$/i, [], () => q.has(ITEM.map), TENZING);
+            await closeDlg();
+        }
+        if (map < 8) {
+            await q.walk('to back door', [{ x: TENZING_BACK.x, z: TENZING_BACK.z, tol: 0 }]);
+            await q.step('back door', () => q.opLoc(loc(TENZING_BACK), 1), () => z() > TENZING_BACK.z, 10, 5);
+            await q.walk('to stile', [{ x: STILE.x, z: STILE.z - 1, tol: 0 }]);
+            await q.step('stile', () => q.opLoc(loc(STILE), 1), () => z() > STILE.z, 12, 5);
+            await q.walk('secret way', [{ x: 2817, z: 3586, tol: 2 }, { x: 2830, z: 3595, tol: 2 }, { x: 2843, z: 3606, tol: 2 }, { x: SCOUT.x, z: SCOUT.z, tol: 1 }]);
+            await q.waitUntil(() => q.msgCount(/no trolls on the secret path/i) > 0, 6);
+            if (q.msgCount(/no trolls on the secret path/i) === 0) await q.fail('secret way not scouted');
+            await closeDlg();
+            q.milestone(8);
 
-    // The secret way has no other way down (the SDK plan to Denulth ends at 2881,3596; trial 5): back over the stile and
-    // through Tenzing's hut.
-    await q.walk('secret way back', [{ x: 2843, z: 3606, tol: 2 }, { x: 2830, z: 3594, tol: 2 }, { x: 2817, z: 3584, tol: 2 }, { x: STILE.x, z: STILE.z + 2, tol: 0 }]);
-    await q.step('stile back', () => q.opLoc(loc(STILE), 1), () => z() < STILE.z, 12, 5);
-    await q.walk('to back door out', [{ x: TENZING_BACK.x, z: TENZING_BACK.z + 1, tol: 0 }]);
-    await q.step('back door in', () => q.opLoc(loc(TENZING_BACK), 1), () => z() <= TENZING_BACK.z, 10, 5);
-    await outTenzing();
+            // The secret way has no other way down (the SDK plan to Denulth ends at 2881,3596; trial 5): back over the stile and
+            // through Tenzing's hut.
+            await q.walk('secret way back', [{ x: 2843, z: 3606, tol: 2 }, { x: 2830, z: 3594, tol: 2 }, { x: 2817, z: 3584, tol: 2 }, { x: STILE.x, z: STILE.z + 2, tol: 0 }]);
+            await q.step('stile back', () => q.opLoc(loc(STILE), 1), () => z() < STILE.z, 12, 5);
+            await q.walk('to back door out', [{ x: TENZING_BACK.x, z: TENZING_BACK.z + 1, tol: 0 }]);
+            await q.step('back door in', () => q.opLoc(loc(TENZING_BACK), 1), () => z() <= TENZING_BACK.z, 10, 5);
+        }
+        await outTenzing();
+    }
 
     // 8. Denulth: the map and the combination.
     await npcTalk('denulth end', /^denulth$/i, [], () => questDone, DENULTH, 80);
