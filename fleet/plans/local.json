@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850353310,
+ "at": 1795850427791,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -221,21 +221,6 @@
    "role": "army"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper"
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
@@ -345,6 +330,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=2000 -- runecraft supply"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
   },
   {
