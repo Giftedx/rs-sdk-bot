@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795841123380,
+ "at": 1795841368688,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,69 +185,28 @@
    "role": "pvp"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "174",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "71600",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "174"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 STALL_TICKS=255 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2350 TARGET_COUNT=235 PRODUCT_TARGET=235 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=235 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
    "account": "Ballbag",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "gemshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "144",
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "144"
+    "DEMAND_ID": "campaign:haggis:item:1623",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:1623",
    "role": "helper"
   },
   {
@@ -323,6 +282,21 @@
    "role": "auto"
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1639",
+   "role": "army"
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -345,10 +319,42 @@
    "role": "army"
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "herblore",
+    "potions"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67",
+    "STALL_TICKS": "200"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2481",
+   "role": "auto"
+  },
+  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=2100 TARGET_COUNT=210 PRODUCT_TARGET=235 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=235 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
     "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
@@ -357,22 +363,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
    "role": "army"
   },
   {
@@ -392,34 +382,19 @@
    "role": "army"
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 STALL_TICKS=200 -- herblore potions",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2481",
-   "role": "auto"
-  },
-  {
    "account": "WellHung",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "runecraft",
-    "air"
+    "sweep",
+    "vampire"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "59"
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:quest_board:vampire",
    "role": "helper"
   },
   {
@@ -437,6 +412,31 @@
    "repeat": false,
    "goal": "goal:quest_board:scorpion",
    "role": "helper"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
   },
   {
    "account": "YewGotWood",

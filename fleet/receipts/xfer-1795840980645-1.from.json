@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840980645-1",
+ "account": "Shaftsinker",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 4,
+ "claim": "2315c4a6-0e18-408b-b871-2820da34acbf",
+ "count": 0,
+ "ok": false,
+ "at": 1795841333225,
+ "detail": "trade claimed"
+}

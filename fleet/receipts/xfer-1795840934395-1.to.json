@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840934395-1",
+ "account": "SporranBulge",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 1,
+ "claim": "5c648d57-5d4b-46b3-8ff1-366ab9267a32",
+ "count": 0,
+ "ok": false,
+ "at": 1795841319540,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840969000-1",
+ "account": "Shaftmaker",
+ "partner": "FishAndChips",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 484,
+ "claim": "3069f67b-03ef-4c8a-a53a-5c9f2a032bf0",
+ "count": 0,
+ "ok": false,
+ "at": 1795841185996,
+ "detail": "trade claimed"
+}
