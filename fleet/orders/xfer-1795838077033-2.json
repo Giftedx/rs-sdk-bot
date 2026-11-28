@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795838077033-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "DropMyLoad",
+  "item": "Rune essence",
+  "count": 184,
+  "itemId": 1436,
+  "start": 1795838077033,
+  "end": 1795838977033,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

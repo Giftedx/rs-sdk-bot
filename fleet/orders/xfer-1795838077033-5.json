@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795838077033-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "Spitroaster",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795838077033,
+  "end": 1795838977033,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

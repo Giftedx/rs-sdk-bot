@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795838063303-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "WellHung",
+  "item": "Copper ore",
+  "count": 15,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 15,
+      "itemId": 438
+    }
+  ],
+  "start": 1795838063303,
+  "end": 1795838963303,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
