@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795862856866-1",
  "account": "Masterbaiter",
  "partner": "TossTheCaber",
@@ -12,6 +12,16 @@
  "claim": "d69f5234-8717-4fff-b718-2ca863f949f2",
  "count": 0,
  "ok": false,
- "at": 1795863192047,
- "detail": "trade claimed"
+ "at": 1795863368725,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 10,
+  "at": 1795863367970
+ },
+ "logout": {
+  "attemptId": "1795863192054-0000007552-0000000001",
+  "at": 1795863368715,
+  "sha256": "90b939d2eb5afffe8e1baad30a90ec56f8d3e92f124f6094619a600df557049c"
+ },
+ "screen": false
 }
