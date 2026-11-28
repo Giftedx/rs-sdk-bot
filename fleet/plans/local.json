@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864887862,
+ "at": 1795866134758,
  "jobs": [
   {
    "account": "Balls",
@@ -46,6 +46,38 @@
   },
   {
    "account": "bigchopper",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop4 3000",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=73 PRODUCT_TARGET=73 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=73 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=73 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
+   "account": "pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=43 STALL_TICKS=160 -- crafting legacy-jewelry",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=73 PRODUCT_TARGET=73 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=73 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=73 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -64,7 +96,44 @@
    ]
   },
   {
-   "account": "pocketrocket",
+   "account": "shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2150 TARGET_COUNT=215 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 MAX_MAKE=230 CAP=2240 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "deeppockets",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "pocketpool",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -84,24 +153,6 @@
    ]
   },
   {
-   "account": "deeppockets",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "meatntwoveg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -118,59 +169,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "shaftmaker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fletching",
-    "arrows"
-   ],
-   "env": {
-    "MODE": "native-arrows",
-    "TIP_TYPE": "rune",
-    "MAX_MAKE": "345",
-    "HEADLESS_RESERVE": "200",
-    "TIP_RESERVE": "5",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "339",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "auto"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
-  },
-  {
-   "account": "pocketpool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=11 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=13 -- runecraft supply",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:245",
-   "role": "army"
   }
  ],
  "army": [
