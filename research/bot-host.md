@@ -118,8 +118,10 @@ Additive changes outside host.ts (single-bot runs keep the same output and exit 
 
 Limits:
 
-- Only the script file is rewritten. A helper module that calls `finish()` or reads `process.argv[2]` sees the host
-  values.
+- Only the script file is rewritten. A helper module's `finish()`, `openBot()` (without a `log`), `console.*` and
+  `process.exit()` still reach the hosted bot that runs it: each bot runs in its own execution context, and
+  `packages/core/src/bot/host-scope.ts` maps that context to the bot (section 3e). A helper that reads
+  `process.argv[2]` or `process.env` sees the host values.
 - `process.env` per bot is a copy taken at start: the host's env plus that bot's `--env <bot> KEY=value` values
   (swarm.json `envByAccount`).
 - One bot's uncaught error is logged as `[host] ...` and does not stop the others. If a script throws at top level,
@@ -272,6 +274,45 @@ no `[host]`, `WARN` or `ERROR` line. Coins/tick (16.07) and idle (4.5 %) sit ins
 Gaps: the chain mode (section 2 usage) has unit proof only (`packages/core/test/host.test.ts`: steps in order, 2
 rounds, stop file); no practice chain run. 600 ticks is a short proof; section 3b has the long run.
 
+## 3e. aio-skiller in a swarm host job
+
+Claim: a `supervise-host.ts` job of 2 `scripts/aio-skiller.ts woodcutting yews` bots ends each account and holds
+about 300 MB private per bot, against about 550 MB per bot for 2 `supervise.ts` jobs. Conditions: preset
+`gather_yews` (Seers' yews, Woodcutting 99), `CAP=900`, `RANDOM_EVENTS=0`, lean bun env (section 5), fresh bots per
+round, local practice stack (about 155 ms tick), 4 live bots on the same PC. Rounds 3-5; round 4 ran host first,
+round 5 separate first. Memory is the private bytes of every bun process in the job's tree (supervisors included),
+sampled every 30 s; "steady" drops the first sample. Evidence path: `.practice/host-live-pilot/r{3,4,5}-{host,sep}/`
+(logs, `mem.csv`), runner `run.ps1`, `sample-tree.ps1`, `series.sh` (not committed).
+
+Before the host-scope fix, `aio-skiller.ts` was not host-safe. Its workers call `finish()` from helper modules. A
+2-bot host printed `RESULT fail ...` without a `[bot]` prefix, then `WARN finish inside a bot host without a runner
+hook; this bot stops, the host keeps running` for both bots, and the host never printed `HOST done`
+(`.practice/host-live-pilot/r1b-host/host.log`). Most live jobs run `aio-skiller.ts` steps, so a host job of them
+would hold its slots with no bot. The section 3-3d proofs used `goldfarm.ts`, which calls `finish()` in the script
+file.
+
+| Round | Host tree steady mean (peak) | Separate tree steady mean (peak) |
+|---|---|---|
+| 3 | 576 MB (593) | one tree sampled (sampler fault), 76 + 572-598 MB for one bot |
+| 4 | 632 MB (759) | 1,149 MB (1,381) |
+| 5 | 588 MB (601) | 1,058 MB (1,357) |
+| Mean | **599 MB (300 per bot)** | **1,104 MB (552 per bot)** |
+
+A host tree is one supervisor (74-76 MB) and one host (500-685 MB). A separate tree is a supervisor (76 MB) and a
+worker (366-628 MB) per bot. All 12 bot runs printed `RESULT ok` (901-939 ticks); every host printed
+`HOST done ok=2/2` and `SUPERVISE-HOST end after 1 runs` with both accounts `done`.
+
+| Mode | Logs per 1k ticks (6 bot runs) | Idle % (6 bot runs) |
+|---|---|---|
+| Host | 25.25, 31.95, 33.15, 33.51, 29.97, 31.83 (mean 30.94) | 56.6, 53.2, 56.7, 55.2, 47.5, 46.7 (mean 52.6) |
+| Separate | 32.12, 54.47, 40.22, 35.32, 34.33, 35.44 (mean 38.65) | 42.3, 37.6, 48.0, 46.4, 49.4, 48.6 (mean 45.4) |
+
+The idle difference is not a host stall: the longest idle streaks are `after:interactLoc` waits at the same yew in
+both modes (host 88-153 ticks, separate 11-155 ticks), and both bots of one tree wait together in both modes
+(round 5 separate: `60@t727` for each bot). Gap: two bots share one yew, so which run's tree falls first decides most
+of the spread; 3 rounds do not separate a host cost from that luck. The worker waits up to 155 ticks for one yew
+instead of moving to the next.
+
 ## 4. What (b), a slimmer client, would take
 
 The lite client is already browserless. Upstream measured 13.8 MB marginal per bot with 8 bots in one process
@@ -321,6 +362,11 @@ restart. No live run has the lean env yet; GC pause times under a full session h
 - Swarm host jobs exist (section 3c) with per-account env and chain steps (section 3d); the live farmers are not
   moved yet (owner switch: the proposed `swarm.json` host jobs are in the PR that added section 3d).
 - Live runs not done (practice only).
+- The brain cannot use a host. It makes one job per account (`packages/fleet/src/swarm.ts`, `brainJobFor`), each
+  with its own chain, and `host.ts` takes one script and one argument list for every bot (`parseHostArgs`). A hand
+  host job in `swarm.json` takes its accounts out of brain dispatch (`handAccountSet`). Every standing live job is
+  a brain job, so a live host needs either a hand job (the owner moves the accounts) or per-bot steps in `host.ts`
+  plus brain grouping of same-step accounts.
 
 
 ## Tick waste attribution
