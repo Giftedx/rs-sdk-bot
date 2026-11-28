@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795837615707,
+ "at": 1795837704010,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -200,6 +200,25 @@
    "role": "helper"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -257,23 +276,29 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "ore"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "78",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "78"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
   },
   {
    "account": "YewGotWood",
@@ -320,7 +345,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1626"
+    "BATCH_UNITS": "1615"
    },
    "enabled": true,
    "repeat": false,
@@ -365,31 +390,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "80",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "80"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
   }
  ],
  "army": [
@@ -410,7 +410,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "pocketpython",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
