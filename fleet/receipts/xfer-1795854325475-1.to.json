@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795854325475-1",
+ "account": "Wandwaver",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Limpwurt root",
+ "requested": 2,
+ "claim": "c62de705-f253-4a43-98cb-1df04da0b51a",
+ "count": 2,
+ "ok": true,
+ "at": 1795854575236,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Earth rune",
+   "requested": 30,
+   "count": 30,
+   "inventory": {
+    "before": 0,
+    "after": 30
+   },
+   "bank": {
+    "count": 30,
+    "at": 1795854574567
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795854574091
+ },
+ "logout": {
+  "attemptId": "1795854544149-0000009624-0000000001",
+  "at": 1795854575226,
+  "sha256": "4ffef4271aa6478354ab8af6a3b907d0e6fc18fecacf9d4b281650eeb680bebc"
+ },
+ "screen": true
+}
