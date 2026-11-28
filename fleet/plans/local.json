@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834845673,
+ "at": 1795834952969,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -204,7 +204,7 @@
    ]
   },
   {
-   "account": "BoneToPick",
+   "account": "Pocketpython",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -217,7 +217,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
@@ -242,7 +242,7 @@
    ]
   },
   {
-   "account": "WellHung",
+   "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -255,10 +255,25 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing fishcook",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
   },
   {
    "account": "Nockitoff",
@@ -279,7 +294,7 @@
    "account": "Pullmybow",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=8060 TARGET_COUNT=806 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=7720 TARGET_COUNT=772 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
    ],
    "env": {
@@ -325,23 +340,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "herblore",
-    "potions"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "67",
-    "STALL_TICKS": "200"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2481",
-   "role": "army"
   }
  ],
  "army": [
@@ -362,7 +360,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",

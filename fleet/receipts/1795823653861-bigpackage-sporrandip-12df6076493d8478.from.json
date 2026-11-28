@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823653861-bigpackage-sporrandip-12df6076493d8478",
+ "account": "Bigpackage",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mithril platebody",
+ "requested": 1,
+ "claim": "ddc30d79-e212-4725-b8b4-280759ed83a7",
+ "count": 0,
+ "ok": false,
+ "at": 1795834898966,
+ "detail": "trade claimed"
+}
