@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845515571-1",
  "account": "WellHung",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "c8ba516b-6a02-448c-bf58-040097531357",
- "count": 0,
- "ok": false,
- "at": 1795845888317,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795845902801,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795845902052
+ },
+ "logout": {
+  "attemptId": "1795845888325-0000003044-0000000001",
+  "at": 1795845902793,
+  "sha256": "713ec38512589109a5291519d9623925adffec172d97a29a1a370ac75d8946c4"
+ },
+ "screen": true
 }
