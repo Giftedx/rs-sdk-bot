@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795820172637-bigpackage-mightyrod-5a928ad76748ee5d",
+ "account": "Mightyrod",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "3ad5ef38-2f7b-4df1-85c5-dfbbe396f77c",
+ "count": 0,
+ "ok": false,
+ "at": 1795834408220,
+ "detail": "trade claimed"
+}
