@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795838063303-1",
  "account": "SporranBulge",
  "partner": "WellHung",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 15,
  "claim": "e47675da-30ff-496c-8d70-cd80839def85",
- "count": 0,
- "ok": false,
- "at": 1795838198214,
- "detail": "trade claimed",
+ "count": 15,
+ "ok": true,
+ "at": 1795838507931,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 15,
-   "count": 0
+   "count": 15,
+   "inventory": {
+    "before": 15,
+    "after": 0
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795838395577
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795838394378
+ },
+ "logout": {
+  "attemptId": "1795838198223-0000007836-0000000001",
+  "at": 1795838507920,
+  "sha256": "3f39e62994395bc9a7bcd92cd34272162cf391f7b5113e95ebcb0ed27a2d34f0"
+ },
+ "screen": true
 }

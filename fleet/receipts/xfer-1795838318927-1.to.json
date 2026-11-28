@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795838318927-1",
+ "account": "Shaftsinker",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "a649aae8-b7d0-41cc-8a73-dcd224cf9176",
+ "count": 0,
+ "ok": false,
+ "at": 1795838507282,
+ "detail": "trade claimed"
+}
