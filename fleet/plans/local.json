@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850643674,
+ "at": 1795850714907,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -236,6 +236,31 @@
    "role": "helper"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "43",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "43"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -251,7 +276,7 @@
    "role": "army"
   },
   {
-   "account": "YewGotWood",
+   "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -279,6 +304,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "helper"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=79 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "auto"
   },
   {
    "account": "CoinCock",
@@ -405,31 +445,6 @@
    "role": "army"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "87",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "87"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -451,21 +466,6 @@
    "resources": [
     "karambwanji-lake"
    ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=79 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
   },
   {
    "account": "BoneToPick",
