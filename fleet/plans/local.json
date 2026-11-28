@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795868634002,
+ "at": 1795868706231,
  "jobs": [
   {
    "account": "Balls",
@@ -48,34 +48,34 @@
    "account": "oreelse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-95-o0-p97 ITEM_ID=440 QUANTITY=95 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=190 MAX_ORE=190 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=95 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=95 STALL_TICKS=280 -- smithing smelt 2300 steel"
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:oreelse BATCH_UNITS=250 -- ranged-gather"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
+   "goal": "goal:pk_army:oreelse",
+   "role": "auto"
   },
   {
-   "account": "pocketpython",
-   "script": "scripts/aio-fighter.ts",
+   "account": "coincock",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "ranged-gather"
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:pocketpython",
-    "BATCH_UNITS": "250"
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:pocketpython",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "meatntwoveg",
@@ -94,6 +94,31 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "416",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "416"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
   },
   {
    "account": "abracadickra",
