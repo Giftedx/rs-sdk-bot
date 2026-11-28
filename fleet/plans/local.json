@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857980035,
+ "at": 1795857990748,
  "jobs": [
   {
    "account": "Balls",
@@ -105,7 +105,7 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=89 PRODUCT_TARGET=92 MAX_ORE=89 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=88 PRODUCT_TARGET=92 MAX_ORE=88 -- mining ore",
     "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1840 TARGET_COUNT=184 PRODUCT_TARGET=184 MAX_ORE=184 -- mining ore",
     "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=92 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=92 STALL_TICKS=280 -- smithing smelt 2240 steel"
    ],
@@ -199,21 +199,14 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
+    "scripts/aio-fighter.ts CAP=2500 TARGET_COUNT=250 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
+    "scripts/aio-fighter.ts CAP=2500 TARGET_COUNT=250 PRODUCT_TARGET=250 -- chicken",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
    ],
    "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -310,6 +303,83 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=303 \"ITEMS=Small fishing net\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop2 3000",
+    "scripts/aio-skiller.ts METHOD=karambwanji BANKED=1 CAP=3000 DEMAND_ID=goal:supply_chain:3150 BATCH_UNITS=240 AMOUNT=240 -- fishing staged"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:3150",
+   "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "41",
+    "MAX_MAKE": "3",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:41",
+    "BATCH_UNITS": "3",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:41",
+   "role": "auto"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "generalshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1755",
+    "ITEMS": "Chisel",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1755",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1755",
+   "role": "helper"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=1772 -- mining essence"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "army"
   }
  ],
  "army": [
@@ -327,10 +397,8 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
-  "dipstick",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
