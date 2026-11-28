@@ -1,5 +1,5 @@
 import {listAttempts,type LogoutProof} from './session-lifecycle';
-import {laterProcessHolds,processStartTimes} from './proc';
+import {laterProcessHolds,processStartTimes,processStartTimesAsync} from './proc';
 
 // Servers proven to hand a re-login to the Player still in the world (rs-sdk 97725db3 and db0cc51e): the new client
 // attaches, no save is reloaded, and a death, delay or combat lock carries on. Each entry names its evidence.
@@ -13,8 +13,13 @@ export function pidAlive(pid:number):boolean{try{process.kill(pid,0);return true
 // later one, so a live id that a later process holds is not that process (laterProcessHolds). A start-time read that
 // fails proves nothing, and the id then counts as alive. The read starts PowerShell, and it runs only for a live id.
 export type ProcessStarts=(pids:readonly number[])=>ReadonlyMap<number,number>|null;
+export type ProcessStartsAsync=(pids:readonly number[])=>Promise<ReadonlyMap<number,number>|null>;
 export function savedProcessAlive(pid:number,savedAt:number,starts:ProcessStarts=processStartTimes,alive:(pid:number)=>boolean=pidAlive):boolean{
     return alive(pid)&&!laterProcessHolds(pid,savedAt,starts([pid]));
+}
+export async function savedProcessAliveAsync(pid:number,savedAt:number,starts:ProcessStartsAsync=processStartTimesAsync,alive:(pid:number)=>boolean=pidAlive):Promise<boolean>{
+    if(!alive(pid))return false;
+    return !laterProcessHolds(pid,savedAt,await starts([pid]));
 }
 
 // A held session whose client died ends with one re-login on a takeover server: the next producer session attaches to

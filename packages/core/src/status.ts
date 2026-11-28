@@ -11,6 +11,7 @@ import {readLogoutProof, resolveLifecycleRoot} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
 import {statusDirForServer} from './practice-paths';
 import { noteLoopPhase, startLoopWatchdog, watchStatusFile } from './loop-watchdog';
+import type { LedgerLiveSnapshot } from './ledger';
 
 // Live status for the dashboard (packages/dashboard): live bots write .practice/live/status/<name>.json
 // and practice bots write .practice/sim/status/<name>.json every few ticks.
@@ -103,6 +104,10 @@ function updateLines(e: StatusLines, line: string): void {
     if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
     if (line.startsWith('RESULT ')) { e.result = line.slice(7, 300); e.counters=resultCounters(line.slice(7)); }
 }
+export function activeStatusPhase(name: string): string | null {
+    const line = perBot.get(name.toLowerCase())?.line;
+    return line ? line : null;
+}
 export function noteStatusLine(name: string, line: string): void {
     const key = name.toLowerCase(), e = perBot.get(key) ?? emptyLines(true);
     e.attributed = true;
@@ -182,7 +187,7 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     };
 }
 
-export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string, opts: { dir?: string; lifecycleRoot?: string } = {}) {
+export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string, opts: { dir?: string; lifecycleRoot?: string; tickStats?: () => LedgerLiveSnapshot | null } = {}) {
     captureMilestones();
     const key = s.name.toLowerCase(), lines = emptyLines(perBot.get(key)?.attributed ?? false);
     perBot.set(key, lines);
@@ -325,6 +330,8 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             // Passive journal observations only. Older running sessions remain untouched.
             quests, questsAt,
             bank, bankAt, ledger: ledgerCounts?.() ?? null,
+            // Rolling tick efficiency and standing-still streak telemetry for live monitoring.
+            tickStats: opts.tickStats?.() ?? null,
             // Last 300 ticks: x XP, v observed inventory change (not net output), m move, a anim, d dialog, s stun, i idle.
             timeline: timeline?.() ?? '',
             // Inputs sent per tick (last 300 ticks, one digit each) and the top action sets with the XP they gained.

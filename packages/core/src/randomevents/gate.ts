@@ -147,7 +147,7 @@ export function createActionGate(opts: GateOptions): ActionGate {
 
     if (gateOn) {
         s.direct = (a: Act) => {
-            if (passes(a)) { noteToolDrop(a); return rawDirect(a); }
+            if (passes(a)) { noteType(a); noteToolDrop(a); return rawDirect(a); }
             noteType(a);
             noteScript(a);
             if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
@@ -166,7 +166,7 @@ export function createActionGate(opts: GateOptions): ActionGate {
         };
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
-                if (passes(msg.action)) { noteToolDrop(msg.action); return rawSend.call(sdkAny, msg); }
+                if (passes(msg.action)) { noteType(msg.action); noteToolDrop(msg.action); return rawSend.call(sdkAny, msg); }
                 noteType(msg.action);
                 noteScript(msg.action);
                 if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
@@ -193,6 +193,7 @@ export function createActionGate(opts: GateOptions): ActionGate {
     let lastSendTick = -1;
     const send = (a: Act) => {
         lastSendTick = s.tick();
+        if (typeof a?.type === 'string' && a.type !== 'togglePrayer') lastType = 'random-event';
         return Promise.resolve(rawDirect({ reason: 'random-event', ...a })).then((r: any) => {
             if (r && r.success === false) { log(`EVENT ${activeName() ?? 'watcher'} send-failed t=${s.tick()} ${a.type}: ${r.message ?? ''}`); return false; }
             return true;

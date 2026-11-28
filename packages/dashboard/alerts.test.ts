@@ -49,3 +49,26 @@ test('local manual status keeps its finite stall window and completed or disable
  for(const change of [{at:now-60_000},{at:now-900_000},{result:'ok done'},{job:{state:'disabled'}},{job:{state:'ended'}}])
   expect(alerts([{...b,...change}],now)).toEqual([]);
 });
+
+test('live tickStats alerts catch standing-still, dialog, open-window, move, and high-waste stalls without false combat alerts',()=>{
+ const now=1_000_000,at=now-2000;
+ // Active combat idle (currentStandStill=0, currentIdle=30) must NOT alert.
+ expect(alerts([{name:'Fighter',at,fresh:true,tickStats:{ticks:100,currentIdle:30,currentStandStill:0,windowTicks:100,windowStandStillPct:10,standStillPct:10,currentDialogTicks:0,currentWindowTicks:0,currentMoveStreak:0}}],now)).toEqual([]);
+ // Standing still > 20 ticks alerts with reason and tile.
+ expect(alerts([{name:'Stuck',at,fresh:true,tickStats:{ticks:100,currentStandStill:35,currentStandStillWhy:'after:interactLoc',currentStandStillAt:'3200,3200',windowTicks:100,windowStandStillPct:35}}],now))
+  .toEqual([{name:'Stuck',at,kind:'idle',text:'standing still 35 ticks (after:interactLoc @ 3200,3200)',practice:false}]);
+ // Dialog stall > 20 ticks alerts.
+ expect(alerts([{name:'Chatter',at,fresh:true,tickStats:{ticks:100,currentStandStill:0,currentDialogTicks:25,windowTicks:100,windowStandStillPct:0}}],now))
+  .toEqual([{name:'Chatter',at,kind:'idle',text:'dialog open 25 ticks',practice:false}]);
+ // Open bank/shop window > 20 ticks alerts.
+ expect(alerts([{name:'Shopper',at,fresh:true,tickStats:{ticks:100,currentStandStill:0,currentDialogTicks:0,currentWindowTicks:28,currentWindowKind:'shop',windowTicks:100,windowStandStillPct:0}}],now))
+  .toEqual([{name:'Shopper',at,kind:'idle',text:'shop open 28 ticks',practice:false}]);
+ // High rolling standing-still % with interleaved actions alerts.
+ expect(alerts([{name:'Drifter',at,fresh:true,tickStats:{ticks:150,currentStandStill:5,windowTicks:120,windowStandStillPct:72,standStillPct:70,topIdleBy:[['bank',60]]}}],now))
+  .toEqual([{name:'Drifter',at,kind:'efficiency',text:'high standing-still 72% over 120t (bank)',practice:false}]);
+ // Legacy timeline without tickStats alerts on trailing d+ and high idle %.
+ expect(alerts([{name:'LegacyDlg',at,fresh:true,timeline:'xx'+'d'.repeat(25)}],now))
+  .toEqual([{name:'LegacyDlg',at,kind:'idle',text:'dialog open 25 ticks',practice:false}]);
+ expect(alerts([{name:'LegacyHigh',at,fresh:true,timeline:('iiix').repeat(30)}],now))
+  .toEqual([{name:'LegacyHigh',at,kind:'efficiency',text:'high idle 75% over 120t',practice:false}]);
+});

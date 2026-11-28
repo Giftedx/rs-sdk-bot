@@ -18,6 +18,7 @@ import {
     prayerGuards,
     randomEvents,
     records,
+    sessionLogs,
     settling,
     statuses,
 } from './monitors';
@@ -108,7 +109,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     const [
         { assertSideOwns, loadOwners },
         { ensureCredential },
-        { assertLiveWorkerRelease },
+        { assertLiveWorkerReleaseAsync },
     ] = await Promise.all([
         import('../fleet'),
         import('../fleet-vault'),
@@ -135,17 +136,17 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         throw new Error(`refusing to connect sim bot ${name} to non-local server ${server}`);
     }
     assertServerAllowed(server);
-    assertLiveWorkerRelease(server);
+    await assertLiveWorkerReleaseAsync(server);
     const trade = opts.trade;
     const scriptFile = opts.record?.script ?? process.argv[1] ?? '';
     const prayerGuardOn = process.env.PRAYER_GUARD !== '0';
     const eatGuardOn = process.env.EAT_GUARD !== '0' && !NO_GUARD_SCRIPT_RE.test(basename(scriptFile));
     const [
         { connectInProcess },
-        { startLedger, stalled },
+        { ledgerScriptId, startLedger, stalled },
         { GUARD_VALUE, recordRun, sellsItems, sharedLootTables },
         { createTickRecorder },
-        { startStatus },
+        { startStatus, activeStatusPhase },
         { FLEE_HP, appendDeathAlert, damageLog, deathAlert, deathLine, recoverDeath },
         { fleetLeaseAllowsWorker },
         prayerMod,
@@ -209,11 +210,11 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     let born: LifeFields = life(p);
     let lastLife: LifeFields = born, deathSeen = false;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
+    sessionLogs.set(s, log);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
-    // The worker release of this run (WORKER_RELEASE, which the swarm sets from the files the job runs): reports such as
-    // scripts/tick-waste.ts count each run under the code it ran, so a fixed bug stops counting. A line of its own,
-    // because proofs match the START line to its end.
-    log(releaseLine(process.env.WORKER_RELEASE));
+    // The worker release and script identity of this run: tools/tick-waste.ts counts each run under the script and code it ran.
+    const scriptId = ledgerScriptId(scriptFile, opts.record?.argv ?? process.argv.slice(2), name);
+    log(releaseLine(process.env.WORKER_RELEASE, scriptId));
     // On the lockstep practice engine: the time from the start of the worker process to its login, for the bench.
     if (process.env.SIM_LOCKSTEP === '1') log(`BOOT ${Math.round(performance.now())} ms from process start to login`);
     const record = createTickRecorder({
@@ -222,8 +223,13 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     });
     if (record && s.record) { s.record(record); records.set(s, record); }
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
-    // The ledger names the last script action of each idle tick: the watcher's gate sees them (started below).
-    const led = startLedger(s as any, () => randomEvents.get(s)?.lastAction() ?? null, Math.max(STALL_TICKS, 300));
+    // The ledger tracks dispatched SDK actions directly and also consults the random-event gate when active.
+    const led = startLedger(
+        s as any,
+        () => randomEvents.get(s)?.lastAction() ?? null,
+        Math.max(STALL_TICKS, 300),
+        { script: scriptId, phase: () => activeStatusPhase(name) },
+    );
     ledgers.set(s, led);
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
@@ -356,7 +362,13 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
     });
     // Live status for the dashboard (packages/dashboard).
-    statuses.set(s, startStatus(s as any, server, led.counts, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
+    statuses.set(s, startStatus(
+        s as any,
+        server,
+        led.counts,
+        () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join(''),
+        { tickStats: () => led.snapshot() },
+    ));
     // No more game ticks arrive after disconnect. End a script waiting on them
     // through its own session owner, while planned logout/stop keeps its result.
     watchUnexpectedEnd(s, () => settling.has(s), () => stopping, detail =>

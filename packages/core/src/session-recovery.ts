@@ -2,6 +2,8 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {connectInProcess,clientTransportState,observeClientTransport,inProcessRuntimePaths,type Session} from './inprocess';
+import {formatLedger,startLedger} from './ledger';
+import {startStatus} from './status';
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
 import {lifecycleRootForServer,resolveBotEnvPath} from './practice-paths';
@@ -317,15 +319,19 @@ async function cli(){
  try{console.log('RECOVERY_RUNTIME '+JSON.stringify({at:Date.now(),pid:process.pid,bun:Bun.version,runner:import.meta.path,...inProcessRuntimePaths()}));}catch{/* Observation only. */}
  const timer=startRecoverySessionTimer(permitExpiresAt);
  const lifecycleRoot=resolvedLifecycle.root;
+ const recoveryLedgers=new WeakMap<Session,{led:ReturnType<typeof startLedger>;status:ReturnType<typeof startStatus>}>();
  const receipt=await recoveryBoundary('session',()=>recoverSession(request,{root:lifecycleRoot,guard,...(admission?{admission}:{}),
   connect:async()=>{
    const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(resolvedLifecycle.overrideForConnect?{lifecycleRoot}:{})});
+   const led=startLedger(s as any,()=>null,300,{script:'session-recovery'});
+   const status=startStatus(s as any,request.server,led.counts,()=>led.rows.slice(-300).map(r=>r.kind==='inventory'?'v':r.kind[0]).join(''),{lifecycleRoot,tickStats:()=>led.snapshot()});
+   recoveryLedgers.set(s,{led,status});
    // Through cleanup and logout: client write times and lengths, never payloads.
    observeClientTransport(s.client,row=>console.log('RECOVERY_TRANSPORT '+JSON.stringify(row)),{tick:()=>s.tick()});
    return s;
   },
   ready:recoveryReady,closeModal:recoveryCloseModal,
-  logout:s=>recoveryLogout(s),close:async s=>{const r=await closeWithin([s],5000);if(r.timedOut)throw Error('close timed out');}}));
+  logout:s=>recoveryLogout(s),close:async s=>{const m=recoveryLedgers.get(s);if(m){recoveryLedgers.delete(s);console.log(`${formatLedger(m.led.stop())} bot=${request.account}`);m.status.stop();}const r=await closeWithin([s],5000);if(r.timedOut)throw Error('close timed out');}}));
  clearTimeout(timer);await recoveryBoundary('output-receipt',()=>writeFileSync(join(out!,'receipt.json'),JSON.stringify(receipt,null,2),{flag:'wx'}));process.exitCode=receipt.state==='confirmed'?0:1;
 }
 if(import.meta.main)cli().catch(error=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(error)));process.exitCode=1;});

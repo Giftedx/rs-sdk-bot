@@ -22,6 +22,7 @@ export const deathRecoveries = new WeakMap<Session, Promise<string>>();
 export const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
 export const eatGuards = new Map<Session, ReturnType<typeof startEatGuard>>();
 export const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
+export const sessionLogs = new WeakMap<Session, (line: string) => void>();
 export const settling = new WeakSet<Session>();
 export const settlements = new WeakMap<Session, Promise<boolean>>();
 

@@ -3,6 +3,151 @@ import { readFileSync } from 'node:fs';
 // A PowerShell read that hangs ends after this time. The exit code is then null, and the readers below report "not known":
 // commandLine gives null and processStartTimes gives null. A controller loop must not wait on a hung read for good.
 export const POWERSHELL_TIMEOUT_MS = 20_000;
+export const PROCESS_QUERY_CACHE_MS = 5_000;
+
+async function killSpawnTree(proc: Bun.Subprocess<'ignore', 'pipe', 'ignore'>): Promise<void> {
+    if (process.platform === 'win32' && Number.isSafeInteger(proc.pid) && proc.pid > 0) {
+        try {
+            const killer = Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+            await Promise.race([killer.exited, Bun.sleep(1500)]);
+        } catch { /* fallback below */ }
+    }
+    try { proc.kill('SIGKILL'); } catch { /* already exited */ }
+}
+
+// Non-blocking subprocess execution with bounded timeout and tree kill on expiry.
+export async function spawnAsyncTimed(cmd: string[], timeoutMs = POWERSHELL_TIMEOUT_MS): Promise<{ exitCode: number | null; stdout: string }> {
+    let proc: Bun.Subprocess<'ignore', 'pipe', 'ignore'>;
+    try {
+        proc = Bun.spawn(cmd, { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+    } catch {
+        return { exitCode: null, stdout: '' };
+    }
+    const stdoutP = new Response(proc.stdout).text().catch(() => '');
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+        const raced = await Promise.race([
+            Promise.all([stdoutP, proc.exited]).then(([stdout, exitCode]) => ({ stdout, exitCode })),
+            new Promise<null>(resolve => {
+                timer = setTimeout(() => { timedOut = true; resolve(null); }, timeoutMs);
+            }),
+        ]);
+        if (timer) clearTimeout(timer);
+        if (!raced || timedOut) {
+            await killSpawnTree(proc);
+            await Promise.race([stdoutP, Bun.sleep(250)]);
+            return { exitCode: null, stdout: '' };
+        }
+        return raced;
+    } catch {
+        if (timer) clearTimeout(timer);
+        await killSpawnTree(proc);
+        return { exitCode: null, stdout: '' };
+    }
+}
+
+export type ProcessTableInfo = { createdAt: number | null; commandLine: string | null };
+const processInfoCache = new Map<number, { at: number; info: ProcessTableInfo }>();
+let inFlightBatch: { key: string; promise: Promise<Map<number, ProcessTableInfo> | null> } | null = null;
+
+export function clearProcessInfoCache(): void {
+    processInfoCache.clear();
+}
+
+// Non-blocking batch read of CreationDate and CommandLine for live PIDs on Windows (Linux reads /proc synchronously
+// in microseconds). Uses a short TTL cache so concurrent pool logins do not spawn redundant PowerShell processes.
+export async function processInfoBatchAsync(pids: readonly number[], now = Date.now()): Promise<Map<number, ProcessTableInfo> | null> {
+    const ids = [...new Set(pids.filter(p => Number.isSafeInteger(p) && p > 0))];
+    const out = new Map<number, ProcessTableInfo>();
+    if (!ids.length) return out;
+    const liveIds = ids.filter(pidAlive);
+    if (!liveIds.length) return out;
+
+    if (process.platform === 'linux') {
+        for (const pid of liveIds) {
+            let line: string | null = null;
+            try { line = readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || null; } catch { /* exited */ }
+            out.set(pid, { createdAt: null, commandLine: line });
+        }
+        return out;
+    }
+    if (process.platform !== 'win32') return null;
+
+    const missing: number[] = [];
+    for (const pid of liveIds) {
+        const hit = processInfoCache.get(pid);
+        if (hit && now - hit.at < PROCESS_QUERY_CACHE_MS) out.set(pid, hit.info);
+        else missing.push(pid);
+    }
+    if (!missing.length) return out;
+
+    const key = missing.slice().sort((a, b) => a - b).join(',');
+    let batchP: Promise<Map<number, ProcessTableInfo> | null>;
+    if (inFlightBatch && inFlightBatch.key === key) {
+        batchP = inFlightBatch.promise;
+    } else {
+        const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${missing.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { $c = if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } else { '' }; $cmd = if ($_.CommandLine) { ($_.CommandLine -replace "[\\r\\n]+",' ') } else { '' }; '{0}|{1}|{2}' -f $_.ProcessId, $c, $cmd }; 'read'`;
+        const run = (async (): Promise<Map<number, ProcessTableInfo> | null> => {
+            const r = await spawnAsyncTimed(['powershell', '-NoProfile', '-Command', script], POWERSHELL_TIMEOUT_MS);
+            const lines = r.stdout.trim().split(/\r?\n/);
+            if (r.exitCode !== 0 || lines.pop() !== 'read') return null;
+            const fetched = new Map<number, ProcessTableInfo>();
+            for (const line of lines) {
+                const first = line.indexOf('|');
+                if (first <= 0) continue;
+                const second = line.indexOf('|', first + 1);
+                if (second < 0) continue;
+                const pid = Number(line.slice(0, first));
+                const rawAt = line.slice(first + 1, second).trim();
+                const at = rawAt ? Number(rawAt) : null;
+                const cmd = line.slice(second + 1).trim() || null;
+                if (Number.isSafeInteger(pid) && pid > 0) {
+                    fetched.set(pid, { createdAt: at !== null && Number.isFinite(at) ? at : null, commandLine: cmd });
+                }
+            }
+            const stamp = Date.now();
+            if (processInfoCache.size > 512) {
+                for (const [k, v] of processInfoCache) if (stamp - v.at >= PROCESS_QUERY_CACHE_MS) processInfoCache.delete(k);
+            }
+            for (const pid of missing) {
+                const info = fetched.get(pid);
+                if (info) processInfoCache.set(pid, { at: stamp, info });
+            }
+            return fetched;
+        })();
+        inFlightBatch = { key, promise: run };
+        batchP = run.finally(() => { if (inFlightBatch?.promise === run) inFlightBatch = null; });
+    }
+    const fetched = await batchP;
+    if (!fetched) return null;
+    for (const [pid, info] of fetched) out.set(pid, info);
+    return out;
+}
+
+export async function processStartTimesAsync(pids: readonly number[]): Promise<Map<number, number> | null> {
+    if (process.platform !== 'win32') return null;
+    const batch = await processInfoBatchAsync(pids);
+    if (!batch) return null;
+    const out = new Map<number, number>();
+    for (const [pid, info] of batch) if (info.createdAt !== null) out.set(pid, info.createdAt);
+    return out;
+}
+
+export async function commandLineAsync(pid: number): Promise<string | null> {
+    if (!Number.isInteger(pid) || pid <= 0) return null;
+    if (!pidAlive(pid)) return null;
+    if (process.platform === 'linux') {
+        try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim() || null; }
+        catch { return null; }
+    }
+    if (process.platform === 'win32') {
+        const batch = await processInfoBatchAsync([pid]);
+        return batch?.get(pid)?.commandLine ?? null;
+    }
+    const r = await spawnAsyncTimed(['ps', '-o', 'command=', '-p', String(pid)], POWERSHELL_TIMEOUT_MS);
+    return r.stdout.trim() || null;
+}
 
 export type TimedSpawnSyncOptions<
     In extends Bun.SpawnOptions.Writable = 'ignore',

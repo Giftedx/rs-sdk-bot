@@ -10,6 +10,7 @@ import {
     prayerGuards,
     randomEvents,
     records,
+    sessionLogs,
     settlements,
     settling,
     stallWatches,
@@ -24,10 +25,15 @@ const RECORD_FLUSH_MS = 3000;
 const CLOSE_TIMEOUT_MS = 15_000;
 
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail, opts: Pick<SettlementOptions, 'logout'> = {}): Promise<never> {
-    const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
-    if (hook) { const final = await settle(sessions, ok, detail, opts); hook(final, detail); return new Promise<never>(() => {}); }
-    // A helper module's finish() inside a bot host ends the hosted bot that runs it (host-scope.ts).
     const hosted = currentHostedScope();
+    const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
+    if (hook) {
+        const log = sessions.map(s => sessionLogs.get(s)).find(Boolean) ?? (hosted ? (l: string) => hosted.log(l) : undefined);
+        const final = await settle(sessions, ok, detail, log ? { ...opts, log } : opts);
+        hook(final, detail);
+        return new Promise<never>(() => {});
+    }
+    // A helper module's finish() inside a bot host ends the hosted bot that runs it (host-scope.ts).
     if (hosted) return hosted.finish(sessions, ok, detail);
     // Inside a bot host other bots share this process: log this one out and stop here, never exit the host.
     if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail, opts); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
@@ -68,7 +74,8 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
     tickWaits.active++;
     try {
-        const log = opts.log ?? ((l: string) => console.log(l));
+        const hostedScope = currentHostedScope();
+        const log = opts.log ?? sessions.map(s => sessionLogs.get(s)).find(Boolean) ?? (hostedScope ? (l: string) => hostedScope.log(l) : (l: string) => console.log(l));
         for (const s of sessions) {
             const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
             // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.

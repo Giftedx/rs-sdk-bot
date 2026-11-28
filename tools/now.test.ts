@@ -230,3 +230,21 @@ test('isPortUnbound detects active listeners on 127.0.0.1 and 0.0.0.0 and reject
         expect(isPortUnbound(port)).toBe(true);
     }
 });
+
+test('the ticks and stalls lines surface live standing-still, dialog/window stalls, high-waste, and recent LOOP_STALL events', () => {
+    const s: DashState = {
+        ...state(),
+        tickHealth: {
+            liveBots: 5,
+            standingStillNow: [{ name: 'Dipstick', streak: 42, at: '3200,3200', why: 'after:interactNpc', standStillPct: 73, script: 'goldfarm' }],
+            dialogStalls: [{ name: 'Fingerblastr', ticks: 35, script: 'gather-fish' }],
+            windowStalls: [{ name: 'OreElse', ticks: 24, kind: 'shop', script: 'shop-buyer' }],
+            moveStalls: [],
+            highWaste: [{ name: 'Ballbag', standStillPct: 85, windowStandStillPct: 86, windowTicks: 200, maxStandStill: 49, why: 'bank', script: 'shop-buyer' }],
+        },
+    };
+    const lines = nowLines(s, local({ loopStalls: { count: 3, accounts: ['Moneyshot', 'OreElse'] } }), NOW);
+    expect(lines).toContain('ticks   WARN 1 standing still (Dipstick 42t after:interactNpc); 1 dialog stall (Fingerblastr 35t); 1 window stall (OreElse shop 24t); 1 high-waste (Ballbag 86% bank)');
+    expect(lines).toContain('stalls  WARN 3 LOOP_STALL event(s) in 24 h (Moneyshot, OreElse)');
+    expect(nowLines(state(), local({ loopStalls: { count: 0, accounts: [] } }), NOW).some(l => l.startsWith('ticks') || l.startsWith('stalls'))).toBe(false);
+});

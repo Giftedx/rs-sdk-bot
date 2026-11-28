@@ -5,6 +5,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { assertServerAllowed, serverFromEnv, logoutSession, closeWithin } from '../packages/core/src/bot';
 import { connectInProcess } from '../packages/core/src/inprocess';
+import { formatLedger, startLedger } from '../packages/core/src/ledger';
+import { startStatus } from '../packages/core/src/status';
 import { NAMES } from '../packages/core/src/names';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { assertSideOwns } from '../packages/core/src/fleet';
@@ -32,12 +34,22 @@ const s = await connectInProcess({ name, password, server,
         assertProvisionCrew(JSON.parse(crew),root);
     } : undefined,
 });
+const led = startLedger(s as any, () => null, 300, { script: 'claim-account' });
+const status = startStatus(
+    s as any,
+    server,
+    led.counts,
+    () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join(''),
+    { tickStats: () => led.snapshot() },
+);
 // Log out the moment the client reports it is in the game: no tutorial, no actions.
 const t0 = Date.now();
 while (!s.sdk.getState()?.inGame && Date.now() - t0 < 30_000) await Bun.sleep(20);
 const inAt = s.tick();
 const reached = !!s.sdk.getState()?.inGame;
 const out = reached ? await logoutSession(s) : 'never in game';
+console.log(`${formatLedger(led.stop())} bot=${name}`);
 console.log(`CLAIM ticks=${s.tick() - inAt} in_game=${reached} logout=${out}`);
+status.stop();
 await closeWithin([s], 5000);
 process.exit(out === 'logged-out' ? 0 : 1);

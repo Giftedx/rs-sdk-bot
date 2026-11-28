@@ -55,9 +55,9 @@ export function assertServerAllowed(server: string, env: Record<string, string |
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }
 
-// `RELEASE <first 12 hex of the worker release>`, or `RELEASE unpinned` for a run that the swarm did not start.
-export const releaseLine = (release: string | undefined) =>
-    `RELEASE ${/^[0-9a-f]{12,}$/i.test(release ?? '') ? release!.slice(0, 12).toLowerCase() : 'unpinned'}`;
+// `RELEASE <first 12 hex of the worker release>` (plus `script=<id>` when supplied), or `RELEASE unpinned`.
+export const releaseLine = (release: string | undefined, script?: string | null) =>
+    `RELEASE ${/^[0-9a-f]{12,}$/i.test(release ?? '') ? release!.slice(0, 12).toLowerCase() : 'unpinned'}${script ? ` script=${script}` : ''}`;
 
 export function sessionDied(initial: any, now: any): boolean {
     return !!now && (now.isDead === true || (now.respawnCount ?? 0) > (initial?.respawnCount ?? 0)

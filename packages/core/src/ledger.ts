@@ -18,17 +18,107 @@ export type TickKind = 'xp' | 'inventory' | 'move' | 'anim' | 'dialog' | 'stun' 
 // `dialogTicks`, on a dialog row of startLedger: the open-dialog ticks in a row that showed the same words, this one
 // included (see dialogWords; a closed tick does not reset the count).
 export interface TickRow { tick: number; kind: TickKind; at: string; why?: string; dialogTicks?: number }
+export type StandStillStreak = { start: number; length: number; at: string; why: string };
+export interface LedgerLiveSnapshot {
+    ticks: number;
+    idle: number;
+    idlePct: number;
+    standStill: number;
+    standStillPct: number;
+    windowTicks: number;
+    windowIdlePct: number;
+    windowStandStillPct: number;
+    currentIdle: number;
+    currentStandStill: number;
+    currentStandStillAt: string | null;
+    currentStandStillWhy: string | null;
+    maxStandStill: number;
+    maxStandStillAt: string | null;
+    maxStandStillWhy: string | null;
+    longestIdle: number;
+    longestIdleAt: string | null;
+    currentDialogTicks: number;
+    maxDialogTicks: number;
+    currentWindowTicks: number;
+    currentWindowKind: 'bank' | 'shop' | 'window' | null;
+    maxWindowTicks: number;
+    currentMoveStreak: number;
+    maxMoveStreak: number;
+    lastAction: string | null;
+    idleBy: Record<string, number>;
+    topIdleBy: [string, number][];
+    script: string | null;
+}
 // Ticks after a hit on the player in which an idle tick with no fight counts as `hurt`.
 export const FIGHT_TICKS = 8;
 
-// The reason for one idle tick, from the state of that tick and the type of the script's last action.
-export function idleWhy(now: any, lastAction: string | null): string {
+// Optional explicit phase tag per session (e.g. `route-plan`, `trade-wait`) so pre-action idle ticks do not read `none`.
+const sessionPhases = new WeakMap<object, string>();
+export function setLedgerPhase(session: object, phase: string | null): void {
+    if (phase && phase.trim()) sessionPhases.set(session, phase.trim());
+    else sessionPhases.delete(session);
+}
+export function ledgerPhaseOf(session: object): string | null {
+    return sessionPhases.get(session) ?? null;
+}
+
+const ROUTE_PHASE_RE = /\b(?:walk|route|travel|path|goTo)\b/i;
+const TRADE_PHASE_RE = /\b(?:trade|partner|meet|handoff|wait(?:ing)?\s+for)\b/i;
+export function phaseIdleReason(phase: string | null | undefined): string | null {
+    if (!phase) return null;
+    const trimmed = phase.trim();
+    if (!trimmed) return null;
+    if (trimmed === 'route-plan' || trimmed === 'trade-wait') return trimmed;
+    if (TRADE_PHASE_RE.test(trimmed)) return 'trade-wait';
+    if (ROUTE_PHASE_RE.test(trimmed)) return 'route-plan';
+    return null;
+}
+
+// Idle ticks caused by active combat swings (`combat`) or recent damage (`hurt`) are combat ticks, not standing still.
+export function isStandingStillReason(why: string | undefined): boolean {
+    return why !== 'combat' && why !== 'hurt';
+}
+
+const MULTI_DISPATCH_SCRIPTS = new Set(['aio', 'aio-skiller', 'aio-combat', 'aio-market', 'aio-logistics', 'aio-quester']);
+const SAFE_SCRIPT_TOKEN = /[^A-Za-z0-9_./:-]/g;
+
+// Compact script/job identifier for LEDGER lines and live status snapshots (e.g. `aio-logistics:walk-to`, `goldfarm`).
+export function ledgerScriptId(script: string | undefined, argv: readonly string[] = [], account?: string): string | null {
+    const raw = (script ?? '').trim();
+    if (!raw) return null;
+    const base = raw.split(/[\\/]/).pop()?.replace(/\.(?:ts|js|mjs|cjs)$/i, '').trim() ?? '';
+    if (!base) return null;
+    const acctLower = account?.trim().toLowerCase();
+    const rest = argv.filter((a, idx) => {
+        if (typeof a !== 'string' || !a.trim()) return false;
+        if (idx === 0 && acctLower && a.trim().toLowerCase() === acctLower) return false;
+        return true;
+    });
+    if (MULTI_DISPATCH_SCRIPTS.has(base.toLowerCase())) {
+        const sub: string[] = [];
+        for (const arg of rest) {
+            if (arg.startsWith('-') || arg.includes('=')) continue;
+            if (/^\d+$/.test(arg)) break;
+            const clean = arg.trim().replace(SAFE_SCRIPT_TOKEN, '');
+            if (!clean) continue;
+            sub.push(clean);
+            if (sub.length >= 2) break;
+        }
+        if (sub.length) return `${base.replace(SAFE_SCRIPT_TOKEN, '')}:${sub.join('/')}`.slice(0, 64);
+    }
+    const cleanBase = base.replace(SAFE_SCRIPT_TOKEN, '');
+    return cleanBase ? cleanBase.slice(0, 64) : null;
+}
+
+// The reason for one idle tick, from the state of that tick, the last action the script sent, and any active phase.
+export function idleWhy(now: any, lastAction: string | null, phase?: string | null): string {
     if (now?.fight) return 'combat';
     if (now?.hurt) return 'hurt';
     if (now?.bank) return 'bank';
     if (now?.shop) return 'shop';
     if (now?.window) return 'window';
-    return lastAction ? `after:${lastAction}` : 'none';
+    if (lastAction) return `after:${lastAction}`;
+    return phaseIdleReason(phase) ?? 'none';
 }
 
 const xpSum = (st: any) => {
@@ -76,33 +166,113 @@ export function classifyTick(before: any, now: any, stunned = false): TickKind {
 const LONGEST_IDLE = 5;
 type Streak = { start: number; length: number; at: string };
 
-// Counters for the summary: a count of each kind, the idle reasons and the five longest idle streaks. A session holds
-// these, not every row, so its memory does not grow with the run.
+// Counters for the summary: a count of each kind, the idle reasons, standing-still counters/streaks, and the five
+// longest idle streaks. A session holds these, not every row, so its memory stays bounded over any run length.
 export class TickTally {
     ticks = 0;
+    standStill = 0;
     readonly counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
     private readonly why = new Map<string, number>();
     private readonly longest: Streak[] = [];
     private open: Streak | null = null;
+    private openStandStill: StandStillStreak | null = null;
+    private bestStandStill: StandStillStreak | null = null;
+    private curDialog = 0;
+    private bestDialog = 0;
+    private curMove = 0;
+    private bestMove = 0;
     add(r: TickRow): void {
         this.ticks++;
         this.counts[r.kind]++;
-        if (r.kind !== 'idle') { this.close(); return; }
+        if (r.kind === 'dialog') {
+            this.curDialog++;
+            if (this.curDialog > this.bestDialog) this.bestDialog = this.curDialog;
+        } else {
+            this.curDialog = 0;
+        }
+        if (r.kind === 'move') {
+            this.curMove++;
+            if (this.curMove > this.bestMove) this.bestMove = this.curMove;
+        } else if (r.kind === 'xp' || r.kind === 'inventory') {
+            this.curMove = 0;
+        }
+        if (r.kind !== 'idle') { this.close(); this.closeStandStill(); return; }
         const reason = r.why ?? 'none';
         this.why.set(reason, (this.why.get(reason) ?? 0) + 1);
         if (this.open) this.open.length++;
         else this.open = { start: r.tick, length: 1, at: r.at };
+        if (isStandingStillReason(reason)) {
+            this.standStill++;
+            if (this.openStandStill) {
+                this.openStandStill.length++;
+                this.openStandStill.why = reason;
+            } else {
+                this.openStandStill = { start: r.tick, length: 1, at: r.at, why: reason };
+            }
+        } else {
+            this.closeStandStill();
+        }
     }
     private close(): void {
         if (this.open) offerStreak(this.longest, this.open);
         this.open = null;
     }
-    summary(xpGain = 0) {
+    private closeStandStill(): void {
+        if (this.openStandStill) {
+            if (!this.bestStandStill
+                || this.openStandStill.length > this.bestStandStill.length
+                || (this.openStandStill.length === this.bestStandStill.length && this.openStandStill.start < this.bestStandStill.start)) {
+                this.bestStandStill = { ...this.openStandStill };
+            }
+        }
+        this.openStandStill = null;
+    }
+    currentIdle(): Streak | null {
+        return this.open ? { ...this.open } : null;
+    }
+    longestIdleTop(): Streak | null {
+        const best = this.longest[0] ?? null, cur = this.open;
+        if (!cur) return best ? { ...best } : null;
+        if (!best || cur.length > best.length || (cur.length === best.length && cur.start < best.start)) return { ...cur };
+        return { ...best };
+    }
+    currentDialog(): { current: number; max: number } {
+        return { current: this.curDialog, max: this.bestDialog };
+    }
+    currentMove(): { current: number; max: number } {
+        return { current: this.curMove, max: this.bestMove };
+    }
+    currentStandStill(): StandStillStreak | null {
+        return this.openStandStill ? { ...this.openStandStill } : null;
+    }
+    maxStandStill(): StandStillStreak | null {
+        const best = this.bestStandStill, cur = this.openStandStill;
+        if (!cur) return best ? { ...best } : null;
+        if (!best || cur.length > best.length || (cur.length === best.length && cur.start < best.start)) return { ...cur };
+        return { ...best };
+    }
+    topIdleBy(limit = 6): [string, number][] {
+        return [...this.why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, limit);
+    }
+    summary(xpGain = 0, script: string | null = null) {
         // The open streak is a streak too. Offer it to a copy, so the tally keeps counting.
         const longest = this.longest.map(s => ({ ...s }));
         if (this.open) offerStreak(longest, this.open);
-        const idleBy = [...this.why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
-        return { ticks: this.ticks, counts: { ...this.counts }, idlePct: this.ticks ? (100 * this.counts.idle) / this.ticks : 0, longestIdle: longest, xpGain, idleBy };
+        const idleBy = this.topIdleBy(6);
+        const standStillPct = this.ticks ? (100 * this.standStill) / this.ticks : 0;
+        const maxStandStill = this.maxStandStill();
+        return {
+            ticks: this.ticks,
+            counts: { ...this.counts },
+            idlePct: this.ticks ? (100 * this.counts.idle) / this.ticks : 0,
+            standStill: this.standStill,
+            standStillPct,
+            maxStandStill,
+            longestIdle: longest,
+            xpGain,
+            idleBy,
+            ...(script ? { script } : {}),
+        };
     }
 }
 
@@ -136,11 +306,51 @@ function dialogWords(d: any): string {
 }
 
 // `lastAction` returns the type of the last action the script sent, or null.
+// `startLedger` also intercepts `s.direct` and `s.sdk.send` directly so sessions without randomEvents (e.g.
+// RANDOM_EVENTS=0, record runs, or direct openBot scripts) still attribute idle ticks to their last dispatched action.
 // `keep` is the number of newest rows that `rows` holds (at least the stall window of `stalled`); older rows only
 // count in the tally. `rows` holds between `keep` and 2 x `keep` rows.
-export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }, lastAction: () => string | null = () => null, keep = LEDGER_KEEP) {
+export function startLedger(
+    s: { sdk: { getState(): any; getDialog?(): any; send?: (msg: any) => unknown }; direct?: (a: any) => unknown; onTick(cb: () => void): () => void; tick(): number },
+    lastAction: () => string | null = () => null,
+    keep = LEDGER_KEEP,
+    opts: { script?: string | null; phase?: () => string | null } = {},
+) {
     const rows: TickRow[] = [], tally = new TickTally(), floor = Number.isFinite(keep) ? Math.max(1, keep) : LEDGER_KEEP;
+    const scriptId = opts.script ?? null;
     const STUN_RE = /stunned/i;
+    let stopped = false;
+    let effectiveAction: string | null = null;
+    let lastExternalAction: string | null = null;
+    const noteDispatched = (action: any) => {
+        if (stopped || !action || typeof action.type !== 'string' || action.type === 'togglePrayer') return;
+        effectiveAction = action.reason === 'random-event' ? 'random-event' : action.type;
+    };
+    const sessAny = s as any;
+    const sdkAny = s.sdk as any;
+    const origDirect = sessAny.direct;
+    let directWrapper: ((a: any) => unknown) | undefined;
+    if (typeof origDirect === 'function') {
+        const bound = origDirect.bind(sessAny);
+        directWrapper = (a: any) => { noteDispatched(a); return bound(a); };
+        sessAny.direct = directWrapper;
+    }
+    const origSend = sdkAny?.send;
+    let sendWrapper: ((msg: any) => unknown) | undefined;
+    if (typeof origSend === 'function') {
+        const bound = origSend.bind(sdkAny);
+        sendWrapper = (msg: any) => { if (msg?.type === 'sdk_action') noteDispatched(msg.action); return bound(msg); };
+        sdkAny.send = sendWrapper;
+    }
+    const resolveLastAction = (): string | null => {
+        const external = lastAction();
+        if (external !== lastExternalAction) {
+            lastExternalAction = external;
+            if (external !== null) effectiveAction = external;
+            else if (!directWrapper && !sendWrapper) effectiveAction = null;
+        }
+        return effectiveAction ?? external;
+    };
     type SnapState = {
         xp: number;
         hasPlayer: boolean;
@@ -204,12 +414,23 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
     let stunUntil = -1;
     // The words of the last open dialog and the open-dialog ticks that showed them in a row (TickRow.dialogTicks).
     let shownWords: string | null = null, shownTicks = 0;
+    let curWindowTicks = 0, maxWindowTicks = 0;
+    let curWindowKind: 'bank' | 'shop' | 'window' | null = null;
     const off = s.onTick(() => {
         readSnap(cur);
         const tick = s.tick();
         if (cur.dialogOpen) {
             shownTicks = cur.dialogWords === shownWords ? shownTicks + 1 : 1;
             shownWords = cur.dialogWords;
+        }
+        const winKind: 'bank' | 'shop' | 'window' | null = cur.bank ? 'bank' : cur.shop ? 'shop' : cur.window ? 'window' : null;
+        if (winKind) {
+            curWindowTicks = curWindowKind === winKind ? curWindowTicks + 1 : 1;
+            curWindowKind = winKind;
+            if (curWindowTicks > maxWindowTicks) maxWindowTicks = curWindowTicks;
+        } else {
+            curWindowTicks = 0;
+            curWindowKind = null;
         }
         const msgs = s.sdk.getState()?.gameMessages;
         if (msgs?.length) {
@@ -227,30 +448,94 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
             : cur.animId !== -1 ? 'anim'
             : cur.dialogOpen ? 'dialog'
             : tick <= stunUntil ? 'stun' : 'idle';
+        const activePhase = ledgerPhaseOf(s) ?? opts.phase?.() ?? null;
         const row: TickRow = {
             tick,
             kind,
             at: cur.hasPlayer ? `${cur.x},${cur.z}` : 'undefined,undefined',
-            ...(kind === 'idle' ? { why: idleWhy(cur, lastAction()) } : kind === 'dialog' ? { dialogTicks: shownTicks } : {}),
+            ...(kind === 'idle' ? { why: idleWhy(cur, resolveLastAction(), activePhase) } : kind === 'dialog' ? { dialogTicks: shownTicks } : {}),
         };
         tally.add(row);
         rows.push(row);
         if (rows.length >= 2 * floor) rows.splice(0, rows.length - floor);
         const tmp = last; last = cur; cur = tmp;
     });
+    const snapshot = (window = 300): LedgerLiveSnapshot => {
+        const w = Math.min(rows.length, Math.max(1, window));
+        const startIdx = rows.length - w;
+        let wIdle = 0, wStandStill = 0;
+        for (let i = startIdx; i < rows.length; i++) {
+            const r = rows[i]!;
+            if (r.kind === 'idle') {
+                wIdle++;
+                if (isStandingStillReason(r.why)) wStandStill++;
+            }
+        }
+        const curStand = tally.currentStandStill();
+        const curIdle = tally.currentIdle();
+        const bestStand = tally.maxStandStill();
+        const topIdle = tally.longestIdleTop();
+        const dlg = tally.currentDialog();
+        const mv = tally.currentMove();
+        const topBy = tally.topIdleBy(6);
+        const round1 = (n: number) => Math.round(n * 10) / 10;
+        return {
+            ticks: tally.ticks,
+            idle: tally.counts.idle,
+            idlePct: tally.ticks ? round1((100 * tally.counts.idle) / tally.ticks) : 0,
+            standStill: tally.standStill,
+            standStillPct: tally.ticks ? round1((100 * tally.standStill) / tally.ticks) : 0,
+            windowTicks: w,
+            windowIdlePct: w > 0 ? round1((100 * wIdle) / w) : 0,
+            windowStandStillPct: w > 0 ? round1((100 * wStandStill) / w) : 0,
+            currentIdle: curIdle?.length ?? 0,
+            currentStandStill: curStand?.length ?? 0,
+            currentStandStillAt: curStand?.at ?? null,
+            currentStandStillWhy: curStand?.why ?? null,
+            maxStandStill: bestStand?.length ?? 0,
+            maxStandStillAt: bestStand?.at ?? null,
+            maxStandStillWhy: bestStand?.why ?? null,
+            longestIdle: topIdle?.length ?? 0,
+            longestIdleAt: topIdle?.at ?? null,
+            currentDialogTicks: dlg.current,
+            maxDialogTicks: dlg.max,
+            currentWindowTicks: curWindowTicks,
+            currentWindowKind: curWindowKind,
+            maxWindowTicks,
+            currentMoveStreak: mv.current,
+            maxMoveStreak: mv.max,
+            lastAction: resolveLastAction(),
+            idleBy: Object.fromEntries(topBy),
+            topIdleBy: topBy.slice(0, 4),
+            script: scriptId,
+        };
+    };
     return {
-        stop: () => { off(); return tally.summary(Math.max(0, last.xp - xpStart)); },
+        stop: () => {
+            if (!stopped) {
+                stopped = true;
+                off();
+                if (directWrapper && sessAny.direct === directWrapper) sessAny.direct = origDirect;
+                if (sendWrapper && sdkAny.send === sendWrapper) sdkAny.send = origSend;
+            }
+            return tally.summary(Math.max(0, last.xp - xpStart), scriptId);
+        },
         rows,
         /** Ticks of each kind so far, for the kinds that occurred. */
         counts: (): Record<string, number> => Object.fromEntries(Object.entries(tally.counts).filter(([, n]) => n > 0)),
+        snapshot,
+        lastAction: resolveLastAction,
     };
 }
 
 export function formatLedger(sum: ReturnType<typeof summarize>): string {
     const c = sum.counts;
+    const maxStand = sum.maxStandStill ? `${sum.maxStandStill.length}@t${sum.maxStandStill.start}(${sum.maxStandStill.at})` : '0';
     return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} xpGain=${sum.xpGain} `
         + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`
-        + ` idleBy=${sum.idleBy.map(([why, n]) => `${why}:${n}`).join(',')}`;
+        + ` idleBy=${sum.idleBy.map(([why, n]) => `${why}:${n}`).join(',')}`
+        + ` standStill=${sum.standStill} standStillPct=${sum.standStillPct.toFixed(1)} maxStandStill=${maxStand}`
+        + (sum.script ? ` script=${sum.script}` : '');
 }
 
 // A session is stalled when its last `window` ticks hold no xp, no inventory change, no new dialog and no journey:
