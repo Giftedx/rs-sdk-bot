@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795860666742-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "mmsmk1232",
+  "item": "Air talisman",
+  "count": 1,
+  "itemId": 1438,
+  "start": 1795860666742,
+  "end": 1795861566742,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
