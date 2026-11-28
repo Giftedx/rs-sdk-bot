@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795832703757-1",
+ "account": "Shaftsinker",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "639cf046-00e7-46cf-ae8c-39eff13b4717",
+ "count": 0,
+ "ok": false,
+ "at": 1795832826451,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 4,
+   "count": 0
+  }
+ ]
+}
