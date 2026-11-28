@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795837246192,
+ "at": 1795837333592,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "193",
+    "MAX_ITEMS": "139",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "193"
+    "BATCH_UNITS": "139"
    },
    "enabled": true,
    "repeat": false,
@@ -338,20 +338,22 @@
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "ranged-camp"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1540"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Fingersmith",
