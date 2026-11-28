@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834412390,
+ "at": 1795834437610,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,22 +185,6 @@
    "role": "pvp"
   },
   {
-   "accounts": [
-    "Nockitoff",
-    "Pocketrocket"
-   ],
-   "script": "scripts/generated/woodcutting.ts",
-   "env": {
-    "WC_SITE": "draynor",
-    "TARGET": "60",
-    "CAP": "3000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "owner-approved host pilot (research/bot-host.md 3e): 30 min in one host, then 30 min separate; then the brain gets both back",
-   "role": "woodcutting"
-  },
-  {
    "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -332,6 +316,7 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
