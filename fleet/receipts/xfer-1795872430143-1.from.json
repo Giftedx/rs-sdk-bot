@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795872430143-1",
  "account": "billionaire",
  "partner": "ballspinner",
@@ -12,6 +12,16 @@
  "claim": "4f4b12ad-66cf-4a94-9cbd-45e0bd36b695",
  "count": 0,
  "ok": false,
- "at": 1795872499753,
- "detail": "trade claimed"
+ "at": 1795872602736,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 10,
+  "at": 1795872571967
+ },
+ "logout": {
+  "attemptId": "1795872499761-0000027460-0000000001",
+  "at": 1795872602727,
+  "sha256": "d06817baae25accf17714ead04ca92d9119bc6592197d0978d81a44f2e848623"
+ },
+ "screen": false
 }
