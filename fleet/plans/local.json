@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795825319816,
+ "at": 1795825401770,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,31 +185,6 @@
    "role": "pvp"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "helper"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -225,6 +200,31 @@
    "resources": [
     "draynor-willows"
    ]
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "arheinstore",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1755",
+    "ITEMS": "Chisel",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1755",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1755",
+   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
