@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795826054905,
+ "at": 1795826143871,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,53 +202,19 @@
    ]
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
    "account": "RearEntry",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "blackknight"
+    "prince"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:blackknight",
+    "DEMAND_ID": "goal:quest_board:prince",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:blackknight",
-   "role": "helper"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "demon"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:demon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:demon",
+   "goal": "goal:quest_board:prince",
    "role": "helper"
   },
   {
@@ -266,6 +232,24 @@
    "repeat": false,
    "goal": "goal:quest_board:demon",
    "role": "helper"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   }
  ],
  "army": [
