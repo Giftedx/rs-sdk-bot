@@ -172,7 +172,7 @@ describe('PvP BiS missions and self-sustaining supply chain', () => {
                     state: 'staging',
                     kitTargets: [
                         { itemId: 861, itemName: 'Magic shortbow', countPerParticipant: 2, slot: 'ranged_weapon' },
-                        { itemId: 2503, itemName: "Black d'hide body", countPerParticipant: 2, slot: 'body' },
+                        { itemId: 2503, itemName: 'Dragonhide body', countPerParticipant: 2, slot: 'body' },
                         { itemId: 1712, itemName: 'Amulet of glory(4)', countPerParticipant: 2, slot: 'neck' },
                         { itemId: 1231, itemName: 'Dragon dagger(p)', countPerParticipant: 2, slot: 'special_weapon' },
                     ],
