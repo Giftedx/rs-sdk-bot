@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842846164-1",
+ "account": "Woodenstaff",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "852a812c-eba4-4c61-ab1a-99cca9422913",
+ "count": 3,
+ "ok": true,
+ "at": 1795843420911,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795843420162
+ },
+ "logout": {
+  "attemptId": "1795843410341-0000023660-0000000001",
+  "at": 1795843420903,
+  "sha256": "095849584ee17aea22aab9c8766c4902674315836c9b266fedf52faa89beb6c6"
+ },
+ "screen": true
+}

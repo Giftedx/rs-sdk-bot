@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795843390778,
+ "at": 1795843452203,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,7 +195,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "83"
    },
    "enabled": true,
    "repeat": false,
@@ -216,7 +216,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "83"
    },
    "enabled": true,
    "repeat": false,
@@ -227,7 +227,7 @@
    ]
   },
   {
-   "account": "WellHung",
+   "account": "TossTheCaber",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "fishing",
@@ -237,12 +237,12 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "83"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:377",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "catherby-lobsters"
    ]
@@ -258,7 +258,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "83"
    },
    "enabled": true,
    "repeat": false,
@@ -273,7 +273,22 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=80 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing staged",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -285,49 +300,60 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing staged",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=80 -- fishing cage cage"
+    "woodcutting",
+    "yews"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army"
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=960 -- fishing shark"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "BackdoorMan",
@@ -344,6 +370,25 @@
    "repeat": false,
    "goal": "goal:quest_board:scorpion",
    "role": "helper"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Kiltlifter",
@@ -371,18 +416,75 @@
    "role": "army"
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "account": "Nockitoff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Spitroaster",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-440-2-o0-p97",
+    "ITEM_ID": "440",
+    "QUANTITY": "2",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "97",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army"
+  },
+  {
+   "account": "ChaosInPants",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "vampire"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
    "role": "auto"
   },
   {
@@ -394,37 +496,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "44",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "88",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "44"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "88"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
+   "goal": "campaign:haggis:item:562",
    "role": "auto"
   },
   {
@@ -518,55 +603,26 @@
    "role": "helper"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 TARGET_COUNT=40 CAP=1000 STALL_TICKS=200 -- herblore potions",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2481",
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fletching TARGET_LEVEL=80 STALL_TICKS=224 -- fletching worker",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:72 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-bow:unstrung_magic_shortbow"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:72",
-   "role": "army"
-  },
-  {
-   "account": "Nockitoff",
+   "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "76",
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "25",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "25",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
+   "goal": "campaign:haggis:item:2349",
+   "role": "helper"
   }
  ],
  "army": [
@@ -583,7 +639,6 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "sausagefest"
  ],
  "builds": {
