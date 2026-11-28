@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795857104387-1",
+ "account": "KnightRider",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "e59526cd-d7aa-4eff-96bd-7873d3ccfaed",
+ "count": 1,
+ "ok": true,
+ "at": 1795857750301,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Iron bar",
+   "requested": 5,
+   "count": 5,
+   "inventory": {
+    "before": 0,
+    "after": 5
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795857749548
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795857749200
+ },
+ "logout": {
+  "attemptId": "1795857710421-0000025280-0000000001",
+  "at": 1795857750293,
+  "sha256": "8531da98a6a6cd55a893e8f03f82587f565818abca094d50e8a11a2f88302e37"
+ },
+ "screen": true
+}

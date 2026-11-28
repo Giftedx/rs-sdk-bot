@@ -1,0 +1,42 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795857263852-1",
+ "account": "Deeppockets",
+ "partner": "BackdoorMan",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "ace9b530-18d4-4bf1-8c52-ef898e642d41",
+ "count": 10,
+ "ok": true,
+ "at": 1795857787081,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Adamant scimitar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795857769556
+   }
+  }
+ ],
+ "inventory": {
+  "before": 15,
+  "after": 5
+ },
+ "logout": {
+  "attemptId": "1795857761384-0000022764-0000000001",
+  "at": 1795857787071,
+  "sha256": "f55cae980ad46d5af15432231e5856fffa03b8ce8db42592463779e32577a4bc"
+ },
+ "screen": true
+}

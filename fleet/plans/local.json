@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857421478,
+ "at": 1795857792582,
  "jobs": [
   {
    "account": "Balls",
@@ -45,92 +45,15 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
    "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy arheinstore 3000",
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "cut-sapphire"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -138,74 +61,68 @@
    "role": "army"
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=22 PRODUCT_TARGET=22 MAX_ORE=22 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1000 TARGET_COUNT=44 PRODUCT_TARGET=44 MAX_ORE=44 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=22 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=22 STALL_TICKS=280 -- smithing smelt 1500 steel"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-2357-26-o0-p3459 ITEM_ID=2357 QUANTITY=26 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=26 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=26 STALL_TICKS=280 -- crafting jewellery-trip"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "shantayshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1937",
-    "ITEMS": "Jug of water",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1937",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1937",
-   "role": "helper"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 MAX_MAKE=25 STALL_TICKS=150 -- fletching shafts",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "zanaris"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "goal": "campaign:haggis:item:1515",
    "role": "army"
   }
  ],
@@ -224,8 +141,10 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
+  "dipstick",
   "fatstack",
-  "hocuspokeus",
+  "fingerblastr",
+  "fingersmith",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
@@ -233,10 +152,11 @@
   "mmthv2350",
   "oreelse",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

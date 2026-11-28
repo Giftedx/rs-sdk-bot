@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795857406641-1",
+ "account": "Pocketrocket",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "c5548f83-5b53-40a4-9ce5-2c483f9a83e9",
+ "count": 1,
+ "ok": true,
+ "at": 1795857691157,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Emerald ring",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795857674348
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795857673944
+ },
+ "logout": {
+  "attemptId": "1795857665295-0000018556-0000000001",
+  "at": 1795857691088,
+  "sha256": "e8a451b328e8ea391701a8bff945c602f8c6f43ddae9f8cba1334f665f55ca6e"
+ },
+ "screen": true
+}

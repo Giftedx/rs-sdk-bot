@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795857263852-3",
+ "account": "Ballspinner",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 2,
+ "claim": "1badd974-bac0-42b0-9cc8-b98a9165ea98",
+ "count": 2,
+ "ok": true,
+ "at": 1795857601181,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795857535951
+ },
+ "logout": {
+  "attemptId": "1795857528519-0000023628-0000000001",
+  "at": 1795857601170,
+  "sha256": "4e48804f4dd9102b0ee2c9ed40a509e15c5085506e40d82a88ce9df948683cb3"
+ },
+ "screen": true
+}
