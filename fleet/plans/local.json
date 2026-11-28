@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870895589,
+ "at": 1795870967139,
  "jobs": [
   {
    "account": "Balls",
@@ -64,22 +64,23 @@
    ]
   },
   {
-   "account": "unsheathed",
-   "script": "scripts/aio-logistics.ts",
+   "account": "abracadickra",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "foraging",
+    "flax"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "seers-flax"
+   ]
   },
   {
    "account": "meatntwoveg",
