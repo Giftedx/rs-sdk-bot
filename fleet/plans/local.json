@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850500152,
+ "at": 1795850571666,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,21 +206,6 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army"
-  },
-  {
    "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
@@ -266,7 +251,7 @@
    "role": "army"
   },
   {
-   "account": "YewGotWood",
+   "account": "Ballbag",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -278,10 +263,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
-   "role": "auto"
+   "role": "helper"
   },
   {
-   "account": "ChaosInPants",
+   "account": "YewGotWood",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -316,19 +301,19 @@
    ]
   },
   {
-   "account": "Ballbag",
-   "script": "scripts/chain.ts",
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:chocolate_bar"
+    "foraging",
+    "feathers"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1975",
+   "goal": "goal:coin_fund:fleet",
    "role": "helper"
   },
   {
@@ -442,6 +427,44 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
+   "role": "auto"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "staged"
+   ],
+   "env": {
+    "METHOD": "karambwanji",
+    "BANKED": "1",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:3150",
+    "BATCH_UNITS": "480",
+    "AMOUNT": "480"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:3150",
+   "role": "army",
+   "resources": [
+    "karambwanji-lake"
+   ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=79 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
    "role": "auto"
   }
  ],
