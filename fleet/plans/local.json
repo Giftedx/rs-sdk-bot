@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795841479888,
+ "at": 1795841523529,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -210,6 +210,44 @@
    "role": "helper"
   },
   {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -337,39 +375,48 @@
    "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "5",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:2349",
+   "role": "helper"
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "fishing",
-    "shark"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "400"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "26",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "26"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army",
-   "resources": [
-    "catherby-sharks"
-   ]
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -415,6 +462,21 @@
   },
   {
    "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -428,63 +490,6 @@
    "repeat": false,
    "goal": "goal:quest_board:vampire",
    "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "5",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
-   "account": "InTheSack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "helper"
   },
   {
    "account": "YewGotWood",
@@ -501,6 +506,39 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "merlin"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:merlin",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:merlin",
+   "role": "auto"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Spitroaster",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   }
  ],
