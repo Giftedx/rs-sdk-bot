@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856858415-1",
+ "account": "OreElse",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 7,
+ "claim": "83425d90-30d9-4a4a-a14a-b14a99bb3268",
+ "count": 7,
+ "ok": true,
+ "at": 1795857133115,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 0
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795857115170
+ },
+ "logout": {
+  "attemptId": "1795857104973-0000024760-0000000001",
+  "at": 1795857133104,
+  "sha256": "45a84f79a0d91199ae37e517ec202dee4aeae1a0e48824b7111b8a9b33bd4df0"
+ },
+ "screen": true
+}

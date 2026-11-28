@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795857104387-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "KnightRider",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "extra": [
+    {
+      "item": "Iron bar",
+      "count": 5,
+      "itemId": 2351
+    }
+  ],
+  "start": 1795857104387,
+  "end": 1795858004387,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

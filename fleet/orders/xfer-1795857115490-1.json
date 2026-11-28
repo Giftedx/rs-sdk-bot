@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795857115490-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Abracadickra",
+  "to": "Mightyrod",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795857115490,
+  "end": 1795858015490,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

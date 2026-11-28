@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856611033-2",
+ "account": "Hocuspokeus",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air talisman",
+ "requested": 1,
+ "claim": "80d11926-f33b-45bf-a03b-83684eb66938",
+ "count": 1,
+ "ok": true,
+ "at": 1795857212711,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795857211606
+ },
+ "logout": {
+  "attemptId": "1795857182841-0000015188-0000000001",
+  "at": 1795857212702,
+  "sha256": "914ab93aef5a190fe6dcee32eac307504d78f36900ae942abeaed0287588cbf1"
+ },
+ "screen": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856763243-1",
+ "account": "Pocketrocket",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "692a7073-2b08-4b34-bc81-c3d434267b6f",
+ "count": 10,
+ "ok": true,
+ "at": 1795857211513,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795857210822
+ },
+ "logout": {
+  "attemptId": "1795857202377-0000026868-0000000001",
+  "at": 1795857211506,
+  "sha256": "50f7e6c0bc9a803ef8365b4c5e1ee1ecd67228e18d84e3f96002dfbd337d95d3"
+ },
+ "screen": true
+}

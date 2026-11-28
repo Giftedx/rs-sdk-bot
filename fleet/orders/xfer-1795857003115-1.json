@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795857003115-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "Woodenstaff",
+  "item": "Steel bar",
+  "count": 3,
+  "itemId": 2353,
+  "start": 1795857003115,
+  "end": 1795857903115,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856586478-4",
+ "account": "Knightstick",
+ "partner": "BackdoorMan",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "e109974d-7e64-40ac-b343-ca0fbb1316e7",
+ "count": 3,
+ "ok": true,
+ "at": 1795857181520,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 13
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795857180762
+ },
+ "logout": {
+  "attemptId": "1795857154228-0000022724-0000000001",
+  "at": 1795857181510,
+  "sha256": "4ebc24fba42f093bf3eb59171cb95acf90319fd78fbe8eb8617faaf19a6df857"
+ },
+ "screen": true
+}

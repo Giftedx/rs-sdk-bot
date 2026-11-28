@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795856611033-1",
  "account": "Kiltlifter",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "ee145f75-58fc-47c8-aba5-2ca4de2f4a70",
- "count": 0,
- "ok": false,
- "at": 1795856947622,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795856995117,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795856994366
+ },
+ "logout": {
+  "attemptId": "1795856947636-0000017504-0000000001",
+  "at": 1795856995108,
+  "sha256": "9a793536ac7dbcfc4d572daef9bbc635ed299864fd421368a03a22ebf3b0af0b"
+ },
+ "screen": true
 }
