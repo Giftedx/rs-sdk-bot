@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795871861874,
+ "at": 1795871999113,
  "jobs": [
   {
    "account": "Balls",
@@ -49,20 +49,20 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "gemshop2",
+    "ardougnegemstall",
     "3000"
    ],
    "env": {
     "ITEM_ID": "1607",
     "ITEMS": "Sapphire",
-    "MAX_ITEMS": "1",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
@@ -102,6 +102,38 @@
    "role": "helper"
   },
   {
+   "account": "abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "wool"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
+   "account": "chaosinpants",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "wool"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
    "account": "tacklebox",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -116,6 +148,24 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "helper"
+  },
+  {
+   "account": "bigchopper",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "meatntwoveg",

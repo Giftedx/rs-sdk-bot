@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795871711472-1",
+ "account": "billionaire",
+ "partner": "bonetopick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 1,
+ "claim": "b19cb6be-7622-400a-829a-7db744d043c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795871993699,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
