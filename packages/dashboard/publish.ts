@@ -19,11 +19,13 @@ import {expandQuests} from './quest-pack';
 import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocksValue} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
+import {leanBunEnv} from '../core/src/lean-bun-env';
 import {reloadDue,respawnDaemon} from '../core/src/live-reload';
 import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
 const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice'),startedAt=Date.now();
-const expectedDrops=expectedLootPrices(JSON.parse(readFileSync(join(import.meta.dir,'client-assets','npc-loot.json'),'utf8')));
+let expectedDropsCache: ReturnType<typeof expectedLootPrices> | undefined;
+const getExpectedDrops = () => (expectedDropsCache ??= expectedLootPrices(JSON.parse(readFileSync(join(import.meta.dir,'client-assets','npc-loot.json'),'utf8'))));
 const REPO=process.env.FLEET_COMMAND_REPO??'';
 const DIR=resolve(process.env.FLEET_COMMAND_DIR??join(prac,'fleet-command'));
 const CYCLE_MS=Math.max(15,Number(process.env.CYCLE_S)||60)*1000,PUBLIC_MS=Math.max(60,Number(process.env.PUBLIC_EVERY_S)||600)*1000;
@@ -63,7 +65,7 @@ async function dash(path:string,init?:RequestInit,timeoutMs=30_000){return fetch
 async function ensureDashboard(){
  try{if((await dash('/api/viewer-health',undefined,5000)).ok)return;}catch{/* start it */}
  const out=openSync(join(prac,'dashboard.out.log'),'a'),err=openSync(join(prac,'dashboard.err.log'),'a');
- const child=spawn(process.execPath,[join(root,'packages','dashboard','server.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,err],env:process.env});
+ const child=spawn(process.execPath,['--smol',join(root,'packages','dashboard','server.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,err],env:leanBunEnv(process.env)});
  closeSync(out);closeSync(err);child.unref();
  log(`PUBLISH started the local dashboard pid ${child.pid}`);
  for(let i=0;i<30;i++){await Bun.sleep(1000);try{if((await dash('/api/viewer-health',undefined,3000)).ok)return;}catch{/* not yet */}}
@@ -403,7 +405,7 @@ async function cycle(){
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
  const controlObj=controlView(state,meta),control=JSON.stringify(controlObj);
  let pubObj:any=null,pub:string|null=null,pubError:unknown=null;
- try{pubObj=publicView(state,MAIN_ACCOUNT,expectedDrops);pub=JSON.stringify(pubObj);}catch(e){pubError=e;}
+ try{pubObj=publicView(state,MAIN_ACCOUNT,getExpectedDrops());pub=JSON.stringify(pubObj);}catch(e){pubError=e;}
  writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
@@ -438,7 +440,7 @@ if(import.meta.main){
  const lock=join(prac,'dashboard-publish.lock');
  if(process.argv.includes('--daemon')){
   const out=openSync(join(prac,'dashboard-publish.log'),'a');
-  const child=spawn(process.execPath,[join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:{...process.env,PUBLISH_LOG_DIRECT:'1'}});
+  const child=spawn(process.execPath,['--smol',join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:leanBunEnv({...process.env,PUBLISH_LOG_DIRECT:'1'})});
   closeSync(out);child.unref();console.log(`PUBLISH started pid ${child.pid} (log .practice/dashboard-publish.log)`);process.exit(0);
  }
  if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid>0&&pid!==process.pid&&alive(pid)){log(`PUBLISH already running pid ${pid}`);process.exit(0);}}

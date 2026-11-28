@@ -2,13 +2,18 @@
 // and goes through stop files (.practice/stop-<account>, .practice/stop-swarm), swarm.json under .practice/live's
 // plan-write lock, or Brain operator commands (.practice/live/operator-commands/). The main account is never a target.
 import {existsSync,readFileSync,writeFileSync,unlinkSync,mkdirSync,readdirSync,statSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import {join} from 'node:path';
 import {withPlanWrite,atomicJson} from '../core/src/plan-lock';
 import {findStopFile,listStopEntries,liveRoot,operatorCommandsDir,practiceRoot,stopFilePaths} from '../core/src/practice-paths';
 import {mySide} from '../core/src/fleet';
-import {defaultActivityCatalog} from '../brain/src/catalog';
 import {validateOperatorCommand,type OperatorCommand} from '../brain/src/contracts';
 import {MAIN_ACCOUNT} from './publish-relay';
+
+const require = createRequire(import.meta.url);
+function loadActivityCatalog(root: string): { has: (id: string) => boolean } {
+ return (require('../brain/src/catalog') as typeof import('../brain/src/catalog')).defaultActivityCatalog(root);
+}
 export const NAME_RE=/^[A-Za-z0-9]{1,12}$/;
 
 export const ACTIONS=['account-pause','account-resume','swarm-pause','swarm-resume','side-pause','side-resume','override-account','clear-defect','job-disable','job-enable','request'] as const;
@@ -181,7 +186,7 @@ export async function applyCommand(cmd:Command,ctx:ApplyContext):Promise<Outcome
   }
   case 'request':{const {id}=appendOwnerRequest(ctx.root,cmd.text??'');return {status:'request-recorded',note:`row ${id} in ${REQUEST_FILE}`};}
   case 'override-account':{
-   if(cmd.activityId!==undefined&&cmd.activityId!==null&&!defaultActivityCatalog(ctx.root).has(cmd.activityId)){
+   if(cmd.activityId!==undefined&&cmd.activityId!==null&&!loadActivityCatalog(ctx.root).has(cmd.activityId)){
     return {status:'refused',note:`unknown activity "${cmd.activityId}"`};
    }
    const mins=cmd.durationMin??30;

@@ -8,6 +8,7 @@ import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, tak
 import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
 import { fleetTradeClaimRefusal, isFleetSwarmClaim, readHeldFleetAccountClaims, type FleetAccountClaim, type FleetTradeClaim } from '../../core/src/fleet-trade-claim';
 import { validOrder, type Order, type Receipt, type TradeRole } from '../../core/src/fleet-trade-settlement';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
 import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
@@ -16,7 +17,7 @@ import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
 import type { RawWorkerExitInput } from '../../brain/src/index';
 import { queueWorkerOutcome, tradeNoRouteOutcome } from './brain-runtime';
-import { brainPlannedJobs } from './fleet-sync';
+import { brainBusyAccounts } from './fleet-sync';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 import { drainedFiles, readPendingUpdate } from './live-update/pending';
 import { clearSwarmStop, SWARM_STOP, swarmWroteStop, writeSwarmStop } from './swarm';
@@ -27,31 +28,90 @@ import { askWorkersToLogOut } from './worker-stop';
 const root = repoRoot;
 export const AGENT_SUBPROCESS_TIMEOUT_MS = 180_000;
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
-const jsonFileCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
-const readJson = (dir: string) => {
-    if (!existsSync(dir)) return [];
-    const now = Date.now();
-    const out: any[] = [];
-    for (const f of readdirSync(dir)) {
-        if (!f.endsWith('.json')) continue;
-        const full = join(dir, f);
-        try {
-            const st = statSync(full);
-            const hit = jsonFileCache.get(full);
-            if (hit && now - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
-                out.push(hit.value);
+type ExpiredOrderStamp = { mtimeMs: number; size: number; end: number };
+const expiredOrderCache = new Map<string, ExpiredOrderStamp>();
+const activeOrderCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+const activeReceiptCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+
+function readCachedJsonFile(
+    cache: Map<string, { mtimeMs: number; size: number; value: unknown }>,
+    full: string,
+    nowWall: number,
+): unknown {
+    try {
+        const st = statSync(full);
+        const hit = cache.get(full);
+        if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+            return hit.value;
+        }
+        const value = JSON.parse(readFileSync(full, 'utf8'));
+        cache.set(full, { mtimeMs: st.mtimeMs, size: st.size, value });
+        return value;
+    } catch {
+        cache.delete(full);
+        return undefined;
+    }
+}
+
+// Keep only unexpired or currently running orders and their receipts parsed in RAM; expired orders hold only a stat stamp.
+export function readActiveOrdersAndReceipts(
+    dir: string,
+    now: number,
+    runningOrders: ReadonlyMap<string, string> = new Map(),
+): { orders: Order[]; receipts: Receipt[] } {
+    const ordersDir = join(dir, 'orders'), receiptsDir = join(dir, 'receipts');
+    const orders: Order[] = [];
+    const receipts: Receipt[] = [];
+    const runningIds = new Set(runningOrders.values());
+    const nowWall = Date.now();
+    const seenOrders = new Set<string>();
+    if (existsSync(ordersDir)) {
+        for (const f of readdirSync(ordersDir)) {
+            if (!f.endsWith('.json')) continue;
+            const full = join(ordersDir, f);
+            seenOrders.add(full);
+            let st;
+            try { st = statSync(full); } catch { continue; }
+            const orderId = f.slice(0, -5);
+            const expired = expiredOrderCache.get(full);
+            if (expired && !runningIds.has(orderId) && expired.mtimeMs === st.mtimeMs && expired.size === st.size && now >= expired.end) {
                 continue;
             }
-            const value = JSON.parse(readFileSync(full, 'utf8'));
-            if (jsonFileCache.size > 4096) jsonFileCache.clear();
-            jsonFileCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, value });
-            out.push(value);
-        } catch {
-            jsonFileCache.delete(full);
+            const raw = readCachedJsonFile(activeOrderCache, full, nowWall);
+            if (!validOrder(raw)) {
+                expiredOrderCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, end: 0 });
+                activeOrderCache.delete(full);
+                continue;
+            }
+            if (now >= raw.end && !runningIds.has(raw.id)) {
+                expiredOrderCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, end: raw.end });
+                activeOrderCache.delete(full);
+                continue;
+            }
+            expiredOrderCache.delete(full);
+            orders.push(raw);
         }
     }
-    return out;
-};
+    for (const key of expiredOrderCache.keys()) if (!seenOrders.has(key)) expiredOrderCache.delete(key);
+    for (const key of activeOrderCache.keys()) if (!seenOrders.has(key)) activeOrderCache.delete(key);
+
+    const activeIds = new Set(orders.map(o => o.id));
+    for (const id of runningIds) activeIds.add(id);
+    const seenReceipts = new Set<string>();
+    if (activeIds.size > 0 && existsSync(receiptsDir)) {
+        for (const f of readdirSync(receiptsDir)) {
+            if (!f.endsWith('.json')) continue;
+            const dot = f.lastIndexOf('.', f.length - 6);
+            if (dot <= 0 || !activeIds.has(f.slice(0, dot))) continue;
+            const full = join(receiptsDir, f);
+            seenReceipts.add(full);
+            const rec = readCachedJsonFile(activeReceiptCache, full, nowWall) as Receipt | undefined;
+            if (rec) receipts.push(rec);
+        }
+    }
+    for (const key of activeReceiptCache.keys()) if (!seenReceipts.has(key)) activeReceiptCache.delete(key);
+    return { orders, receipts };
+}
 
 export { readAgentJobs, swarmBusy } from './trade-plan';
 
@@ -430,7 +490,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     const lock = join(base, '.practice', 'fleet-agent.lock'), logFile = join(base, '.practice', 'fleet-agent.log');
     if (argv.includes('--daemon')) {
         const out = openSync(logFile, 'a');
-        const child = spawn(process.execPath, [join(base, 'scripts', 'fleet-agent.ts')], { cwd: base, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: agentDaemonEnv(process.env) });
+        const child = spawn(process.execPath, ['--smol', join(base, 'scripts', 'fleet-agent.ts')], { cwd: base, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: leanBunEnv(agentDaemonEnv(process.env)) });
         closeSync(out); child.unref();
         console.log(`FLEET_AGENT started pid ${child.pid} (log .practice/fleet-agent.log)`);
         process.exit(0);
@@ -457,10 +517,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     if (!once) saveLaunch(join(base, controllerNamed('fleet-agent').launch), []);
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(base), 'infra-circuit-breaker.json') });
     const sync = () => {
-        const p = spawnSyncTimed([process.execPath, 'scripts/fleet-sync.ts'], {
+        const p = spawnSyncTimed([process.execPath, '--smol', 'scripts/fleet-sync.ts'], {
             cwd: base,
             windowsHide: true,
-            env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+            env: leanBunEnv({ ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' }),
             stdout: 'pipe',
             stderr: 'pipe',
             timeout: AGENT_SUBPROCESS_TIMEOUT_MS,
@@ -487,10 +547,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             await Bun.sleep(Math.min(CYCLE, Math.max(5_000, infraGate.waitMs)));
             continue;
         }
-        const update = spawnSyncTimed([process.execPath, 'packages/fleet/src/live-update.ts'], {
+        const update = spawnSyncTimed([process.execPath, '--smol', 'packages/fleet/src/live-update.ts'], {
             cwd: base,
             windowsHide: true,
-            env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+            env: leanBunEnv({ ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' }),
             stdout: 'pipe',
             stderr: 'pipe',
             timeout: AGENT_SUBPROCESS_TIMEOUT_MS,
@@ -501,7 +561,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
         if (!renewLease(lock)) continue;
         if (!once && !marketRefresh && marketStale(base)) {
-            marketRefresh = spawn(process.execPath, [join(base, 'scripts', 'market-cache.ts')], { cwd: base, windowsHide: true, stdio: 'ignore' });
+            marketRefresh = spawn(process.execPath, ['--smol', join(base, 'scripts', 'market-cache.ts')], { cwd: base, env: leanBunEnv(process.env), windowsHide: true, stdio: 'ignore' });
             marketRefresh.on('exit', () => { marketRefresh = null; });
             marketRefresh.on('error', () => { marketRefresh = null; });
         }
@@ -516,9 +576,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         sync();
         if (!renewLease(lock)) continue;
         const dir = FLEET_DIR(), now = Date.now(), side = mySide(), owners = loadOwners();
-        const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
+        const { orders, receipts } = readActiveOrdersAndReceipts(dir, now, runningOrders);
         const handJobs = readAgentJobs();
-        const busy = swarmBusy([...handJobs, ...brainPlannedJobs(base, handJobs, now)]);
+        const busy = swarmBusy(handJobs);
+        for (const acct of brainBusyAccounts(base, handJobs, now)) busy.add(acct.toLowerCase());
         const ownerStop = fleetOwnerStop(base);
         const pending = readPendingUpdate(base, now);
         const tradeDrained = pending ? drainedFiles(pending, [TRADE_ENTRY_REL], base) : [];
@@ -558,8 +619,8 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             const tradeStartedAt = Date.now();
             try {
-                const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
-                    cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: tradeEnvironment(dir),
+                const p = Bun.spawn([process.execPath, '--smol', TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
+                    cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: leanBunEnv(tradeEnvironment(dir)),
                 });
                 void (async () => {
                     try {

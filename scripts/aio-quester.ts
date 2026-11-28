@@ -2,13 +2,45 @@
 // Usage:
 //   bun scripts/aio-quester.ts <account> <mode|quest-slug> [arg ...] [KEY=value ...]
 //   bun scripts/aio-quester.ts --list
+import { createRequire } from 'node:module';
 import {
+    QUESTER_MODES,
+    QUEST_PREREQUISITES,
+    QUEST_SCRIPT_ALIAS,
+    assessQuestReadiness,
     dispatchQuesterCli,
     listGeneratedQuestScripts,
-    QUESTER_MODES,
-} from '../packages/workers/src/quest';
+    prioritizeQuestsForAccount,
+    resolveQuestScript,
+    resolveQuesterStep,
+    runAioQuester,
+    type QuesterModeSpec,
+} from '../packages/workers/src/quest/modes';
 
-export * from '../packages/workers/src/quest';
+const require = createRequire(import.meta.url);
+type QuestOrderMod = typeof import('../packages/workers/src/quest/order');
+let orderMod: QuestOrderMod | undefined;
+const getOrderMod = () => (orderMod ??= require('../packages/workers/src/quest/order') as QuestOrderMod);
+export const QUEST_ORDERS: QuestOrderMod['QUEST_ORDERS'] = new Proxy({} as QuestOrderMod['QUEST_ORDERS'], {
+    get: (_t, p) => Reflect.get(getOrderMod().QUEST_ORDERS, p),
+    has: (_t, p) => Reflect.has(getOrderMod().QUEST_ORDERS, p),
+    ownKeys: () => Reflect.ownKeys(getOrderMod().QUEST_ORDERS),
+    getOwnPropertyDescriptor: (_t, p) => Reflect.getOwnPropertyDescriptor(getOrderMod().QUEST_ORDERS, p),
+});
+
+export {
+    QUESTER_MODES,
+    QUEST_PREREQUISITES,
+    QUEST_SCRIPT_ALIAS,
+    assessQuestReadiness,
+    dispatchQuesterCli,
+    listGeneratedQuestScripts,
+    prioritizeQuestsForAccount,
+    resolveQuestScript,
+    resolveQuesterStep,
+    runAioQuester,
+    type QuesterModeSpec,
+};
 
 if (import.meta.main) {
     const [account, ...rest] = process.argv.slice(2);

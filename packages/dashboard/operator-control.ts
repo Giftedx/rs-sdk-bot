@@ -1,15 +1,21 @@
 // Operator requests write validated Brain OperatorCommands to .practice/live/operator-commands/
 // and manage owned account/side stop files and swarm.json under the .practice/live lock.
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync, unlinkSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ACCOUNT_ROLES, GOAL_KINDS, type AccountRole, type OperatorCommand, type CampaignState, type MissionState } from '../brain/src/contracts';
-import { defaultActivityCatalog, type ActivityCatalog } from '../brain/src/catalog';
+import type { ActivityCatalog } from '../brain/src/catalog';
 import { controllerStates } from '../core/src/controllers';
 import { atomicJson } from '../core/src/plan-lock';
 import { findStopFile, listStopEntries, liveRoot, operatorCommandsDir, practiceRoot } from '../core/src/practice-paths';
 import { appendOwnerRequest, applyCommand, enqueueBrainCommand, existingStopFiles, validateCommand, REQUEST_MAX, HOLD_PREFIX, ID_RE } from './publish-commands';
 import { MAIN_ACCOUNT } from './publish-relay';
+
+const require = createRequire(import.meta.url);
+function loadActivityCatalog(root: string): ActivityCatalog {
+ return (require('../brain/src/catalog') as typeof import('../brain/src/catalog')).defaultActivityCatalog(root);
+}
 
 const OVERRIDE_ROLES = ACCOUNT_ROLES.filter((role): role is Exclude<AccountRole, 'main'> => role !== 'main');
 const TERMINAL_AUDIT_STATUSES = new Set(['refused', 'failed', 'rejected', 'not-applied']);
@@ -100,7 +106,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
  };
 
  function catalog() {
-  const cat = defaultActivityCatalog(root);
+  const cat = loadActivityCatalog(root);
   let cached = catalogViewCache.get(cat);
   if (!cached) {
    cached = cat.list().map(a => ({
@@ -268,7 +274,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
     const activityId = input.activityId;
     if (activityId !== undefined && activityId !== null) {
      if (typeof activityId !== 'string' || !activityId.trim()) throw Error('Invalid activityId');
-     if (!defaultActivityCatalog(root).has(activityId)) throw Error(`Unknown activity "${activityId}"`);
+     if (!loadActivityCatalog(root).has(activityId)) throw Error(`Unknown activity "${activityId}"`);
     }
     let role: Exclude<AccountRole, 'main'> | undefined;
     if (input.role !== undefined && input.role !== null && input.role !== '') {

@@ -1,31 +1,56 @@
 // AIO Fighter ("Auto Fighter"): unified CLI dispatcher & compatibility shim over packages/workers/src/combat/.
 // Usage:
 //   bun scripts/aio-fighter.ts <account> <target> [arg ...] [KEY=value ...]
+import { createRequire } from 'node:module';
 import type { Step } from '../packages/core/src/chain-step';
 import { resolveRouteStep } from '../packages/core/src/route-step';
 import { runDirectChild } from '../packages/core/src/run-child';
 import { defaultEatAt, totalAvailableHeal } from '../packages/core/src/sustain';
-import { bankCombatLoot, cowProfile, cowRoutePoints, genericCombatNpc, guardCowWalker } from '../packages/workers/src/combat/melee-gather';
-import { chickenCombatUnlockPlan, chickenTrainingKit, chickenTrainingProfile, chickenTrainingStyle } from '../packages/workers/src/combat/chickens';
-import {
-    combatAlchPolicy,
-    combatPotionPolicy,
-    combatPotionRecovery,
-    combatPotionSession,
-    createCombatLoot,
-    createCombatPotions,
-    telegrabPolicy,
-} from '../packages/workers/src/combat/survivability';
 import type { CombatLevels, FighterProfileSpec } from '../packages/workers/src/combat/types';
-import { enableSpecial, holdPrayer, qolDropSelection, refillCannon, type QolDropOrder } from '../packages/workers/src/bank-artisan/foraging-qol';
-import {
-    createPotionCareSession,
-    potionCareRecipe,
-    runPotionCare,
-    validatePotionCare,
-    type PotionCareOrder,
-    type PotionCarePolicy,
-} from './microbot-potion-care';
+import type { QolDropOrder } from '../packages/workers/src/bank-artisan/foraging-qol';
+import type { PotionCareOrder, PotionCarePolicy } from './microbot-potion-care';
+
+const require = createRequire(import.meta.url);
+type MeleeGatherMod = typeof import('../packages/workers/src/combat/melee-gather');
+type ChickensMod = typeof import('../packages/workers/src/combat/chickens');
+type SurvMod = typeof import('../packages/workers/src/combat/survivability');
+type QolMod = typeof import('../packages/workers/src/bank-artisan/foraging-qol');
+type PotionCareMod = typeof import('./microbot-potion-care');
+let meleeMod: MeleeGatherMod | undefined;
+let chickensMod: ChickensMod | undefined;
+let survMod: SurvMod | undefined;
+let qolMod: QolMod | undefined;
+let potionMod: PotionCareMod | undefined;
+const getMelee = () => (meleeMod ??= require('../packages/workers/src/combat/melee-gather') as MeleeGatherMod);
+const getChickens = () => (chickensMod ??= require('../packages/workers/src/combat/chickens') as ChickensMod);
+const getSurv = () => (survMod ??= require('../packages/workers/src/combat/survivability') as SurvMod);
+const getQol = () => (qolMod ??= require('../packages/workers/src/bank-artisan/foraging-qol') as QolMod);
+const getPotion = () => (potionMod ??= require('./microbot-potion-care') as PotionCareMod);
+
+export const bankCombatLoot: MeleeGatherMod['bankCombatLoot'] = (...a) => getMelee().bankCombatLoot(...a);
+export const cowProfile: MeleeGatherMod['cowProfile'] = (...a) => getMelee().cowProfile(...a);
+export const cowRoutePoints: MeleeGatherMod['cowRoutePoints'] = (...a) => getMelee().cowRoutePoints(...a);
+export const genericCombatNpc: MeleeGatherMod['genericCombatNpc'] = (...a) => getMelee().genericCombatNpc(...a);
+export const guardCowWalker: MeleeGatherMod['guardCowWalker'] = (...a) => getMelee().guardCowWalker(...a);
+export const chickenCombatUnlockPlan: ChickensMod['chickenCombatUnlockPlan'] = (...a) => getChickens().chickenCombatUnlockPlan(...a);
+export const chickenTrainingKit: ChickensMod['chickenTrainingKit'] = (...a) => getChickens().chickenTrainingKit(...a);
+export const chickenTrainingProfile: ChickensMod['chickenTrainingProfile'] = (...a) => getChickens().chickenTrainingProfile(...a);
+export const chickenTrainingStyle: ChickensMod['chickenTrainingStyle'] = (...a) => getChickens().chickenTrainingStyle(...a);
+export const combatAlchPolicy: SurvMod['combatAlchPolicy'] = (...a) => getSurv().combatAlchPolicy(...a);
+export const combatPotionPolicy: SurvMod['combatPotionPolicy'] = (...a) => getSurv().combatPotionPolicy(...a);
+export const combatPotionRecovery: SurvMod['combatPotionRecovery'] = (...a) => getSurv().combatPotionRecovery(...a);
+export const combatPotionSession: SurvMod['combatPotionSession'] = (...a) => getSurv().combatPotionSession(...a);
+export const createCombatLoot: SurvMod['createCombatLoot'] = (...a) => getSurv().createCombatLoot(...a);
+export const createCombatPotions: SurvMod['createCombatPotions'] = (...a) => getSurv().createCombatPotions(...a);
+export const telegrabPolicy: SurvMod['telegrabPolicy'] = (...a) => getSurv().telegrabPolicy(...a);
+export const enableSpecial: QolMod['enableSpecial'] = (...a) => getQol().enableSpecial(...a);
+export const holdPrayer: QolMod['holdPrayer'] = (...a) => getQol().holdPrayer(...a);
+export const qolDropSelection: QolMod['qolDropSelection'] = (...a) => getQol().qolDropSelection(...a);
+export const refillCannon: QolMod['refillCannon'] = (...a) => getQol().refillCannon(...a);
+export const createPotionCareSession: PotionCareMod['createPotionCareSession'] = (...a) => getPotion().createPotionCareSession(...a);
+export const potionCareRecipe: PotionCareMod['potionCareRecipe'] = (...a) => getPotion().potionCareRecipe(...a);
+export const runPotionCare: PotionCareMod['runPotionCare'] = (...a) => getPotion().runPotionCare(...a);
+export const validatePotionCare: PotionCareMod['validatePotionCare'] = (...a) => getPotion().validatePotionCare(...a);
 
 export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
     {
@@ -235,32 +260,8 @@ export function planAutoFighterBand(
 }
 
 export {
-    bankCombatLoot,
-    chickenCombatUnlockPlan,
-    chickenTrainingKit,
-    chickenTrainingProfile,
-    chickenTrainingStyle,
-    combatAlchPolicy,
-    combatPotionPolicy,
-    combatPotionRecovery,
-    combatPotionSession,
-    cowProfile,
-    cowRoutePoints,
-    createCombatLoot,
-    createCombatPotions,
-    createPotionCareSession,
     defaultEatAt,
-    enableSpecial,
-    genericCombatNpc,
-    guardCowWalker,
-    holdPrayer,
-    potionCareRecipe,
-    qolDropSelection,
-    refillCannon,
-    runPotionCare,
-    telegrabPolicy,
     totalAvailableHeal,
-    validatePotionCare,
     type CombatLevels,
     type FighterProfileSpec,
     type PotionCareOrder,
@@ -316,18 +317,14 @@ if (import.meta.main) {
     const step = resolveFighterStep(target!, args);
     const mergedEnv = mergeCombatEnv(step.env, process.env, args);
     if (step.script === 'scripts/aio-fighter.ts') {
-        const [{ runCombatModeCli }, { RANGED_ADAPTIVE_DEPS }, { stageCows }, { leaveRuneStarter }, { stageTrooperFood }] = await Promise.all([
-            import('../packages/workers/src/combat/module'),
-            import('./ranged-train'),
-            import('./cow-stage'),
-            import('./rune-starter'),
-            import('./trooper-food'),
-        ]);
-        await runCombatModeCli(account, step.args[0] ?? target!, step.args.slice(1), mergedEnv, {
-            stageTrooperFood,
-            stageCows,
-            leaveStarter: leaveRuneStarter,
-            ...RANGED_ADAPTIVE_DEPS,
+        const mode = step.args[0] ?? target!;
+        const { runCombatModeCli } = await import('../packages/workers/src/combat/module');
+        const rangedDeps = mode.startsWith('ranged') ? (await import('./ranged-train')).RANGED_ADAPTIVE_DEPS : {};
+        await runCombatModeCli(account, mode, step.args.slice(1), mergedEnv, {
+            stageTrooperFood: async (...a) => (await import('./trooper-food')).stageTrooperFood(...a),
+            stageCows: async (...a) => (await import('./cow-stage')).stageCows(...a),
+            leaveStarter: async (...a) => (await import('./rune-starter')).leaveRuneStarter(...a),
+            ...rangedDeps,
         });
         process.exit(process.exitCode && process.exitCode !== 0 ? Number(process.exitCode) : 0);
     }

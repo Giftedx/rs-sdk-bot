@@ -1,26 +1,43 @@
 // AIO Boss ("PvM Helper"): unified CLI dispatcher & compatibility shim over packages/workers/src/combat/.
 // Usage:
 //   bun scripts/aio-boss.ts <account> <boss> [arg ...] [KEY=value ...]
+import { createRequire } from 'node:module';
 import type { Step } from '../packages/core/src/chain-step';
 import { resolveRouteStep } from '../packages/core/src/route-step';
 import { runDirectChild } from '../packages/core/src/run-child';
-import { assessBossReadiness, runCombatModeCli } from '../packages/workers/src/combat/module';
-import { combatTeleportAllowed } from '../packages/workers/src/combat/survivability';
-import {
-    BLACK_KIT,
-    BLUE_KIT,
-    KBD_KIT,
-    blueDungeonEntry,
-    combatAssetIssues,
-    combatKitTotals,
-    combatTrip,
-    inKbdEntrancePit,
-    inNativeKbdLair,
-    leaveKbdEntrancePit,
-    validateCombatKit,
-    type CombatKit,
-} from '../packages/workers/src/combat/trip-kit';
+import type { CombatKit } from '../packages/workers/src/combat/trip-kit';
 import type { BossEncounterSpec } from '../packages/workers/src/combat/types';
+
+const require = createRequire(import.meta.url);
+type CombatModule = typeof import('../packages/workers/src/combat/module');
+type SurvivabilityModule = typeof import('../packages/workers/src/combat/survivability');
+type TripKitModule = typeof import('../packages/workers/src/combat/trip-kit');
+let combatMod: CombatModule | undefined;
+let survMod: SurvivabilityModule | undefined;
+let tripKitMod: TripKitModule | undefined;
+const getCombatMod = () => (combatMod ??= require('../packages/workers/src/combat/module') as CombatModule);
+const getSurvMod = () => (survMod ??= require('../packages/workers/src/combat/survivability') as SurvivabilityModule);
+const getTripKitMod = () => (tripKitMod ??= require('../packages/workers/src/combat/trip-kit') as TripKitModule);
+const lazyObj = <T extends object>(load: () => T): T => new Proxy({} as T, {
+    get: (_t, p) => Reflect.get(load(), p),
+    has: (_t, p) => Reflect.has(load(), p),
+    ownKeys: () => Reflect.ownKeys(load()),
+    getOwnPropertyDescriptor: (_t, p) => Reflect.getOwnPropertyDescriptor(load(), p),
+});
+
+export const BLACK_KIT: TripKitModule['BLACK_KIT'] = lazyObj(() => getTripKitMod().BLACK_KIT);
+export const BLUE_KIT: TripKitModule['BLUE_KIT'] = lazyObj(() => getTripKitMod().BLUE_KIT);
+export const KBD_KIT: TripKitModule['KBD_KIT'] = lazyObj(() => getTripKitMod().KBD_KIT);
+export const assessBossReadiness: CombatModule['assessBossReadiness'] = (...a) => getCombatMod().assessBossReadiness(...a);
+export const blueDungeonEntry: TripKitModule['blueDungeonEntry'] = (...a) => getTripKitMod().blueDungeonEntry(...a);
+export const combatAssetIssues: TripKitModule['combatAssetIssues'] = (...a) => getTripKitMod().combatAssetIssues(...a);
+export const combatKitTotals: TripKitModule['combatKitTotals'] = (...a) => getTripKitMod().combatKitTotals(...a);
+export const combatTeleportAllowed: SurvivabilityModule['combatTeleportAllowed'] = (...a) => getSurvMod().combatTeleportAllowed(...a);
+export const combatTrip: TripKitModule['combatTrip'] = (...a) => getTripKitMod().combatTrip(...a);
+export const inKbdEntrancePit: TripKitModule['inKbdEntrancePit'] = (...a) => getTripKitMod().inKbdEntrancePit(...a);
+export const inNativeKbdLair: TripKitModule['inNativeKbdLair'] = (...a) => getTripKitMod().inNativeKbdLair(...a);
+export const leaveKbdEntrancePit: TripKitModule['leaveKbdEntrancePit'] = (...a) => getTripKitMod().leaveKbdEntrancePit(...a);
+export const validateCombatKit: TripKitModule['validateCombatKit'] = (...a) => getTripKitMod().validateCombatKit(...a);
 
 export const BOSS_ENCOUNTERS: readonly BossEncounterSpec[] = [
     {
@@ -72,22 +89,9 @@ export function resolveBossStep(bossInput: string, rest: readonly string[] = [])
     return { script: step.script, args: [spec.boss, ...step.args], env: { ...(spec.defaultEnv ?? {}), ...step.env } };
 }
 
-export {
-    BLACK_KIT,
-    BLUE_KIT,
-    KBD_KIT,
-    assessBossReadiness,
-    blueDungeonEntry,
-    combatAssetIssues,
-    combatKitTotals,
-    combatTeleportAllowed,
-    combatTrip,
-    inKbdEntrancePit,
-    inNativeKbdLair,
-    leaveKbdEntrancePit,
-    validateCombatKit,
-    type BossEncounterSpec,
-    type CombatKit,
+export type {
+    BossEncounterSpec,
+    CombatKit,
 };
 
 function mergeBossEnv(stepEnv: Record<string, string>, baseEnv: Record<string, string | undefined>, rawArgs: readonly string[]) {
@@ -125,6 +129,7 @@ if (import.meta.main) {
     }
     const [boss, ...args] = rest;
     const step = resolveBossStep(boss!, args);
+    const { runCombatModeCli } = await import('../packages/workers/src/combat/module');
     await runCombatModeCli(account, step.args[0] ?? boss!, step.args.slice(1), mergeBossEnv(step.env, process.env, args));
     process.exit(process.exitCode && process.exitCode !== 0 ? Number(process.exitCode) : 0);
 }

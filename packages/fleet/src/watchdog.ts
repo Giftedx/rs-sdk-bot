@@ -121,7 +121,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             const repo = publisherRepo(remote);
             if (!repo) log(`publisher not restarted: no GitHub origin in ${clone}`);
             else {
-                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: leanBunEnv({ ...process.env, FLEET_COMMAND_REPO: repo }), stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
+                const r = Bun.spawnSync([process.execPath, '--smol', 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: leanBunEnv({ ...process.env, FLEET_COMMAND_REPO: repo }), stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
                 log(`publisher restarted for ${repo} (previous pid=${pid || 'none'}): ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
             }
         }
@@ -148,11 +148,11 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             continue;
         }
         if (c.name === 'fleet-agent') {
-            const r = Bun.spawnSync([process.execPath, ...start], { cwd: base, env, stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
+            const r = Bun.spawnSync([process.execPath, '--smol', ...start], { cwd: base, env, stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
             log(`fleet-agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
         } else {
             mkdirSync(join(prac, 'swarm-logs'), { recursive: true });
-            const swarmArgs = [...start, `--nonce=${randomUUID()}`];
+            const swarmArgs = ['--smol', ...start, `--nonce=${randomUUID()}`];
             const pid = spawnDetached([process.execPath, ...swarmArgs], base, join(prac, 'swarm-logs', `daemon-${now}.out.log`), join(prac, 'swarm-logs', `daemon-${now}.err.log`), env);
             log(`swarm restarted pid=${pid} plan=${start[1]}`);
         }
@@ -177,7 +177,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     }
 
     if ((process.env.FLEET_SIDE || 'local') === 'local' && existsSync(join(prac, 'cloud-launch', 'config.json')) && !stopped('cloud-launch')) {
-        const r = Bun.spawnSync([process.execPath, 'scripts/cloud-launch.ts', '--once'], { cwd: base, stdout: 'pipe', stderr: 'pipe', timeout: 240_000, windowsHide: true });
+        const r = Bun.spawnSync([process.execPath, '--smol', 'scripts/cloud-launch.ts', '--once'], { cwd: base, env: leanBunEnv(process.env), stdout: 'pipe', stderr: 'pipe', timeout: 240_000, windowsHide: true });
         for (const line of `${r.stdout.toString()}\n${r.stderr.toString()}`.split('\n').map(l => l.trim()).filter(Boolean).slice(-6)) {
             log(line.slice(0, 300));
         }

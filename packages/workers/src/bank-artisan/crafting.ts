@@ -14,6 +14,7 @@ import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
 import { CONTENT_DIR, packMap } from './catalog';
+import { jewelleryRecipes, type JewelleryRecipe } from './recipes';
 import { cookingRecipes, runCookingBatch } from './cooking';
 import {
     inventoryRecipes,
@@ -491,50 +492,7 @@ const objIdByName = (name: string) => {
     return n;
 };
 
-export interface JewelleryRecipe extends InventoryRecipe {
-    bar: number;
-    shape: 'ring' | 'necklace' | 'amulet' | 'silver';
-    slot: number;
-    silverLetter?: 'a' | 'b' | 'c';
-}
-
-let cachedJewelleryRecipes: JewelleryRecipe[] | undefined;
-
-export function jewelleryRecipes(): JewelleryRecipe[] {
-    if (cachedJewelleryRecipes) return cachedJewelleryRecipes;
-    const pathRel = 'scripts/skill_crafting/configs/jewellery/jewellery.struct';
-    const text = readFileSync(join(CONTENT_DIR, pathRel), 'utf8');
-    cachedJewelleryRecipes = [...text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)].map((match): JewelleryRecipe => {
-        const name = match[1]!;
-        const body = match[2]!;
-        const param = (key: string) => body.match(new RegExp('^param=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-        const product = param('product')!;
-        const silver = ['unstrung_symbol', 'unstrung_emblem', 'silver_sickle'].includes(name);
-        const perfect = name.startsWith('perfect_');
-        const shape = silver ? 'silver' : name.includes('ring') ? 'ring' : name.includes('necklace') ? 'necklace' : 'amulet';
-        const gem = param('gem');
-        const bar = objIdByName(silver ? 'silver_bar' : perfect ? 'perfect_gold_bar' : 'gold_bar');
-        const mould = param('mould') ?? shape + '_mould';
-        const slot = silver ? 0 : gem ? ['gold', 'sapphire', 'emerald', 'ruby', 'diamond', 'dragonstone'].indexOf(gem) : 0;
-        if (slot < 0) throw Error('unknown native jewellery gem');
-        return {
-            name,
-            product: objIdByName(product),
-            inputs: [{ id: bar, units: 1 }, ...(gem ? [{ id: objIdByName(gem), units: 1 }] : [])],
-            tools: [objIdByName(mould)],
-            skill: 'Crafting',
-            level: Number(param('levelrequired')),
-            xp: true,
-            members: gem === 'dragonstone' || name === 'unstrung_emblem' || name === 'silver_sickle',
-            source: 'vendor/rs-sdk/server/content/' + pathRel,
-            bar,
-            shape,
-            slot,
-            ...(silver ? { silverLetter: name === 'unstrung_emblem' ? ('a' as const) : name === 'unstrung_symbol' ? ('b' as const) : ('c' as const) } : {}),
-        };
-    });
-    return cachedJewelleryRecipes;
-}
+export { jewelleryRecipes, type JewelleryRecipe };
 
 export function jewelleryMenu(r: JewelleryRecipe, items: Record<number, number>, members: boolean) {
     if (r.shape !== 'silver') {

@@ -44,9 +44,7 @@
 import { openBot, finish, countItems, releasePrayerGuard, sessionDied } from '../../packages/core/src/bot';
 import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { waitTicks } from '../../packages/core/src/ticks';
-import {runWoodSupply} from '../../packages/workers/src/gather';
-import { approach } from '../../packages/workers/src/logistics';
-import {runShafts,runHeadless} from '../../packages/workers/src/bank-artisan';
+import { approach } from '../../packages/workers/src/logistics/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
 import { newGiver, stage, refollow, beside, handOver, staged, giverStats, type Giver } from '../site-givers';
@@ -108,7 +106,7 @@ try {
         givers.push(g);
     }
     await waitTicks(s, 5);
-    if(process.env.SUPPLY_LOGS!==undefined){const r=await runWoodSupply(s,Number(process.env.SUPPLY_LOGS),Number(process.env.SUPPLY_HEADLESS??0),CAP,{runShafts:(sess,opts)=>runShafts(sess,{...opts,reserve:opts.reserve??0}),runHeadless:(sess,opts)=>runHeadless(sess,{...opts,shaftReserve:opts.shaftReserve??0,featherReserve:opts.featherReserve??0})});await finish([s],r.ok,'wood-supply '+JSON.stringify(r));}
+    if(process.env.SUPPLY_LOGS!==undefined){const [{runWoodSupply},{runShafts,runHeadless}]=await Promise.all([import('../../packages/workers/src/gather/woodcutting'),import('../../packages/workers/src/bank-artisan/fletching')]);const r=await runWoodSupply(s,Number(process.env.SUPPLY_LOGS),Number(process.env.SUPPLY_HEADLESS??0),CAP,{runShafts:(sess,opts)=>runShafts(sess,{...opts,reserve:opts.reserve??0}),runHeadless:(sess,opts)=>runHeadless(sess,{...opts,shaftReserve:opts.shaftReserve??0,featherReserve:opts.featherReserve??0})});await finish([s],r.ok,'wood-supply '+JSON.stringify(r));}
     if (!SITE) await finish([s], false, `unknown WC_SITE ${siteName}: ${Object.keys(SITES).join(', ')}`);
     const site = SITE!;
 

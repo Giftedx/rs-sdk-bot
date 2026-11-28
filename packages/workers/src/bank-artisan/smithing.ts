@@ -12,8 +12,11 @@ import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { parseConfigs } from '../../../knowledge/src/config';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { CONTENT_DIR, packMap, parsePackNameToId, productionBatch, SMITH_ANVIL, SMITH_BANK, smeltEntryRoute, smithStageRoute } from './catalog';
+import { SMELT_BAR_TYPES, smeltingStructByName, smeltRecipe, smithRecipe, type SmeltRecipe, type SmithRecipe } from './recipes';
 import { actionSessionOwner, finishActionSession, productionStopRequested } from './runtime';
 import type { Session } from './types';
+
+export { SMELT_BAR_TYPES, smeltRecipe, smithRecipe, type SmeltRecipe, type SmithRecipe };
 
 type Stock = readonly { id: number; count: number }[];
 const count = (rows: Stock, id: number) => {
@@ -23,17 +26,6 @@ const count = (rows: Stock, id: number) => {
 };
 
 // ---- Smelt Batch & Native Smelting (smelt-batch.ts) ----
-
-export type SmeltRecipe = {
-    product: number;
-    level: number;
-    ingredients: { id: number; units: number }[];
-    iron: boolean;
-    productUnits?: number;
-    tools?: readonly number[];
-    receiptTicks?: number;
-    rawXp?: number;
-};
 
 export type SmeltBonusGear =
     | { kind: 'goldsmith'; xpRate: number }
@@ -176,49 +168,6 @@ export function validateSmeltRoute(route: SmeltLocalRoute) {
         }
     }
     return route;
-}
-
-const smeltRecipeCache = new Map<string, SmeltRecipe>();
-let cachedSmeltingStructByName: Map<string, ReturnType<typeof parseConfigs>[number]> | undefined;
-function smeltingStructByName() {
-    if (!cachedSmeltingStructByName) {
-        const file = 'scripts/skill_smithing/configs/smelting/smelting.struct';
-        cachedSmeltingStructByName = new Map(parseConfigs(readFileSync(join(CONTENT_DIR, file), 'utf8'), file).map(b => [b.name, b]));
-    }
-    return cachedSmeltingStructByName;
-}
-export const SMELT_BAR_TYPES = ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamantite', 'runite'] as const;
-
-export function smeltRecipe(bar: string): SmeltRecipe {
-    const cached = smeltRecipeCache.get(bar);
-    if (cached) return cached;
-    if (bar === 'cannonballs') {
-        const r: SmeltRecipe = { product: 2, level: 35, ingredients: [{ id: 2353, units: 1 }], iron: false, productUnits: 4, tools: [4], receiptTicks: 24, rawXp: 375 };
-        smeltRecipeCache.set(bar, r);
-        return r;
-    }
-    if (!SMELT_BAR_TYPES.includes(bar as (typeof SMELT_BAR_TYPES)[number])) {
-        throw Error('unsupported smelt recipe: ' + bar);
-    }
-    const ids = packMap('obj');
-    const b = smeltingStructByName().get('smelting_' + bar + '_bar');
-    if (!b) throw Error('pinned smelt recipe missing');
-    const p = Object.fromEntries(
-        (b.props.param ?? []).map(v => {
-            const at = v.indexOf(',');
-            return [v.slice(0, at), v.slice(at + 1)];
-        }),
-    );
-    const item = (name: string) => {
-        const id = ids.get(name);
-        if (id === undefined) throw Error('unknown smelt item ' + name);
-        return id;
-    };
-    const ingredients = [{ id: item(p.ingredient!), units: Number(p.bar_count) }];
-    if (p.ingredient_secondary) ingredients.push({ id: item(p.ingredient_secondary), units: Number(p.ingredient_secondary_count) });
-    const r: SmeltRecipe = { product: item(p.product!), level: Number(p.levelrequired), ingredients, iron: bar === 'iron' };
-    smeltRecipeCache.set(bar, r);
-    return r;
 }
 
 export function planSmeltLoad(r: SmeltRecipe, bank: Stock, freeSlots: number, maximum: number, reserved: Readonly<Record<number, number>>) {
@@ -1580,105 +1529,9 @@ export async function runBronze(
 
 // ---- Anvil Smithing (smith-batch.ts) ----
 
-export type SmithRecipe = {
-    product: number;
-    amount: number;
-    level: number;
-    bar: number;
-    bars: number;
-    xpPerBar: number;
-    component: number;
-    slot: number;
-    quest?: 'The Tourist Trap' | 'Death Plateau';
-};
-
 export const HAMMER = 2347;
 export const SMITHING_INTERFACE = 994;
 export const TOLL_GUARD_EAST = 926;
-
-const smithRecipeCache = new Map<number, SmithRecipe>();
-
-type SmithingTables = {
-    objs: ReadonlyMap<string, number>;
-    objNameById: Map<number, string>;
-    components: ReadonlyMap<string, number>;
-    dbrowByProduct: Map<string, ReturnType<typeof parseConfigs>[number]>;
-    smeltingObjByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
-    smithingStructByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
-    smithingInvByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
-    handler: string;
-};
-let cachedSmithingTables: SmithingTables | undefined;
-
-function smithingTables(): SmithingTables {
-    if (cachedSmithingTables) return cachedSmithingTables;
-    const configs = 'scripts/skill_smithing/configs/';
-    const blocks = (file: string) => parseConfigs(readFileSync(join(CONTENT_DIR, configs + file), 'utf8'), file);
-    const field = (rows: string[] | undefined, key: string) => rows?.find(v => v.startsWith(key + ','))?.slice(key.length + 1);
-    const objs = packMap('obj');
-    const objNameById = new Map<number, string>();
-    for (const [name, id] of objs) if (!objNameById.has(id)) objNameById.set(id, name);
-    const dbrowByProduct = new Map<string, ReturnType<typeof parseConfigs>[number]>();
-    for (const b of blocks('smithing/smithing.dbrow')) {
-        const prod = field(b.props.data, 'product');
-        if (prod && !dbrowByProduct.has(prod)) dbrowByProduct.set(prod, b);
-    }
-    cachedSmithingTables = {
-        objs,
-        objNameById,
-        components: parsePackNameToId(readFileSync(join(CONTENT_DIR, 'pack/interface.pack'), 'utf8')),
-        dbrowByProduct,
-        smeltingObjByName: new Map(blocks('smelting/smelting.obj').map(b => [b.name, b])),
-        smithingStructByName: new Map(blocks('smithing/smithing.struct').map(b => [b.name, b])),
-        smithingInvByName: new Map(blocks('smithing/smithing.inv').map(b => [b.name, b])),
-        handler: readFileSync(join(CONTENT_DIR, 'scripts/skill_smithing/scripts/smithing/smithing.rs2'), 'utf8'),
-    };
-    return cachedSmithingTables;
-}
-
-export function smithRecipe(product: number): SmithRecipe {
-    const unsupported = Error('unsupported smith recipe: ' + product);
-    if (!Number.isSafeInteger(product) || product < 0) throw unsupported;
-    const cached = smithRecipeCache.get(product);
-    if (cached) return cached;
-    const field = (rows: string[] | undefined, key: string) => rows?.find(v => v.startsWith(key + ','))?.slice(key.length + 1);
-    const t = smithingTables();
-    const name = t.objNameById.get(product);
-    const row = name === undefined ? undefined : t.dbrowByProduct.get(name);
-    if (!row) throw unsupported;
-    const bar = field(row.props.data, 'bar')!;
-    const struct = field(t.smeltingObjByName.get(bar)?.props.param, 'smithing_anvil_struct');
-    const params = struct ? t.smithingStructByName.get(struct)?.props.param : undefined;
-    const columns = Array.from({ length: 5 }, (_, i) => ({ inventory: field(params, 'invcolumn' + (i + 1)), component: 'smithing:column' + (i + 1) }));
-    const branch = t.handler.split('case ' + bar + ' :')[1]?.split(/\bcase /)[0];
-    const claws = branch?.match(/inv_transmit\((\w+), smithing:column_claws\)/)?.[1];
-    if (claws) columns.push({ inventory: claws, component: 'smithing:column_claws' });
-    for (const column of columns) {
-        const inv = column.inventory ? t.smithingInvByName.get(column.inventory) : undefined;
-        const stock = Object.entries(inv?.props ?? {}).find(([k, v]) => /^stock\d+$/.test(k) && v[0]?.split(',')[0] === name);
-        const component = t.components.get(column.component);
-        if (!stock || component === undefined) continue;
-        const recipe = {
-            product,
-            amount: Number(field(row.props.data, 'product_amount')),
-            level: Math.max(Number(field(row.props.data, 'levelrequired')), Number(field(params, 'levelrequired'))),
-            bar: t.objs.get(bar)!,
-            bars: Number(field(row.props.data, 'bar_amount')),
-            xpPerBar: Number(field(params, 'xpperbar')),
-            component,
-            slot: Number(stock[0].slice(5)) - 1,
-        };
-        if (!Object.values(recipe).every(n => Number.isSafeInteger(n) && n >= 0) || recipe.amount < 1 || recipe.bars < 1) throw unsupported;
-        const resolved: SmithRecipe = name!.endsWith('_dart_tip')
-            ? { ...recipe, quest: 'The Tourist Trap' }
-            : column.component === 'smithing:column_claws'
-              ? { ...recipe, quest: 'Death Plateau' }
-              : recipe;
-        smithRecipeCache.set(product, resolved);
-        return resolved;
-    }
-    throw unsupported;
-}
 
 export function planSmithLoad(r: SmithRecipe, bank: Stock, freeSlots: number, maximum: number, reserve: number) {
     return productionBatch([{ id: r.bar, available: count(bank, r.bar), reserved: reserve, units: r.bars, stackable: false }], freeSlots, maximum, 'best-effort');

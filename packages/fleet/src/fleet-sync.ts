@@ -177,9 +177,7 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     if (!isFleetState(raw) || now - (raw as FleetState).emittedAt >= CLAIM_MAX_AGE_MS) return [];
     const state = raw as FleetState;
     const existing = new Set(existingJobs.flatMap(jobAccounts).map(n => n.toLowerCase()));
-    const knowledgeRoot = existsSync(join(base, 'knowledge', 'items.json')) ? base : root;
-    const catalog = defaultActivityCatalog(knowledgeRoot);
-    const out: any[] = [];
+    const eligible: [string, FleetState['activeChains'][string], FleetState['accounts'][string] | undefined][] = [];
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
         const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
@@ -190,6 +188,13 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
                 || acctState.lifecycle === 'reserved'
                 || acctState.lifecycle === 'dead')
         ) continue;
+        eligible.push([acctName, plan, acctState]);
+    }
+    if (eligible.length === 0) return [];
+    const knowledgeRoot = existsSync(join(base, 'knowledge', 'items.json')) ? base : root;
+    const catalog = defaultActivityCatalog(knowledgeRoot);
+    const out: any[] = [];
+    for (const [acctName, plan, acctState] of eligible) {
         const dispatched = dispatchAccountPlan(plan, { catalog });
         const selected = selectBrainDispatchStep(dispatched, plan.steps);
         if (selected.mode !== 'worker') continue;
@@ -211,6 +216,34 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
             ...(goalId ? { goal: goalId } : {}),
             ...(spotId ? { resources: [spotId] } : {}),
         });
+    }
+    return out;
+}
+
+// Fast busy-account view for fleet-agent: reads active worker chains from fleet-state.json without building the full ActivityCatalog.
+export function brainBusyAccounts(base: string, existingJobs: readonly any[], now = Date.now()): string[] {
+    let raw: unknown;
+    try { raw = JSON.parse(readFileSync(fleetStateFile(base), 'utf8')); } catch { return []; }
+    if (!isFleetState(raw) || now - (raw as FleetState).emittedAt >= CLAIM_MAX_AGE_MS) return [];
+    const state = raw as FleetState;
+    const existing = new Set(existingJobs.flatMap(jobAccounts).map(n => n.toLowerCase()));
+    const out: string[] = [];
+    for (const [acctName, plan] of Object.entries(state.activeChains)) {
+        if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
+        const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
+        if (
+            acctState
+            && (acctState.protectedClock
+                || acctState.lifecycle === 'paused_owner'
+                || acctState.lifecycle === 'reserved'
+                || acctState.lifecycle === 'dead')
+        ) continue;
+        // A chain whose leading step is a hub-banker fleet trade or logout recovery is not a running worker job.
+        const first = plan.steps[0];
+        if (!first) continue;
+        if (first.stepKind === 'recover' && first.recoveryKind === 'logout') continue;
+        if ((first.stepKind === 'acquire' || first.stepKind === 'gear_upgrade') && first.source === 'hub_banker') continue;
+        out.push(acctName);
     }
     return out;
 }
