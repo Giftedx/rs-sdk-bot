@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795854592576,
+ "at": 1795854604656,
  "jobs": [
   {
    "account": "Balls",
@@ -46,18 +46,21 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=13 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=13 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:dwarf_weed"
+    "fire-giant"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "mission:mission:pk-squad:item:1333",
+    "BATCH_UNITS": "400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:267",
-   "role": "army"
+   "goal": "mission:mission:pk-squad:item:1333",
+   "role": "army",
+   "resources": [
+    "fire-giants"
+   ]
   },
   {
    "account": "Woodenstaff",

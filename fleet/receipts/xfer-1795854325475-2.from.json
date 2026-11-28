@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795854325475-2",
  "account": "TrouserSnake",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 11,
  "claim": "a0848120-a523-42d3-9b8c-6b3162a868f4",
- "count": 0,
- "ok": false,
- "at": 1795854563086,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795854600837,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795854585313
+ },
+ "logout": {
+  "attemptId": "1795854563106-0000021776-0000000001",
+  "at": 1795854600829,
+  "sha256": "6851dd3c8b214edc5a1ac7c3bb99639976579cbdf4e6855d57676642f265e745"
+ },
+ "screen": true
 }
