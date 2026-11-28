@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795862840170,
+ "at": 1795862869935,
  "jobs": [
   {
    "account": "Balls",
@@ -45,29 +45,100 @@
    "role": "pvp"
   },
   {
-   "account": "Ballbag",
-   "script": "scripts/aio-market.ts",
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=95 PRODUCT_TARGET=95 MAX_ORE=95 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=190 MAX_ORE=190 -- mining ore",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=95 ORE_RESERVE=0 MAX_MAKE=95 STALL_TICKS=350 -- smithing smelt"
    ],
    "env": {
-    "ITEM_ID": "221",
-    "ITEMS": "Eye of newt",
-    "MAX_ITEMS": "3",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:221",
-    "BATCH_UNITS": "3"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:221",
-   "role": "helper"
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "backdoorman",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "RearEntry",
@@ -104,14 +175,18 @@
    "role": "army"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 PRODUCT_TARGET=28 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 MAX_MAKE=28 CAP=1500 STALL_TICKS=255 -- cooking food"
+    "cooking",
+    "food"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:379",
+    "BATCH_UNITS": "28",
+    "MAX_MAKE": "28",
+    "CAP": "1500",
+    "STALL_TICKS": "255"
    },
    "enabled": true,
    "repeat": false,
@@ -122,28 +197,6 @@
    "account": "PickpockDick",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-2353-17-o0-p919",
-    "ITEM_ID": "2353",
-    "QUANTITY": "17",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "919",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "17"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
     "shop-buy",
     "ranging_guild_bowshop",
     "3000"
@@ -151,86 +204,18 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "301",
+    "MAX_ITEMS": "293",
     "COIN_RESERVE": "1000",
-    "FLOAT": "122400",
+    "FLOAT": "119200",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "301"
+    "BATCH_UNITS": "293"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 MAX_ORE=3 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=3 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=3 STALL_TICKS=280 -- smithing smelt 1500 iron"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "auto"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "4",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "4",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "helper"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts RAW_ONLY=1 CAP=3230 TARGET_COUNT=323 PRODUCT_TARGET=323 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark",
-    "scripts/aio-skiller.ts FOOD_TYPE=shark DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=323 MAX_MAKE=323 CAP=2984 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "304"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
