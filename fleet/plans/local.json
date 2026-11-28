@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795871109626,
+ "at": 1795871180528,
  "jobs": [
   {
    "account": "Balls",
@@ -45,11 +45,27 @@
    "role": "pvp"
   },
   {
+   "account": "backdoorman",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "spawn"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
    "account": "tacklebox",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
-    "flax"
+    "spawn"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
@@ -58,48 +74,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "seers-flax"
-   ]
-  },
-  {
-   "account": "abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "flax"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto",
-   "resources": [
-    "seers-flax"
-   ]
-  },
-  {
-   "account": "ballbag",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "flax"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "seers-flax"
-   ]
+   "role": "helper"
   },
   {
    "account": "meatntwoveg",
@@ -118,24 +93,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "backdoorman",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
   },
   {
    "account": "yewfirst",
