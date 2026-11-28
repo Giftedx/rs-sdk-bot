@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795871251226,
+ "at": 1795871861874,
  "jobs": [
   {
    "account": "Balls",
@@ -45,11 +45,52 @@
    "role": "pvp"
   },
   {
+   "account": "bigpackage",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "gemshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1607",
+    "ITEMS": "Sapphire",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:supply_chain:1607",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
+   "role": "army"
+  },
+  {
    "account": "backdoorman",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
-    "spawn"
+    "wool"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
+   "account": "ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "wool"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
@@ -65,26 +106,11 @@
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
-    "spawn"
+    "wool"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
     "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper"
-  },
-  {
-   "account": "bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=2000 -- foraging spawn"
-   ],
-   "env": {
-    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -118,20 +144,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "424",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "247",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
+    "FLOAT": "51400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "424"
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "247"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:43",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   }
  ],

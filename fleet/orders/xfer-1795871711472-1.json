@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795871711472-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "bonetopick",
+  "to": "billionaire",
+  "item": "Copper ore",
+  "count": 1,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 1,
+      "itemId": 438
+    }
+  ],
+  "start": 1795871711472,
+  "end": 1795872611472,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
