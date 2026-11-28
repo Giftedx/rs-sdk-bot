@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857216187,
+ "at": 1795857257819,
  "jobs": [
   {
    "account": "Balls",
@@ -153,6 +153,42 @@
    "role": "army"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "items",
+    "enchant:emerald_ring",
+    "-",
+    "1",
+    "1200"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:2552",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
+  },
+  {
    "account": "Deeppockets",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -232,6 +268,26 @@
    "repeat": false,
    "goal": "campaign:haggis:item:53",
    "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "shafts"
+   ],
+   "env": {
+    "MODE": "shafts",
+    "CAP": "6800",
+    "TARGET_COUNT": "680",
+    "PRODUCT_TARGET": "680",
+    "MAX_MAKE": "25",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "auto"
   },
   {
    "account": "Pocketpython",
@@ -336,7 +392,6 @@
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
-  "pocketrocket",
   "sausagefest",
   "sporrandip",
   "woodpecker",

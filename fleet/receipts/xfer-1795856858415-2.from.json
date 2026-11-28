@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795856858415-2",
+ "account": "PickpockDick",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "afeaed70-b7eb-4712-9f00-e1c10961af5d",
+ "count": 0,
+ "ok": false,
+ "at": 1795857221297,
+ "detail": "trade claimed"
+}
