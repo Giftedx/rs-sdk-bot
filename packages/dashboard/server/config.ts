@@ -62,7 +62,7 @@ export type Status = Record<string, any> & { name: string; at: number; server: s
 export type Item = PriceIdentity & { name: string; count: number; unconfirmed?: true };
 export type Row = { board: string; rank: number; level: number; time: string };
 
-export type CompactCatalogItem = { id: number; name: string; debugname?: string; cost?: number; tradeable?: boolean; baseId?: number };
+type CompactCatalogItem = { id: number; name: string; debugname?: string; cost?: number; tradeable?: boolean; baseId?: number };
 export function compactItemsCatalog(file = join(root, 'knowledge', 'items.json')): CompactCatalogItem[] {
     return cached<CompactCatalogItem[]>(file, text => {
         const raw = JSON.parse(text);
