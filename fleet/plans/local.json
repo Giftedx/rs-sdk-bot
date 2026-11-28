@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850086132,
+ "at": 1795850137726,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,6 +206,21 @@
    ]
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army"
+  },
+  {
    "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
@@ -290,7 +305,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1684"
+    "BATCH_UNITS": "1697"
    },
    "enabled": true,
    "repeat": false,
@@ -412,28 +427,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:562",
    "role": "auto"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-440-2-o0-p97",
-    "ITEM_ID": "440",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "97",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army"
   }
  ],
  "army": [
