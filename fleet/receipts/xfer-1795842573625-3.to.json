@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842573625-3",
+ "account": "Nockitoff",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 380,
+ "claim": "e837681c-87c8-46c8-a3d7-141b509f619b",
+ "count": 380,
+ "ok": true,
+ "at": 1795843333343,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 380
+ },
+ "bank": {
+  "count": 380,
+  "at": 1795843332576
+ },
+ "logout": {
+  "attemptId": "1795843320688-0000014640-0000000001",
+  "at": 1795843333334,
+  "sha256": "7508e62d5d02cfbdc27321aac53311d3c52fcd2903aa0b0728e0d37eb8cb4dde"
+ },
+ "screen": true
+}

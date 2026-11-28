@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795843069429-1",
+ "account": "Spitroaster",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic logs",
+ "requested": 22,
+ "claim": "a9b48484-3f89-4f1f-bb53-c6cbed40778c",
+ "count": 22,
+ "ok": true,
+ "at": 1795843315725,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795843258578
+ },
+ "logout": {
+  "attemptId": "1795843247547-0000015120-0000000001",
+  "at": 1795843315702,
+  "sha256": "107d670dc11080970e661620b4cb9adf7b3cfa79162fa9a5cc3133e22c33453c"
+ },
+ "screen": true
+}
