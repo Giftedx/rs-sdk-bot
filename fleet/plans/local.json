@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795846045263,
+ "at": 1795846213394,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -277,6 +277,27 @@
    "role": "auto"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "cut-sapphire"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "DEMAND_ID": "goal:supply_chain:1607",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
+   "role": "auto"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -302,7 +323,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "75"
+    "BATCH_UNITS": "65"
    },
    "enabled": true,
    "repeat": false,
@@ -314,31 +335,108 @@
   },
   {
    "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=76 PRODUCT_TARGET=82 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=82 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:235 BATCH_UNITS=82 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:235",
+   "role": "helper"
+  },
+  {
+   "account": "Pullmybow",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ardougnegemstall",
+    "runeshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1607",
-    "ITEMS": "Sapphire",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "43",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "43"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "helper"
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
   },
   {
-   "account": "BackdoorMan",
+   "account": "Abracadickra",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "unicorn"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:supply_chain:237",
+    "BATCH_UNITS": "56",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:237",
+   "role": "auto",
+   "resources": [
+    "edgeville-unicorns"
+   ]
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1783"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -351,163 +449,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "helper"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
-    "MAX_MAKE": "2",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "2",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_marrentill_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:93",
    "role": "auto"
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=3000 TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing harpoon harpoon",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=960 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "helper"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "4",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "4"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "helper"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1773"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "zanaris"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
-   "role": "army"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "328",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "328"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "auto"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
   },
   {
    "account": "TackleBox",
@@ -546,6 +488,7 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "pocketrocket",
   "sausagefest",
   "woodpecker"
  ],

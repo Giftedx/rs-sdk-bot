@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845904903-2",
  "account": "BoneToPick",
  "partner": "ChaosInPants",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 48,
  "claim": "0dd8bbc2-9ebc-41cd-bf8a-35b512f6a60f",
- "count": 0,
- "ok": false,
- "at": 1795846101413,
- "detail": "trade claimed"
+ "count": 48,
+ "ok": true,
+ "at": 1795846164817,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 48
+ },
+ "bank": {
+  "count": 48,
+  "at": 1795846164064
+ },
+ "logout": {
+  "attemptId": "1795846101421-0000023244-0000000001",
+  "at": 1795846164809,
+  "sha256": "75cc529dd76ca83978c1a8f594243b8727c3b9d48f85c9d5008bb8a5e232664d"
+ },
+ "screen": true
 }

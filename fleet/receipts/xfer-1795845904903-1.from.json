@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795845904903-1",
+ "account": "Shaftsinker",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "342dcc47-d0ea-405a-a90d-01c5810b733a",
+ "count": 1,
+ "ok": true,
+ "at": 1795846192453,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795846173307
+ },
+ "logout": {
+  "attemptId": "1795846162390-0000019136-0000000001",
+  "at": 1795846192444,
+  "sha256": "735aa40af9057f04dc2c4081a414671b6af44806b1e9cf752c3008740465ff94"
+ },
+ "screen": true
+}
