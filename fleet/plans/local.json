@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795825647853,
+ "at": 1795825972575,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,31 @@
    "role": "pvp"
   },
   {
+   "account": "RearEntry",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "arheinstore",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1755",
+    "ITEMS": "Chisel",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1755",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1755",
+   "role": "helper"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -199,6 +224,23 @@
    "repeat": false,
    "goal": "goal:quest_board:blackknight",
    "role": "auto"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "MeatNTwoVeg",
