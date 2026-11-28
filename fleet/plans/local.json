@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795863621784,
+ "at": 1795863638329,
  "jobs": [
   {
    "account": "Balls",
@@ -110,88 +110,42 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "CoinCock",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "druid"
    ],
    "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1511",
+   "goal": "goal:pk_army:CoinCock",
    "role": "auto",
    "resources": [
-    "draynor-normal-trees"
+    "chaos-druids"
    ]
   },
   {
    "account": "dropmyload",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "helper",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "auto",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "flax"
+    "chicken"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "769"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army",
+   "role": "helper",
    "resources": [
-    "seers-flax"
+    "chickens"
    ]
   },
   {
@@ -247,6 +201,24 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   },
   {
    "account": "meatntwoveg",
@@ -307,6 +279,7 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
