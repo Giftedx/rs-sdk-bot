@@ -10,8 +10,10 @@ import { courierDeliveryWaiting, readCourierStatus } from '../src/courier-admiss
 import { brainPlannedJobs, confirmedTradeLogout, droppedTradeClaims, readSyncStatuses, readSyncStopText, releasePublishedTradeClaims, sideCard } from '../src/fleet-sync';
 import {
     BRAIN_RECOVERY_WAIT,
+    MAX_STARTS_PER_TICK,
     brainJobFor,
     brainPlanHold,
+    burstStartAllowed,
     clearAccountAutoStops,
     clearAccountSwarmStops,
     missionSignature,
@@ -518,5 +520,16 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
         expect(hold(250, new Map(), () => 0)).toBeUndefined();
         expect(brainPlanHold({ selected: { mode: 'session_recovery' } }, new Map(), offline)).toBe(BRAIN_RECOVERY_WAIT);
         expect(brainPlanHold({ selected: { mode: 'fleet_trade' } }, blocked, offline)).toBeUndefined();
+    });
+
+    test('burstStartAllowed caps concurrent starts per tick without deadlocking oversized first jobs', () => {
+        expect(MAX_STARTS_PER_TICK).toBe(3);
+        expect(burstStartAllowed(0)).toBe(true);
+        expect(burstStartAllowed(1)).toBe(true);
+        expect(burstStartAllowed(2)).toBe(true);
+        expect(burstStartAllowed(3)).toBe(false);
+        expect(burstStartAllowed(10)).toBe(false);
+        expect(burstStartAllowed(0, 1)).toBe(true);
+        expect(burstStartAllowed(1, 1)).toBe(false);
     });
 });

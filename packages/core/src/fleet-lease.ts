@@ -49,6 +49,7 @@ export function gitErrorDetail(text: string): string {
     return first.replace(/\s+/g, ' ').trim().slice(0, 155) + ' ... ' + flat.slice(-160);
 }
 const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+const asyncPause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 // Each Git command of an authority within one time budget. A failure names the authority and ends with Git's own error
 // text, so a log tells a network fault from a moved ref.
@@ -80,11 +81,95 @@ export function fleetGitWindow(root: string, authority = 'fleet controller lease
     };
 }
 
+async function spawnGitAsync(root: string, args: string[], { input, timeout }: { input?: string; timeout: number }): Promise<string> {
+    const proc = Bun.spawn(['git', ...args], {
+        cwd: root,
+        stdin: input !== undefined ? new TextEncoder().encode(input) : 'ignore',
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+    });
+    const stdoutP = new Response(proc.stdout).text().catch(() => '');
+    const stderrP = new Response(proc.stderr).text().catch(() => '');
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+        const outcome = await Promise.race([
+            proc.exited.then(code => ({ kind: 'exited' as const, code })),
+            new Promise<{ kind: 'timeout' }>(resolve => {
+                timer = setTimeout(() => {
+                    timedOut = true;
+                    try { proc.kill('SIGKILL'); } catch { /* already exited */ }
+                    resolve({ kind: 'timeout' });
+                }, timeout);
+                timer.unref?.();
+            }),
+        ]);
+        if (timer) { clearTimeout(timer); timer = undefined; }
+        if (outcome.kind === 'timeout' || timedOut) {
+            try { proc.kill('SIGKILL'); } catch { /* already exited */ }
+            const [stdout, stderr] = await Promise.race([
+                Promise.all([stdoutP, stderrP]),
+                new Promise<[string, string]>(resolve => setTimeout(() => resolve(['', '']), 50)),
+            ]);
+            void proc.stdout.cancel?.().catch(() => {});
+            void proc.stderr.cancel?.().catch(() => {});
+            throw Object.assign(Error('spawn git ETIMEDOUT'), { code: 'ETIMEDOUT', stdout, stderr });
+        }
+        const [stdout, stderr] = await Promise.all([stdoutP, stderrP]);
+        if (outcome.code !== 0) {
+            throw Object.assign(Error(stderr.trim() || `git exited with code ${outcome.code}`), { code: outcome.code, stdout, stderr });
+        }
+        return stdout;
+    } finally {
+        if (timer) clearTimeout(timer);
+        if (proc.exitCode === null) {
+            try { proc.kill('SIGKILL'); } catch { /* ignore */ }
+        }
+    }
+}
+
+export type FleetGitAsync = (args: string[], input?: string) => Promise<string>;
+
+// Non-blocking Git command runner within one time budget: keeps shared-host event loops responsive
+// while preserving the exact retry, deadline, ref-rejection, and credential-redaction rules.
+export function fleetGitWindowAsync(
+    root: string,
+    authority = 'fleet controller lease authority',
+    budgetMs = GIT_DEADLINE_MS,
+    run: (args: string[], options: { input?: string; timeout: number }) => Promise<string> = (args, options) => spawnGitAsync(root, args, options),
+): FleetGitAsync {
+    const deadline = performance.now() + budgetMs;
+    return async (args: string[], input?: string): Promise<string> => {
+        let network = 0;
+        for (let attempt = 0; ; attempt++) {
+            const timeout = Math.floor(deadline - performance.now());
+            if (timeout <= 0) throw Error(authority + ' timed out');
+            try {
+                return (await run(args, { input, timeout })).trim();
+            } catch (error) {
+                const failure = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+                if (attempt === 0 && process.platform === 'win32' && failure.code === 'ETIMEDOUT'
+                    && !failure.stdout?.length && !failure.stderr?.length && performance.now() < deadline) continue;
+                const full = sanitizeGitError(String(failure.stderr ?? '') || failure.message || ''), detail = gitErrorDetail(full);
+                const wait = 300 * (network + 1);
+                if (network < NETWORK_RETRIES && !REF_REJECTION.test(full) && TRANSIENT_GIT.test(full) && performance.now() + wait < deadline) {
+                    network++;
+                    await asyncPause(wait);
+                    continue;
+                }
+                throw Error(authority + ' unavailable or changed' + (detail ? ': ' + detail : ''));
+            }
+        }
+    };
+}
+
 type FleetGit = ReturnType<typeof fleetGitWindow>;
 
-export function readFleetGitRefs(git: FleetGit, refs: readonly string[]) {
+function parseFleetGitRefs(output: string, refs: readonly string[]) {
     const found = new Map<string, string>();
-    for (const line of git(['ls-remote', '--refs', 'origin', ...refs]).split('\n').filter(Boolean)) {
+    for (const line of output.split('\n').filter(Boolean)) {
         const [sha, name] = line.trim().split(/\s+/);
         if (!sha || !SHA.test(sha) || !name || !refs.some(ref => ref.endsWith('*') ? name.startsWith(ref.slice(0, -1)) : name === ref)) {
             throw Error('fleet Git authority has an invalid ref');
@@ -94,17 +179,37 @@ export function readFleetGitRefs(git: FleetGit, refs: readonly string[]) {
     return found;
 }
 
+export function readFleetGitRefs(git: FleetGit, refs: readonly string[]) {
+    return parseFleetGitRefs(git(['ls-remote', '--refs', 'origin', ...refs]), refs);
+}
+
+export async function readFleetGitRefsAsync(git: FleetGitAsync, refs: readonly string[]) {
+    return parseFleetGitRefs(await git(['ls-remote', '--refs', 'origin', ...refs]), refs);
+}
+
 // Publishing a child of the observed head gives one winner without forcing the remote ref.
 export function commitFleetGitRecord(git: FleetGit, head: string | undefined, tree: string, message: string) {
+    return git(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
+        'commit-tree', tree, ...(head ? ['-p', head] : []), '-F', '-'], message + '\n');
+}
+export function commitFleetGitRecordAsync(git: FleetGitAsync, head: string | undefined, tree: string, message: string) {
     return git(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
         'commit-tree', tree, ...(head ? ['-p', head] : []), '-F', '-'], message + '\n');
 }
 export function pushFleetGitRecord(git: FleetGit, ref: string, commit: string) {
     git(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', commit + ':' + ref]);
 }
+export async function pushFleetGitRecordAsync(git: FleetGitAsync, ref: string, commit: string) {
+    await git(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', commit + ':' + ref]);
+}
 export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | undefined, tree: string, message: string) {
     const next = commitFleetGitRecord(git, head, tree, message);
     pushFleetGitRecord(git, ref, next);
+    return next;
+}
+export async function appendFleetGitRecordAsync(git: FleetGitAsync, ref: string, head: string | undefined, tree: string, message: string) {
+    const next = await commitFleetGitRecordAsync(git, head, tree, message);
+    await pushFleetGitRecordAsync(git, ref, next);
     return next;
 }
 
@@ -182,6 +287,28 @@ export function fleetLeaseLastSeen(git: FleetGit, side: string): number | null {
     return seen;
 }
 
+export async function fleetLeaseLastSeenAsync(git: FleetGitAsync, side: string): Promise<number | null> {
+    if (!SIDE_NAME.test(side)) throw Error('invalid fleet lease side');
+    const ref = 'refs/heads/fleet-lease/' + side, refs = await readFleetGitRefsAsync(git, [ref, LEGACY_REF]);
+    let seen: number | null = null;
+    const head = refs.get(ref);
+    if (head) {
+        await git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
+        seen = parseRemote(await git(['show', '-s', '--format=%B', head]), side).at;
+    }
+    const legacy = refs.get(LEGACY_REF);
+    if (legacy) {
+        await git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', legacy]);
+        const path = 'fleet/leases/' + side + '.json';
+        if (await git(['ls-tree', '--name-only', legacy, '--', path]) === path) {
+            const old = JSON.parse(await git(['show', legacy + ':' + path]));
+            if (!Number.isSafeInteger(old?.at) || old.at <= 0) throw Error('legacy fleet lease has an invalid record');
+            seen = Math.max(seen ?? 0, old.at);
+        }
+    }
+    return seen;
+}
+
 // The newest renewal of every side in one round trip: each fleet-lease/<side> ref's head, and the older heartbeat files
 // in `legacyDir` (a synced fleet-data worktree's fleet/leases). A side with neither is absent from the map.
 export function allLeaseLastSeen(git: FleetGit, legacyDir?: string): Map<string, number> {
@@ -212,20 +339,40 @@ function sideLeaseHistory(git:FleetGit,side:string,depth=600):RemoteLease[]{
     git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
     return git(['log', '-n', String(depth), '--format=%B%x00', tip]).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
 }
+async function sideLeaseHistoryAsync(git: FleetGitAsync, side: string, depth = 600): Promise<RemoteLease[]> {
+    if (!SIDE_NAME.test(side)) throw Error('invalid fleet lease side');
+    const ref = 'refs/heads/fleet-lease/' + side, tip = (await readFleetGitRefsAsync(git, [ref])).get(ref);
+    if (!tip) return [];
+    await git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', tip]);
+    return (await git(['log', '-n', String(depth), '--format=%B%x00', tip])).split('\0').map(r => r.trim()).filter(Boolean).map(r => parseRemote(r, side));
+}
 export function fleetCheckoutLastSeen(git: FleetGit, side: string, checkout: string, depth = 600): { head: RemoteLease | null; seen: number | null } {
     if (!SIDE_NAME.test(side) || !HOLDER.test(checkout)) throw Error('invalid fleet lease checkout');
     const records=sideLeaseHistory(git,side,depth);
     const head = records[0] ?? null, mine = records.find(r => r.holder === checkout);
     return { head, seen: mine ? mine.at : null };
 }
+export async function fleetCheckoutLastSeenAsync(git: FleetGitAsync, side: string, checkout: string, depth = 600): Promise<{ head: RemoteLease | null; seen: number | null }> {
+    if (!SIDE_NAME.test(side) || !HOLDER.test(checkout)) throw Error('invalid fleet lease checkout');
+    const records = await sideLeaseHistoryAsync(git, side, depth);
+    const head = records[0] ?? null, mine = records.find(r => r.holder === checkout);
+    return { head, seen: mine ? mine.at : null };
+}
+
+function matchRecoveryHostLease(records: readonly RemoteLease[], checkout: string, previousHost: string, now: number) {
+    const current = records[0], previous = records.find(r => r.holder === checkout && r.host === previousHost);
+    if (!current || !previous || current.host !== hostname() || current.host === previousHost || current.holder !== checkout
+        || current.epoch === previous.epoch || current.at > now || now - current.at >= FLEET_LEASE_TTL_MS
+        || current.at < previous.at + FLEET_LEASE_TTL_MS) return null;
+    return { current, previous };
+}
 
 // Evidence only: callers still need the spent recovery permit and exact inherited producer.
 export function recoveryHostLease(git:FleetGit,side:string,checkout:string,previousHost:string,now:number){
-    const records=sideLeaseHistory(git,side),current=records[0],previous=records.find(r=>r.holder===checkout&&r.host===previousHost);
-    if(!current||!previous||current.host!==hostname()||current.host===previousHost||current.holder!==checkout
-        ||current.epoch===previous.epoch||current.at>now||now-current.at>=FLEET_LEASE_TTL_MS
-        ||current.at<previous.at+FLEET_LEASE_TTL_MS)return null;
-    return {current,previous};
+    return matchRecoveryHostLease(sideLeaseHistory(git,side),checkout,previousHost,now);
+}
+export async function recoveryHostLeaseAsync(git: FleetGitAsync, side: string, checkout: string, previousHost: string, now: number) {
+    return matchRecoveryHostLease(await sideLeaseHistoryAsync(git, side), checkout, previousHost, now);
 }
 
 // The remote ref is the authority. A contender writes a child of the exact head it read.

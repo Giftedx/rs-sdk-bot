@@ -389,6 +389,9 @@ export const POOL_MAX_LAUNCHES = 128;
 export const POOL_IDLE_EXIT_MS = 30_000;
 // Stop attaching new bots halfway through the pool's idle exit window so a start command cannot race pool shutdown.
 export const POOL_IDLE_DRAIN_MS = POOL_IDLE_EXIT_MS / 2;
+// Bound new bot launches per 2 s swarm tick so cold-start and post-reload bursts ramp smoothly without stampeding pools or Git claims.
+export const MAX_STARTS_PER_TICK = 3;
+export const burstStartAllowed = (startedThisTick: number, cap = MAX_STARTS_PER_TICK): boolean => startedThisTick < cap;
 const START_RESERVE_MS = 30_000;
 
 export function activeExternalLive(statuses: readonly any[], managed: readonly string[], now: number): string[] {
@@ -2631,6 +2634,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         for (const a of clearDrainStops([liveDir, prac], new Set([...runs.values()].flatMap(r => r.accounts.map(n => n.toLowerCase()))))) {
             console.log(`SWARM drain stop cleared ${a}: its run has ended`);
         }
+        let startsThisTick = 0;
         for (let rowIdx = 0; rowIdx < combinedJobs.length; rowIdx++) {
             const raw = combinedJobs[rowIdx]!;
             if (isReservation(raw)) {
@@ -2746,9 +2750,12 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                     ? 'waiting: maxBots'
                                     : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
                             }
+                        } else if (!burstStartAllowed(startsThisTick)) {
+                            for (const a of go) st[a] = 'waiting: start stagger';
                         } else {
                             try {
                                 start(p, go);
+                                startsThisTick += go.length;
                                 cachedExternalCount = null;
                                 infraBreaker.recordSuccess('proxy');
                                 infraBreaker.recordSuccess('server_drain');
