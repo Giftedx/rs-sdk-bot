@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795862826028-1",
+ "account": "Wandwaver",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 78,
+ "claim": "9b58bb87-59b9-4506-b4e9-7e6a9574e7f1",
+ "count": 78,
+ "ok": true,
+ "at": 1795863185602,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Coal",
+   "requested": 156,
+   "count": 156,
+   "inventory": {
+    "before": 0,
+    "after": 156
+   },
+   "bank": {
+    "count": 156,
+    "at": 1795863184783
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 78
+ },
+ "bank": {
+  "count": 78,
+  "at": 1795863184384
+ },
+ "logout": {
+  "attemptId": "1795863173443-0000021364-0000000001",
+  "at": 1795863185521,
+  "sha256": "6eb804d8dd94ed0b29f10912c3ff320a9fbdfe7def1712d500153bcd8c5e20b4"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795862856866-1",
+ "account": "Masterbaiter",
+ "partner": "TossTheCaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "d69f5234-8717-4fff-b718-2ca863f949f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795863192047,
+ "detail": "trade claimed"
+}

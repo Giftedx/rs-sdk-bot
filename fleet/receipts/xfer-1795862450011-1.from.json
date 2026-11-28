@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795862450011-1",
+ "account": "CoinCock",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "4aa128b4-fc8e-469a-b0e7-cc713f773cb9",
+ "count": 0,
+ "ok": false,
+ "at": 1795863106731,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 500,
+  "at": 1795863090784
+ },
+ "logout": {
+  "attemptId": "1795863079883-0000011316-0000000001",
+  "at": 1795863106721,
+  "sha256": "a27a49d6f3e223d28f364e29d7b55035575762708a70a368e1b12086ef253b34"
+ },
+ "screen": false
+}
