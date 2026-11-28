@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795863539122-1",
  "account": "SporranBulge",
  "partner": "knightrider",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "656110b9-aed9-46a2-961c-b5cadb588500",
- "count": 0,
- "ok": false,
- "at": 1795863614927,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795863822699,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795863797957
+ },
+ "logout": {
+  "attemptId": "1795863614936-0000027344-0000000001",
+  "at": 1795863822690,
+  "sha256": "161aa594654b214386a1e17861d4fd2270af53b7904696c6561ac4378c60e911"
+ },
+ "screen": true
 }
