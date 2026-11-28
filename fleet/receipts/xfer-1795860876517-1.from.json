@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795860876517-1",
  "account": "Masterbaiter",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "44697758-3a1e-4d1e-a391-c4ed755849d2",
- "count": 0,
- "ok": false,
- "at": 1795861386464,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795861448003,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795861434048
+ },
+ "logout": {
+  "attemptId": "1795861386842-0000017428-0000000001",
+  "at": 1795861447994,
+  "sha256": "4fa3370e17cc1aacd2c4ff8f533b32c3cff7bee7a69bcef45c6729e7cbe4a131"
+ },
+ "screen": true
 }

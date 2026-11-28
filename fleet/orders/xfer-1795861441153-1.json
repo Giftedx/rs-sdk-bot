@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795861441153-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Hocuspokeus",
+  "item": "Emerald ring",
+  "count": 10,
+  "itemId": 1639,
+  "start": 1795861441153,
+  "end": 1795862341153,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
