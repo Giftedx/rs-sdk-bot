@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795845571490-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "BowBeforeMe",
+  "item": "Magic logs",
+  "count": 8,
+  "itemId": 1513,
+  "start": 1795845571490,
+  "end": 1795846471490,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

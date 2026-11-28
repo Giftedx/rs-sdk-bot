@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795845503970-1",
+ "account": "Shaftsinker",
+ "partner": "Ballbag",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 1,
+ "claim": "66f60eb0-69d8-49e9-b9cd-06747187a602",
+ "count": 1,
+ "ok": true,
+ "at": 1795845830017,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795845829286
+ },
+ "logout": {
+  "attemptId": "1795845819189-0000004560-0000000001",
+  "at": 1795845830009,
+  "sha256": "248f4bcc275d3e66f81ca019214343eddbd3ae776f09e2d5ea651b785eb2ca5d"
+ },
+ "screen": true
+}

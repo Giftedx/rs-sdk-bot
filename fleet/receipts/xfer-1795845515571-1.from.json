@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795845515571-1",
+ "account": "Abracadickra",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "5631c57d-188c-49db-a910-8fd75b0e0660",
+ "count": 0,
+ "ok": false,
+ "at": 1795845803874,
+ "detail": "trade claimed"
+}

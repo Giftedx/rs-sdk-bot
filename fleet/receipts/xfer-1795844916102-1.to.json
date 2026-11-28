@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795844916102-1",
+ "account": "Woodenstaff",
+ "partner": "Pullmybow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "6e0393e6-8abd-46e9-9cac-0cc5868d321e",
+ "count": 10,
+ "ok": true,
+ "at": 1795845699627,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795845698874
+ },
+ "logout": {
+  "attemptId": "1795845667161-0000025668-0000000001",
+  "at": 1795845699607,
+  "sha256": "175b5b369f8c058d101098ca2683e6f08fef0c5a98079ce2cfcdfed2bf3e600b"
+ },
+ "screen": true
+}

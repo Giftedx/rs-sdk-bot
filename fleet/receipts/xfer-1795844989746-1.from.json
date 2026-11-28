@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795844989746-1",
+ "account": "FishAndChips",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "fa1756cd-79c9-484d-a3b4-ef69d0867cd6",
+ "count": 60,
+ "ok": true,
+ "at": 1795845764459,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9691,
+  "after": 9631
+ },
+ "logout": {
+  "attemptId": "1795845687256-0000021880-0000000001",
+  "at": 1795845764449,
+  "sha256": "86279080d5cc25a51e315c1ef11cd71f7efe5d0193e01c37d2f5fb56845948cb"
+ },
+ "screen": true
+}
