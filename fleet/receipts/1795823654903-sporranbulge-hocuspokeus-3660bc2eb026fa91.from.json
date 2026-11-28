@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795823654903-sporranbulge-hocuspokeus-3660bc2eb026fa91",
+ "account": "SporranBulge",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 22,
+ "claim": "00eb6d4d-aaa5-4cb9-b362-b0b807664707",
+ "count": 22,
+ "ok": true,
+ "at": 1795837885943,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795837878001
+ },
+ "logout": {
+  "attemptId": "1795837868217-0000009676-0000000001",
+  "at": 1795837885931,
+  "sha256": "c0e7f2fa76259eb0d395c5d4e3a59f259bbc33ff7217d4a686f1b211fefae49b"
+ },
+ "screen": true
+}
