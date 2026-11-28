@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795844917077,
+ "at": 1795844935417,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -289,31 +289,6 @@
    "role": "army"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "88",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "88"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -358,45 +333,50 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "4",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "4"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "helper"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
     "magicshop",
     "3000"
    ],
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "2",
+    "MAX_ITEMS": "15",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "2"
+    "BATCH_UNITS": "15"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "helper"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
+   "role": "army"
   },
   {
    "account": "Kiltlifter",
@@ -443,21 +423,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- chicken"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
   },
   {
@@ -520,6 +485,25 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "helper"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "nature-chest"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:561",
+    "BATCH_UNITS": "1200"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:561",
+   "role": "army",
+   "resources": [
+    "nature-chest"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -592,61 +576,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
-    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "nature-chest"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:561",
-    "BATCH_UNITS": "1200"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:561",
-   "role": "army",
-   "resources": [
-    "nature-chest"
-   ]
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "76",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
   }
  ],
  "army": [
@@ -660,6 +589,7 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
+  "bigpackage",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
