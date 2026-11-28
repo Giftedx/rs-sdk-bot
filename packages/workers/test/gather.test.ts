@@ -153,7 +153,7 @@ test('gatherPreflight enforces invalid_config, protected_clock, level cap, plane
         { skill: 'woodcutting', method: 'woodcut-supply', target: { count: 26 } },
         { skill: 'woodcutting', method: 'yews', region: 'lumbridge', env: { WOOD_GROVE: 'native-processing' } },
         { skill: 'woodcutting', method: 'yews', region: 'seers', spot: 'yew', env: { NORMAL_GROVE: 'north' } },
-        { skill: 'mining', method: 'ore', spot: 'gold' },
+        { skill: 'mining', method: 'ore', spot: 'blurite' },
         { skill: 'mining', method: 'drop', spot: 'not_a_rock' },
         { skill: 'mining', method: 'at-site', spot: 'iron_rock_table', env: { MINING_SITE: 'nowhere' } },
         { skill: 'thieving', method: 'stalls', spot: 'no_such_stall' },

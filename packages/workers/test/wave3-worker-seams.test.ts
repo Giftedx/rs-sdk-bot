@@ -31,6 +31,7 @@ import {
     selectRock,
 } from '../src/gather/mining';
 import { normalizeGatherConfig } from '../src/gather/types';
+import { gatherEstimate, gatherPreflight } from '../src/gather/preflight';
 import { runLogisticsWorkerSession } from '../src/logistics/module';
 import {
     ALL_ALTARS_BY_NAME,
@@ -89,6 +90,36 @@ describe('Banked mining profiles (coal, gold, heroes-runite)', () => {
         expect(selectRock([goldRock], 40, 0, 0, 'gold')?.id).toBe(2098);
         expect(selectRock([runiteRock], 84, 0, 0, 'heroes-runite')).toBeUndefined();
         expect(selectRock([runiteRock], 85, 0, 0, 'heroes-runite')?.id).toBe(2107);
+    });
+
+    test('gatherPreflight and gatherEstimate admit coal, gold, and heroes-runite with skill/quest/tool/HP gates', () => {
+        const makeAcct = (o: Record<string, any> = {}): any => ({
+            name: 'OreTester',
+            skills: { Mining: { level: 85, xp: 3_500_000 }, Hitpoints: { level: 80, xp: 2_000_000 }, Attack: { level: 60, xp: 300_000 } },
+            quests: { "Heroes' Quest": 'complete' },
+            inventory: { 1275: 1 },
+            equipment: {},
+            bank: { observedAt: 1, trusted: true, items: {} },
+            pos: { x: 2946, z: 3368, level: 0 },
+            ...o,
+        });
+        const world: any = { tick: 10, accounts: {}, reserves: {}, globalReserves: {}, spotCounts: {} };
+
+        expect(gatherPreflight(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'coal' } }, world).ok).toBe(true);
+        expect(gatherPreflight(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'gold' } }, world).ok).toBe(true);
+        expect(gatherPreflight(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'heroes-runite' } }, world).ok).toBe(true);
+        expect(gatherPreflight(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'adamant-bogus' } }, world).blockers[0]?.kind).toBe('invalid_config');
+
+        const noQuest = makeAcct({ quests: {} });
+        expect(gatherPreflight(noQuest, { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'heroes-runite' } }, world).blockers.map(b => b.kind)).toContain('quest_incomplete');
+        const lowHp = makeAcct({ skills: { Mining: { level: 85, xp: 3_500_000 }, Hitpoints: { level: 60, xp: 300_000 } } });
+        expect(gatherPreflight(lowHp, { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'heroes-runite' } }, world).blockers.map(b => b.kind)).toContain('combat_survivability');
+        const lowMining = makeAcct({ skills: { Mining: { level: 29, xp: 12_000 }, Hitpoints: { level: 80, xp: 2_000_000 } } });
+        expect(gatherPreflight(lowMining, { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'coal' } }, world).blockers.map(b => b.kind)).toContain('skill_level');
+
+        expect(gatherEstimate(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'coal' } }, world).outputsPerUnit).toEqual({ 453: 1 });
+        expect(gatherEstimate(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'gold' } }, world).outputsPerUnit).toEqual({ 444: 1 });
+        expect(gatherEstimate(makeAcct(), { skill: 'mining', method: 'ore', env: { ORE_PROFILE: 'heroes-runite' } }, world).outputsPerUnit).toEqual({ 451: 1 });
     });
 
     test('runMiningSession runs banked heroes-runite with immediate rock switching and Falador West banking', async () => {
