@@ -1,0 +1,40 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795853762270-1",
+ "account": "Bigchopper",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "7c069531-3f8f-4d45-9b13-79cff5d0bd44",
+ "count": 0,
+ "ok": false,
+ "at": 1795854400377,
+ "detail": "Error: partner failed: no trade",
+ "lines": [
+  {
+   "item": "Dragonhide body",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Cooked karambwan",
+   "requested": 3,
+   "count": 0
+  },
+  {
+   "item": "Shark",
+   "requested": 1,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795854390691-0000009284-0000000001",
+  "at": 1795854399233,
+  "sha256": "32059511d8a376aa136f3c4e197288372e380ac769823ad860b537b55b3fa1f7"
+ },
+ "screen": false
+}

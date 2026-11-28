@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795854325475-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Wandwaver",
+  "item": "Limpwurt root",
+  "count": 2,
+  "itemId": 225,
+  "extra": [
+    {
+      "item": "Earth rune",
+      "count": 30,
+      "itemId": 557
+    }
+  ],
+  "start": 1795854325475,
+  "end": 1795855225475,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

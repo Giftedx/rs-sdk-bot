@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795854325475-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TrouserSnake",
+  "to": "Moneyshot",
+  "item": "Air rune",
+  "count": 11,
+  "itemId": 556,
+  "start": 1795854325475,
+  "end": 1795855225475,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

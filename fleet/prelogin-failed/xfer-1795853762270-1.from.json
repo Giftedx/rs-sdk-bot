@@ -5,6 +5,6 @@
  "account": "mmsmk1232",
  "partner": "Bigchopper",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795853997058,
+ "at": 1795854378429,
  "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
 }
