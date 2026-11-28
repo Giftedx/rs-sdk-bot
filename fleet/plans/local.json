@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856684506,
+ "at": 1795856705078,
  "jobs": [
   {
    "account": "Balls",
@@ -80,6 +80,28 @@
    ]
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:lochnessrod:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lochnessrod:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
@@ -92,22 +114,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1999"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
