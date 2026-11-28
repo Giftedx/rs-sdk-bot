@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795852150999-1",
+ "account": "Swordswallow",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 250,
+ "claim": "0ea03c51-9bd6-4ba1-af7d-a72dc115ef11",
+ "count": 0,
+ "ok": false,
+ "at": 1795852965923,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Mind rune",
+   "requested": 250,
+   "count": 0
+  }
+ ]
+}

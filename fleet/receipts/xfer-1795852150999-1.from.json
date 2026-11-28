@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795852150999-1",
+ "account": "CoinCock",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 250,
+ "claim": "bb1cdd5e-c024-43af-97bb-2e564cd88386",
+ "count": 0,
+ "ok": false,
+ "at": 1795853053778,
+ "detail": "Error: no matching trade completed",
+ "lines": [
+  {
+   "item": "Mind rune",
+   "requested": 250,
+   "count": 0,
+   "inventory": {
+    "before": 250,
+    "after": 250
+   },
+   "bank": {
+    "count": 250,
+    "at": 1795853013340
+   }
+  }
+ ],
+ "inventory": {
+  "before": 250,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795853012589
+ },
+ "logout": {
+  "attemptId": "1795852912107-0000013612-0000000001",
+  "at": 1795853052887,
+  "sha256": "1804d1ce3500e2a05831013210f222758819059db74619be71fc1ed7d7a94bb8"
+ },
+ "screen": false
+}

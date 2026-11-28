@@ -1,13 +1,29 @@
 {
  "side": "local",
- "at": 1795852609760,
+ "at": 1795853056056,
  "jobs": [
   {
    "account": "Mightyrod",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
-   "role": "pvp"
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   },
   {
    "account": "Balls",
@@ -24,41 +40,6 @@
    "role": "rehearsal"
   },
   {
-   "account": "Bigchopper",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Knightstick",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
-   "role": "pvp"
-  },
-  {
    "account": "UnderMyKilt",
    "script": "",
    "enabled": false,
@@ -67,90 +48,6 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Dipstick",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "PocketPool",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "YewFirst",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "OreElse",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "SporranDip",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "KnightRider",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Billionaire",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Fatstack",
    "script": "",
    "enabled": false,
    "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
@@ -169,68 +66,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "",
-   "enabled": false,
-   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
-   "role": "pvp"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
   },
   {
    "account": "Shaftsinker",
@@ -341,11 +176,27 @@
    "role": "auto"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=43 STALL_TICKS=160 -- crafting legacy-jewelry",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=74 PRODUCT_TARGET=74 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=74 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=74 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -379,23 +230,22 @@
    ]
   },
   {
-   "account": "Pocketrocket",
+   "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=43 STALL_TICKS=160 -- crafting legacy-jewelry",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=74 PRODUCT_TARGET=74 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=74 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=74 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1601",
-   "role": "army"
+   "goal": "goal:supply_chain:1607",
+   "role": "auto"
   },
   {
-   "account": "Kiltlifter",
+   "account": "DropMyLoad",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -408,23 +258,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "army"
+   "role": "helper"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-quester.ts",
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "itgronigen"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=31 STALL_TICKS=200 -- crafting progressive",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Kiltlifter:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:itgronigen",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:itgronigen",
-   "role": "helper"
+   "goal": "goal:pvp_unlock:Kiltlifter:zanaris",
+   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -435,7 +284,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "292"
+    "BATCH_UNITS": "1920"
    },
    "enabled": true,
    "repeat": false,
@@ -454,13 +303,25 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
+  "ballspinner",
+  "billionaire",
   "bowbeforeme",
+  "dipstick",
+  "fatstack",
+  "hocuspokeus",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
+  "oreelse",
+  "pickpockdick",
+  "pocketpool",
   "pocketpython",
   "sausagefest",
-  "woodpecker"
+  "sporrandip",
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

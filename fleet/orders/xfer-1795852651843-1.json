@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795852651843-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "YewGotWood",
+  "item": "Coins",
+  "count": 103,
+  "itemId": 995,
+  "start": 1795852651843,
+  "end": 1795853551843,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

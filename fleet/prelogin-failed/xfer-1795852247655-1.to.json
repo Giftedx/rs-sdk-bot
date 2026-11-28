@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795852247655-1",
+ "role": "to",
+ "account": "Woodenstaff",
+ "partner": "BoneToPick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795852987712,
+ "detail": "Error: account plan writer waits for its existing owner"
+}
