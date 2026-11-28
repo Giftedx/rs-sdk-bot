@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795855957130-1",
  "account": "Fingerblastr",
  "partner": "Ballbag",
@@ -10,15 +10,37 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "8533557c-bd0d-44d7-ba0f-54b0cdcb01a9",
- "count": 0,
- "ok": false,
- "at": 1795856402267,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795856476411,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Bronze bar",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795856475654
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795856475206
+ },
+ "logout": {
+  "attemptId": "1795856402275-0000026796-0000000001",
+  "at": 1795856476403,
+  "sha256": "49c8dd9c9c1519410d0be4d64f554deaf0a240abf22aad80d8338535a3bfe619"
+ },
+ "screen": true
 }
