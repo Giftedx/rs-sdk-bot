@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845165166-1",
  "account": "Nockitoff",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Uncut sapphire",
  "requested": 1,
  "claim": "9c68235e-a9f0-4105-adb0-c03363dab567",
- "count": 0,
- "ok": false,
- "at": 1795845293644,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795845325633,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795845300954
+ },
+ "logout": {
+  "attemptId": "1795845293668-0000000476-0000000001",
+  "at": 1795845325620,
+  "sha256": "86834ded32ab1bd9496a0ca3840c70aef959017c21af5c5a887cba3e4ce057b5"
+ },
+ "screen": true
 }
