@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795823654705-coincock-hocuspokeus-3531c73e8920a040",
+ "role": "from",
+ "account": "CoinCock",
+ "partner": "Hocuspokeus",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795837385317,
+ "detail": "Error: account logout is not confirmed: CoinCock ended stopped"
+}
