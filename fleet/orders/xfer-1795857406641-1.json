@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795857406641-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketrocket",
+  "to": "TrouserSnake",
+  "item": "Cosmic rune",
+  "count": 1,
+  "itemId": 564,
+  "extra": [
+    {
+      "item": "Emerald ring",
+      "count": 1,
+      "itemId": 1639
+    }
+  ],
+  "start": 1795857406641,
+  "end": 1795858306641,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

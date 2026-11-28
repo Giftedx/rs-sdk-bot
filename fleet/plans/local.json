@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857404872,
+ "at": 1795857421478,
  "jobs": [
   {
    "account": "Balls",
@@ -117,40 +117,65 @@
    "role": "army"
   },
   {
-   "account": "Pocketrocket",
+   "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "items",
-    "enchant:emerald_ring",
-    "-",
-    "1",
-    "1200"
+    "crafting",
+    "inventory",
+    "cut-sapphire"
    ],
    "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:2552",
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "DEMAND_ID": "goal:supply_chain:1607",
     "BATCH_UNITS": "1",
-    "STALL_TICKS": "224"
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2552",
+   "goal": "goal:supply_chain:1607",
    "role": "army"
   },
   {
-   "account": "TrouserSnake",
+   "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+    "scripts/aio-market.ts ORDER_KEY=brain-2357-26-o0-p3459 ITEM_ID=2357 QUANTITY=26 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=26 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=26 STALL_TICKS=280 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "campaign:haggis:item:1639",
    "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "shantayshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1937",
+    "ITEMS": "Jug of water",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1937",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1937",
+   "role": "helper"
   },
   {
    "account": "Moneyshot",
@@ -168,44 +193,20 @@
    "role": "army"
   },
   {
-   "account": "ChaosInPants",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Pocketpython",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "chicken"
+    "sweep",
+    "zanaris"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:ChaosInPants",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:ChaosInPants",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Nockitoff",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
   }
  ],
  "army": [
@@ -224,7 +225,6 @@
   "billionaire",
   "bowbeforeme",
   "fatstack",
-  "fingerblastr",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
@@ -232,9 +232,8 @@
   "mmtha0205",
   "mmthv2350",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
-  "pocketpython",
+  "pocketrocket",
   "sausagefest",
   "sporrandip",
   "woodpecker",
