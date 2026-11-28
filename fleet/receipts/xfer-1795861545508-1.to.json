@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795861545508-1",
+ "account": "SporranDip",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 28,
+ "claim": "19ed3e7e-549b-4c85-99fd-420be8cc8f86",
+ "count": 0,
+ "ok": false,
+ "at": 1795861777244,
+ "detail": "trade claimed"
+}
