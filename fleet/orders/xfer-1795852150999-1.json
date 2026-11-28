@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795852150999-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "Swordswallow",
+  "item": "Air rune",
+  "count": 250,
+  "itemId": 556,
+  "extra": [
+    {
+      "item": "Mind rune",
+      "count": 250,
+      "itemId": 558
+    }
+  ],
+  "start": 1795852150999,
+  "end": 1795853050999,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

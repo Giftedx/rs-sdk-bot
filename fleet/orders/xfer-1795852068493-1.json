@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795852068493-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballbag",
+  "to": "mmtha0205",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "start": 1795852068493,
+  "end": 1795852968493,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

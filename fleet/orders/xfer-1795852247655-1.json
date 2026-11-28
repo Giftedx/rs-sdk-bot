@@ -1,0 +1,46 @@
+{
+  "id": "xfer-1795852247655-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Woodenstaff",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "extra": [
+    {
+      "item": "Water rune",
+      "count": 2,
+      "itemId": 555
+    },
+    {
+      "item": "Air rune",
+      "count": 6,
+      "itemId": 556
+    },
+    {
+      "item": "Earth rune",
+      "count": 1,
+      "itemId": 557
+    },
+    {
+      "item": "Rope",
+      "count": 1,
+      "itemId": 954
+    }
+  ],
+  "start": 1795852247655,
+  "end": 1795853147655,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

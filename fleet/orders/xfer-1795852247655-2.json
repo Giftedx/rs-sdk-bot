@@ -1,0 +1,41 @@
+{
+  "id": "xfer-1795852247655-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "WellHung",
+  "to": "Woodenstaff",
+  "item": "Bronze bar",
+  "count": 4,
+  "itemId": 2349,
+  "extra": [
+    {
+      "item": "Water rune",
+      "count": 5,
+      "itemId": 555
+    },
+    {
+      "item": "Air rune",
+      "count": 6,
+      "itemId": 556
+    },
+    {
+      "item": "Earth rune",
+      "count": 4,
+      "itemId": 557
+    }
+  ],
+  "start": 1795852247655,
+  "end": 1795853147655,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
