@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795819449486-knightrider-wandwaver-07b781b616c83809",
+ "account": "Wandwaver",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "bdede099-bdd9-4370-9302-c40ae0da8e4b",
+ "count": 1,
+ "ok": true,
+ "at": 1795828996306,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795828995200
+ },
+ "logout": {
+  "attemptId": "1795828984369-0000024412-0000000001",
+  "at": 1795828995943,
+  "sha256": "7dfe7c78883f0ca410439083d94e82b4269b28158a4656aacd23fac8c00a6bdf"
+ },
+ "screen": true
+}
