@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795843737336-1",
+ "account": "Shaftmaker",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 63,
+ "claim": "6ad05d6c-526d-4657-a59c-7b9bbab7c0c7",
+ "count": 63,
+ "ok": true,
+ "at": 1795843916165,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 63
+ },
+ "bank": {
+  "count": 63,
+  "at": 1795843914950
+ },
+ "logout": {
+  "attemptId": "1795843902778-0000024620-0000000001",
+  "at": 1795843916084,
+  "sha256": "131a7ed94639198029ac20eef22c10dac18f5df23ab4e6152063327e4264c2f7"
+ },
+ "screen": true
+}
