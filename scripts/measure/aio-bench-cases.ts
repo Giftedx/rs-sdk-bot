@@ -515,7 +515,7 @@ const teamBait3Plus1Case = (key: string, size: number, sizeB: number, at: {x: nu
       'SPAR_A=gang-hunter', 'SPAR_B=ganker-live',
       'SPAR_B_OPTS={"protectItem":true}',
       'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair',
-      'NEVER_SKULL=1', 'SPAR_PICKUP=1', 'SPAR_PICKUP_RADIUS=4', 'SQUAD_DAGGER=1',
+      'NEVER_SKULL=1', 'SPAR_PICKUP=1', 'SPAR_PICKUP_RADIUS=6', 'SQUAD_DAGGER=1',
       'SPAR_CAP=3000', 'STALL_TICKS=3000',
     ],
     companions: letters.map((suffix, i) => ({

@@ -368,7 +368,9 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                     radius: pickupRadius,
                     maxTicks: sideDagger && enemiesLeft ? 12 : 30,
                     wait: 6,
-                    stop: () => over || halt() || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 55),
+                    stop: () => over || halt()
+                        || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 55)
+                        || (enemiesLeft && home !== null && !home.multi && (() => { const p = s.sdk.getState()?.player; return !!p && isMulti(p.worldX, p.worldZ); })()),
                 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
@@ -387,6 +389,11 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             if (r.outcome === 'died' || r.outcome === 'session ended') return;
             // Zero-tick-waste switch: only wait a tick when fightPlayer consumed 0 ticks.
             if (s.tick() === began && !await nextTick(s)) return;
+        }
+        // Post-victory battlefield sweep: once all enemies are out, surviving Side A members vacuum remaining dropped weapons/loot.
+        if (key === 'a' && pickup && !isOut(s) && !halt() && foes.every(isOut)) {
+            const sweep = await pickUp(s, pickup, { radius: Math.max(pickupRadius, 12), maxTicks: 30, wait: 4, stop: () => halt() });
+            for (const [id, n] of Object.entries(sweep)) picked[id] = (picked[id] ?? 0) + n;
         }
         } finally { teamFocus?.unassign(s.name); unwatchRefusals(); }
     });
