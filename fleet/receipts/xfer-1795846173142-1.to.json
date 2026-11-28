@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795846173142-1",
  "account": "Pocketrocket",
  "partner": "Ballbag",
@@ -10,8 +10,22 @@
  "item": "Chisel",
  "requested": 1,
  "claim": "0429e59a-9b85-44f9-bcad-b4efe5353142",
- "count": 0,
- "ok": false,
- "at": 1795846492343,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795846504848,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795846504044
+ },
+ "logout": {
+  "attemptId": "1795846492363-0000016576-0000000001",
+  "at": 1795846504791,
+  "sha256": "be961ace4fdd6f6ae9f2c9c257696c2888291662f9b38b10a4e53f986f94def4"
+ },
+ "screen": true
 }
