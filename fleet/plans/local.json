@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870748029,
+ "at": 1795870824553,
  "jobs": [
   {
    "account": "Balls",
@@ -45,57 +45,22 @@
    "role": "pvp"
   },
   {
-   "account": "woodenstaff",
-   "script": "scripts/aio-skiller.ts",
+   "account": "unsheathed",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
-  },
-  {
-   "account": "woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "harpoon",
-    "harpoon"
-   ],
-   "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "catherby-harpoon"
-   ]
-  },
-  {
-   "account": "yewgotwood",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "meatntwoveg",
@@ -145,7 +110,7 @@
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
-    "feathers"
+    "flax"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
@@ -154,7 +119,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper"
+   "role": "helper",
+   "resources": [
+    "seers-flax"
+   ]
   }
  ],
  "army": [
@@ -190,7 +158,8 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip"
+  "sporrandip",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
