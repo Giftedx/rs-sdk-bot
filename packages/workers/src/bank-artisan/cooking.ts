@@ -119,7 +119,7 @@ export async function runCookingBatch(
             if (!raw) throw Error('staged cooking input exhausted');
             const snapshot = cookSnapshot(before);
             if (r.additional !== undefined && before.inventory.length >= 28) throw Error('cooking needs space for returned container');
-            await d.close();
+            if (before.dialog?.isOpen || before.interface?.isOpen || before.modalOpen) await d.close();
             if (!await d.heat(raw.slot, o.heat, r)) throw Error('cooking heat action refused');
             let effect: ReturnType<typeof cookingEffect> = null;
             if (!await d.wait(() => !!(effect = cookingEffect(r, snapshot, cookSnapshot(state()))), Math.min(12, o.cap - (d.tick() - start)))) {
@@ -214,12 +214,16 @@ export async function cookSharks(s: Session, stop: () => boolean) {
     while (counts().raw > 0) {
         if (stop()) throw Error('shark cooking budget/health stop');
         if (s.tick() - progress >= 40) throw Error('shark cooking no progress');
-        const range = s.sdk.getState()?.nearbyLocs.find(l => /^(range|cooking range)$/i.test(l.name) && l.x === 2817 && l.z === 3443)
-            ?? s.sdk.getState()?.nearbyLocs.find(l => /^(range|cooking range)$/i.test(l.name) && Math.max(Math.abs(l.x - 2816), Math.abs(l.z - 3443)) <= 2);
+        const st = s.sdk.getState();
+        if (st?.dialog?.isOpen) {
+            await s.sdk.sendCloseModal?.();
+        }
+        const range = st?.nearbyLocs.find(l => /^(range|cooking range)$/i.test(l.name) && l.x === 2817 && l.z === 3443)
+            ?? st?.nearbyLocs.find(l => /^(range|cooking range)$/i.test(l.name) && Math.max(Math.abs(l.x - 2816), Math.abs(l.z - 3443)) <= 2);
         if (!range) throw Error('Catherby range unobserved');
         const raw = s.sdk.getInventory().find(i => i.id === 383)!;
         await s.sdk.sendUseItemOnLoc(raw.slot, range.x, range.z, range.id);
-        await waitUntil(s, () => stop() || counts().raw < last, { timeoutTicks: 10 });
+        await waitUntil(s, () => stop() || counts().raw < last || !!s.sdk.getState()?.dialog?.isOpen, { timeoutTicks: 10 });
         if (counts().raw < last) {
             last = counts().raw;
             progress = s.tick();
@@ -292,12 +296,14 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
     let walkTicks = 0;
     const counters = () => `cookedTotal=${cookedTotal} heldCooked=${cookedCount()} heldRaw=${rawCount()} bankTrips=${bankTrips} walkTicks=${walkTicks}`;
 
+    let cachedWalker: ReturnType<typeof sessionWalker> | undefined;
     const walk = async (x: number, z: number, tol = 1): Promise<boolean> => {
         const a = s.tick();
+        const walker = await (cachedWalker ??= sessionWalker(s));
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
+            const r = await walkPath(walker, [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 await waitTicks(s, 1);
@@ -313,17 +319,16 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
             return 'failed';
         }
         await s.bot.depositItem(foodDepositPattern(FOOD_TYPE), -1);
-        await waitTicks(s, 1);
-        const loaded = await waitUntil(s, () => (s.sdk.getState()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 5 });
+        const loaded = (s.sdk.getState()?.bank?.items?.length ?? 0) > 0
+            || await waitUntil(s, () => (s.sdk.getState()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 5 });
         const empty = loaded && !(s.sdk.getState()?.bank?.items ?? []).some((i: { name: string; count: number }) => rawRe.test(i.name) && i.count > 0);
         if (!empty) await s.bot.withdrawItem(rawRe, 28);
         bankTrips++;
         await s.bot.closeInterface();
-        await waitTicks(s, 1);
         return empty ? 'empty' : 'ok';
     };
 
@@ -342,7 +347,7 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
                 break;
             }
             if (rawCount() === 0) {
-                await waitTicks(s, 5);
+                await waitTicks(s, 2);
                 continue;
             }
         }
@@ -354,15 +359,23 @@ export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE,
         }
         const range = s.sdk.findNearbyLoc(/range|oven/i);
         if (!range) {
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
             continue;
         }
         const rawItem = s.sdk.getInventory().find(i => rawRe.test(i.name));
         if (!rawItem) continue;
+        if (s.sdk.getState()?.dialog?.isOpen && cookLevelRefusal(s.sdk.getState(), 0) === null) {
+            await s.sdk.sendCloseModal?.();
+        }
+        const rawBefore = rawCount();
         const before = cookedCount();
         const sentTick = s.tick();
         await s.sdk.sendUseItemOnLoc(rawItem.slot, range.x, range.z, range.id);
-        await waitUntil(s, () => cookedCount() > before || rawCount() === 0 || cookLevelRefusal(s.sdk.getState(), sentTick) !== null, { timeoutTicks: 10 });
+        await waitUntil(
+            s,
+            () => rawCount() < rawBefore || cookedCount() > before || rawCount() === 0 || cookLevelRefusal(s.sdk.getState(), sentTick) !== null,
+            { timeoutTicks: 10 },
+        );
         const gained = cookedCount() - before;
         if (gained > 0) cookedTotal += gained;
         const refused = cookLevelRefusal(s.sdk.getState(), sentTick);

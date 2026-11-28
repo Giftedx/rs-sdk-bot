@@ -14,7 +14,8 @@ import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
 import { CONTENT_DIR, packMap } from './catalog';
-import { jewelleryRecipes, type JewelleryRecipe } from './recipes';
+import { itemMagicRecipe, jewelleryRecipes, type JewelleryRecipe } from './recipes';
+import { runItemMagicBanked } from './magic';
 import { cookingRecipes, runCookingBatch } from './cooking';
 import {
     inventoryRecipes,
@@ -1153,6 +1154,263 @@ export async function runJewelleryTripCli(
     }
 }
 
+export type PvpJewelleryKey =
+    | 'ring_of_recoil'
+    | 'amulet_of_magic'
+    | 'amulet_of_defence'
+    | 'amulet_of_strength'
+    | 'amulet_of_power'
+    | 'ring_of_life'
+    | 'amulet_of_glory';
+
+export interface PvpJewellerySpec {
+    key: PvpJewelleryKey;
+    gem: 'sapphire' | 'emerald' | 'ruby' | 'diamond' | 'dragonstone';
+    shape: 'ring' | 'amulet';
+    uncutGem: number;
+    cutGem: number;
+    mould: number;
+    jewelleryRecipe: string;
+    mouldedItem: number;
+    stringRecipe?: string;
+    enchantTargetName: string;
+    enchantTargetId: number;
+    enchantMode: string;
+    productId: number;
+    craftLevel: number;
+    magicLevel: number;
+    members: boolean;
+}
+
+// Pinned content/pack/obj.pack & jewellery.struct & magic_spells.dbrow IDs for PvP jewelry chains.
+export const PVP_JEWELLERY_PIPELINES: Readonly<Record<PvpJewelleryKey, PvpJewellerySpec>> = {
+    ring_of_recoil: {
+        key: 'ring_of_recoil',
+        gem: 'sapphire',
+        shape: 'ring',
+        uncutGem: 1623,
+        cutGem: 1607,
+        mould: 1592,
+        jewelleryRecipe: 'sapphire_ring',
+        mouldedItem: 1637,
+        enchantTargetName: 'sapphire_ring',
+        enchantTargetId: 1637,
+        enchantMode: 'enchant:sapphire_ring',
+        productId: 2550,
+        craftLevel: 20,
+        magicLevel: 7,
+        members: true,
+    },
+    amulet_of_magic: {
+        key: 'amulet_of_magic',
+        gem: 'sapphire',
+        shape: 'amulet',
+        uncutGem: 1623,
+        cutGem: 1607,
+        mould: 1595,
+        jewelleryRecipe: 'unstrung_sapphire_amulet',
+        mouldedItem: 1675,
+        stringRecipe: 'string-sapphire-amulet',
+        enchantTargetName: 'strung_sapphire_amulet',
+        enchantTargetId: 1694,
+        enchantMode: 'enchant:strung_sapphire_amulet',
+        productId: 1727,
+        craftLevel: 24,
+        magicLevel: 7,
+        members: false,
+    },
+    amulet_of_defence: {
+        key: 'amulet_of_defence',
+        gem: 'emerald',
+        shape: 'amulet',
+        uncutGem: 1621,
+        cutGem: 1605,
+        mould: 1595,
+        jewelleryRecipe: 'unstrung_emerald_amulet',
+        mouldedItem: 1677,
+        stringRecipe: 'string-emerald-amulet',
+        enchantTargetName: 'strung_emerald_amulet',
+        enchantTargetId: 1696,
+        enchantMode: 'enchant:strung_emerald_amulet',
+        productId: 1729,
+        craftLevel: 31,
+        magicLevel: 27,
+        members: false,
+    },
+    amulet_of_strength: {
+        key: 'amulet_of_strength',
+        gem: 'ruby',
+        shape: 'amulet',
+        uncutGem: 1619,
+        cutGem: 1603,
+        mould: 1595,
+        jewelleryRecipe: 'unstrung_ruby_amulet',
+        mouldedItem: 1679,
+        stringRecipe: 'string-ruby-amulet',
+        enchantTargetName: 'strung_ruby_amulet',
+        enchantTargetId: 1698,
+        enchantMode: 'enchant:strung_ruby_amulet',
+        productId: 1725,
+        craftLevel: 50,
+        magicLevel: 49,
+        members: false,
+    },
+    amulet_of_power: {
+        key: 'amulet_of_power',
+        gem: 'diamond',
+        shape: 'amulet',
+        uncutGem: 1617,
+        cutGem: 1601,
+        mould: 1595,
+        jewelleryRecipe: 'unstrung_diamond_amulet',
+        mouldedItem: 1681,
+        stringRecipe: 'string-diamond-amulet',
+        enchantTargetName: 'strung_diamond_amulet',
+        enchantTargetId: 1700,
+        enchantMode: 'enchant:strung_diamond_amulet',
+        productId: 1731,
+        craftLevel: 70,
+        magicLevel: 57,
+        members: false,
+    },
+    ring_of_life: {
+        key: 'ring_of_life',
+        gem: 'diamond',
+        shape: 'ring',
+        uncutGem: 1617,
+        cutGem: 1601,
+        mould: 1592,
+        jewelleryRecipe: 'diamond_ring',
+        mouldedItem: 1643,
+        enchantTargetName: 'diamond_ring',
+        enchantTargetId: 1643,
+        enchantMode: 'enchant:diamond_ring',
+        productId: 2570,
+        craftLevel: 43,
+        magicLevel: 57,
+        members: true,
+    },
+    amulet_of_glory: {
+        key: 'amulet_of_glory',
+        gem: 'dragonstone',
+        shape: 'amulet',
+        uncutGem: 1631,
+        cutGem: 1615,
+        mould: 1595,
+        jewelleryRecipe: 'unstrung_dragonstone_amulet',
+        mouldedItem: 1683,
+        stringRecipe: 'string-dragonstone-amulet',
+        enchantTargetName: 'strung_dragonstone_amulet',
+        enchantTargetId: 1702,
+        enchantMode: 'enchant:strung_dragonstone_amulet',
+        productId: 1704,
+        craftLevel: 80,
+        magicLevel: 68,
+        members: true,
+    },
+};
+
+export function planPvpJewelleryChain(
+    key: PvpJewelleryKey,
+    stock: Record<number, number>,
+    levels: { crafting: number; magic: number },
+    target: number,
+    members = true,
+) {
+    const spec = PVP_JEWELLERY_PIPELINES[key];
+    if (!Number.isSafeInteger(target) || target < 1) throw Error('invalid PvP jewellery target');
+    if (levels.crafting < spec.craftLevel) throw Error(`${key} requires Crafting ${spec.craftLevel}, has ${levels.crafting}`);
+    if (levels.magic < spec.magicLevel) throw Error(`${key} requires Magic ${spec.magicLevel}, has ${levels.magic}`);
+    if (spec.members && !members) throw Error(`${key} requires members world`);
+    const enchantRecipe = itemMagicRecipe(spec.enchantMode);
+    const haveReadyToEnchant = stock[spec.enchantTargetId] ?? 0;
+    const needCraft = Math.max(0, target - haveReadyToEnchant);
+    const craftPlan =
+        needCraft > 0
+            ? planJewelleryOrder(
+                  {
+                      recipe: spec.jewelleryRecipe,
+                      target: needCraft,
+                      batch: 13,
+                      cap: 1500,
+                      returnTicks: 100,
+                      reserve: 0,
+                      members,
+                      stringAmulet: spec.shape === 'amulet',
+                      bank: { x: 3269, z: 3167, level: 0 },
+                      furnace: { x: 3275, z: 3186, level: 0 },
+                  },
+                  stock,
+                  levels.crafting,
+              )
+            : { stages: [], delta: {} as Record<number, number>, product: spec.enchantTargetId, floor: {} };
+    const runeShortfalls: Record<number, number> = {};
+    for (const [idStr, perCast] of Object.entries(enchantRecipe.inputs)) {
+        const id = Number(idStr);
+        if (id === enchantRecipe.target) continue;
+        const need = perCast * target;
+        const have = stock[id] ?? 0;
+        if (have < need) runeShortfalls[id] = need - have;
+    }
+    return {
+        spec,
+        target,
+        needCraft,
+        craftStages: craftPlan.stages,
+        enchantRecipe,
+        runeShortfalls,
+        canEnchantNow: Object.keys(runeShortfalls).length === 0,
+    };
+}
+
+// Heroes' Guild basement Fountain of Heroes (m45_154.jm2: 2638 @ 2917,9893,0; fountain_of_heroes.rs2:1-8).
+export const FOUNTAIN_OF_HEROES = {
+    locId: 2638,
+    x: 2917,
+    z: 9893,
+    level: 0,
+    stand: { x: 2918, z: 9894, level: 0 },
+} as const;
+export const UNCHARGED_GLORY_IDS = [1704, 1706, 1708, 1710] as const;
+export const CHARGED_GLORY_ID = 1712;
+
+export async function rechargeGloriesAtFountain(
+    s: Pick<Session, 'sdk' | 'bot' | 'tick' | 'onTick'>,
+    o: { cap?: number; stop?: () => boolean } = {},
+): Promise<{ ok: boolean; recharged: number; remaining: number; ticks: number; failure?: string }> {
+    const cap = o.cap ?? 120;
+    const stop = o.stop ?? (() => false);
+    const start = s.tick();
+    const over = () => stop() || s.tick() - start >= cap;
+    const unchargedSet = new Set<number>(UNCHARGED_GLORY_IDS);
+    const nextUncharged = () => s.sdk.getInventory().find(i => unchargedSet.has(i.id));
+    const countCharged = () => s.sdk.getInventory().filter(i => i.id === CHARGED_GLORY_ID).reduce((n, i) => n + i.count, 0);
+    const countUncharged = () => s.sdk.getInventory().filter(i => unchargedSet.has(i.id)).reduce((n, i) => n + i.count, 0);
+    let recharged = 0;
+    let failure = '';
+    try {
+        while (!over()) {
+            const item = nextUncharged();
+            if (!item) break;
+            const fountain = s.sdk.getState()?.nearbyLocs.find(l => l.id === FOUNTAIN_OF_HEROES.locId || /fountain of heroes/i.test(l.name));
+            if (!fountain) throw Error('fountain of heroes not nearby');
+            const before = countCharged();
+            const used = await s.sdk.sendUseItemOnLoc(item.slot, fountain.x, fountain.z, fountain.id);
+            if (!used.success) throw Error(`fountain recharge refused: ${used.message ?? 'unknown'}`);
+            const settled = await waitUntil(s, () => countCharged() > before || over(), {
+                timeoutTicks: Math.min(8, Math.max(1, cap - (s.tick() - start))),
+            });
+            if (!settled || countCharged() <= before) throw Error('fountain recharge unobserved');
+            recharged += countCharged() - before;
+            if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.sendClickDialog(0).catch(() => {});
+        }
+    } catch (error) {
+        failure = String(error);
+    }
+    const remaining = countUncharged();
+    return { ok: !failure && remaining === 0 && recharged > 0, recharged, remaining, ticks: s.tick() - start, failure: failure || undefined };
+}
+
 // ---- Legacy Jewelry Crafter (craft-jewelry.ts) ----
 
 export async function runLegacyCraftJewelryCli(
@@ -1216,30 +1474,45 @@ export async function runLegacyCraftJewelryCli(
             const p = pos();
             return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
         };
+        const SHAPE = (env.SHAPE ?? 'ring').toLowerCase() === 'amulet' ? 'amulet' : 'ring';
         const bank = async () => {
             await walk(BANK_SPOT.x, BANK_SPOT.z, 2);
             const b = await s.bot.openBank();
             if (!b.success) {
-                await waitTicksFn(s, 2);
+                await waitTicksFn(s, 1);
                 return;
             }
             if (ACTION === 'cut') {
                 await s.bot.depositItem(cutRe, -1);
-                await waitTicksFn(s, 1);
                 if (!findItem(/^chisel$/i)) await s.bot.withdrawItem(/^chisel$/i, 1);
                 await s.bot.withdrawItem(uncutRe, 27);
             } else if (ACTION === 'smelt') {
                 await s.bot.depositItem(/ring|amulet|necklace/i, -1);
-                await waitTicksFn(s, 1);
-                if (!findItem(/mould/i)) await s.bot.withdrawItem(/ring mould/i, 1);
+                const mouldRe = SHAPE === 'amulet' ? /amulet mould/i : /ring mould/i;
+                if (!findItem(mouldRe)) await s.bot.withdrawItem(mouldRe, 1);
                 await s.bot.withdrawItem(/gold bar/i, 13);
                 await s.bot.withdrawItem(cutRe, 13);
             }
             bankTrips++;
             await s.bot.closeInterface();
-            await waitTicksFn(s, 1);
         };
-        console.log(`START jewelry crafter ${botName} action=${ACTION} tier=${TIER}`);
+        console.log(`START jewelry crafter ${botName} action=${ACTION} tier=${TIER} shape=${SHAPE}`);
+        if (ACTION === 'enchant') {
+            const enchantTarget = SHAPE === 'amulet' ? `strung_${TIER}_amulet` : `${TIER}_ring`;
+            const enchantRecipe = itemMagicRecipe(`enchant:${enchantTarget}`);
+            const maxCasts = Number(env.MAX_MAKE ?? 1000);
+            const r = await runItemMagicBanked(s, enchantRecipe, {
+                count: maxCasts,
+                cap: Math.max(1, CAP - used()),
+                members: env.MEMBERS !== '0',
+                stop: over,
+            });
+            crafted = r.casts;
+            const perK = ((crafted * 1000) / Math.max(1, used())).toFixed(2);
+            const summary = `ticks=${used()} crafted=${crafted} action=${ACTION} tier=${TIER} shape=${SHAPE} product=${r.product} craftPer1kTicks=${perK}`;
+            if (!externalSession) await finishFn([s], r.ok, summary);
+            return { ok: r.ok, crafted, ticks: used(), summary, failure: r.ok ? undefined : `legacy-jewelry enchant ${r.stop}` };
+        }
         let walkFails = 0;
         while (!over()) {
             if (ACTION === 'cut') {
@@ -1248,7 +1521,7 @@ export async function runLegacyCraftJewelryCli(
                 if (!chisel || uncut.length === 0) {
                     await bank();
                     if (inv().filter(i => uncutRe.test(i.name)).length === 0) {
-                        await waitTicksFn(s, 5);
+                        await waitTicksFn(s, 2);
                         continue;
                     }
                 }
@@ -1267,7 +1540,7 @@ export async function runLegacyCraftJewelryCli(
                 if (!gold || !gem) {
                     await bank();
                     if (!findItem(/gold bar/i) || !findItem(cutRe)) {
-                        await waitTicksFn(s, 5);
+                        await waitTicksFn(s, 2);
                         continue;
                     }
                 }
@@ -1276,7 +1549,7 @@ export async function runLegacyCraftJewelryCli(
                     const arrived = await walk(FURNACE_SPOT.x, FURNACE_SPOT.z, 2);
                     if (!arrived) {
                         if (++walkFails >= 5) break;
-                        await waitTicksFn(s, 2);
+                        await waitTicksFn(s, 1);
                     } else {
                         walkFails = 0;
                     }
@@ -1284,10 +1557,10 @@ export async function runLegacyCraftJewelryCli(
                 }
                 walkFails = 0;
                 const before = countRe(/ring|amulet/i);
-                await s.bot.craftJewelry({ product: 'ring', gem: TIER });
+                await s.bot.craftJewelry({ product: SHAPE, gem: TIER });
                 const made = countRe(/ring|amulet/i) - before;
                 if (made > 0) crafted += made;
-                else await waitTicksFn(s, 2);
+                else await waitTicksFn(s, 1);
             }
         }
         const perK = ((crafted * 1000) / Math.max(1, used())).toFixed(2);

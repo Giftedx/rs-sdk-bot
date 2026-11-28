@@ -1043,7 +1043,7 @@ export async function runSmeltBatch(
                     if (!option) throw Error('smelt unexpected dialog');
                     const reply = await s.sdk.sendClickDialog(option.index);
                     if (!reply.success) throw Error('smelt dialog click refused: ' + JSON.stringify(reply));
-                    await waitTicks(s, 1);
+                    if (s.sdk.getDialog()?.isOpen) await waitUntil(s, () => ended || died || !s.sdk.getDialog()?.isOpen, { timeoutTicks: 2 });
                     continue;
                 }
                 localAdmission();
@@ -1087,7 +1087,7 @@ export async function runSmeltBatch(
                     { timeoutTicks: cannon ? 3 : 2 },
                 );
                 if (bonus) {
-                    await waitTicks(s, 2);
+                    if (!wearReceipt()) await waitUntil(s, () => ended || died || wearReceipt(), { timeoutTicks: 2 });
                     bonusGuard();
                 }
                 const effect = smeltEffect(r, before, inv(), beforeXp, xp());
@@ -1420,17 +1420,20 @@ export async function runBronze(
     };
     const open = async () => {
         if (!(await s.bot.openBank()).success) throw new Error('bronze bank open failed');
-        await waitTicks(s, 2);
+        if (!s.sdk.getState()?.bank?.isOpen) await waitUntil(s, () => over() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 5 });
     };
     const deposit = async (ids: number[]) => {
-        for (const id of new Set(ids)) {
+        const unique = [...new Set(ids)];
+        for (const id of unique) {
             const item = inv().find(i => i.id === id);
             if (item) {
                 const r = await s.bot.depositItem(item, -1);
                 if (!r.success) throw new Error(`bronze deposit failed id=${id}`);
             }
         }
-        await waitTicks(s, 1);
+        if (unique.some(id => cnt(inv(), id) > 0)) {
+            await waitUntil(s, () => over() || unique.every(id => cnt(inv(), id) === 0), { timeoutTicks: 3 });
+        }
     };
     let initialCopper = 0;
     let initialTin = 0;
@@ -1533,6 +1536,29 @@ export const HAMMER = 2347;
 export const SMITHING_INTERFACE = 994;
 export const TOLL_GUARD_EAST = 926;
 
+// Pinned content/pack/obj.pack IDs for PvP rune gear & arrowtips (verified via smithRecipe).
+export const RUNE_PVP_SMITH_PRODUCTS = {
+    rune_arrowtips: 44,
+    rune_scimitar: 1333,
+    rune_full_helm: 1163,
+    rune_chainbody: 1113,
+    rune_kiteshield: 1201,
+    rune_platelegs: 1079,
+} as const;
+
+// Choose Make 10 (op 3), Make 5 (op 2), or Make 1 (op 1) from smithing.rs2 inv_button1/2/3 to avoid
+// re-opening the anvil interface on every single item in large batches.
+export function smithBatchClickOption(
+    remaining: number,
+    packCanMake: number,
+    allowMulti = true,
+): { option: 1 | 2 | 3; count: number } {
+    const cap = Math.max(0, Math.min(remaining, packCanMake));
+    if (allowMulti && cap >= 10) return { option: 3, count: 10 };
+    if (allowMulti && cap >= 5) return { option: 2, count: 5 };
+    return { option: 1, count: Math.min(1, cap) };
+}
+
 export function planSmithLoad(r: SmithRecipe, bank: Stock, freeSlots: number, maximum: number, reserve: number) {
     return productionBatch([{ id: r.bar, available: count(bank, r.bar), reserved: reserve, units: r.bars, stackable: false }], freeSlots, maximum, 'best-effort');
 }
@@ -1542,6 +1568,17 @@ export function smithEffect(r: SmithRecipe, before: Stock, after: Stock, xpBefor
     const made = count(after, r.product) - count(before, r.product);
     if (debit === 0 && made === 0 && xpAfter === xpBefore) return 0;
     if (debit === r.bars && made === r.amount && xpAfter > xpBefore) return 1;
+    throw Error('smith bar/product/XP mismatch');
+}
+
+export function smithMultiEffect(r: SmithRecipe, before: Stock, after: Stock, xpBefore: number, xpAfter: number) {
+    const debit = count(before, r.bar) - count(after, r.bar);
+    const made = count(after, r.product) - count(before, r.product);
+    if (debit === 0 && made === 0 && xpAfter === xpBefore) return 0;
+    if (debit > 0 && debit % r.bars === 0) {
+        const units = debit / r.bars;
+        if (made === units * r.amount && xpAfter > xpBefore) return units;
+    }
     throw Error('smith bar/product/XP mismatch');
 }
 
@@ -1816,11 +1853,41 @@ export async function runSmithBatch(
                 }
                 const before = inv().map(i => ({ id: i.id, count: i.count }));
                 const beforeXp = xp();
-                const sent = await s.sdk.sendClickComponentWithOption(r.component, 1, r.slot);
-                await waitUntil(s, () => ended || died || held(r.bar) < count(before, r.bar), { timeoutTicks: 8 });
-                await waitUntil(s, () => ended || died || (held(r.product) > count(before, r.product) && xp() > beforeXp), { timeoutTicks: 3 });
-                if (smithEffect(r, before, inv(), beforeXp, xp())) {
-                    made++;
+                const click = smithBatchClickOption(
+                    o.maximum - made,
+                    Math.floor(held(r.bar) / r.bars),
+                    !nativeQuestAdmission,
+                );
+                const sent = await s.sdk.sendClickComponentWithOption(r.component, click.option, r.slot);
+                let stepBefore = before;
+                let stepXp = beforeXp;
+                let batchMade = 0;
+                const wantSteps = Math.max(1, click.count);
+                for (let step = 0; step < wantSteps && made + batchMade < o.maximum && (step === 0 || !over()); step++) {
+                    await waitUntil(
+                        s,
+                        () => ended || died || held(r.bar) < count(stepBefore, r.bar) || !!s.sdk.getDialog()?.isOpen,
+                        { timeoutTicks: 8 },
+                    );
+                    if (held(r.bar) < count(stepBefore, r.bar)) {
+                        await waitUntil(
+                            s,
+                            () => ended || died || (held(r.product) > count(stepBefore, r.product) && xp() > stepXp),
+                            { timeoutTicks: 3 },
+                        );
+                    }
+                    const delta = smithMultiEffect(r, stepBefore, inv(), stepXp, xp());
+                    if (delta > 0) {
+                        batchMade += delta;
+                        stepBefore = inv().map(i => ({ id: i.id, count: i.count }));
+                        stepXp = xp();
+                        if (batchMade >= wantSteps) break;
+                    } else {
+                        break;
+                    }
+                }
+                if (batchMade > 0) {
+                    made += batchMade;
                     misses = 0;
                     nativeQuestAdmission = false;
                 } else if (nativeQuestAdmission) {

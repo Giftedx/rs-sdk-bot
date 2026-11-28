@@ -55,7 +55,70 @@ export const COSMIC_ALTAR: RuneAltar = {
 };
 
 export const COSMIC_EXIT_APPROACH: Tile = tile(2142, 4815);
-export const ALL_ALTARS: readonly RuneAltar[] = [...RUNE_ALTARS, COSMIC_ALTAR];
+
+// Pinned members Law altar (runecraft_law in runecraft.dbrow; loc.pack 2459=lawtemple_ruined, 2472=lawtemple_exit_portal).
+export const LAW_ALTAR: RuneAltar = {
+    name: 'law',
+    level: 54,
+    xp: 9.5,
+    multiplier: 100,
+    rune: 563,
+    talisman: 1458,
+    ruins: tile(2858, 3381),
+    inside: tile(2464, 4819),
+    outside: tile(2858, 3378),
+    portal: 2472,
+};
+
+// Pinned members Nature altar (runecraft_nature in runecraft.dbrow; loc.pack 2460=naturetemple_ruined, 2473=naturetemple_exit_portal).
+export const NATURE_ALTAR: RuneAltar = {
+    name: 'nature',
+    level: 44,
+    xp: 9,
+    multiplier: 91,
+    rune: 561,
+    talisman: 1462,
+    ruins: tile(2869, 3019),
+    inside: tile(2400, 4835),
+    outside: tile(2865, 3022),
+    portal: 2473,
+};
+
+// Solo bank-craft altars (Nature uses the dedicated Shilo Village runner in shilo.ts).
+// Order matches loc.pack ruined temple IDs 2452..2459 (air..body, cosmic=2458, law=2459).
+export const ALL_ALTARS: readonly RuneAltar[] = [...RUNE_ALTARS, COSMIC_ALTAR, LAW_ALTAR];
+export const PVP_RUNE_ALTARS: readonly RuneAltar[] = [
+    ...RUNE_ALTARS.filter(a => ['air', 'water', 'earth', 'fire'].includes(a.name)),
+    COSMIC_ALTAR,
+    NATURE_ALTAR,
+    LAW_ALTAR,
+];
+
+const ALTAR_NEAREST_BANK: Readonly<Record<string, Tile>> = {
+    air: BANK,
+    mind: tile(3094, 3491),
+    water: DRAYNOR_BANK,
+    earth: tile(3254, 3420),
+    fire: tile(3269, 3167),
+    body: tile(3094, 3491),
+    cosmic: ZANARIS_BANK,
+    nature: tile(2852, 2955),
+    law: DRAYNOR_BANK,
+};
+
+export function nearestBankForAltar(altarName: string): Tile {
+    return ALTAR_NEAREST_BANK[altarName] ?? BANK;
+}
+
+const ENTRANA_CONTRABAND_RE = /\b(sword|scimitar|dagger|mace|axe|pickaxe|bow|arrow|bolt|dart|knife|spear|halberd|claw|staff|wand|helm|hat|hood|body|plate|chain|legs|skirt|shield|sq|kiteshield|gauntlets|gloves|boots|vamb|chaps|coif|cowl|armour|armor|battleaxe|warhammer|flail|crossbow|javelin|thrownaxe)\b/i;
+
+// Entrana monks reject any weapon or armour in inventory or equipment before boarding the boat to the Law altar.
+export function entranaContraband(
+    inventory: readonly { id: number; name: string }[],
+    equipment: readonly { id: number; name: string }[],
+): { id: number; name: string }[] {
+    return [...inventory, ...equipment].filter(i => i.id !== 1458 && i.id !== 1436 && i.id !== 563 && ENTRANA_CONTRABAND_RE.test(i.name));
+}
 
 export function insideAirAltar(p: { worldX: number; worldZ: number; level: number } | null | undefined): boolean {
     return !!p && p.level === 0 && p.worldX >= 2830 && p.worldX <= 2855 && p.worldZ >= 4820 && p.worldZ <= 4845;
@@ -95,8 +158,9 @@ export function chooseRuneAltar(level: number, owned: ReadonlySet<number>, force
 }
 
 type RuinTargetEntry = { at: Tile; q: InteractionTarget };
+const RUIN_LOC_ALTARS: readonly RuneAltar[] = [...ALL_ALTARS, NATURE_ALTAR];
 const RUIN_TARGETS_BY_NAME = new Map<string, RuinTargetEntry>(
-    ALL_ALTARS.map((a, idx) => {
+    RUIN_LOC_ALTARS.map((a, idx) => {
         const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
         return [
             a.name,
@@ -122,7 +186,7 @@ export function ruinTarget(a: RuneAltar): { at: Tile; q: InteractionTarget } {
     const cached = RUIN_TARGETS_BY_NAME.get(a.name);
     if (cached) return { at: { ...cached.at }, q: { ...cached.q } };
     const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
-    const id = 2452 + ALL_ALTARS.indexOf(a);
+    const id = 2452 + RUIN_LOC_ALTARS.indexOf(a);
     return {
         at,
         q: {
