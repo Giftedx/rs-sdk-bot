@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795856858415-2",
  "account": "PickpockDick",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Chisel",
  "requested": 1,
  "claim": "afeaed70-b7eb-4712-9f00-e1c10961af5d",
- "count": 0,
- "ok": false,
- "at": 1795857221297,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795857400310,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795857383133
+ },
+ "logout": {
+  "attemptId": "1795857221650-0000005460-0000000001",
+  "at": 1795857400302,
+  "sha256": "43bdb561cb53c6b09f70c2ffba0072cefd9d4f4c6d96c91f016df50adcdc0cc5"
+ },
+ "screen": true
 }

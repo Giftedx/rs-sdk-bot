@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857304373,
+ "at": 1795857404872,
  "jobs": [
   {
    "account": "Balls",
@@ -206,49 +206,6 @@
    "resources": [
     "chickens"
    ]
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "imp"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "helper",
-   "resources": [
-    "ardougne-imps"
-   ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
   }
  ],
  "army": [
@@ -271,6 +228,7 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
