@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795837404818,
+ "at": 1795837441832,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "218",
+    "MAX_ITEMS": "204",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "218"
+    "BATCH_UNITS": "204"
    },
    "enabled": true,
    "repeat": false,
@@ -345,7 +345,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1549"
+    "BATCH_UNITS": "1569"
    },
    "enabled": true,
    "repeat": false,
