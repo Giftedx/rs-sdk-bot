@@ -1,0 +1,72 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795869688241-1",
+ "account": "hocuspokeus",
+ "partner": "shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 97,
+ "claim": "81f3d1e2-62c8-4fad-9c57-bf4900a258fa",
+ "count": 97,
+ "ok": true,
+ "at": 1795869918838,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Ring of dueling(8)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795869895269
+   }
+  },
+  {
+   "item": "Shortbow",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795869895705
+   }
+  },
+  {
+   "item": "Iron arrow",
+   "requested": 12,
+   "count": 12,
+   "inventory": {
+    "before": 12,
+    "after": 0
+   },
+   "bank": {
+    "count": 12,
+    "at": 1795869896489
+   }
+  }
+ ],
+ "inventory": {
+  "before": 97,
+  "after": 0
+ },
+ "bank": {
+  "count": 97,
+  "at": 1795869894885
+ },
+ "logout": {
+  "attemptId": "1795869890135-0000023812-0000000001",
+  "at": 1795869918828,
+  "sha256": "7bb8eeafe28f3406a8f774ac5eb4b57c1edf3226e83d733f1b4ed104f054dc05"
+ },
+ "screen": true
+}

@@ -1,0 +1,32 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795869688241-1",
+ "account": "shaftsinker",
+ "partner": "hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 97,
+ "claim": "8f20cbe5-f9f1-4ffa-8ea1-e6bc05a14688",
+ "count": 97,
+ "ok": true,
+ "at": 1795869922101,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Ring of dueling(8)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795869920091
+   }
+  },
+  {
+   "item": "Sho
