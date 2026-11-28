@@ -16,6 +16,7 @@ import {
     statuses,
 } from './monitors';
 import type { FinishDetail, SettlementOptions } from './rules';
+import { currentHostedScope } from '../host-scope';
 
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
 const RECORD_FLUSH_MS = 3000;
@@ -23,6 +24,9 @@ const RECORD_FLUSH_MS = 3000;
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail, opts: Pick<SettlementOptions, 'logout'> = {}): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
     if (hook) { const final = await settle(sessions, ok, detail, opts); hook(final, detail); return new Promise<never>(() => {}); }
+    // A helper module's finish() inside a bot host ends the hosted bot that runs it (host-scope.ts).
+    const hosted = currentHostedScope();
+    if (hosted) return hosted.finish(sessions, ok, detail);
     // Inside a bot host other bots share this process: log this one out and stop here, never exit the host.
     if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail, opts); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
     const final = await settle(sessions, ok, detail, {

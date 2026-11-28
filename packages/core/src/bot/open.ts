@@ -35,6 +35,7 @@ import {
     type OpenBotOptions,
 } from './rules';
 import { finish } from './settle';
+import { currentHostedScope } from '../host-scope';
 
 const NO_GUARD_SCRIPT_RE = /quest|microbot/i;
 
@@ -89,6 +90,9 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
     const hook = openHooks.get(name.toLowerCase());
     if (hook) { openHooks.delete(name.toLowerCase()); try { return await hook(name, opts); } finally { openHooks.set(name.toLowerCase(), hook); } }
+    // A helper module's openBot() inside a bot host goes through its hosted bot (host-scope.ts), which tracks and
+    // logs out the session. The host's own call passes a log, so it reaches the login below.
+    if (opts.log === undefined) { const hosted = currentHostedScope(); if (hosted) return hosted.openBot(name, opts); }
     // A replay (replay.ts) serves its recorded accounts through hooks and never logs in for real.
     if (process.env.REPLAY_ONLY === '1') throw new Error(`replay has no record for ${name}; it never logs in`);
     const [
