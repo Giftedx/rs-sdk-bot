@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795835408211,
+ "at": 1795835493882,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,46 @@
    "role": "pvp"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "315",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "315"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -205,26 +245,22 @@
    ]
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
-   "account": "Pocketrocket",
+   "account": "Pocketpython",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -282,77 +318,37 @@
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "sweep",
-    "scorpion"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:scorpion",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:scorpion",
-   "role": "helper"
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "elena"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:elena",
+   "goal": "campaign:haggis:item:2351",
    "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "240",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "240"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "Fingersmith",
@@ -403,7 +399,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
   "mineyourbiz",
