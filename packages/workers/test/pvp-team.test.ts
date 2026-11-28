@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
 import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
 import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
@@ -205,6 +205,7 @@ test('extra:team-{24,25}v49-gang-bait-3plus1-x1 bench cases wire 49 skulled Prot
         expect(args).toContain('SPAR_B_OPTS={"protectItem":true}');
         expect(args).toContain('NEVER_SKULL=1');
         expect(args).toContain('SPAR_PICKUP=1');
+        expect(args).toContain('SPAR_PICKUP_RADIUS=10');
         expect(args).toContain('SQUAD_DAGGER=1');
     }
 });
@@ -327,6 +328,7 @@ test('buildTeamSideOptions applies gang-bait-3plus1 options above gang-hunter pr
     });
     expect(base.eatAt).toBe(62);
     expect(base.freeze).toBe('flee');
+    expect(base.chase).toBe(true);
     expect(base.comboFood).toBe(true);
     expect(base.zeroDrainFlick).toBe(true);
     expect(base.protectItem).toBe(true);
@@ -424,4 +426,28 @@ test('team() with SQUAD_DAGGER=1 and NEVER_SKULL=0 does not spin-loop when the s
     } finally {
         clearInterval(timer);
     }
+});
+
+test('shouldStopOnDying stays false on Side A when pickup is active so kill messages trigger looting', () => {
+    expect(shouldStopOnDying(true, 10, 'a', true)).toBe(false);
+    expect(shouldStopOnDying(true, 10, 'a', false)).toBe(true);
+    expect(shouldStopOnDying(true, 10, 'b', true)).toBe(true);
+    expect(shouldStopOnDying(true, 1, 'a', false)).toBe(false);
+    expect(shouldStopOnDying(false, 10, 'a', false)).toBe(false);
+});
+
+test('cureAfterEscape drinks carried antipoison after escaping to prevent post-escape poison deaths', async () => {
+    const used: [number, number][] = [];
+    const s = {
+        sdk: {
+            getInventory: () => [
+                { id: 385, slot: 0, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+                { id: 2448, slot: 2, name: 'Super antipoison(4)', optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] },
+            ],
+            sendUseItem: async (slot: number, opIndex: number) => { used.push([slot, opIndex]); },
+        },
+    };
+    expect(await cureAfterEscape(s as never)).toBe(true);
+    expect(used).toEqual([[2, 1]]);
+    expect(await cureAfterEscape({ sdk: { getInventory: () => [] } } as never)).toBe(false);
 });

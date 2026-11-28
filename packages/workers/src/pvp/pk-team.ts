@@ -22,8 +22,23 @@ export const BAIT_3PLUS1_OPTIONS: Partial<FightOptions> = {
     zeroDrainFlick: true,
     freeze: 'flee',
     eatAt: 62,
+    chase: true,
     protectItem: true,
 };
+
+/** Whether a team member should exit fightPlayer early on a 0-HP dying target (disabled when Side A must catch the kill message for looting). */
+export const shouldStopOnDying = (hasTeamFocus: boolean, liveCount: number, sideKey: 'a' | 'b', hasPickup: boolean): boolean =>
+    hasTeamFocus && liveCount > 1 && !(sideKey === 'a' && hasPickup);
+
+/** Drinks an antipoison dose if carried after escaping to a safe zone so lingering poison cannot kill an escaped account. */
+export async function cureAfterEscape(s: Session): Promise<boolean> {
+    const inv = s.sdk.getInventory?.() ?? [];
+    const anti = inv.find(i => /antipoison/i.test(i.name) && i.optionsWithIndex.some(op => /^drink$/i.test(op.text)));
+    const op = anti?.optionsWithIndex.find(o => /^drink$/i.test(o.text));
+    if (!anti || !op || typeof s.sdk.sendUseItem !== 'function') return false;
+    await s.sdk.sendUseItem(anti.slot, op.opIndex);
+    return true;
+}
 
 /** Resolves a SPAR_KITS entry into fight switches and options, including the zero-risk gang-bait-3plus1 profile. */
 export function resolveTeamKit(kit: string | undefined): { switches: Kit; options: Partial<FightOptions> } {
@@ -307,7 +322,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                     smiteBurst: () => sideDagger.smiteReady(pick.f.name),
                     holdSpecForDrain: () => sideDagger.holdSpecForDrain(pick.f.name, s.tick()),
                 } : {}),
-                stopOnDying: teamFocus !== undefined && liveAll.length > 1,
+                stopOnDying: shouldStopOnDying(teamFocus !== undefined, liveAll.length, key, pickup !== undefined),
                 allies,
                 cap: Math.max(1, cap - (s.tick() - start)),
                 stop: () => ended() || isOut(pick.f) || refusedAt > began || (!!sideDagger?.held(pick.f.name, s.tick()) && hasUnheldAlternative(pick.f)),
@@ -329,15 +344,19 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             if (killed && pickup && key === 'a') {
                 const got = await pickUp(s, pickup, {
                     radius: pickupRadius,
-                    maxTicks: sideDagger ? 14 : 30,
+                    maxTicks: sideDagger ? 18 : 30,
                     wait: 6,
-                    stop: () => over || halt() || (s.sdk.getState()?.player?.hp ?? 99) < 55,
+                    stop: () => over || halt() || (s.sdk.getState()?.player?.hp ?? 99) < 50,
                 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
             }
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
-            if (r.outcome === 'died' || r.outcome === 'escaped' || r.outcome === 'session ended') return;
+            if (r.outcome === 'escaped') {
+                await cureAfterEscape(s);
+                return;
+            }
+            if (r.outcome === 'died' || r.outcome === 'session ended') return;
             // Zero-tick-waste switch: only wait a tick when fightPlayer consumed 0 ticks.
             if (s.tick() === began && !await nextTick(s)) return;
         }
@@ -394,7 +413,16 @@ export async function runPkTeamCli(
     const first = await openBot(bots[0]!, { onStop });
     const groups: Session[][] = [];
     try {
-        for (let at = 0; at < bots.length; at += group) groups.push(await Promise.all(bots.slice(at, at + group).map((name, i) => (at === 0 && i === 0 ? first : openBot(name, { onStop })))));
+        // Open large teams (e.g. 24v49 = 73 bots) in bounded batches of 8 to avoid simultaneous login memory spikes.
+        for (let at = 0; at < bots.length; at += group) {
+            const slice = bots.slice(at, at + group);
+            const opened: Session[] = [];
+            for (let j = 0; j < slice.length; j += 8) {
+                const batch = await Promise.all(slice.slice(j, j + 8).map((name, k) => (at === 0 && j + k === 0 ? first : openBot(name, { onStop }))));
+                opened.push(...batch);
+            }
+            groups.push(opened);
+        }
     } finally { tickWaits.active--; }
     for (const s of groups.flat()) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
     const pickOf = (v?: string): TeamPick => (v === 'near' || v === 'pair' ? v : 'low');
