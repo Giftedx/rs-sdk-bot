@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832168971,
+ "at": 1795832255090,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -191,19 +191,19 @@
     "smithing",
     "smelt",
     "1500",
-    "iron"
+    "bronze"
    ],
    "env": {
-    "BAR_TYPE": "iron",
+    "BAR_TYPE": "bronze",
     "MAX_MAKE": "28",
     "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "2",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "9",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
+   "goal": "campaign:haggis:item:2349",
    "role": "auto"
   },
   {
