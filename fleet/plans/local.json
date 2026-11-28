@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869921963,
+ "at": 1795869936296,
  "jobs": [
   {
    "account": "Balls",
@@ -115,6 +115,40 @@
    "role": "auto"
   },
   {
+   "account": "shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=72 PRODUCT_TARGET=72 BANK_PACK=1 -- giant",
+    "scripts/aio-skiller.ts MAX_MAKE=72 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=72 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "auto"
+  },
+  {
+   "account": "hocuspokeus",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1344",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
+  },
+  {
    "account": "trousersnake",
    "script": "scripts/chain.ts",
    "args": [
@@ -149,7 +183,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",

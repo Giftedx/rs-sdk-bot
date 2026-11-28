@@ -29,4 +29,44 @@
    }
   },
   {
-   "item": "Sho
+   "item": "Shortbow",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795869920877
+   }
+  },
+  {
+   "item": "Iron arrow",
+   "requested": 12,
+   "count": 12,
+   "inventory": {
+    "before": 0,
+    "after": 12
+   },
+   "bank": {
+    "count": 12,
+    "at": 1795869921281
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 97
+ },
+ "bank": {
+  "count": 97,
+  "at": 1795869919684
+ },
+ "logout": {
+  "attemptId": "1795869908824-0000025044-0000000001",
+  "at": 1795869922092,
+  "sha256": "f197620c10a8b2df6df49be5a22fe9836771ed6687fbbb350cce9d0302251bfb"
+ },
+ "screen": true
+}
