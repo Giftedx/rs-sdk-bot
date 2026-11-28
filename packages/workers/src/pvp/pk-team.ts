@@ -42,6 +42,13 @@ export function driftedFromHome(
     return Math.max(Math.abs(pos.worldX - home.x), Math.abs(pos.worldZ - home.z)) > maxLeash;
 }
 
+/** Whether an openBot onStop reason should halt a team run (ignores 900-tick idle notices when STALL_TICKS is raised). */
+export function shouldHaltTeamOnStop(reason: string, stallTicks: number): boolean {
+    if (reason === 'died') return false;
+    if ((stallTicks === 0 || stallTicks > 900) && /^no progress: \d+ ticks without /.test(reason)) return false;
+    return true;
+}
+
 /** Drinks an antipoison dose if carried after escaping to a safe zone so lingering poison cannot kill an escaped account. */
 export async function cureAfterEscape(s: Session): Promise<boolean> {
     const inv = s.sdk.getInventory?.() ?? [];
@@ -451,7 +458,8 @@ export async function runPkTeamCli(
         });
     };
     let halted: string | undefined;
-    const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
+    const stallLimit = Number(env.STALL_TICKS ?? 900);
+    const onStop = async (_s: unknown, reason: string) => { if (shouldHaltTeamOnStop(reason, stallLimit)) halted ??= reason; };
     const { tickWaits } = await import('../../../core/src/tick-stream');
     tickWaits.active++;
     const first = await openBot(bots[0]!, { onStop });

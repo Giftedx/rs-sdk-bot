@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldHaltTeamOnStop, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
 import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
 import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
@@ -460,4 +460,14 @@ test('driftedFromHome flags crossing from single-way anchor into multi-way or ex
     expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, home, 5, multiStub)).toBe(true);
     expect(driftedFromHome({ worldX: 3135, worldZ: 3596 }, home, 5, multiStub)).toBe(true);
     expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, { x: 3150, z: 3560, multi: true }, 40, multiStub)).toBe(false);
+});
+
+test('shouldHaltTeamOnStop ignores static 900-tick idle notice when STALL_TICKS is raised while still halting real faults', () => {
+    const idle900 = 'no progress: 900 ticks without xp, items, a new dialog or a journey';
+    expect(shouldHaltTeamOnStop('died', 900)).toBe(false);
+    expect(shouldHaltTeamOnStop(idle900, 900)).toBe(true);
+    expect(shouldHaltTeamOnStop(idle900, 3000)).toBe(false);
+    expect(shouldHaltTeamOnStop(idle900, 0)).toBe(false);
+    expect(shouldHaltTeamOnStop('stop file', 3000)).toBe(true);
+    expect(shouldHaltTeamOnStop('tick stream stalled', 3000)).toBe(true);
 });
