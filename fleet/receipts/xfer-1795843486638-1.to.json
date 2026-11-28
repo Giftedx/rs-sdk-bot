@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795843486638-1",
+ "account": "BowBeforeMe",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 2,
+ "claim": "a4556490-5c48-45bc-a83a-829e5492ea9f",
+ "count": 2,
+ "ok": true,
+ "at": 1795843733706,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795843732973
+ },
+ "logout": {
+  "attemptId": "1795843720487-0000013132-0000000001",
+  "at": 1795843733698,
+  "sha256": "7442b8530d9068722a68f6c74e0b12b104f594ef5e6659080b765d921a867124"
+ },
+ "screen": true
+}

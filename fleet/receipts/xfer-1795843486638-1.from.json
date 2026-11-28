@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795843486638-1",
  "account": "Spitroaster",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Uncut sapphire",
  "requested": 2,
  "claim": "a417e641-1ff7-4e74-b9ff-8b8e7e5d2f7d",
- "count": 0,
- "ok": false,
- "at": 1795843686165,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795843732109,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795843697352
+ },
+ "logout": {
+  "attemptId": "1795843686173-0000019460-0000000001",
+  "at": 1795843732102,
+  "sha256": "ff437cf3059a0f42153ab638dc936053fa66d1d927264fce2cfe5c0c14edc5ea"
+ },
+ "screen": true
 }

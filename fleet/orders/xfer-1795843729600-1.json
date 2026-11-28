@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795843729600-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Nockitoff",
+  "to": "Pocketrocket",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "extra": [
+    {
+      "item": "Bronze bar",
+      "count": 4,
+      "itemId": 2349
+    }
+  ],
+  "start": 1795843729600,
+  "end": 1795844629600,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
