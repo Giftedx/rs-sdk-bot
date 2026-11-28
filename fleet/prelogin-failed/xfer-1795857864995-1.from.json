@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795857864995-1",
+ "role": "from",
+ "account": "Kiltlifter",
+ "partner": "Masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795858626108,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawn git ETIMEDOUT"
+}
