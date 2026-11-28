@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795835322787,
+ "at": 1795835408211,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -281,6 +281,22 @@
    ]
   },
   {
+   "account": "WellHung",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "scorpion"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:scorpion",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:scorpion",
+   "role": "helper"
+  },
+  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -373,37 +389,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "auto"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "army"
   }
  ],
  "army": [
@@ -418,6 +403,7 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
+  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
   "mineyourbiz",
