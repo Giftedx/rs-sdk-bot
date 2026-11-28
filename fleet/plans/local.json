@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795831241272,
+ "at": 1795831324083,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,41 +185,36 @@
    "role": "pvp"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:2351",
+   "role": "auto"
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
    "resources": [
-    "varrock-se-mine"
+    "draynor-willows"
    ]
   },
   {
