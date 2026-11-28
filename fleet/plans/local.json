@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870967139,
+ "at": 1795871038161,
  "jobs": [
   {
    "account": "Balls",
@@ -64,25 +64,6 @@
    ]
   },
   {
-   "account": "abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "flax"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "auto",
-   "resources": [
-    "seers-flax"
-   ]
-  },
-  {
    "account": "meatntwoveg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -124,6 +105,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:43",
    "role": "army"
+  },
+  {
+   "account": "abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "flax"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "seers-flax"
+   ]
   }
  ],
  "army": [
