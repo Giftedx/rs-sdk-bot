@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869575312,
+ "at": 1795869598980,
  "jobs": [
   {
    "account": "Balls",
@@ -104,39 +104,19 @@
    "role": "auto"
   },
   {
-   "account": "rearentry",
-   "script": "scripts/aio-fighter.ts",
+   "account": "coincock",
+   "script": "scripts/chain.ts",
    "args": [
-    "chicken"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=50 -- thieving knights",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:coincock BATCH_UNITS=250 -- chicken"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "766"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "sporrandip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "glass"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "goal": "goal:pk_army:coincock",
+   "role": "auto"
   },
   {
    "account": "sporranbulge",
@@ -175,51 +155,41 @@
    "role": "auto"
   },
   {
-   "account": "knightstick",
-   "script": "scripts/aio-market.ts",
+   "account": "pickpockdick",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "crafting",
+    "inventory",
+    "decant:super_antipoison"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "6",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "6"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "mission:mission:pk-squad:item:2448",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "mission:mission:pk-squad:item:2448",
    "role": "army"
   },
   {
-   "account": "coincock",
-   "script": "scripts/aio-skiller.ts",
+   "account": "hocuspokeus",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
-    "MAX_MAKE": "2",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "2",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "auto"
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
   }
  ],
  "army": [
@@ -241,7 +211,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
@@ -249,11 +218,11 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
   "sausagefest",
+  "sporrandip",
   "woodpecker",
   "yewfirst"
  ],
