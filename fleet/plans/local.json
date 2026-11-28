@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850571666,
+ "at": 1795850643674,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -251,21 +251,6 @@
    "role": "army"
   },
   {
-   "account": "Ballbag",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "helper"
-  },
-  {
    "account": "YewGotWood",
    "script": "scripts/chain.ts",
    "args": [
@@ -279,6 +264,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "auto"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "helper"
   },
   {
    "account": "CoinCock",
@@ -466,6 +466,26 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1513",
    "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
