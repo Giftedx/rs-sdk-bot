@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795845571490-1",
+ "account": "BowBeforeMe",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic logs",
+ "requested": 8,
+ "claim": "e5b71dcc-9080-422f-bd46-c8ddfe959909",
+ "count": 0,
+ "ok": false,
+ "at": 1795845875203,
+ "detail": "trade claimed"
+}
