@@ -27,6 +27,8 @@ export const protectByStyle = (table: ReadonlyMap<number, readonly AttackStyle[]
 const OFFENCE_GRACE = 6;
 // Prayers that turn each other off (skill_prayer/configs, prayer_deactivate): Defence, Strength, Attack, protection.
 const EXCLUSIVE = [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]];
+export const areExclusivePrayers = (a: number, b: number): boolean =>
+    a !== b && EXCLUSIVE.some(group => group.includes(a) && group.includes(b));
 // The active prayers after one button, from the prayers that were active before it.
 export const afterToggle = (active: readonly number[], prayer: number): number[] => active.includes(prayer) ? active.filter(i => i !== prayer)
     : [...active.filter(i => !EXCLUSIVE.find(group => group.includes(prayer))?.includes(i)), prayer];
@@ -134,5 +136,8 @@ export function planPrayerTransition(
     for (const i of missing) target = afterToggle(target, i);
     const order = [...target].sort((x, y) => backFirst(x) - backFirst(y));
     const asFlick = active.length > 0 && active.length + order.length + (fighting ? 1 : 0) <= TICK_INPUTS && !regenOn(active);
-    return { missing, stale, order, asFlick };
+    // Turning on a prayer in an exclusive group already deactivates the conflicting prayer on the server
+    // (prayer.rs2:52 prayer_deactivate_conflicting), so skip redundant stale-off toggles on non-flick switches.
+    const neededStale = asFlick ? stale : stale.filter(s => !missing.some(m => areExclusivePrayers(s, m)));
+    return { missing, stale: neededStale, order, asFlick };
 }

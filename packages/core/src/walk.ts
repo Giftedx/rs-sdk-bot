@@ -13,7 +13,7 @@ export { FLOAT_BANK_TILES, FLOAT_WALK_TILES, fareFloatNeed, topUpFareFloat, unpa
 export type {
     PathDeps, PathLoc, PathOptions, PathPoint, PathResult, PathTile,
 } from './walk/path';
-export { expandPath, walkPath } from './walk/path';
+export { DEFAULT_RUN_THRESHOLD, expandPath, walkPath } from './walk/path';
 export { applyKnownDoorBlocks, sessionWalker } from './walk/session';
 export type { RouteHarm } from './walk/harm';
 export { eatBeforeWalk, foodToTake, routeDangerText, routeHarm, stageFood } from './walk/harm';

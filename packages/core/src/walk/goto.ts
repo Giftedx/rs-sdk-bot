@@ -163,11 +163,18 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         const unpaid = unpaidFaresNear(from, to, held, loadTravel());
         if (unpaid.length) {
             const fare = Math.max(...unpaid.map(t => t.coins)), rich: Account = { ...acct, coins: held + fare, counts: { ...acct.counts, coins: held + fare } };
-            const paid = routePlanMod ? await routePlanMod.planTripOffThread(from, to, rich, undefined, budgetMs)
-                : (() => { const d = world.route(from, to, rich, { deadline: performance.now() + budgetMs }); return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
-            if (fareDetour(r, paid)) {
-                const fares = paid!.legs.flatMap(l => l.kind === 'travel' && l.travel.coins > held ? [{ edge: l.travel.id, coins: l.travel.coins }] : []);
-                console.log(`WALK_DETOUR ${JSON.stringify({ from, to, cost: r.cost, paidCost: paid!.cost, extra: r.cost - paid!.cost, coins: held, bankCoins: stock?.coins ?? null, fares })}`);
+            const logDetour = (paid: TripPlan | null) => {
+                if (fareDetour(r!, paid)) {
+                    const fares = paid!.legs.flatMap(l => l.kind === 'travel' && l.travel.coins > held ? [{ edge: l.travel.id, coins: l.travel.coins }] : []);
+                    console.log(`WALK_DETOUR ${JSON.stringify({ from, to, cost: r!.cost, paidCost: paid!.cost, extra: r!.cost - paid!.cost, coins: held, bankCoins: stock?.coins ?? null, fares })}`);
+                }
+            };
+            if (routePlanMod) {
+                // Diagnostic only: never stall the bot before walkRoute starts while comparing against a paid route.
+                void routePlanMod.planTripOffThread(from, to, rich, undefined, budgetMs).then(logDetour, () => {});
+            } else {
+                const d = world.route(from, to, rich, { deadline: performance.now() + budgetMs });
+                logDetour(d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null);
             }
         }
     }

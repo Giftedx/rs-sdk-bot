@@ -26,7 +26,7 @@
 
 export type { AttackStyle, GuardSession, Hunter, PrayerGuardOptions, PrayerGuardStats, PrayerIntent } from './prayer-guard/types';
 export { attackTarget, npcDead, wildernessLevel } from './prayer-guard/threats';
-export { afterToggle, believedPrayers, intendToggle, PROTECT, protectByStyle } from './prayer-guard/choice';
+export { afterToggle, areExclusivePrayers, believedPrayers, intendToggle, PROTECT, protectByStyle } from './prayer-guard/choice';
 export { IDLE_TICKS, NEUTRAL } from './prayer-guard/interactions';
 export { startPrayerGuard } from './prayer-guard/guard';
 export { holdSessionPrayer } from './prayer-guard/hold';

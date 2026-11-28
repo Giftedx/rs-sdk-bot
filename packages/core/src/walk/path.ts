@@ -13,8 +13,10 @@ export interface PathDeps {
     ended?: Promise<unknown>;
     walk(x: number, z: number): unknown;
     interactLoc(loc: PathLoc, op: number): unknown;
-    // Clicks the run button on (controls:com_5). Sent once, before the first walk click.
+    // Clicks the run button on (controls:com_5). Sent when run is off and energy meets threshold.
     runOn?(): unknown;
+    // Live run mode and energy (0-100): skips redundant start clicks and re-enables run after depletion.
+    runState?(): { enabled: boolean; energy: number } | null;
     locs(): PathLoc[];
     messages?(): readonly { text: string; tick: number; observationId?: number }[];
     blockDoor?(level: number, loc: PathTile): boolean;
@@ -48,6 +50,7 @@ export interface PathOptions {
     idleMs?: number;        // monotonic deadline for a client that stops publishing game ticks
     look?: number;          // tiles ahead to click (default 20; the client routes inside its 104x104 scene)
     reclickAt?: number;     // click again when this many tiles of the last click remain (default 6: 3 ticks running)
+    runThreshold?: number;  // minimum run energy (0-100) to re-enable run after depletion (default DEFAULT_RUN_THRESHOLD)
     maxTicks?: number;      // tick budget (default: path tiles + 60)
     immediateHunterDetours?: boolean; // take a complete live-hunter detour immediately instead of waiting for a short one
     stop?: () => boolean;   // checked on every tick (death, abort)
@@ -59,6 +62,8 @@ export interface PathResult { ok: boolean; ticks: number; still: number; clicks:
 
 interface HunterSquare { x: number; z: number; r: number }
 
+export const DEFAULT_RUN_THRESHOLD = 20;
+const RUN_TOGGLE_COOLDOWN = 2;
 const DETOUR = 15, HOLD = 50, SHORT = 4;
 const d8 = (a: PathTile, b: PathTile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 const tileKey = (x: number, z: number) => (x + 131072) * 262144 + (z + 131072);
@@ -413,6 +418,8 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
         let still = 0;
         let ticks = 0;
         let ranOn = false;
+        let runClickedAt = -Infinity;
+        const runThreshold = Math.max(1, Math.min(100, opts.runThreshold ?? DEFAULT_RUN_THRESHOLD));
         let sentThisTick = false;
         let replanning = false;
         let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
@@ -447,6 +454,8 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 if (still === 0 && send(`hold ${from.x},${from.z}`, () => deps.walk(from.x, from.z))) target = -1;
                 return;
             }
+            // Skip redundant re-clicks to the exact tile the bot is already moving toward.
+            if (i === target && still === 0 && target >= 0) return;
             const t = tiles[i]!;
             const epoch = movementEpoch;
             res.clicks++; // Dispatch attempts, including an explicit client refusal.
@@ -576,11 +585,32 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                     }
                 }
 
-                // A door the bot asked to open: click past it on the tick it opens.
+                const openDoorNow = (ahead: { l: PathLoc; i: number }): boolean => {
+                    const shut = ahead.l;
+                    const op = openOp(shut)!.opIndex;
+                    const fare = deps.fare?.(level, shut) ?? undefined, held = fare ? deps.coins?.() ?? null : null;
+                    // Short of the fare, the guard only says so (border_gate.rs2 "I don't actually seem to have enough money").
+                    if (fare && held !== null && held < fare.coins && !fare.waived) { failedDoor(shut, `fare ${fare.coins} coins, the pack holds ${held}`, p); return true; }
+                    const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
+                    const entry: DoorTry = { loc: shut, sentAt: ticks, messages: baseline, acked: false, i: ahead.i, ...(fare ? { fare } : {}), talk: [] };
+                    if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
+                        door = entry;
+                        doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
+                        res.doors++; target = -1;
+                    }
+                    return true;
+                };
+
+                // A door the bot asked to open: click past it (or immediately open the next shut door) on the tick it opens.
                 if (door) {
                     const d = door;
                     const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
-                    if (!shutNow) { door = null; doorAttempts.delete(doorKey(d.loc)); log('door open'); clickAhead(look); return; }
+                    if (!shutNow) {
+                        door = null; doorAttempts.delete(doorKey(d.loc)); log('door open');
+                        const nextShut = shutDoorAt(idx, idx + look);
+                        if (nextShut && (nextShut.l.x !== d.loc.x || nextShut.l.z !== d.loc.z)) { openDoorNow(nextShut); return; }
+                        clickAhead(look); return;
+                    }
                     if (d.fare) {
                         const talk = deps.dialog?.();
                         if (talk?.isOpen) {
@@ -612,21 +642,8 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                         door = null;
                     } else return;
                 }
-                const ahead = shutDoorAt(idx, idx + look), shut = ahead?.l ?? null;
-                if (shut) {
-                    const op = openOp(shut)!.opIndex;
-                    const fare = deps.fare?.(level, shut) ?? undefined, held = fare ? deps.coins?.() ?? null : null;
-                    // Short of the fare, the guard only says so (border_gate.rs2 "I don't actually seem to have enough money").
-                    if (fare && held !== null && held < fare.coins && !fare.waived) return failedDoor(shut, `fare ${fare.coins} coins, the pack holds ${held}`, p);
-                    const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
-                    const entry: DoorTry = { loc: shut, sentAt: ticks, messages: baseline, acked: false, i: ahead!.i, ...(fare ? { fare } : {}), talk: [] };
-                    if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
-                        door = entry;
-                        doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
-                        res.doors++; target = -1;
-                    }
-                    return;
-                }
+                const ahead = shutDoorAt(idx, idx + look);
+                if (ahead) { openDoorNow(ahead); return; }
                 // No tile gained for 2 ticks: plan again from where the bot stands.
                 if (still >= 2) {
                     const span = still >= 3 ? Math.ceil(look / 2) : look;
@@ -663,7 +680,25 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 if (ticks > 0 && !moved) res.still++;
 
                 // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
-                if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
+                // With live runState: skip redundant clicks when already on, and re-enable after depletion once energy
+                // recovers to runThreshold (player_controls.rs2:38 disables run below 1% energy).
+                if (deps.runOn) {
+                    const rs = deps.runState?.();
+                    if (rs) {
+                        if (rs.enabled) {
+                            ranOn = true;
+                        } else if (!door && ticks - runClickedAt >= RUN_TOGGLE_COOLDOWN && rs.energy >= (ranOn ? runThreshold : 1)) {
+                            ranOn = true;
+                            runClickedAt = ticks;
+                            send('run on', () => deps.runOn!());
+                            sentThisTick = false;
+                        }
+                    } else if (!ranOn) {
+                        ranOn = true;
+                        send('run on', () => deps.runOn!());
+                        sentThisTick = false;
+                    }
+                }
 
                 if (rejectionReplan) {
                     rejectionReplan = false; rejectionReplanned = true;

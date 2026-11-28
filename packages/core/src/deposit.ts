@@ -1,14 +1,32 @@
 import type { Session } from './inprocess';
+import { BANK_BATCH_MAX } from './bank-trip';
 import { waitUntil } from './ticks';
+
+function countInventoryId(inventory: readonly { id: number; count: number }[] | undefined, id: number): number {
+    if (!Array.isArray(inventory)) return NaN;
+    let total = 0;
+    for (let i = 0; i < inventory.length; i++) {
+        const item = inventory[i]!;
+        if (item.id === id) total += item.count;
+    }
+    return total;
+}
+
+function countBankByName(items: readonly { name: string; count: number }[], nameLower: string): number {
+    let total = 0;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        if (item.name.toLowerCase() === nameLower) total += item.count;
+    }
+    return total;
+}
 
 // The caller owns the session and keeps other inventory actions out of this window.
 // Bank names join noted/unnoted forms; pack debits use the exact dispatched ID.
 export async function depositObserved(s: Session, item: { id: number; name: string }): Promise<number> {
-    const held = () => {
-        const inventory = s.sdk.getState()?.inventory;
-        return Array.isArray(inventory) ? inventory.filter(i => i.id === item.id).reduce((n, i) => n + i.count, 0) : NaN;
-    };
-    const stored = (items: { name: string; count: number }[]) => items.filter(i => i.name.toLowerCase() === item.name.toLowerCase()).reduce((n, i) => n + i.count, 0);
+    const nameLower = item.name.toLowerCase();
+    const held = () => countInventoryId(s.sdk.getState()?.inventory, item.id);
+    const stored = (items: { name: string; count: number }[]) => countBankByName(items, nameLower);
     if (!await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 10 }))
         throw Error(`no deposit progress: bank observation unavailable ${item.id}`);
     const before = s.bankObservation?.(), amount = held();
@@ -64,14 +82,107 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
 
 // Banks the whole pack except what `keep` names, one deposit per item id, with the bank already open. A pack left
 // full by an earlier job (quest leftovers, a farmer's feathers) otherwise blocks a production or shop job that
-// needs free slots. Returns the number of item ids deposited.
+// needs free slots. When `s.direct` is available and multiple distinct non-coin items are deposited, batches up to
+// BANK_BATCH_MAX (5) deposit-all actions in one game tick (bank_deposit.rs2 inv_button4; inventory slots never shift)
+// with paired pack-debit and bank-credit verification. Returns the number of item ids deposited.
 export async function depositPack(s: Session, keep: (item: { id: number; name: string }) => boolean = () => false): Promise<number> {
-    let n = 0;
-    for (const id of new Set(s.sdk.getInventory().filter(i => !keep(i)).map(i => i.id))) {
-        const item = s.sdk.getInventory().find(i => i.id === id);
-        if (!item) continue;
-        await depositObserved(s, item);
-        n++;
+    const inv = s.sdk.getInventory();
+    const distinct: { id: number; name: string; slot: number }[] = [];
+    const seen = new Set<number>();
+    for (let i = 0; i < inv.length; i++) {
+        const item = inv[i]!;
+        if (seen.has(item.id) || keep(item)) continue;
+        seen.add(item.id);
+        distinct.push(item);
     }
-    return n;
+    if (distinct.length === 0) return 0;
+    const direct = (s as { direct?: (a: { type: string; [k: string]: unknown }) => Promise<unknown> }).direct;
+    // Keep coins on depositObserved for coin-container tracing; batch multi-item non-coin packs via direct.
+    if (typeof direct !== 'function' || distinct.length < 2) {
+        let n = 0;
+        for (const entry of distinct) {
+            const item = s.sdk.getInventory().find(i => i.id === entry.id);
+            if (!item) continue;
+            await depositObserved(s, item);
+            n++;
+        }
+        return n;
+    }
+    let deposited = 0;
+    const coins = distinct.find(i => i.id === 995);
+    const others = distinct.filter(i => i.id !== 995);
+    if (coins) {
+        const item = s.sdk.getInventory().find(i => i.id === 995);
+        if (item) { await depositObserved(s, item); deposited++; }
+    }
+    for (let offset = 0; offset < others.length; offset += BANK_BATCH_MAX) {
+        if (!await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 10 }))
+            throw Error(`no deposit progress: bank observation unavailable ${others[offset]!.id}`);
+        const before = s.bankObservation?.();
+        const curInv = s.sdk.getState()?.inventory;
+        if (!before || !Array.isArray(curInv))
+            throw Error(`no deposit progress: inputs unknown ${others[offset]!.id}`);
+        // Group entries sharing a bank name (e.g. noted + unnoted of the same item) so each batch has unique bank names.
+        const chunk: { id: number; name: string; nameLower: string; slot: number; amount: number; bankBefore: number }[] = [];
+        const usedNames = new Set<string>();
+        const deferred: typeof others = [];
+        for (let k = offset; k < Math.min(offset + BANK_BATCH_MAX, others.length); k++) {
+            const entry = others[k]!;
+            const target = curInv.find(i => i.id === entry.id && i.name === entry.name);
+            const amount = countInventoryId(curInv, entry.id);
+            if (!target || !Number.isSafeInteger(amount) || amount <= 0) continue;
+            const nameLower = target.name.toLowerCase();
+            if (usedNames.has(nameLower)) { deferred.push(entry); continue; }
+            usedNames.add(nameLower);
+            const bankBefore = countBankByName(before.items, nameLower);
+            if (!Number.isSafeInteger(bankBefore) || bankBefore < 0)
+                throw Error(`no deposit progress: bank count invalid ${target.id}`);
+            chunk.push({ id: target.id, name: target.name, nameLower, slot: target.slot, amount, bankBefore });
+        }
+        if (chunk.length === 1) {
+            await depositObserved(s, chunk[0]!);
+            deposited++;
+        } else if (chunk.length > 1) {
+            const generation = before.generation;
+            // Send up to BANK_BATCH_MAX deposit-all packets in the same tick (server reads 5 USER_EVENT inputs/tick).
+            await Promise.all(chunk.map(c =>
+                direct({ type: 'bankDeposit', slot: c.slot, amount: -1, reason: 'SDK' }).catch(() => undefined),
+            ));
+            const allMatched = () => {
+                const after = s.bankObservation?.();
+                const nowInv = s.sdk.getState()?.inventory;
+                if (!after || after.generation <= generation || !Array.isArray(nowInv)) return false;
+                for (let j = 0; j < chunk.length; j++) {
+                    const c = chunk[j]!;
+                    if (countInventoryId(nowInv, c.id) !== 0 || countBankByName(after.items, c.nameLower) !== c.bankBefore + c.amount) return false;
+                }
+                return true;
+            };
+            if (!await waitUntil(s, allMatched, { timeoutTicks: 10 }) || !allMatched()) {
+                // Fall back to per-item observed deposit for any remaining items so partial failures remain explicit.
+                for (const c of chunk) {
+                    const remaining = s.sdk.getInventory().find(i => i.id === c.id);
+                    if (remaining) { await depositObserved(s, remaining); deposited++; }
+                    else deposited++;
+                }
+            } else {
+                const after = s.bankObservation!()!;
+                for (const c of chunk) {
+                    console.log('DEPOSIT_RECEIPT ' + JSON.stringify({
+                        account: s.name, itemId: c.id, name: c.name, amount: c.amount,
+                        packBefore: c.amount, packAfter: 0, bankBefore: c.bankBefore, bankAfter: c.bankBefore + c.amount,
+                        generationBefore: generation, generationAfter: after.generation, at: after.at, tick: s.tick(), sdkSuccess: true,
+                    }));
+                }
+                deposited += chunk.length;
+            }
+        }
+        for (const entry of deferred) {
+            const item = s.sdk.getInventory().find(i => i.id === entry.id);
+            if (!item) continue;
+            await depositObserved(s, item);
+            deposited++;
+        }
+    }
+    return deposited;
 }
