@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869936296,
+ "at": 1795869963870,
  "jobs": [
   {
    "account": "Balls",
@@ -45,6 +45,29 @@
    "role": "pvp"
   },
   {
+   "account": "shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:shaftsinker",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:shaftsinker",
+   "role": "auto"
+  },
+  {
    "account": "sporrandip",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -80,20 +103,19 @@
   },
   {
    "account": "tossthecaber",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
+    "fletching",
+    "worker"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "224"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -115,38 +137,19 @@
    "role": "auto"
   },
   {
-   "account": "shaftsinker",
+   "account": "hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=72 PRODUCT_TARGET=72 BANK_PACK=1 -- giant",
-    "scripts/aio-skiller.ts MAX_MAKE=72 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=72 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1601",
-   "role": "auto"
-  },
-  {
-   "account": "hocuspokeus",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1344",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
   },
   {
    "account": "trousersnake",
