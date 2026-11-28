@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795838379655,
+ "at": 1795838488196,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -275,15 +275,15 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-45-o4-p1681",
+    "ORDER_KEY": "brain-1513-44-o4-p1681",
     "ITEM_ID": "1513",
-    "QUANTITY": "45",
+    "QUANTITY": "44",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "1681",
     "EXPECTED_OWNED": "4",
     "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "45"
+    "BATCH_UNITS": "44"
    },
    "enabled": true,
    "repeat": false,
@@ -396,6 +396,31 @@
    "role": "army"
   },
   {
+   "account": "Ballbag",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "144",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "144"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
@@ -472,6 +497,23 @@
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
    "role": "army"
+  },
+  {
+   "account": "ChaosInPants",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:ChaosInPants",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:ChaosInPants",
+   "role": "auto"
   }
  ],
  "army": [

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795838326907-1",
  "account": "YewGotWood",
  "partner": "Ballbag",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 224,
  "claim": "7d5975f8-1918-4c02-923c-af44c8dfc229",
- "count": 0,
- "ok": false,
- "at": 1795838361471,
- "detail": "trade claimed"
+ "count": 224,
+ "ok": true,
+ "at": 1795838455927,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 224,
+  "after": 0
+ },
+ "bank": {
+  "count": 224,
+  "at": 1795838435961
+ },
+ "logout": {
+  "attemptId": "1795838361481-0000026304-0000000001",
+  "at": 1795838455916,
+  "sha256": "6ef8ea9fecaf38a3e68b0200a90ac52df0afaaa69ddf68900451a1526c17ac49"
+ },
+ "screen": true
 }
