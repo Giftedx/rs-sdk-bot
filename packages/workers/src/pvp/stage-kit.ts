@@ -11,7 +11,7 @@ import {walkRoute} from '../../../core/src/walk';
 import {routeFares} from '../../../core/src/world';
 import {buyWithBudget} from '../market/shop-buy';
 import {GOD_LOADOUTS, godCapeStaffConflict, type GodName} from '../../../core/src/pk-kits/god-specs';
-import {assessZeroRiskKit, itemCostOf, RING_OF_RECOIL_ID, type ZeroRiskAssessment} from './fight';
+import {assessZeroRiskKit, BIS_SWITCH_GEAR, dhideTierOf, itemCostOf, MAGIC_FREEZE_SWITCH_IDS, RING_OF_RECOIL_ID, type ZeroRiskAssessment} from './fight';
 import {hasVarrockTeleport} from './wild-rules';
 
 type Item={id:number;count:number};
@@ -103,6 +103,14 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
  return{ok,ticks:s.tick()-start,spent,fares,foodSpent,bought,hpMin,xpPreserved,accounting,atBank,initial,final,position:q&&{x:q.worldX,z:q.worldZ,level:q.level},failure};
 }
 
+export type StageSwitchCoverage = {
+ melee: boolean;
+ ranged: boolean;
+ magic: boolean;
+ dhideTier: 'black' | 'red' | 'blue' | 'green' | 'none';
+ hasMagicSwitch: boolean;
+};
+
 export type StagePreflightReport = {
  ok: boolean;
  missing: string[];
@@ -112,6 +120,7 @@ export type StagePreflightReport = {
  maxGodCasts: number;
  zeroRisk?: ZeroRiskAssessment;
  hasRecoil?: boolean;
+ switchCoverage?: StageSwitchCoverage;
 };
 
 const CHARGED_GLORY_IDS = new Set([1706, 1708, 1710, 1712]);
@@ -195,7 +204,22 @@ export function verifyPvpStageSupplies(input: {
   if (maxGodCasts < 5) missing.push(`god spell runes (casts=${maxGodCasts}, need >=5)`);
   if (input.magicLevel >= 80 && !canCharge) missing.push('Charge runes (3 blood, 3 fire, 3 air + god gear)');
  }
- return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts, zeroRisk, hasRecoil };
+ const combinedIds = new Set(combined.map(i => i.id));
+ const dhideTier = dhideTierOf(combinedIds);
+ const hasMagicSwitch = [...combinedIds].some(id => MAGIC_FREEZE_SWITCH_IDS.has(id));
+ const hasMeleeWeapon = BIS_SWITCH_GEAR.meleeWeapons.some(id => combinedIds.has(id));
+ const hasRangedWeapon = BIS_SWITCH_GEAR.rangedWeapons.some(id => combinedIds.has(id));
+ const hasMagicCast = BIS_SWITCH_GEAR.magicStaves.some(id => combinedIds.has(id))
+  || (runeCount(/^earth ?rune$/i, 557) >= 3 && runeCount(/^water ?rune$/i, 555) >= 3 && runeCount(/^nature ?rune$/i, 561) >= 2)
+  || maxGodCasts > 0;
+ const switchCoverage: StageSwitchCoverage = {
+  melee: hasMeleeWeapon,
+  ranged: hasRangedWeapon,
+  magic: hasMagicCast,
+  dhideTier,
+  hasMagicSwitch,
+ };
+ return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts, zeroRisk, hasRecoil, switchCoverage };
 }
 export async function runStageKitCli(args: readonly string[], existingSession?: Session): Promise<number> {
  let stopped=false;

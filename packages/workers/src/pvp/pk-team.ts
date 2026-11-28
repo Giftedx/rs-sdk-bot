@@ -148,7 +148,6 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                     seenEventId: skullSeenEvent,
                     minTick: start,
                     clientPlayers,
-                    isAttackAnim: anim => anim > 0,
                 });
             }
         });

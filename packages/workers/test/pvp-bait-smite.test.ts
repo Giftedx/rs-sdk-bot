@@ -4,12 +4,15 @@ import { join } from 'node:path';
 import type { Session } from '../../core/src/inprocess';
 import {
     assessZeroRiskKit,
+    BIS_SWITCH_GEAR,
     createNeverSkullGuard,
     deathRisk,
+    dhideTierOf,
     ENEMY_WEAPON_IDS,
     enforceZeroRiskGear,
     evaluateSpecPlan,
     fightPlayer,
+    isCombatAttackAnim,
     itemCostOf,
     ITEMS,
     neverSkullOf,
@@ -21,6 +24,7 @@ import {
     SPELLS,
     summarizeWeaponLoot,
 } from '../src/pvp/fight';
+import { kitFrom } from '../src/pvp/wild-rules';
 import { createDaggerWatch, inferGearPrayerBonus } from '../src/pvp/squad-dagger';
 import { cheapestExpendableSlot, pickUp, PICKUP_ITEMS, plannedPickups } from '../src/pvp/pk-gang';
 import { createTeamFocus, maxOverkillAttackers, pickEnemy } from '../src/pvp/pk-team';
@@ -47,7 +51,7 @@ describe('1. Hard Never-Skull Invariant (pk_skull.rs2)', () => {
         guard.recordIncomingAttack('Goondelf', 1, 10, 'hit');
         expect(guard.canAttackSafely('goondelf', 10)).toBe(true);
         // Same-tick duplicate observation does not triple-shift predator slots.
-        guard.recordIncomingAttack('Goondelf', 1, 10, 'target');
+        guard.recordIncomingAttack('Goondelf', 1, 10, 'anim');
         guard.recordIncomingAttack('Ligma', 2, 11, 'hit');
         guard.recordIncomingAttack('Sugma', 3, 12, 'anim');
         expect(guard.canAttackSafely('goondelf', 12)).toBe(true);
@@ -77,7 +81,20 @@ describe('1. Hard Never-Skull Invariant (pk_skull.rs2)', () => {
         expect(guard.canAttackSafely('fourth', 16)).toBe(false);
     });
 
-    test('observeProvocations records targeting, facing attack anim, and hits while ignoring allies and non-facing players', () => {
+    test('isCombatAttackAnim accepts verified rev-289 combat attack/spec anims and rejects eat, teleport, alch, and non-combat anims', () => {
+        expect(isCombatAttackAnim(402)).toBe(true);  // human_blunt_pummel
+        expect(isCombatAttackAnim(426)).toBe(true);  // human_bow
+        expect(isCombatAttackAnim(1062)).toBe(true); // puncture (DDS spec)
+        expect(isCombatAttackAnim(1161)).toBe(true); // human_castentangle_staff
+        expect(isCombatAttackAnim(1167)).toBe(true); // human_castwave_staff
+        expect(isCombatAttackAnim(829)).toBe(false); // human_eat
+        expect(isCombatAttackAnim(714)).toBe(false); // human_castteleport
+        expect(isCombatAttackAnim(713)).toBe(false); // human_casthighlvlalchemy
+        expect(isCombatAttackAnim(811)).toBe(false); // human_casting (Charge)
+        expect(isCombatAttackAnim(-1)).toBe(false);
+    });
+
+    test('observeProvocations blocks facing+HP-bar bait, eat/tele anims, and attacks facing teammates; approves ONLY verified facing attack anims or corroborated hits', () => {
         const guard = createNeverSkullGuard();
         const allies = new Set(['ally1']);
         const nextId = observeProvocations({
@@ -88,45 +105,70 @@ describe('1. Hard Never-Skull Invariant (pk_skull.rs2)', () => {
             seenEventId: 0,
             nearbyPlayers: [
                 { name: 'Ally1', index: 1, combatTargetType: 'player', combatTargetIndex: 10 },
-                { name: 'TargetingMe', index: 2, combatTargetType: 'player', combatTargetIndex: 10 },
-                { name: 'AnimSwing', index: 3, inCombat: true },
-                { name: 'SkulledOnOther', index: 4, combatTargetType: 'player', combatTargetIndex: 99 },
+                // Trap (a): Enemy facing us with active HP bar (combatTargetIndex === selfSlot) but NO attack anim or damage_taken -> BLOCKED!
+                { name: 'FacingHpBarTrap', index: 2, inCombat: true, combatTargetType: 'player', combatTargetIndex: 10 },
+                // Trap (b): Enemy facing us playing eat animation (829) -> BLOCKED!
+                { name: 'EatBaiter', index: 3, inCombat: true },
+                // Trap (b2): Enemy facing us playing teleport animation (714) -> BLOCKED!
+                { name: 'TeleBaiter', index: 4, inCombat: false },
+                // Trap (c): Nearby enemy playing real combat attack anim (402) while facing a teammate (99 != 10) -> BLOCKED!
+                { name: 'HittingTeammate', index: 5, inCombat: true, combatTargetType: 'player', combatTargetIndex: 99 },
+                // Real provocation #1: verified combat attack anim (1062 = DDS puncture) on frame 0 facing us -> APPROVED!
+                { name: 'RealDdsAttacker', index: 6, inCombat: true },
+                // Real provocation #2: corroborated damage_taken hit from enemy not facing another player -> APPROVED!
+                { name: 'RealHitAttacker', index: 7, inCombat: true },
             ],
             combatEvents: [
-                // Splat attributed to index 4 while index 4 faces player 99 must not be trusted.
-                { observationId: 5, tick: 50, type: 'damage_taken', sourceType: 'other_player', targetType: 'player', sourceIndex: 4 },
+                // Splat attributed to index 5 while index 5 faces player 99 must not be trusted.
+                { observationId: 5, tick: 50, type: 'damage_taken', sourceType: 'other_player', targetType: 'player', sourceIndex: 5 },
+                // Corroborated hit from index 7 facing us -> trusted!
+                { observationId: 6, tick: 50, type: 'damage_taken', sourceType: 'other_player', targetType: 'player', sourceIndex: 7 },
             ],
             clientPlayers: [
                 null,
                 null,
-                null,
-                { faceEntity: 32768 + 10, primaryAnim: 402, primaryAnimCycle: 0, primaryAnimFrame: 0 },
+                { faceEntity: 32768 + 10, primaryAnim: -1, primaryAnimCycle: 0, primaryAnimFrame: 0 },
+                { faceEntity: 32768 + 10, primaryAnim: 829, primaryAnimCycle: 0, primaryAnimFrame: 0 },
+                { faceEntity: 32768 + 10, primaryAnim: 714, primaryAnimCycle: 0, primaryAnimFrame: 0 },
                 { faceEntity: 32768 + 99, primaryAnim: 402, primaryAnimCycle: 0, primaryAnimFrame: 0 },
+                { faceEntity: 32768 + 10, primaryAnim: 1062, primaryAnimCycle: 0, primaryAnimFrame: 0 },
+                { faceEntity: 32768 + 10, primaryAnim: -1, primaryAnimCycle: 0, primaryAnimFrame: 0 },
             ],
-            isAttackAnim: anim => anim === 402,
         });
-        expect(nextId).toBe(5);
+        expect(nextId).toBe(6);
         expect(guard.canAttackSafely('ally1', 50)).toBe(false);
-        expect(guard.canAttackSafely('targetingme', 50)).toBe(true);
-        expect(guard.canAttackSafely('animswing', 50)).toBe(true);
-        expect(guard.canAttackSafely('skulledOnOther', 50)).toBe(false);
+        expect(guard.canAttackSafely('facinghpbartrap', 50)).toBe(false);
+        expect(guard.canAttackSafely('eatbaiter', 50)).toBe(false);
+        expect(guard.canAttackSafely('telebaiter', 50)).toBe(false);
+        expect(guard.canAttackSafely('hittingteammate', 50)).toBe(false);
+        expect(guard.canAttackSafely('realddsattacker', 50)).toBe(true);
+        expect(guard.canAttackSafely('realhitattacker', 50)).toBe(true);
     });
 
-    test('fightPlayer with neverSkull=true blocks first strike until provoked, then retaliates immediately', async () => {
+    test('fightPlayer with neverSkull=true blocks facing/eat/non-attack traps until verified attack anim, then retaliates immediately', async () => {
         let tick = 100;
         const listeners: (() => void)[] = [];
         const attacks: number[] = [];
         const prayers: number[] = [];
         const logs: string[] = [];
-        let targetAttacksUs = false;
+        let enemyAnim = 829; // Start with eat animation while facing us + HP bar: MUST NOT provoke!
         const player = { worldX: 3067, worldZ: 3640, level: 0, hp: 99, maxHp: 99, combatLevel: 126, isDead: false, lifeId: 1, runEnergy: 100 };
+        const enemyClient = {
+            headicons: 1,
+            appearance: [0, 0, 0, 512 + 1231],
+            health: 99,
+            totalHealth: 99,
+            spotanimId: -1,
+            faceEntity: 32768 + 5,
+            primaryAnim: enemyAnim,
+            primaryAnimCycle: 0,
+            primaryAnimFrame: 0,
+        };
         const client = {
             selfSlot: 5,
             localPlayer: { headicons: 0 },
             var: { 300: 1000, 301: 0 },
-            players: {
-                1: { headicons: 1, appearance: [0, 0, 0, 512 + 1231], health: 99, totalHealth: 99, spotanimId: -1 },
-            },
+            players: { 1: enemyClient },
         };
         const session = {
             name: 'baiter',
@@ -152,9 +194,9 @@ describe('1. Hard Never-Skull Invariant (pk_skull.rs2)', () => {
                         z: 3640,
                         distance: 1,
                         combatLevel: 126,
-                        inCombat: targetAttacksUs,
-                        combatTargetType: targetAttacksUs ? 'player' : 'none',
-                        combatTargetIndex: targetAttacksUs ? 5 : -1,
+                        inCombat: true,
+                        combatTargetType: 'player',
+                        combatTargetIndex: 5,
                     }],
                     combatEvents: [],
                     gameMessages: [],
@@ -176,21 +218,83 @@ describe('1. Hard Never-Skull Invariant (pk_skull.rs2)', () => {
             log: l => logs.push(l),
         });
 
-        const step = async () => { tick++; for (const fn of [...listeners]) fn(); await new Promise(r => setTimeout(r, 0)); };
-        // Ticks 1..3: Goondelf is already skulled (headicons=1) on someone else, but has NOT attacked us -> 0 attacks sent!
+        const step = async () => { tick++; enemyClient.primaryAnim = enemyAnim; for (const fn of [...listeners]) fn(); await new Promise(r => setTimeout(r, 0)); };
+        // Ticks 1..3: Goondelf faces us with HP bar and plays eat anim 829 -> 0 attacks sent!
         for (let i = 0; i < 3; i++) await step();
         expect(attacks).toEqual([]);
         expect(logs.some(l => l.includes('PK never-skull bait hold'))).toBe(true);
         // Overhead protect prayer still activates defensively while baiting.
         expect(prayers).toContain(PRAYER.melee);
 
-        // Tick 4+: Goondelf attacks us -> retaliation fires immediately!
-        targetAttacksUs = true;
+        // Tick 4+: Goondelf swings verified DDS puncture anim (1062) facing us -> retaliation fires immediately!
+        enemyAnim = 1062;
         for (let i = 0; i < 4; i++) await step();
         const res = await done;
         expect(attacks.length).toBeGreaterThan(0);
         expect(res.attacks.melee).toBeGreaterThan(0);
         expect(res.unexpectedSkull).toBeUndefined();
+    });
+
+    test('fightPlayer with external provokedBy never bypasses external guard via local observation', async () => {
+        let tick = 150;
+        const listeners: (() => void)[] = [];
+        const attacks: number[] = [];
+        const session = {
+            name: 'baiter',
+            tick: () => tick,
+            ended: new Promise(() => {}),
+            onTick: (fn: () => void) => { listeners.push(fn); return () => {}; },
+            client: {
+                selfSlot: 5,
+                localPlayer: { headicons: 0 },
+                var: { 300: 1000, 301: 0 },
+                players: {
+                    1: {
+                        headicons: 1,
+                        appearance: [0, 0, 0, 512 + 1231],
+                        health: 99,
+                        totalHealth: 99,
+                        spotanimId: -1,
+                        faceEntity: 32768 + 5,
+                        primaryAnim: 1062,
+                        primaryAnimCycle: 0,
+                        primaryAnimFrame: 0,
+                    },
+                },
+            },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: 3067, worldZ: 3640, level: 0, hp: 99, maxHp: 99, combatLevel: 126, isDead: false, lifeId: 1 },
+                    inventory: [],
+                    equipment: [{ id: 1231, slot: 3, count: 1, name: 'Dragon dagger(p)' }],
+                    skills: [{ name: 'Prayer', level: 99, baseLevel: 99 }],
+                    prayers: { prayerPoints: 99, activePrayers: new Array(15).fill(false) },
+                    nearbyPlayers: [{ name: 'Goondelf', index: 1, x: 3068, z: 3640, distance: 1, combatLevel: 126 }],
+                    combatEvents: [],
+                    gameMessages: [],
+                }),
+                sendInteractPlayer: (idx: number) => { attacks.push(idx); },
+                sendSpellOnPlayer: (idx: number) => { attacks.push(idx); },
+                sendTogglePrayer: () => {},
+                sendWalk: () => {},
+            },
+        } as unknown as Session;
+
+        // External provokedBy returns false (e.g. caller's FIFO evicted this player) -> MUST stay blocked!
+        const done = fightPlayer(session, 'Goondelf', {
+            kit: { melee: [1231] },
+            neverSkull: true,
+            provokedBy: () => false,
+            cap: 3,
+            log: () => {},
+        });
+        for (let i = 0; i < 4; i++) {
+            tick++;
+            for (const fn of [...listeners]) fn();
+            await new Promise(r => setTimeout(r, 0));
+        }
+        await done;
+        expect(attacks).toEqual([]);
     });
 
     test('fightPlayer with neverSkull=true immediately aborts offense, enables Protect Item, and reports telemetry if ownSkull turns true', async () => {
@@ -827,5 +931,188 @@ describe('5. Zero-Tick-Waste Fight Loop', () => {
         await step();
         await done;
         expect(spellsCast).toEqual([SPELLS.entangle]);
+    });
+});
+
+describe('6. BiS Multi-Style Gear Switches & Zero-Risk Full-Switch Enforcement', () => {
+    test('kitFrom builds per-style BiS switch lists (d-hide ranged, magic robes/cape/amulet, melee tank/gloves/boots) with weapons first', () => {
+        const worn = [
+            { id: 3751, name: 'Berserker helm', count: 1, slot: 0 },
+            { id: 1127, name: 'Rune platebody', count: 1, slot: 4 },
+            { id: 1079, name: 'Rune platelegs', count: 1, slot: 7 },
+            { id: 1231, name: 'Dragon dagger(p)', count: 1, slot: 3 },
+            { id: 1495, name: "Klank's gauntlets", count: 1, slot: 9 },
+            { id: 3105, name: 'Climbing boots', count: 1, slot: 10 },
+            { id: 2550, name: 'Ring of recoil', count: 1, slot: 12 },
+        ];
+        const pack = [
+            { id: 861, name: 'Magic shortbow', count: 1 },
+            { id: 2503, name: "Black d'hide body", count: 1 },
+            { id: 2497, name: "Black d'hide chaps", count: 1 },
+            { id: 2491, name: "Black d'hide vambraces", count: 1 },
+            { id: 2412, name: 'Saradomin cape', count: 1 },
+            { id: 2415, name: 'Saradomin staff', count: 1 },
+            { id: 577, name: 'Wizard robe', count: 1 },
+            { id: 1033, name: 'Zamorak robe', count: 1 },
+            { id: 1727, name: 'Amulet of magic', count: 1 },
+        ];
+        const kit = kitFrom(worn, pack);
+        // Weapons are always first so same-tick equip+attack fires weapon first within 5 packets/tick.
+        expect(kit.melee?.[0]).toBe(1231);
+        expect(kit.melee).toContain(1127);
+        expect(kit.melee).toContain(1079);
+        expect(kit.melee).toContain(1495);
+        expect(kit.melee).toContain(3105);
+        expect(kit.melee).toContain(3751);
+
+        expect(kit.ranged?.[0]).toBe(861);
+        expect(kit.ranged).toContain(2503);
+        expect(kit.ranged).toContain(2497);
+        expect(kit.ranged).toContain(2491);
+
+        expect(kit.magic?.[0]).toBe(2415);
+        expect(kit.magic).toContain(2412);
+        expect(kit.magic).toContain(577);
+        expect(kit.magic).toContain(1033);
+        expect(kit.magic).toContain(1727);
+        expect(dhideTierOf(new Set(kit.ranged))).toBe('black');
+        expect(BIS_SWITCH_GEAR.meleeGloves).toContain(1495);
+    });
+
+    test('fightPlayer equips zero-cost magic freeze switches (god cape + wizard robe + amulet of magic) in the same tick as casting Entangle within 5 packets', async () => {
+        let tick = 600;
+        const listeners: (() => void)[] = [];
+        const events: string[] = [];
+        const session = {
+            name: 'switcher',
+            tick: () => tick,
+            ended: new Promise(() => {}),
+            onTick: (fn: () => void) => { listeners.push(fn); return () => {}; },
+            client: {
+                localPlayer: { headicons: 0 },
+                var: { 300: 0, 301: 0 },
+                players: { 1: { headicons: 1, appearance: [0, 0, 0, 512 + 1231], health: 95, totalHealth: 99, spotanimId: -1 } },
+            },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: 3067, worldZ: 3640, level: 0, hp: 99, maxHp: 99, combatLevel: 126, isDead: false, lifeId: 1 },
+                    inventory: [
+                        { id: 2412, slot: 0, count: 1, name: 'Saradomin cape', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+                        { id: 577, slot: 1, count: 1, name: 'Wizard robe', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+                        { id: 1727, slot: 2, count: 1, name: 'Amulet of magic', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+                        { id: ITEMS.earthRune, slot: 3, count: 20, name: 'Earth rune', optionsWithIndex: [] },
+                        { id: ITEMS.waterRune, slot: 4, count: 20, name: 'Water rune', optionsWithIndex: [] },
+                        { id: ITEMS.natureRune, slot: 5, count: 20, name: 'Nature rune', optionsWithIndex: [] },
+                    ],
+                    equipment: [{ id: 1231, slot: 3, count: 1, name: 'Dragon dagger(p)' }],
+                    skills: [
+                        { name: 'Prayer', level: 99, baseLevel: 99 },
+                        { name: 'Magic', level: 99, baseLevel: 99 },
+                    ],
+                    prayers: { prayerPoints: 99, activePrayers: new Array(15).fill(false) },
+                    nearbyPlayers: [{ name: 'Runner', index: 1, x: 3069, z: 3640, distance: 2, combatLevel: 126 }],
+                    combatEvents: [],
+                    gameMessages: [],
+                }),
+                sendUseItem: (slot: number) => { events.push(`wear:${slot}@${tick}`); },
+                sendSpellOnPlayer: (_idx: number, spell: number) => { events.push(`spell:${spell}@${tick}`); },
+                sendInteractPlayer: () => {},
+                sendTogglePrayer: () => {},
+                sendWalk: () => {},
+            },
+        } as unknown as Session;
+
+        const done = fightPlayer(session, 'Runner', {
+            kit: { melee: [1231] },
+            freeze: 'flee',
+            smiteBurst: () => true,
+            cap: 2,
+            log: () => {},
+        });
+        const step = async () => { tick++; for (const fn of [...listeners]) fn(); await new Promise(r => setTimeout(r, 0)); };
+        await step();
+        await step();
+        await done;
+        // All 3 magic switches + Entangle fired on tick 601 (4 packets <= 5 packet/tick cap).
+        expect(events).toEqual(['wear:0@601', 'wear:1@601', 'wear:2@601', `spell:${SPELLS.entangle}@601`]);
+    });
+
+    test('squad-ready gang-bait-3plus1 and stage-kit verifyPvpStageSupplies include BiS switches while enforcing strict 3+1 deathRisk across full worn+pack kit', () => {
+        const gearRows = JSON.parse(readFileSync(join(process.cwd(), 'knowledge', 'gear.json'), 'utf8')) as Gear[];
+        const gear = new Map(gearRows.map(g => [g.id, g]));
+        const now = Date.now();
+        const acct: Account = {
+            name: 'SwitchBait',
+            at: now,
+            bankAt: now,
+            pos: { x: 3092, z: 3496, level: 0 },
+            levels: { attack: 99, strength: 99, defence: 99, hitpoints: 99, ranged: 99, magic: 99, prayer: 99 },
+            quests: new Set(['lost city', 'dragon slayer', 'death plateau', 'underground pass']),
+            worn: [],
+            pack: [],
+            bank: [
+                { id: 2503, name: "Black d'hide body", count: 1 },    // 13.48k (keep #2, meleeDef 162, +30 rng, +50 magDef)
+                { id: 2497, name: "Black d'hide chaps", count: 1 },   // 6.22k (keep #3, meleeDef 89, +17 rng, +28 magDef)
+                { id: 1231, name: 'Dragon dagger(p)', count: 1 },     // 24k (keep #1)
+                { id: 861, name: 'Magic shortbow', count: 1 },        // 1.6k (keep #4 with Protect Item)
+                { id: 1495, name: "Klank's gauntlets", count: 1 },    // 6gp (+2 str)
+                { id: 3105, name: 'Climbing boots', count: 1 },       // 12gp (+2 str)
+                { id: RING_OF_RECOIL_ID, name: 'Ring of recoil', count: 1 }, // 900gp
+                { id: 2412, name: 'Saradomin cape', count: 1 },       // 100gp (+10 magAtk)
+                { id: 577, name: 'Wizard robe', count: 1 },           // 15gp (+3 magAtk)
+                { id: 1727, name: 'Amulet of magic', count: 1 },      // 900gp (+10 magAtk)
+                { id: 892, name: 'Rune arrow', count: 300 },
+                { id: 175, name: 'Antipoison(3)', count: 2 },
+                { id: 563, name: 'Law rune', count: 10 },
+                { id: 556, name: 'Air rune', count: 50 },
+                { id: 557, name: 'Earth rune', count: 50 },
+                { id: 555, name: 'Water rune', count: 50 },
+                { id: 561, name: 'Nature rune', count: 50 },
+                { id: 385, name: 'Shark', count: 40 },
+            ],
+            prayerPoints: 99,
+        };
+        const pick = pickKit(acct, gear, RULES['gang-bait-3plus1']!, now);
+        expect(pick.ready).toBe(true);
+        expect(pick.zeroRisk?.ok).toBe(true);
+        expect(pick.zeroRisk?.riskedWeapons4).toEqual([]);
+        expect(pick.zeroRisk?.riskedValuableGear4).toEqual([]);
+        expect(pick.worn.some(w => w.id === 1495)).toBe(true);
+        expect(pick.worn.some(w => w.id === 3105)).toBe(true);
+        expect(pick.worn.some(w => w.id === RING_OF_RECOIL_ID)).toBe(true);
+        // Zero-cost BiS magic switches + Black d'hide body/chaps all fit inside zero-risk 3+1!
+        const allIds = new Set([...pick.worn.map(w => w.id), ...pick.carried.map(c => c.id)]);
+        expect(allIds.has(2412)).toBe(true);
+        expect(allIds.has(577)).toBe(true);
+        expect(allIds.has(1727)).toBe(true);
+        expect(allIds.has(2503)).toBe(true);
+        expect(allIds.has(2497)).toBe(true);
+
+        // Even when an extra Rune platebody (65k) is also banked, gang-bait-3plus1 never lets a carried d'hide switch violate 3+1!
+        const withPlate = pickKit({ ...acct, bank: [{ id: 1127, name: 'Rune platebody', count: 1 }, ...acct.bank] }, gear, RULES['gang-bait-3plus1']!, now);
+        expect(withPlate.ready).toBe(true);
+        expect(withPlate.zeroRisk?.ok).toBe(true);
+        expect(withPlate.zeroRisk?.riskedWeapons4).toEqual([]);
+        expect(withPlate.zeroRisk?.riskedValuableGear4).toEqual([]);
+
+        const stage = verifyPvpStageSupplies({
+            mode: 'bait',
+            magicLevel: 99,
+            equipment: pick.worn,
+            inventory: [
+                ...pick.carried,
+                { id: 554, name: 'Fire rune', count: 10 },
+                ...pick.foodRows.flatMap(r => Array.from({ length: r.count }, () => ({ id: r.id, name: r.name, count: 1 }))),
+            ],
+        });
+        expect(stage.ok).toBe(true);
+        expect(stage.hasRecoil).toBe(true);
+        expect(stage.switchCoverage).toEqual({
+            melee: true,
+            ranged: true,
+            magic: true,
+            dhideTier: 'black',
+            hasMagicSwitch: true,
+        });
     });
 });

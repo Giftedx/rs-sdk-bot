@@ -159,7 +159,7 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
             await a.sdk.sendUseItem(food.slot, op.opIndex); bank.eaten++; await pause(3);
         }
         const boosts = () => a.sdk.getInventory().filter(i => PREPOT.some(doses => (doses as readonly number[]).includes(i.id)));
-        for (const potion of boosts()) { const op = potion.optionsWithIndex.find(o => /^drink$/i.test(o.text)); if (op) { await a.sdk.sendUseItem(potion.slot, op.opIndex); await pause(2); } }
+        for (const potion of boosts()) { const op = potion.optionsWithIndex.find(o => /^drink$/i.test(o.text)); if (op) { await a.sdk.sendUseItem(potion.slot, op.opIndex); await pause(3); } }
         if (!(await a.bot.openBank()).success) {
             if (halt()) return 'stopped';
             await go([at]);
@@ -311,7 +311,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         if (prayerOut < 0 && a.sdk.getState()?.prayers.prayerPoints === 0) prayerOut = a.tick() - start;
         const players = (a.client as { players?: ({ primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number; faceEntity?: number } | null)[] } | undefined)?.players;
         const stTick = a.sdk.getState();
-        for (const p of stTick?.nearbyPlayers ?? []) if (alive.has(p.name.toLowerCase()) && p.distance <= 2 && startsAttack(players?.[p.index])) { lastHitBy = p.index; lastHitAt = a.tick(); seenAnim = true; skullGuard?.recordIncomingAttack(p.name, p.index, a.tick(), 'anim'); }
+        for (const p of stTick?.nearbyPlayers ?? []) if (alive.has(p.name.toLowerCase()) && p.distance <= 2 && startsAttack(players?.[p.index])) { lastHitBy = p.index; lastHitAt = a.tick(); seenAnim = true; }
         // The source of a splat is the player that our account faces (StateCollector): a guess, used only where no animation shows.
         for (const e of stTick?.combatEvents ?? []) { const id = e.observationId ?? e.tick; if (id > seenEvent) { seenEvent = id; if (hitByPlayer(e) && !seenAnim) { lastHitBy = e.sourceIndex; lastHitAt = a.tick(); } } }
         if (skullGuard && stTick) {
@@ -324,7 +324,6 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
                 seenEventId: skullSeenEvent,
                 minTick: start,
                 clientPlayers: players,
-                isAttackAnim: anim => anim > 0,
             });
         }
         for (const msg of stTick?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;

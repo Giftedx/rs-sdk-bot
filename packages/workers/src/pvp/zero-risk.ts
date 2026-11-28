@@ -336,6 +336,57 @@ export function enforceZeroRiskGear<W extends { id: number; name: string; count:
 export const RING_OF_RECOIL_ID = 2550;
 export const DEFAULT_POST_LOOT_TROPHY_FLOOR = 20_000;
 
+/** Verified rev-289 BiS & fallback multi-style switch item IDs (from knowledge/gear.json & items.json). */
+export const BIS_SWITCH_GEAR = {
+    dhideBody: [2503, 2501, 2499, 1135] as readonly number[],     // Black -> Red -> Blue -> Green d'hide body
+    dhideChaps: [2497, 2495, 2493, 1099] as readonly number[],    // Black -> Red -> Blue -> Green d'hide chaps
+    dhideVambs: [2491, 2489, 2487, 1065, 1063] as readonly number[], // Black -> Red -> Blue -> Green -> Leather vambs
+    godCapes: [2412, 2413, 2414] as readonly number[],            // Saradomin / Guthix / Zamorak cape (+10 magAtk, 100gp)
+    godStaves: [2415, 2416, 2417] as readonly number[],           // Saradomin / Guthix / Zamorak staff
+    magicStaves: [2415, 2416, 2417, 1401, 1403, 1405, 1407, 1387, 1381, 1383, 1385] as readonly number[],
+    magicBodies: [3387, 577, 581, 1035] as readonly number[],     // Splitbark (+9), Wizard robe (+3, 15gp), Black robe (+3, 13gp), Zamorak robe top (+2, 40gp)
+    magicLegs: [3389, 1033] as readonly number[],                 // Splitbark legs (+6), Zamorak robe bottom (+2, 30gp)
+    magicHats: [3755, 656, 658, 660, 662, 664, 2900, 2910, 2920, 2930, 2940, 3797, 579, 1017] as readonly number[], // Farseer (+6), Gnome/Fremennik/Wizard hats (+2..+3, 160-500gp)
+    magicAmulets: [1712, 1710, 1708, 1706, 1727, 1731] as readonly number[], // Glory (+10), Amulet of magic (+10, 900gp), Power (+6)
+    meleeGloves: [1495, 775, 776, 777, 778] as readonly number[], // Klank's gauntlets (6gp), Family Crest / Steel gauntlets (1gp): +2 str, +2 att
+    meleeBoots: [3105] as readonly number[],                      // Climbing boots (+2 str, 12gp)
+    meleeHelms: [3751, 3753, 1149, 1163] as readonly number[],    // Berserker (+3 str), Warrior (+5 slash), D-med, Rune full
+    rangedHelms: [3749, 1169] as readonly number[],               // Archer helm (+6 rng), Coif (+2 rng)
+    meleeWeapons: [1231, 1215, 1305, 1434, 1333, 1319, 1303] as readonly number[], // DDS(p), DDS, D-long, D-mace, Rune scimitar, Rune 2h, Rune long
+    rangedWeapons: [861, 859, 857] as readonly number[],          // Magic shortbow, Magic longbow, Yew shortbow
+} as const;
+
+export const MAGIC_FREEZE_SWITCH_IDS: ReadonlySet<number> = new Set([
+    ...BIS_SWITCH_GEAR.godCapes,
+    ...BIS_SWITCH_GEAR.magicBodies,
+    ...BIS_SWITCH_GEAR.magicLegs,
+    ...BIS_SWITCH_GEAR.magicHats,
+    1727, // Amulet of magic (+10 magicAttack, 900gp)
+]);
+
+export const RANGED_ARMOUR_SWITCH_IDS: ReadonlySet<number> = new Set([
+    ...BIS_SWITCH_GEAR.dhideBody,
+    ...BIS_SWITCH_GEAR.dhideChaps,
+    ...BIS_SWITCH_GEAR.dhideVambs,
+    ...BIS_SWITCH_GEAR.rangedHelms,
+]);
+
+export const MELEE_ARMOUR_SWITCH_IDS: ReadonlySet<number> = new Set([
+    3140, 1127, 1113, 1123, // Dragon chain, Rune plate/chain, Addy plate
+    4087, 1079, 1093, 1073, // Dragon legs, Rune legs/skirt, Addy legs
+    ...BIS_SWITCH_GEAR.meleeGloves,
+    ...BIS_SWITCH_GEAR.meleeHelms,
+    ...BIS_SWITCH_GEAR.meleeBoots,
+]);
+
+export function dhideTierOf(ids: ReadonlySet<number>): 'black' | 'red' | 'blue' | 'green' | 'none' {
+    if (ids.has(2503) || ids.has(2497) || ids.has(2491)) return 'black';
+    if (ids.has(2501) || ids.has(2495) || ids.has(2489)) return 'red';
+    if (ids.has(2499) || ids.has(2493) || ids.has(2487)) return 'blue';
+    if (ids.has(1135) || ids.has(1099) || ids.has(1065)) return 'green';
+    return 'none';
+}
+
 export interface PostLootBankDecision {
     readonly bankNow: boolean;
     readonly reason: string | null;

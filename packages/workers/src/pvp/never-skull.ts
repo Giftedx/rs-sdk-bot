@@ -4,14 +4,22 @@
 // Both FIFOs are tracked explicitly:
 // - Per-bot 3-slot `predators` FIFO (last 3 incoming attacks on THIS account)
 // - Observed per-enemy 2-slot `prey` FIFO (last 2 players each enemy was seen attacking)
-// An enemy skulled on a third party (never having attacked THIS account), or evicted from BOTH
-// our 3-slot predators FIFO and their 2-slot prey FIFO, is strictly blocked from attack.
+// True incoming-attack proof is required before approving retaliation:
+// - Either a verified combat attack animation (`isCombatAttackAnim`, rejecting eat/drink/block/tele)
+//   starting on frame 0 / cycle 0 while facing THIS account (`faceEntity === 32768 + selfSlot`), OR
+// - A corroborated `damage_taken` combat event from a visible non-ally player not facing another player.
+// `combatTargetIndex === selfSlot` alone is NEVER trusted because StateCollector sets it whenever an
+// enemy has any active HP bar and faces us (e.g. approaching from range or Follow/Trade before ~set_pk_vars runs).
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parsePack } from '../../../knowledge/src/pack';
+import { contentRoot } from '../../../knowledge/src/paths';
 
 export const PREDATOR_SLOTS = 3;
 export const PREY_SLOTS = 2;
 export const DEFAULT_PROVOCATION_TTL_TICKS = 600;
 
-export type ProvocationProof = 'hit' | 'target' | 'anim';
+export type ProvocationProof = 'hit' | 'anim';
 
 export interface ProvocationRecord {
     readonly name: string;
@@ -19,6 +27,60 @@ export interface ProvocationRecord {
     readonly firstTick: number;
     readonly lastTick: number;
     readonly lastProof: ProvocationProof;
+}
+
+let cachedSeqNames: Map<number, string> | undefined;
+let cachedCombatSeqNames: Set<string> | undefined;
+
+function seqNameIsAttack(name: string | undefined): boolean {
+    if (!name || !name.startsWith('human_')) return false;
+    if (/(block|def|walk|run|ready|stand|idle|turn|death|heal|trap|emote|eat|drink|tele|alch|enchant|superheat|bones|charge)/.test(name)) return false;
+    if (/^human_cast(?:strike|wave|entangle|ibanblast|zap|confuse|weaken|curse|enfeeble|stun)(?:_staff)?$/.test(name)) return true;
+    if (/^human_(bow|xbow|crossbow|dart|knife|javelin|thrownaxe|chinchompa|throw|spear_throw)/.test(name)) return true;
+    if (/^human_(stab|slash|blunt|spear|sword|dagger|scim|whip|axe|mace|unarmed|hack|lunge|attack|claw|halberd|battleaxe|warhammer|pickaxe|2h)/.test(name)) return true;
+    return false;
+}
+
+function loadCombatSeqNames(root = contentRoot()): Set<string> {
+    if (cachedCombatSeqNames) return cachedCombatSeqNames;
+    const set = new Set<string>();
+    try {
+        const configs = join(root, 'scripts/skill_combat/configs');
+        for (const file of readdirSync(configs, { recursive: true }) as string[]) {
+            if (!file.endsWith('.obj')) continue;
+            for (const m of readFileSync(join(configs, file), 'utf8').matchAll(/^param=(?:stab|slash|crush)attack_anim,(\w+)/gm)) {
+                set.add(m[1]!);
+            }
+        }
+        const specDir = join(root, 'scripts/skill_combat/scripts/pvp/specs/scripts');
+        for (const file of readdirSync(specDir)) {
+            if (!file.endsWith('.rs2')) continue;
+            for (const m of readFileSync(join(specDir, file), 'utf8').matchAll(/^\s*anim\((?!%)(\w+),/gm)) {
+                set.add(m[1]!);
+            }
+        }
+    } catch { /* fallback to seq-name heuristics */ }
+    cachedCombatSeqNames = set;
+    return set;
+}
+
+/**
+ * Returns true ONLY for verified rev-289 PvP combat attack animations (melee, ranged, magic, specials).
+ * Rejects eat/drink (829), teleport (714), block/defend, walk, idle, and emotes so non-combat animations
+ * can never trigger false provocation under NEVER_SKULL=1.
+ */
+export function isCombatAttackAnim(anim: number): boolean {
+    if (!Number.isInteger(anim) || anim < 0) return false;
+    if (!cachedSeqNames) {
+        try {
+            cachedSeqNames = parsePack(readFileSync(join(contentRoot(), 'pack/seq.pack'), 'utf8'));
+        } catch {
+            cachedSeqNames = new Map();
+        }
+    }
+    const name = cachedSeqNames.get(anim);
+    if (!name) return false;
+    return loadCombatSeqNames().has(name) || seqNameIsAttack(name);
 }
 
 /** Parses NEVER_SKULL (0 or 1), defaulting to `defaultOn` when unset or empty. */
@@ -219,13 +281,15 @@ export interface ObserveProvocationInput {
         readonly primaryAnimCycle?: number;
         readonly primaryAnimFrame?: number;
     } | null)[] | undefined;
+    /** Defaults to `isCombatAttackAnim` (rev-289 seq.pack + combat configs). */
     readonly isAttackAnim?: (animId: number) => boolean;
 }
 
 /**
- * Inspects one tick's combat events, server combat targets, and facing attack animations,
- * recording every player that provably attacked THIS account AND advancing each enemy's observed
- * 2-slot `%pk_prey1..2` FIFO when they attack other players.
+ * Inspects one tick's combat events and client entity animations, recording ONLY provable incoming
+ * attacks on THIS account into `guard` and advancing enemies' observed 2-slot `%pk_prey1..2` FIFOs
+ * when they attack other players.
+ * Never approves retaliation from `combatTargetIndex === selfSlot` alone (StateCollector.ts:1027-1042).
  * Returns the updated highest seen `combatEvent` observationId.
  */
 export function observeProvocations(input: ObserveProvocationInput): number {
@@ -238,7 +302,7 @@ export function observeProvocations(input: ObserveProvocationInput): number {
         combatEvents,
         minTick = 0,
         clientPlayers,
-        isAttackAnim,
+        isAttackAnim = isCombatAttackAnim,
     } = input;
     let maxEventId = input.seenEventId;
     const byIndex = new Map<number, (typeof nearbyPlayers)[number]>();
@@ -250,19 +314,10 @@ export function observeProvocations(input: ObserveProvocationInput): number {
         const key = p.name.toLowerCase();
         if (allies?.has(key)) continue;
 
-        // 1. Direct server combat target on this account or on another player.
-        if (p.combatTargetType === 'player' && typeof p.combatTargetIndex === 'number' && p.combatTargetIndex >= 0) {
-            if (selfSlot >= 0 && p.combatTargetIndex === selfSlot) {
-                guard.recordIncomingAttack(p.name, p.index, now, 'target');
-            } else {
-                const victim = byIndex.get(p.combatTargetIndex);
-                guard.recordEnemyAttackOn(p.name, victim ? victim.name : `idx:${p.combatTargetIndex}`, now);
-            }
-            continue;
-        }
-
-        // 2. Client entity facing THIS account (or another player) while playing an attack animation (covers 0-damage hits & splashes).
-        if (clientPlayers && isAttackAnim) {
+        // 1. Verified combat attack animation starting (frame 0, cycle 0) while facing a player.
+        // Covers 0-damage hits & splashes without false-triggering on eat/drink/block/walk/approach.
+        let sawAnim = false;
+        if (clientPlayers) {
             const ent = clientPlayers[p.index];
             if (
                 ent
@@ -274,6 +329,7 @@ export function observeProvocations(input: ObserveProvocationInput): number {
                 && (ent.primaryAnimFrame ?? 0) === 0
                 && isAttackAnim(ent.primaryAnim)
             ) {
+                sawAnim = true;
                 const targetIdx = ent.faceEntity - 32768;
                 if (selfSlot >= 0 && targetIdx === selfSlot) {
                     guard.recordIncomingAttack(p.name, p.index, now, 'anim');
@@ -283,9 +339,19 @@ export function observeProvocations(input: ObserveProvocationInput): number {
                 }
             }
         }
+
+        // 2. Conservative eviction only: if an enemy targets a DIFFERENT player (never self!), advance their
+        // 2-slot prey FIFO so stale self-entries are evicted conservatively. Never approve retaliation from
+        // `combatTargetIndex === selfSlot` alone (StateCollector sets it on HP bar + face before ~set_pk_vars runs).
+        if (!sawAnim && p.combatTargetType === 'player' && typeof p.combatTargetIndex === 'number' && p.combatTargetIndex >= 0) {
+            if (selfSlot < 0 || p.combatTargetIndex !== selfSlot) {
+                const victim = byIndex.get(p.combatTargetIndex);
+                guard.recordEnemyAttackOn(p.name, victim ? victim.name : `idx:${p.combatTargetIndex}`, now);
+            }
+        }
     }
 
-    // 3. Incoming player damage_taken events (when sourceIndex matches a visible non-ally player).
+    // 3. Corroborated incoming player damage_taken events (when sourceIndex matches a visible non-ally player).
     if (combatEvents?.length) {
         for (let i = 0; i < combatEvents.length; i++) {
             const e = combatEvents[i]!;
@@ -301,8 +367,8 @@ export function observeProvocations(input: ObserveProvocationInput): number {
             ) {
                 const src = byIndex.get(e.sourceIndex);
                 if (src && !allies?.has(src.name.toLowerCase())) {
-                    // When multiple players are nearby and clientPlayers is available, avoid attributing
-                    // a StateCollector face-guess splat to a player not facing or targeting us.
+                    // When clientPlayers is available, reject StateCollector face-guess splats attributed
+                    // to a player facing someone else.
                     const ent = clientPlayers?.[src.index];
                     const facingOther = selfSlot >= 0 && ent && typeof ent.faceEntity === 'number' && ent.faceEntity >= 32768 && ent.faceEntity !== 32768 + selfSlot;
                     if (!facingOther) {

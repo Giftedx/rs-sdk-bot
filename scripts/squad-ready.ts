@@ -35,7 +35,7 @@ import { wildernessLevel } from '../packages/core/src/prayer-guard';
 import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
 import { BANK_MEETS } from '../packages/workers/src/logistics/location';
 import { makeOrder, writeFleetOrder } from './fleet-order';
-import { assessZeroRiskKit, castableFreeze, defaultSpec, enforceZeroRiskGear, itemCostOf, ITEMS, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './pk';
+import { assessZeroRiskKit, BIS_SWITCH_GEAR, castableFreeze, defaultSpec, enforceZeroRiskGear, itemCostOf, ITEMS, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './pk';
 import { packOf } from '../packages/workers/src/pvp/pk-gang';
 import { FOOD_LIST } from '../packages/workers/src/pvp/hunt-kits';
 import { kitItems } from './pk-kits';
@@ -80,6 +80,8 @@ export type Rule = {
     keepLimit?: 3 | 4;
     /** Requires Ring of recoil (2550) in the ring slot (reflects damage with zero skull risk per pvp_combat.rs2:189). */
     requireRecoil?: boolean;
+    /** Adds owned BiS multi-style switches (d'hide + magic attack robes/capes/amulets) to carried pack when 3+1 deathRisk permits. */
+    multiStyleSwitches?: boolean;
 };
 export const SUPPLY_QUESTS = ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'Tai Bwo Wannai Trio'] as const;
 export const TRIBRID_BIS_ITEMS = {
@@ -139,6 +141,7 @@ export const RULES: Readonly<Record<string, Rule>> = {
         zeroRisk: true,
         keepLimit: 4,
         requireRecoil: true,
+        multiStyleSwitches: true,
     },
     'gang-tribrid-bis': {
         name: 'gang-tribrid-bis',
@@ -404,7 +407,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         const armourSlot = slot === 'hat' || slot === 'torso' || slot === 'legs' || slot === 'lefthand';
         const floor = required && bench ? Math.ceil(armour(bench) / 2) : armourSlot ? 1 : 0;
         const slotRank = (gRow: Gear) => slot === 'hands'
-            ? (gRow.bonuses.rangeAttack ?? 0) * 10 + armour(gRow)
+            ? (gRow.bonuses.rangeAttack ?? 0) * 10 + (gRow.bonuses.strength ?? 0) * 10 + armour(gRow)
             : slot === 'feet'
                 ? (gRow.bonuses.strength ?? 0) * 100 + armour(gRow)
                 : slot === 'ring'
@@ -549,27 +552,29 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     }
     // Food: each kind of the food list that the account holds, the first kind first, up to the free slots of the pack.
     // Unstackable multi-count supplies (multiple Prayer potion(4) or Karambwans) occupy multiple slots in the pack.
-    let extraSupplySlots = 0;
-    for (const c of carried) if (SLOT_COUNTED_IDS.has(c.id) && c.count > 1) extraSupplySlots += c.count - 1;
-    const foodSlots = Math.max(0, PACK_SLOTS - carried.length - extraSupplySlots);
     const foodStock: Item[] = [];
     let foodHeld = 0;
     for (const id of FOOD_IDS) {
         const row = own.get(id);
         if (row && row.count > 0) { foodStock.push({ ...row }); foodHeld += row.count; }
     }
-    const foodRows: Item[] = [];
-    let food = 0;
-    for (const f of foodStock) {
-        const take = Math.min(f.count, foodSlots - food);
-        if (take > 0) { foodRows.push({ id: f.id, name: f.name, count: take }); food += take; }
-    }
-    // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
-    // squadStartFood), so the missing meals are a want; under the floor they block.
-    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
+    const buildFoodPack = () => {
+        let extraSupplySlots = 0;
+        for (const c of carried) if (SLOT_COUNTED_IDS.has(c.id) && c.count > 1) extraSupplySlots += c.count - 1;
+        const slots = Math.max(0, PACK_SLOTS - carried.length - extraSupplySlots);
+        const rows: Item[] = [];
+        let total = 0;
+        for (const f of foodStock) {
+            const take = Math.min(f.count, slots - total);
+            if (take > 0) { rows.push({ id: f.id, name: f.name, count: take }); total += take; }
+        }
+        return { slots, rows, total };
+    };
+    let { slots: foodSlots, rows: foodRows, total: food } = buildFoodPack();
     // Zero-risk 3+1 enforcement: downgrade excess high-cost armour when rule.zeroRisk is active so zero weapons or valuable gear are risked.
     let finalWorn = worn;
     let zeroRisk: ZeroRiskAssessment;
+    const requireProtectItem = (rule.keepLimit ?? 4) === 4;
     if (rule.zeroRisk) {
         const enforced = enforceZeroRiskGear({
             worn,
@@ -588,6 +593,58 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     } else {
         zeroRisk = assessZeroRiskKit([...worn, ...carried, ...foodRows], { cost: itemCostOf, nameOf, requireProtectItem: true });
     }
+    // Per-style BiS multi-style switches (d'hide + zero-cost magic attack switches) when enabled and permitted by 3+1 deathRisk.
+    if (rule.multiStyleSwitches) {
+        const usedIds = new Set<number>([...finalWorn.map(w => w.id), ...carried.map(c => c.id)]);
+        const wornGlory = finalWorn.some(w => GLORY_IDS.has(w.id));
+        const switchGroups: readonly (readonly number[])[] = [
+            BIS_SWITCH_GEAR.godCapes,
+            BIS_SWITCH_GEAR.magicBodies,
+            BIS_SWITCH_GEAR.magicLegs,
+            BIS_SWITCH_GEAR.magicHats,
+            ...(wornGlory ? [] : [[1727] as readonly number[]]),
+            BIS_SWITCH_GEAR.dhideBody,
+            BIS_SWITCH_GEAR.dhideChaps,
+            BIS_SWITCH_GEAR.dhideVambs,
+        ];
+        const minFoodSlotsForSwitches = 16;
+        let addedSwitch = false;
+        for (const group of switchGroups) {
+            if (foodSlots <= minFoodSlotsForSwitches) break;
+            if (group.some(id => usedIds.has(id))) continue;
+            for (const id of group) {
+                const owned = own.get(id);
+                if (!owned || owned.count <= 0) continue;
+                const row = gear.get(id);
+                if (row && !wearable(row, a)) continue;
+                const candidate: Item = { id: owned.id, name: owned.name, count: 1 };
+                if (rule.zeroRisk) {
+                    const check = assessZeroRiskKit([...finalWorn, ...carried, candidate, ...foodRows], {
+                        cost: itemCostOf,
+                        nameOf,
+                        requireProtectItem,
+                    });
+                    if (!check.ok) continue;
+                }
+                carried.push(candidate);
+                usedIds.add(id);
+                addedSwitch = true;
+                break;
+            }
+        }
+        if (addedSwitch) {
+            ({ slots: foodSlots, rows: foodRows, total: food } = buildFoodPack());
+            zeroRisk = assessZeroRiskKit([...finalWorn, ...carried, ...foodRows], {
+                cost: itemCostOf,
+                nameOf,
+                requireProtectItem,
+            });
+            if (rule.zeroRisk && !zeroRisk.ok) reasons.push(`zero-risk 3+1 switch violation: ${zeroRisk.summary}`);
+        }
+    }
+    // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
+    // squadStartFood), so the missing meals are a want; under the floor they block.
+    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
     // The fight kit, the pack of a bank trip, the escape and the freeze, each from the code that the squad runs.
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
     const fight = kitFrom(finalWorn, carried), special = defaultSpec(fight)?.style ?? null;

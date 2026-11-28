@@ -24,9 +24,10 @@ import { Spells } from '../../../../vendor/rs-sdk/sdk/spells';
 import type { NearbyPlayer } from '../../../../vendor/rs-sdk/sdk/types';
 import { REPO_ROOT, SPELLS, type FightOptions, type Kit, type SpecConfig, type Style, type VolleyState } from './types';
 export { SPELLS, type FightOptions, type Kit, type SpecConfig, type Style, type VolleyState } from './types';
-import { createNeverSkullGuard, localPlayerSlot, observeProvocations } from './never-skull';
-export { createNeverSkullGuard, localPlayerSlot, neverSkullOf, observeProvocations, PREDATOR_SLOTS, PREY_SLOTS, type NeverSkullGuard, type ProvocationProof, type ProvocationRecord } from './never-skull';
-export { assessZeroRiskKit, DEFAULT_POST_LOOT_TROPHY_FLOOR, DEFAULT_VALUABLE_GEAR_COST, ENEMY_WEAPON_IDS, ENEMY_WEAPON_LIST, enforceZeroRiskGear, HIGH_VALUE_ARMOUR_AND_GEAR_LIST, isConsumableItem, isValuableGearItem, isWeaponItem, postLootBankDue, RING_OF_RECOIL_ID, summarizeWeaponLoot, type PostLootBankDecision, type RiskedItem, type RiskUnit, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './zero-risk';
+import { createNeverSkullGuard, isCombatAttackAnim, localPlayerSlot, observeProvocations } from './never-skull';
+export { createNeverSkullGuard, isCombatAttackAnim, localPlayerSlot, neverSkullOf, observeProvocations, PREDATOR_SLOTS, PREY_SLOTS, type NeverSkullGuard, type ProvocationProof, type ProvocationRecord } from './never-skull';
+export { assessZeroRiskKit, BIS_SWITCH_GEAR, DEFAULT_POST_LOOT_TROPHY_FLOOR, DEFAULT_VALUABLE_GEAR_COST, dhideTierOf, ENEMY_WEAPON_IDS, ENEMY_WEAPON_LIST, enforceZeroRiskGear, HIGH_VALUE_ARMOUR_AND_GEAR_LIST, isConsumableItem, isValuableGearItem, isWeaponItem, MAGIC_FREEZE_SWITCH_IDS, MELEE_ARMOUR_SWITCH_IDS, postLootBankDue, RANGED_ARMOUR_SWITCH_IDS, RING_OF_RECOIL_ID, summarizeWeaponLoot, type PostLootBankDecision, type RiskedItem, type RiskUnit, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './zero-risk';
+import { MAGIC_FREEZE_SWITCH_IDS } from './zero-risk';
 
 export const ITEMS = {
     shark: 385, karambwan: 3144, glory: [1712, 1710, 1708, 1706],
@@ -1111,7 +1112,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const protectItemNow = () => (o.neverSkull && ownSkull(s.client) === true)
         ? true
         : o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
-    const skullGuard = o.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
+    // When caller supplies an authoritative external `provokedBy` guard (squad/gang/team/hunt), do NOT run a separate unsynchronized local guard.
+    const skullGuard = o.neverSkull && !o.provokedBy ? createNeverSkullGuard({ selfName: s.name }) : null;
     let skullSeenEvent = 0, neverSkullLogged = false, unexpectedSkullHandled = false;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
@@ -1161,7 +1163,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 seenEventId: skullSeenEvent,
                 minTick: start,
                 clientPlayers: combatPlayers,
-                isAttackAnim: anim => anim > 0,
+                isAttackAnim: isCombatAttackAnim,
             });
         }
         if (o.neverSkull && skullNow === true && !unexpectedSkullHandled) {
@@ -1837,10 +1839,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // Hard pre-attack Never-Skull invariant: never dispatch any melee, ranged, magic, or special attack
         // unless this target has provably attacked THIS account first (pk_skull.rs2 deserves_pk_skull).
         if (o.neverSkull) {
-            const externalProvoked = typeof o.provokedBy === 'function'
-                ? o.provokedBy(target.name, target.index)
-                : o.provokedBy?.has(target.name.toLowerCase()) === true;
-            const provokedNow = externalProvoked || (skullGuard?.canAttackSafely(target.name, now) ?? false);
+            const provokedNow = o.provokedBy
+                ? (typeof o.provokedBy === 'function' ? o.provokedBy(target.name, target.index) : o.provokedBy.has(target.name.toLowerCase()))
+                : (skullGuard?.canAttackSafely(target.name, now) ?? false);
             if (!provokedNow) {
                 if (!neverSkullLogged) {
                     neverSkullLogged = true;
@@ -1981,9 +1982,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         let budget = 5 - sentEvents - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
-        // freezeWear: items (debugnames) worn for a freeze cast, such as a god cape (magic attack +10); the other turns'
-        // switch lists put the usual ones back (pk-kits tribrid-dragon-capeswap).
-        const freezeWear = castFreeze && o.freezeWear ? inv.filter(i => o.freezeWear!.includes(names.get(i.id) ?? '')).map(i => i.id) : [];
+        // freezeWear: explicit debugnames worn for a freeze cast plus any carried zero-cost/BiS magic attack switches
+        // (god capes, wizard/zamorak/splitbark robes, magic hats, amulet of magic) equipped in the same tick as the cast.
+        const autoMagicFreezeIds = castFreeze && o.freezeWear === undefined
+            ? inv.filter(i => MAGIC_FREEZE_SWITCH_IDS.has(i.id)).map(i => i.id)
+            : [];
+        const freezeWear = castFreeze
+            ? (o.freezeWear ? inv.filter(i => o.freezeWear!.includes(names.get(i.id) ?? '')).map(i => i.id) : autoMagicFreezeIds)
+            : [];
         for (const id of [...freezeWear, ...(keepWeapon ? [] : [...turnIds, ...(turn.style === 'melee' ? tankIds : [])])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
