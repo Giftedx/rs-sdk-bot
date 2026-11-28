@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795829148105,
+ "at": 1795829239782,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -246,6 +246,23 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
    "resources": [
     "draynor-willows"
    ]
