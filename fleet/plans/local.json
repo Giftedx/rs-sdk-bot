@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795831407196,
+ "at": 1795831490038,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -188,7 +188,7 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 PRODUCT_TARGET=35 -- mining ore",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
@@ -198,24 +198,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
    "role": "auto"
   },
   {
@@ -234,6 +216,24 @@
    "resources": [
     "draynor-willows"
    ]
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
   }
  ],
  "army": [
