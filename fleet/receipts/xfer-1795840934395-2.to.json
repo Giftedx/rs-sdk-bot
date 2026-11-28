@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795840934395-2",
+ "account": "SporranBulge",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 244,
+ "claim": "87fc2709-65f7-4192-ad22-e441b3c94268",
+ "count": 0,
+ "ok": false,
+ "at": 1795841834588,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795841819051-0000008940-0000000001",
+  "at": 1795841834576,
+  "sha256": "411a2ec1b475c0b883ad8fb2683f27648c47aeee6b97b86dbdbd8b93850ea01b"
+ },
+ "screen": false
+}

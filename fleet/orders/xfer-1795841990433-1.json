@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795841990433-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "CoinCock",
+  "to": "mmtha0205",
+  "item": "Tin ore",
+  "count": 1,
+  "itemId": 438,
+  "start": 1795841990433,
+  "end": 1795842890433,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795841402538-1",
+ "account": "FishAndChips",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 7005,
+ "claim": "681888c5-c526-4b48-9c90-f7c9dc0f63d4",
+ "count": 7005,
+ "ok": true,
+ "at": 1795841996175,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7005,
+  "after": 0
+ },
+ "bank": {
+  "count": 7005,
+  "at": 1795841912637
+ },
+ "logout": {
+  "attemptId": "1795841903556-0000025172-0000000001",
+  "at": 1795841996164,
+  "sha256": "44eaac0bd29007272bc3e5c51a2de73cf1f56d177f3dfe8f21dd4533fe9b85ea"
+ },
+ "screen": true
+}

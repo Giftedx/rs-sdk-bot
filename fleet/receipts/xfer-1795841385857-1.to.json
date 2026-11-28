@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795841385857-1",
+ "account": "BackdoorMan",
+ "partner": "Pullmybow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "f347f64d-1b87-487f-a3d0-eebce012970b",
+ "count": 0,
+ "ok": false,
+ "at": 1795842006356,
+ "detail": "fled at low hitpoints: flee_guard id=99 at=2654,3335 ticks=5",
+ "logout": {
+  "attemptId": "1795841990903-0000017504-0000000001",
+  "at": 1795842006171,
+  "sha256": "c8d57d410b510ddbf9de7014153469612e75aa506ffa030c49e272a48cd7785b"
+ },
+ "screen": false
+}
