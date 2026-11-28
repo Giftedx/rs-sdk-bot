@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795847170750-1",
+ "account": "Nockitoff",
+ "partner": "WellHung",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 10,
+ "claim": "b78dac91-7445-4d91-ad2b-b8250095a1cc",
+ "count": 10,
+ "ok": true,
+ "at": 1795848060709,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795848059642
+ },
+ "logout": {
+  "attemptId": "1795848046600-0000019648-0000000001",
+  "at": 1795848060702,
+  "sha256": "901ce9684fc5142e0464b196649a240f735dddaf1295d1d361527e4476d076ae"
+ },
+ "screen": true
+}
