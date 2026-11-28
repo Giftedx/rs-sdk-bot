@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795830618633-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "WellHung",
+  "to": "Ballbag",
+  "item": "Copper ore",
+  "count": 10,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 10,
+      "itemId": 438
+    }
+  ],
+  "start": 1795830618633,
+  "end": 1795831518633,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
