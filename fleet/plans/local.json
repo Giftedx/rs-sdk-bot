@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857970174,
+ "at": 1795857980035,
  "jobs": [
   {
    "account": "Balls",
@@ -105,7 +105,7 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=90 PRODUCT_TARGET=92 MAX_ORE=90 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=89 PRODUCT_TARGET=92 MAX_ORE=89 -- mining ore",
     "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1840 TARGET_COUNT=184 PRODUCT_TARGET=184 MAX_ORE=184 -- mining ore",
     "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=92 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=92 STALL_TICKS=280 -- smithing smelt 2240 steel"
    ],
@@ -152,7 +152,7 @@
    "role": "army"
   },
   {
-   "account": "Knightstick",
+   "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -167,7 +167,7 @@
    "role": "army"
   },
   {
-   "account": "Hocuspokeus",
+   "account": "Knightstick",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -238,6 +238,78 @@
    "resources": [
     "essence-mine"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   }
  ],
  "army": [
@@ -256,8 +328,6 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
-  "fingersmith",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
@@ -267,7 +337,6 @@
   "pickpockdick",
   "pocketpool",
   "pocketpython",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "yewfirst"
