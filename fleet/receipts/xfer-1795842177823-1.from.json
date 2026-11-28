@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795842177823-1",
+ "account": "Pocketpython",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 1,
+ "claim": "4a42cd09-300d-447a-a5a9-0c70364a7524",
+ "count": 0,
+ "ok": false,
+ "at": 1795842512743,
+ "detail": "trade claimed"
+}

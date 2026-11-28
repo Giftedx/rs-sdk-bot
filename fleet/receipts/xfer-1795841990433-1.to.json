@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795841990433-1",
+ "account": "mmtha0205",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 1,
+ "claim": "00b5af4d-ce28-4259-af73-a7df8100b571",
+ "count": 1,
+ "ok": true,
+ "at": 1795842533846,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795842533036
+ },
+ "logout": {
+  "attemptId": "1795842522076-0000013084-0000000001",
+  "at": 1795842533768,
+  "sha256": "9995d5958d975364e454884d8242a45caab4c39512d68a86136325ab36a2a122"
+ },
+ "screen": true
+}

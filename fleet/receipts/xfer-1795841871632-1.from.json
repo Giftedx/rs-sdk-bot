@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795841871632-1",
  "account": "Woodenstaff",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "6b857927-924a-499b-a6ba-65803d3be60a",
- "count": 0,
- "ok": false,
- "at": 1795842240493,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795842477348,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795842462253
+ },
+ "logout": {
+  "attemptId": "1795842240501-0000003484-0000000001",
+  "at": 1795842477339,
+  "sha256": "122c8699b764f8ef179990035edbcc456d4934de9fdf899dda00d0cebb7daac5"
+ },
+ "screen": true
 }
