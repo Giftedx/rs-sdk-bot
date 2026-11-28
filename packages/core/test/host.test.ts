@@ -122,6 +122,29 @@ test('runHost runs one script per bot in one process, each with its own argv, lo
     expect(lines.some(l => l.startsWith('[exiter] RESULT'))).toBe(false);
 });
 
+test('a helper module ends, prints, opens and exits for the hosted bot that runs it', async () => {
+    const lines: string[] = [];
+    const logDir = join(tmpdir(), `host-helper-test-${process.pid}`);
+    let opens = 0, closed = false;
+    const session = { name: 'helperopen', sdk: {}, bot: {}, direct: async () => ({}), onTick: () => () => {}, ended: Promise.resolve({ reason: 'logged-out' }), close: async () => { closed = true; } } as unknown as Session;
+    const script = join(import.meta.dir, 'fixtures', 'host-helper.ts');
+    try {
+        const r = await runHost(
+            ['helperok', 'helperfail', 'helperexit', 'helperopen'].map(name => ({ name, script })),
+            { out: l => lines.push(l), logDir, guard: false, open: async (_name, opts) => { opens++; expect(typeof opts?.log).toBe('function'); return session; } },
+        );
+        expect(r.map(x => [x.name, x.code])).toEqual([['helperok', 0], ['helperfail', 1], ['helperexit', 4], ['helperopen', 0]]);
+        expect(lines).toContain('[helperok] HELPER helperok');
+        expect(lines).toContain('[helperexit] HELPER helperexit');
+        expect(lines).toContain('[helperok] RESULT ok helper bot=helperok');
+        expect(lines).toContain('[helperfail] RESULT fail helper bot=helperfail');
+        expect(lines).toContain('[helperopen] RESULT ok helper bot=helperopen');
+        expect(opens).toBe(1);
+        expect(closed).toBe(true);
+        expect(lines.some(l => l.includes('NEVER') || l.includes('without a runner hook'))).toBe(false);
+    } finally { rmSync(logDir, { recursive: true, force: true }); }
+});
+
 test('a chain bot runs its steps in order inside the host, repeats rounds and ends with the chain RESULT', async () => {
     const lines: string[] = [];
     const logDir = join(tmpdir(), `host-chain-test-${process.pid}`);

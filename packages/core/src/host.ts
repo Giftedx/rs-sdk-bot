@@ -32,6 +32,7 @@ import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
 import { shareLocIndex } from './loc-index-share';
 import { workerExecution } from './worker-execution';
+import { bindHostedScope, currentHostedScope } from './bot';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -172,7 +173,8 @@ type OpenOptions = NonNullable<Parameters<typeof openBot>[1]>;
 export function hostedOpenOptions(log: (line: string) => void, defaultStop: NonNullable<OpenOptions['onStop']>, opts: OpenOptions = {}): OpenOptions {
     // A custom callback cancels work/banks products before the worker calls its
     // own finish. Only scripts without that policy use the host's final stop.
-    return { log, ...opts, onStop: opts.onStop ?? defaultStop, onSessionEnd: opts.onSessionEnd ?? defaultStop };
+    // The log is never undefined here: openBot (bot/open.ts) sends a call without a log back to the hosted bot.
+    return { ...opts, log: opts.log ?? log, onStop: opts.onStop ?? defaultStop, onSessionEnd: opts.onSessionEnd ?? defaultStop };
 }
 
 // The per-bot copy of bot.ts: everything from the shared module, with openBot and finish bound to one bot.
@@ -195,7 +197,7 @@ interface Instance {
     log(line: string): void;
     exit(code?: number): never;
     openBot(name: string, opts?: OpenOptions): Promise<Session>;
-    finish(sessions: Session[], ok: boolean, detail: string): Promise<never>;
+    finish(sessions: Session[], ok: boolean, detail: Parameters<typeof settle>[2]): Promise<never>;
     sessions: Session[];
     result: string;
     done: Promise<number>;
@@ -224,6 +226,14 @@ function install(out: (line: string) => void, guard: boolean): void {
             });
         },
     });
+    // Code the host does not rewrite (helper modules) prints and exits through the hosted bot that runs it, so its
+    // RESULT and LEDGER lines carry the `[bot]` prefix and its exit ends that bot, not the host (bot/host-scope.ts).
+    for (const level of ['log', 'info', 'warn', 'error'] as const) {
+        const original = console[level].bind(console);
+        console[level] = (...a: unknown[]) => { const hosted = currentHostedScope(); if (hosted) hosted.log(fmt(a)); else original(...a); };
+    }
+    const exit = process.exit.bind(process);
+    process.exit = ((code?: number) => { const hosted = currentHostedScope(); return hosted ? hosted.exit(code) : exit(code); }) as typeof process.exit;
     // One bot's stray error must not end the other bots' sessions.
     if (guard) process.on('unhandledRejection', e => { if (!(e instanceof HostExit)) out(`[host] unhandled rejection: ${fmt([e])}`); });
     if (guard) process.on('uncaughtException', e => { if (!(e instanceof HostExit)) out(`[host] uncaught exception: ${fmt([e])}`); });
@@ -254,6 +264,8 @@ function createInstance(name: string, id: string, script: string, args: string[]
     const done = new Promise<number>(r => { resolveDone = r; });
     let finished = false;
     const never = new Promise<never>(() => {});
+    // One function per instance: it names this bot to code the host does not rewrite (bot/host-scope.ts).
+    const contextLog = (level: 'log' | 'warn' | 'error', args: unknown[]) => inst.console[level](...args);
     const inst: Instance = {
         id,
         name,
@@ -318,9 +330,10 @@ function createInstance(name: string, id: string, script: string, args: string[]
         sessions: [],
         result: '',
         done,
-        execution: workerExecution((level, args) => inst.console[level](...args)),
+        execution: workerExecution(contextLog),
         openings: new Set(),
     };
+    bindHostedScope(contextLog, inst);
     return inst;
 }
 

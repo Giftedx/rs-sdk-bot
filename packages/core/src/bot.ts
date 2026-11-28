@@ -26,4 +26,5 @@ export {
     releasePrayerGuard,
 } from './bot/monitors';
 export { finish, settle } from './bot/settle';
+export { bindHostedScope, currentHostedScope } from './bot/host-scope';
 export { accountOf, getWorld, openBot } from './bot/open';
