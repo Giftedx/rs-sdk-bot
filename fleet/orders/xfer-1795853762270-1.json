@@ -1,0 +1,41 @@
+{
+  "id": "xfer-1795853762270-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Bigchopper",
+  "item": "Rune full helm",
+  "count": 1,
+  "itemId": 1163,
+  "extra": [
+    {
+      "item": "Dragonhide body",
+      "count": 1,
+      "itemId": 2503
+    },
+    {
+      "item": "Cooked karambwan",
+      "count": 3,
+      "itemId": 3144
+    },
+    {
+      "item": "Shark",
+      "count": 1,
+      "itemId": 385
+    }
+  ],
+  "start": 1795853762270,
+  "end": 1795854662270,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
