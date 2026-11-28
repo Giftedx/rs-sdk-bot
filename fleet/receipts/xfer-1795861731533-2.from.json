@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795861731533-2",
+ "account": "Nockitoff",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 1,
+ "claim": "1161aa7d-5043-441f-b546-535bdb360f50",
+ "count": 1,
+ "ok": true,
+ "at": 1795861881589,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795861850019
+ },
+ "logout": {
+  "attemptId": "1795861840357-0000017816-0000000001",
+  "at": 1795861881582,
+  "sha256": "0b78199c1fb4aab0c3cc657732d1d20a2270de39ad4d8774b4f8bfaf55b4ef4f"
+ },
+ "screen": true
+}

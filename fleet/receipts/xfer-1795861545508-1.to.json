@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861545508-1",
  "account": "SporranDip",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Raw lobster",
  "requested": 28,
  "claim": "19ed3e7e-549b-4c85-99fd-420be8cc8f86",
- "count": 0,
- "ok": false,
- "at": 1795861777244,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795861807194,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795861806050
+ },
+ "logout": {
+  "attemptId": "1795861777281-0000024032-0000000001",
+  "at": 1795861807185,
+  "sha256": "71e395f05a4b784c755d0deeefa44eb8e1092c6e75dc72589fb0cd3204b66f0c"
+ },
+ "screen": true
 }

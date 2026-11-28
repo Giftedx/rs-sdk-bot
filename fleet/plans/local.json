@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861778411,
+ "at": 1795861925862,
  "jobs": [
   {
    "account": "Balls",
@@ -43,123 +43,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-1621-7-o0-p3020 ITEM_ID=1621 QUANTITY=7 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3020 EXPECTED_OWNED=0 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=7 CAP=1000 DEMAND_ID=goal:supply_chain:1605 BATCH_UNITS=7 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-emerald"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1605",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1621 \"ITEMS=Uncut emerald\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1605 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-emerald"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1605",
-   "role": "army"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "473",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20920",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "473"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
   },
   {
    "account": "Quickhandjob",
@@ -270,11 +153,32 @@
    "role": "army"
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "items",
+    "enchant:sapphire_ring",
+    "-",
+    "1",
+    "1200"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:2550",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:2550",
+   "role": "army"
+  },
+  {
    "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1623-1-o1-p23000 ITEM_ID=1623 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23000 EXPECTED_OWNED=1 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+    "scripts/aio-market.ts ORDER_KEY=brain-1623-17-o1-p23000 ITEM_ID=1623 QUANTITY=17 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23000 EXPECTED_OWNED=1 -- ge-buy",
+    "scripts/aio-skiller.ts MAX_MAKE=18 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=18 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
     "ROUNDS": "1"
@@ -285,51 +189,18 @@
    "role": "army"
   },
   {
-   "account": "PickpockDick",
+   "account": "SporranDip",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "decant:super_antipoison"
+    "cooking",
+    "food"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "mission:mission:pk-squad:item:2448",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2448",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:tarromin",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_tarromin_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:95",
-   "role": "auto"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 PRODUCT_TARGET=219 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=219 MAX_MAKE=219 CAP=2152 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:379",
+    "BATCH_UNITS": "28",
+    "MAX_MAKE": "28",
+    "CAP": "1500",
+    "STALL_TICKS": "255"
    },
    "enabled": true,
    "repeat": false,
@@ -337,23 +208,83 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "119",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "49600",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "119"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=25 PRODUCT_TARGET=25 MAX_ORE=25 -- mining ore",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=25 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=25 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=38 PRODUCT_TARGET=38 MAX_ORE=38 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1000 TARGET_COUNT=47 PRODUCT_TARGET=76 MAX_ORE=47 -- mining ore",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=38 ORE_RESERVE=0 MAX_MAKE=38 STALL_TICKS=350 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "army"
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=191 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=191 MAX_MAKE=191 CAP=1928 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "helper"
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -367,30 +298,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:mineshafted:item:440",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Kiltlifter",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "chicken"
+    "sweep",
+    "barcrawl"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
   }
  ],
  "army": [
@@ -407,16 +334,17 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
-  "hocuspokeus",
+  "dipstick",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpool",
   "pocketrocket",
   "sausagefest",
-  "sporrandip",
   "woodpecker",
   "yewfirst"
  ],

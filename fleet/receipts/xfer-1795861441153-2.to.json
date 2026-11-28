@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861441153-2",
  "account": "OreElse",
  "partner": "BoneToPick",
@@ -10,15 +10,37 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "10fe0dbd-01cf-4ce0-8631-9e016e8e2564",
- "count": 0,
- "ok": false,
- "at": 1795861747145,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795861813183,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Bronze bar",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795861812501
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795861812029
+ },
+ "logout": {
+  "attemptId": "1795861747158-0000022416-0000000001",
+  "at": 1795861813173,
+  "sha256": "733fb286eb8d7ab4ef717666461f7d545252885962fbe677699965ca128720c6"
+ },
+ "screen": true
 }

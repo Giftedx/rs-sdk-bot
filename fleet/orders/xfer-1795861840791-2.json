@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795861840791-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "Wandwaver",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 211,
+  "start": 1795861840791,
+  "end": 1795862740791,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

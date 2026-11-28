@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795861840791-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Dipstick",
+  "to": "Masterbaiter",
+  "item": "Rune platelegs",
+  "count": 1,
+  "itemId": 1079,
+  "extra": [
+    {
+      "item": "Rune scimitar",
+      "count": 1,
+      "itemId": 1333
+    }
+  ],
+  "start": 1795861840791,
+  "end": 1795862740791,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
