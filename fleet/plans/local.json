@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795863357255,
+ "at": 1795863367412,
  "jobs": [
   {
    "account": "Balls",
@@ -53,20 +53,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "215",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "96",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "215"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "96"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:43",
+   "goal": "campaign:haggis:item:42",
    "role": "auto"
   },
   {
@@ -194,6 +194,24 @@
    "role": "army"
   },
   {
+   "account": "Mightyrod",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "fire-giant"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:1333",
+    "BATCH_UNITS": "100"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:1333",
+   "role": "army",
+   "resources": [
+    "fire-giants"
+   ]
+  },
+  {
    "account": "Dipstick",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -204,14 +222,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "80",
+    "MAX_ITEMS": "65",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "80"
+    "BATCH_UNITS": "65"
    },
    "enabled": true,
    "repeat": false,
@@ -234,6 +252,28 @@
    "role": "army"
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "10",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "10",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "auto"
+  },
+  {
    "account": "dropmyload",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -242,7 +282,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "1237"
    },
    "enabled": true,
    "repeat": false,
