@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795863988462,
+ "at": 1795864120018,
  "jobs": [
   {
    "account": "Balls",
@@ -46,6 +46,31 @@
   },
   {
    "account": "Mightyrod",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "292",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "292"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -61,7 +86,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1511",
-   "role": "army",
+   "role": "helper",
    "resources": [
     "draynor-normal-trees"
    ]
@@ -89,22 +114,23 @@
    ]
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
+   "account": "pullmybow",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "foraging",
-    "flax"
+    "chicken"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:pullmybow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
+   "goal": "goal:pk_army:pullmybow",
+   "role": "auto",
    "resources": [
-    "seers-flax"
+    "chickens"
    ]
   },
   {
@@ -198,24 +224,44 @@
    "role": "auto"
   },
   {
-   "account": "pullmybow",
-   "script": "scripts/aio-fighter.ts",
+   "account": "yewfirst",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "chicken"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:pullmybow",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:pullmybow",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   }
  ],
  "army": [
@@ -249,9 +295,7 @@
   "pocketpython",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
-  "woodpecker",
-  "yewfirst"
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

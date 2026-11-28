@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795863961644-1",
+ "account": "knightrider",
+ "partner": "shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harpoon",
+ "requested": 1,
+ "claim": "a3f10010-b1c9-4408-bd6d-06a6a0d7c6b3",
+ "count": 0,
+ "ok": false,
+ "at": 1795864044822,
+ "detail": "trade claimed"
+}
