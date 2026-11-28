@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795862015468-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Fingerblastr",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795862015468,
+  "end": 1795862915468,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

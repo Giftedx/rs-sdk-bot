@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795861575495-2",
+ "account": "Mightyrod",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 2,
+ "claim": "f3c58efc-e8bd-419d-9f5b-b37583a39181",
+ "count": 2,
+ "ok": true,
+ "at": 1795862344363,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795862325624
+ },
+ "logout": {
+  "attemptId": "1795862282813-0000008964-0000000001",
+  "at": 1795862344355,
+  "sha256": "e37bf927d3ee2e38c655309fad927c43a86cf9c3fe061b241203aae3087468bb"
+ },
+ "screen": true
+}

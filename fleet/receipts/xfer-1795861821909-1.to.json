@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795861821909-1",
+ "account": "OreElse",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 24,
+ "claim": "5f925fd4-c636-4d9e-bd26-976051c9cbc2",
+ "count": 24,
+ "ok": true,
+ "at": 1795862239556,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 24
+ },
+ "bank": {
+  "count": 24,
+  "at": 1795862238816
+ },
+ "logout": {
+  "attemptId": "1795862227369-0000027484-0000000001",
+  "at": 1795862239549,
+  "sha256": "205abf87dc399071e39f42f731ddf2846538475747834d3c33546b4c3522c952"
+ },
+ "screen": true
+}

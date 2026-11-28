@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861999151,
+ "at": 1795862410372,
  "jobs": [
   {
    "account": "Balls",
@@ -45,255 +45,185 @@
    "role": "pvp"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "2",
-    "1200"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:2550",
-    "BATCH_UNITS": "2",
-    "STALL_TICKS": "224"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2550",
-   "role": "army"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "1",
-    "1200"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:2550",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "224"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2550",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
+   "account": "Mightyrod",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1623-13-o1-p23000 ITEM_ID=1623 QUANTITY=13 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23000 EXPECTED_OWNED=1 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=14 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=14 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop2 3000",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=73 PRODUCT_TARGET=73 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=73 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=73 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1607",
+   "goal": "goal:supply_chain:1601",
    "role": "army"
   },
   {
    "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "emerald_ring",
-    "TARGET": "17",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1639",
-    "BATCH_UNITS": "17",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1639",
-   "role": "auto"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "cooking",
-    "food"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:379",
-    "BATCH_UNITS": "28",
-    "MAX_MAKE": "28",
-    "CAP": "1500",
-    "STALL_TICKS": "255"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "119",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "49600",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "119"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=38 PRODUCT_TARGET=38 MAX_ORE=38 -- mining ore",
-    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1000 TARGET_COUNT=47 PRODUCT_TARGET=76 MAX_ORE=47 -- mining ore",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=38 ORE_RESERVE=0 MAX_MAKE=38 STALL_TICKS=350 -- smithing smelt"
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop4 3000",
+    "scripts/aio-market.ts ITEM_ID=1621 \"ITEMS=Uncut emerald\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1605 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-emerald"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "goal:supply_chain:1605",
    "role": "auto"
   },
   {
-   "account": "BoneToPick",
+   "account": "Knightstick",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=219 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=219 MAX_MAKE=219 CAP=2152 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "helper"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -313,53 +243,19 @@
    ]
   },
   {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
+   "account": "Billionaire",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1800 TARGET_COUNT=180 PRODUCT_TARGET=181 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=181 MAX_MAKE=181 CAP=1848 STALL_TICKS=255 -- cooking food"
+    "sweep",
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:pvp_unlock:Billionaire:druid",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "helper"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:mineshafted:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:mineshafted:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Fingerblastr:druid BATCH_UNITS=1 -- sweep druid"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Fingerblastr:druid",
+   "goal": "goal:pvp_unlock:Billionaire:druid",
    "role": "army"
   },
   {
@@ -379,19 +275,21 @@
    "role": "army"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-quester.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "sweep",
-    "druid"
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:pvp_unlock:Swordswallow:druid",
-    "BATCH_UNITS": "1"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pvp_unlock:Swordswallow:druid",
    "role": "army"
   }
  ],
@@ -409,16 +307,18 @@
   "bigpackage",
   "bowbeforeme",
   "dipstick",
+  "fingerblastr",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "sausagefest",
+  "sporrandip",
   "woodpecker",
   "yewfirst"
  ],

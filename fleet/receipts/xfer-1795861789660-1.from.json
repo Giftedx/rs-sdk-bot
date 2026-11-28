@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795861789660-1",
+ "account": "Woodenstaff",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 10,
+ "claim": "c60e7242-5301-4286-b6b6-e14adf8ea853",
+ "count": 0,
+ "ok": false,
+ "at": 1795862301774,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}

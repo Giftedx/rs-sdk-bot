@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795862015468-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Nockitoff",
+  "to": "BoneToPick",
+  "item": "Rune pickaxe",
+  "count": 1,
+  "itemId": 1275,
+  "start": 1795862015468,
+  "end": 1795862915468,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
