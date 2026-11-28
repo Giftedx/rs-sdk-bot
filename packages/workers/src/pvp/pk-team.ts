@@ -7,11 +7,51 @@
 // be kits joined by `+` (tribrid-snare-spear+tribrid-snare), taken in turn by its members.
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../../../core/src/inprocess';
-import { fightPlayer, nextTick, observePlayer, recordKillLoot, wildernessLevel, type FightOptions } from './fight';
+import { createNeverSkullGuard, fightPlayer, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, recordKillLoot, wildernessLevel, type FightOptions } from './fight';
 import { TRIBRID_KIT } from './hunt-kits';
 import { kitOptions, kitSwitches } from '../../../core/src/pk-kits/kits';
 import { sparOptions } from './pk-spar';
 import { pickUp, PICKUP_ITEMS } from './pk-gang';
+
+/** Maximum simultaneous attackers assigned to a wounded target before overflow rolls to the secondary focus (eliminates 24v49 overkill waste). */
+export function maxOverkillAttackers(hpFrac: number): number {
+    if (hpFrac <= 0) return 0;
+    if (hpFrac <= 0.15) return 2;
+    if (hpFrac <= 0.30) return 3;
+    if (hpFrac <= 0.50) return 5;
+    return Infinity;
+}
+
+/** Shared target-assignment tracker for multi-way team stacks (24v49) so overflow attackers focus-fire the next priority target without overkill waste. */
+export function createTeamFocus() {
+    const memberTarget = new Map<string, string>();
+    const counts = new Map<string, number>();
+    const unassign = (member: string) => {
+        const mKey = member.toLowerCase();
+        const prev = memberTarget.get(mKey);
+        if (!prev) return;
+        memberTarget.delete(mKey);
+        const next = (counts.get(prev) ?? 1) - 1;
+        if (next <= 0) counts.delete(prev);
+        else counts.set(prev, next);
+    };
+    const assign = (member: string, target: string) => {
+        const mKey = member.toLowerCase();
+        const tKey = target.toLowerCase();
+        if (memberTarget.get(mKey) === tKey) return;
+        unassign(mKey);
+        memberTarget.set(mKey, tKey);
+        counts.set(tKey, (counts.get(tKey) ?? 0) + 1);
+    };
+    const assignedCount = (target: string, excludeMember?: string): number => {
+        const tKey = target.toLowerCase();
+        const total = counts.get(tKey) ?? 0;
+        if (excludeMember && memberTarget.get(excludeMember.toLowerCase()) === tKey) return Math.max(0, total - 1);
+        return total;
+    };
+    return { assign, unassign, assignedCount };
+}
+export type TeamFocus = ReturnType<typeof createTeamFocus>;
 
 export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number }; taken: { a: number; b: number }; picked?: Record<string, number> };
 
@@ -35,9 +75,33 @@ export type TeamPick = 'low' | 'near' | 'pair';
 export const shouldStopUnseen = (anyEnemyInView: boolean, unseen: number, wait: number) => !anyEnemyInView && unseen > wait;
 
 // The enemy that an account takes from those in view (`own`: the enemy in its own place on the other side).
-export function pickEnemy<F, X extends { f: F; p?: { distance: number } }>(live: readonly X[], own: F | undefined, pick: TeamPick, health: (x: X) => number): X | undefined {
-    return (pick === 'pair' ? live.find(x => x.f === own) : undefined)
-        ?? [...live].sort((x, y) => (pick !== 'near' ? health(x) - health(y) : 0) || x.p!.distance - y.p!.distance)[0];
+// When `focus` is supplied (large multi-way stacks), skips 0-HP dying enemies and caps overkill attackers on low-HP targets
+// so overflow allies immediately pile the next priority target without wasting attack ticks.
+export function pickEnemy<F, X extends { f: F; p?: { name?: string; distance: number } }>(
+    live: readonly X[],
+    own: F | undefined,
+    pick: TeamPick,
+    health: (x: X) => number,
+    coord?: { focus: TeamFocus; memberName: string; nameOf: (x: X) => string; drained?: (x: X) => boolean },
+): X | undefined {
+    if (pick === 'pair') {
+        const paired = live.find(x => x.f === own);
+        if (paired) return paired;
+    }
+    const sorted = [...live].sort((x, y) => {
+        if (coord?.drained) {
+            const dx = coord.drained(x) ? 1 : 0, dy = coord.drained(y) ? 1 : 0;
+            if (dx !== dy) return dy - dx;
+        }
+        return (pick !== 'near' ? health(x) - health(y) : 0) || x.p!.distance - y.p!.distance;
+    });
+    if (!coord) return sorted[0];
+    const nonOverkill = sorted.find(x => {
+        const hp = health(x);
+        const cap = maxOverkillAttackers(hp);
+        return cap > 0 && coord.focus.assignedCount(coord.nameOf(x), coord.memberName) < cap;
+    });
+    return nonOverkill ?? sorted.find(x => health(x) > 0) ?? sorted[0];
 }
 // optionsA and optionsB: one side's options, or a function of the member's place on its side (per-member kits).
 type SideOptions = FightOptions | ((member: number) => FightOptions);
@@ -56,31 +120,66 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     // whose fight loop ends for another reason (it escaped, it fled) is not stopped: a runner is still chased.
     const stopped = new Set<Session>();
     const ended = () => over || halt() || a.every(isOut) || b.every(isOut) || a[0]!.tick() - start >= cap || a.every(s => isOut(s) || stopped.has(s)) || b.every(s => isOut(s) || stopped.has(s));
-    const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => mine.map(async (s, member) => {
+    const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => {
+        const teamFocus = mine.length >= 4 ? createTeamFocus() : undefined;
+        return mine.map(async (s, member) => {
         const options = typeof sideOptions === 'function' ? sideOptions(member) : sideOptions;
         const allies = mine.filter(x => x !== s).map(x => x.name.toLowerCase());
+        const allySet = new Set(allies);
+        const skullGuard = options.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
         // The game refuses an attack on an enemy while another one has hit us in the last 8 ticks (pvp_combat.rs2:104-112:
         // "I'm already under attack.", and "Someone else is already fighting your opponent." for an enemy that another one
         // hit): the fight stops on the refusal and the pick leaves that enemy out for 8 ticks.
-        let seenMessage = 0, refusedAt = -100, unseen = 0;
+        let seenMessage = 0, refusedAt = -100, unseen = 0, skullSeenEvent = 0;
         const skip = new Map<Session, number>();
-        const unwatchRefusals = s.onTick(() => { for (const msg of s.sdk.getState()?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
-            if (msg.tick >= start && /already under attack|already fighting your opponent/i.test(msg.text)) refusedAt = s.tick(); } });
+        const unwatchRefusals = s.onTick(() => {
+            const st = s.sdk.getState();
+            for (const msg of st?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
+                if (msg.tick >= start && /already under attack|already fighting your opponent/i.test(msg.text)) refusedAt = s.tick(); }
+            if (skullGuard && st) {
+                const clientPlayers = (s.client as { players?: ({ faceEntity?: number; primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
+                skullSeenEvent = observeProvocations({
+                    guard: skullGuard,
+                    now: s.tick(),
+                    selfSlot: localPlayerSlot(s.client),
+                    allies: allySet,
+                    nearbyPlayers: st.nearbyPlayers ?? [],
+                    combatEvents: st.combatEvents,
+                    seenEventId: skullSeenEvent,
+                    minTick: start,
+                    clientPlayers,
+                    isAttackAnim: anim => anim > 0,
+                });
+            }
+        });
         try {
         while (!ended() && !isOut(s)) {
             // The enemy with the lowest health bar in view, the nearest on a tie.
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
-            const live = foes.filter(f => !isOut(f) && (skip.get(f) ?? -100) < s.tick()).map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) })).filter(x => x.p);
+            const liveAll = foes.filter(f => !isOut(f) && (skip.get(f) ?? -100) < s.tick())
+                .map(f => ({ f, p: view.find(v => v.name.toLowerCase() === f.name.toLowerCase()) }))
+                .filter(x => x.p && !isDying(observePlayer(s.client, x.p.index)));
+            const live = skullGuard ? liveAll.filter(x => skullGuard.canAttackSafely(x.f.name, s.tick())) : liveAll;
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
-            const pick = pickEnemy(live, foes[member], picks[key], health);
+            const pick = pickEnemy(live, foes[member], picks[key], health, teamFocus ? { focus: teamFocus, memberName: s.name, nameOf: x => x.f.name } : undefined);
             // No enemy in view for SPAR_TEAM_WAIT ticks (default 100): the enemies left are away, as the gang meeting's `away`.
             const anyEnemyInView = foes.some(f => !isOut(f) && view.some(v => v.name.toLowerCase() === f.name.toLowerCase()));
-            if (!pick) { if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
+            if (!pick) { teamFocus?.unassign(s.name); if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
             unseen = 0;
+            teamFocus?.assign(s.name, pick.f.name);
             const began = s.tick();
-            const r = await fightPlayer(s, pick.f.name, { ...options, allies, cap: Math.max(1, cap - (s.tick() - start)), stop: () => ended() || isOut(pick.f) || refusedAt > began,
-                log: l => log(`[${s.name}] ${l}`) });
+            const r = await fightPlayer(s, pick.f.name, {
+                ...options,
+                ...(skullGuard ? { provokedBy: (name: string) => skullGuard.canAttackSafely(name, s.tick()) } : {}),
+                stopOnDying: teamFocus !== undefined && liveAll.length > 1,
+                allies,
+                cap: Math.max(1, cap - (s.tick() - start)),
+                stop: () => ended() || isOut(pick.f) || refusedAt > began,
+                log: l => log(`[${s.name}] ${l}`),
+            });
+            teamFocus?.unassign(s.name);
             if (refusedAt > began) skip.set(pick.f, s.tick() + 8);
+            if (r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) skullGuard?.recordDeath(pick.f.name);
             // `pickup`: after its kill the account takes the wanted stacks within `pickupRadius` tiles (SPAR_PICKUP_RADIUS,
             // default 3; scripts/pk-gang.ts pickUp). It runs on after the meeting ends: the last kill ends it.
             // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
@@ -91,10 +190,12 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             }
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'died' || r.outcome === 'escaped' || r.outcome === 'session ended') return;
-            if (!await nextTick(s)) return;
+            // Zero-tick-waste switch: only wait a tick when fightPlayer consumed 0 ticks.
+            if (s.tick() === began && !await nextTick(s)) return;
         }
-        } finally { unwatchRefusals(); }
+        } finally { teamFocus?.unassign(s.name); unwatchRefusals(); }
     });
+    };
     await Promise.all([...side(a, b, optionsA, 'a'), ...side(b, a, optionsB, 'b')]);
     over = true;
     for (const u of unwatch) u();
@@ -114,11 +215,16 @@ export async function runPkTeamCli(
     const { openBot, finish } = await import('../../../core/src/bot');
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const [kitA, kitB] = (env.SPAR_KITS ?? '').split(':');
+    const neverSkullA = neverSkullOf((k, d) => env[k] ?? d, false);
     const options = (sideB: boolean, group: number) => (member: number): FightOptions => {
         const kits = (sideB ? kitB : kitA)?.split('+').filter(Boolean) ?? [];
         const kit = kits.length ? kits[member % kits.length] : undefined;
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + (sideB ? 1 : 0) };
-        return { ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
+        return {
+            ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}),
+            ...(!sideB && neverSkullA ? { neverSkull: true, protectItem: true } : {}),
+            ...seed,
+        };
     };
     let halted: string | undefined;
     const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };

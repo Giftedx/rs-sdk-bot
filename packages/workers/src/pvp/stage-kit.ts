@@ -11,6 +11,7 @@ import {walkRoute} from '../../../core/src/walk';
 import {routeFares} from '../../../core/src/world';
 import {buyWithBudget} from '../market/shop-buy';
 import {GOD_LOADOUTS, godCapeStaffConflict, type GodName} from '../../../core/src/pk-kits/god-specs';
+import {assessZeroRiskKit, itemCostOf, RING_OF_RECOIL_ID, type ZeroRiskAssessment} from './fight';
 import {hasVarrockTeleport} from './wild-rules';
 
 type Item={id:number;count:number};
@@ -109,6 +110,8 @@ export type StagePreflightReport = {
  escape: 'glory' | 'varrock_tele' | 'none';
  canCharge: boolean;
  maxGodCasts: number;
+ zeroRisk?: ZeroRiskAssessment;
+ hasRecoil?: boolean;
 };
 
 const CHARGED_GLORY_IDS = new Set([1706, 1708, 1710, 1712]);
@@ -127,22 +130,32 @@ export function stageSupplyDeficit(
  });
 }
 
-// Verify staged rev-289 Wilderness kit supplies: god cape/staff parity, escape item, food floor, prayer pots, and Charge runes.
+// Verify staged rev-289 Wilderness kit supplies: god cape/staff parity, escape item, food floor, prayer pots, Charge runes, and optional zero-risk 3+1 protection.
 export function verifyPvpStageSupplies(input: {
  magicLevel: number;
  inventory: readonly { id: number; name: string; count: number }[];
  equipment: readonly { id: number; name: string; count?: number }[];
- mode?: 'tribrid' | 'god-charge' | 'standby';
+ mode?: 'tribrid' | 'god-charge' | 'standby' | 'bait';
  minFood?: number;
  minPrayerPots?: number;
+ requireZeroRisk?: boolean;
+ cost?: (id: number) => number;
 }): StagePreflightReport {
  const mode = input.mode ?? 'tribrid';
  const minFood = input.minFood ?? (mode === 'standby' ? 1 : 8);
- const minPrayerPots = input.minPrayerPots ?? (mode === 'standby' ? 0 : 1);
+ const minPrayerPots = input.minPrayerPots ?? (mode === 'standby' || mode === 'bait' ? 0 : 1);
  const combined = [...input.inventory, ...input.equipment.map(e => ({ ...e, count: e.count ?? 1 }))];
  const conflict = godCapeStaffConflict(combined.map(i => i.id));
  const missing: string[] = [];
  if (conflict) missing.push(`conflicting ${conflict.capeGod} cape and ${conflict.staffGod} staff`);
+ const zeroRisk = assessZeroRiskKit(combined, {
+  cost: input.cost ?? itemCostOf,
+  requireProtectItem: true,
+ });
+ const hasRecoil = combined.some(i => i.id === RING_OF_RECOIL_ID || /^ring of recoil$/i.test(i.name.replace(/_/g, ' ')));
+ if ((mode === 'bait' || input.requireZeroRisk === true) && !zeroRisk.ok) {
+  missing.push(`zero-risk 3+1 violation (${zeroRisk.summary})`);
+ }
 
  const hasGlory = combined.some(i => CHARGED_GLORY_IDS.has(i.id) || /^amulet of glory\([1-4]\)$/i.test(i.name));
  const hasTele = hasVarrockTeleport(input.magicLevel, input.inventory, input.equipment);
@@ -182,7 +195,7 @@ export function verifyPvpStageSupplies(input: {
   if (maxGodCasts < 5) missing.push(`god spell runes (casts=${maxGodCasts}, need >=5)`);
   if (input.magicLevel >= 80 && !canCharge) missing.push('Charge runes (3 blood, 3 fire, 3 air + god gear)');
  }
- return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts };
+ return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts, zeroRisk, hasRecoil };
 }
 export async function runStageKitCli(args: readonly string[], existingSession?: Session): Promise<number> {
  let stopped=false;

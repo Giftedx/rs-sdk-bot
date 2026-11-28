@@ -17,7 +17,7 @@ import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { tradePartners } from '../../../core/src/tradeguard';
 import { readOpponent, readOpponents } from '../../../core/src/opponent';
 import { componentId } from '../../../core/src/logout';
-import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, packGain, recordKillLoot } from './fight';
+import { assessZeroRiskKit, bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, itemCostOf, observePlayer, packGain, postLootBankDue, recordKillLoot } from './fight';
 import { armourDefence } from './pk-read';
 import { PROFILES } from './pk-spar';
 import { KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
@@ -345,7 +345,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     else await sdk.waitForTicks(1);
                     continue;
                 }
-                if (castable && canAttack(m, near) && session.tick() >= freezeReady && !held) {
+                if (castable && !cfg.fight?.neverSkull && canAttack(m, near) && session.tick() >= freezeReady && !held) {
                     // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short:
                     // 2.4 s is 6 live ticks (400 ms). Live, 1 s (2.5 ticks) reported every Snare as unproved.
                     const r = await bot.castSpell(near as any, castable, 2400);
@@ -381,7 +381,27 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     stats.kills++;
                     const at = fight.targetAt ?? lastTile;
                     await sdk.waitForTicks(4);
-                    if (cfg.loot && at) { const pack = sdk.getInventory().map(i => ({ id: i.id, count: i.count })); await loot(at); recordKillLoot(fight, packGain(pack, sdk.getInventory())); }
+                    if (cfg.loot && at) {
+                        const beforeEq = sdk.getEquipment();
+                        const ownCore = new Set(assessZeroRiskKit([...beforeEq, ...sdk.getInventory()], { cost: itemCostOf, requireProtectItem: false }).kept3);
+                        const pack = sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+                        await loot(at);
+                        const gained = packGain(pack, sdk.getInventory());
+                        recordKillLoot(fight, gained);
+                        if (Object.keys(gained).length > 0) {
+                            const bankCheck = postLootBankDue([...sdk.getEquipment(), ...sdk.getInventory()], {
+                                cost: itemCostOf,
+                                nameOf: id => getObjNames().get(id),
+                                protectItem: true,
+                                ownCoreIds: ownCore,
+                            });
+                            if (bankCheck.bankNow) {
+                                emit({ e: 'post-loot-bank', reason: bankCheck.reason });
+                                await escape(`post-loot bank: ${bankCheck.reason}`);
+                                return "flee";
+                            }
+                        }
+                    }
                     return "kill";
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }

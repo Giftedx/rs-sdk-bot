@@ -24,6 +24,9 @@ import { Spells } from '../../../../vendor/rs-sdk/sdk/spells';
 import type { NearbyPlayer } from '../../../../vendor/rs-sdk/sdk/types';
 import { REPO_ROOT, SPELLS, type FightOptions, type Kit, type SpecConfig, type Style, type VolleyState } from './types';
 export { SPELLS, type FightOptions, type Kit, type SpecConfig, type Style, type VolleyState } from './types';
+import { createNeverSkullGuard, localPlayerSlot, observeProvocations } from './never-skull';
+export { createNeverSkullGuard, localPlayerSlot, neverSkullOf, observeProvocations, PREDATOR_SLOTS, PREY_SLOTS, type NeverSkullGuard, type ProvocationProof, type ProvocationRecord } from './never-skull';
+export { assessZeroRiskKit, DEFAULT_POST_LOOT_TROPHY_FLOOR, DEFAULT_VALUABLE_GEAR_COST, ENEMY_WEAPON_IDS, ENEMY_WEAPON_LIST, enforceZeroRiskGear, HIGH_VALUE_ARMOUR_AND_GEAR_LIST, isConsumableItem, isValuableGearItem, isWeaponItem, postLootBankDue, RING_OF_RECOIL_ID, summarizeWeaponLoot, type PostLootBankDecision, type RiskedItem, type RiskUnit, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './zero-risk';
 
 export const ITEMS = {
     shark: 385, karambwan: 3144, glory: [1712, 1710, 1708, 1706],
@@ -50,7 +53,9 @@ const PRAYER_REQ: Record<number, number> = {
 
 export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger' | 'session ended'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; flicks?: number; prayerLeft?: number; targetAt?: { x: number; z: number };
     // The file of the kill receipt (packages/core/src/kill-receipt.ts), on a kill with a written receipt.
-    receipt?: string };
+    receipt?: string;
+    // True if ownSkull became unexpectedly active while neverSkull was enforced.
+    unexpectedSkull?: boolean };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -446,14 +451,26 @@ const ARMOUR_SLOT: Record<string, number> = { hat: 0, back: 1, torso: 4, legs: 7
 let gearSlots: Map<number, string> | undefined;
 export async function rewearStart(s: Session, start: readonly number[], log: (line: string) => void = () => {}, tick: () => Promise<boolean> = () => nextTick(s)): Promise<number> {
     gearSlots ??= new Map(loadGear().map(g => [g.id, g.slot]));
-    let n = 0;
+    const eq = s.sdk.getState()?.equipment ?? [];
+    const inv = s.sdk.getInventory();
+    const wornSlots = new Set(eq.map(e => e.slot));
+    const toWear: { slot: number; opIndex: number }[] = [];
     for (const id of start) {
-        const slot = ARMOUR_SLOT[gearSlots.get(id) ?? ''];
-        if (slot === undefined || (s.sdk.getState()?.equipment ?? []).some(e => e.slot === slot)) continue;
-        const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => /^(wear|wield)$/i.test(x.text));
+        const eqSlot = ARMOUR_SLOT[gearSlots.get(id) ?? ''];
+        if (eqSlot === undefined || wornSlots.has(eqSlot)) continue;
+        const item = inv.find(i => i.id === id), op = item?.optionsWithIndex?.find(x => /^(wear|wield)$/i.test(x.text));
         if (!item || !op) continue;
-        await s.sdk.sendUseItem(item.slot, op.opIndex);
-        n++;
+        wornSlots.add(eqSlot);
+        toWear.push({ slot: item.slot, opIndex: op.opIndex });
+    }
+    // Batch up to 4 equip clicks per tick (within the 5-packet USER_EVENT budget) so re-equipping costs 1 tick instead of N.
+    let n = 0;
+    for (let i = 0; i < toWear.length; i += 4) {
+        const batch = toWear.slice(i, i + 4);
+        for (const req of batch) {
+            await s.sdk.sendUseItem(req.slot, req.opIndex);
+            n++;
+        }
         if (!await tick()) break;
     }
     if (n) log(`PK wore ${n} piece${n === 1 ? '' : 's'} of the starting armour again`);
@@ -482,9 +499,9 @@ export const carriedPoison = (client: unknown, now: number): boolean => { const 
 export const carriedSplat = (client: unknown): number => (typeof client === 'object' && client ? poisonCarry.get(client)?.splat ?? 0 : 0);
 export function noteFightPoison(client: unknown, poisoned: boolean, seenAt: number, splat = 0): void { if (typeof client === 'object' && client) poisonCarry.set(client, { poisoned, seenAt, splat }); }
 
-// The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, a health bar under the weapon's threshold.
-export const specReasons = (r: { fled: boolean; bursting: boolean; volleying: boolean; chainStun: boolean; low: boolean }) =>
-    ([['fled', r.fled], ['burst', r.bursting], ['volley', r.volleying], ['chain', r.chainStun], ['low', r.low]] as const).filter(([, on]) => on).map(([name]) => name).join('+') || 'none';
+// The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, smite burst, a health bar under the weapon's threshold.
+export const specReasons = (r: { fled: boolean; bursting: boolean; volleying: boolean; chainStun: boolean; smite?: boolean; low: boolean }) =>
+    ([['fled', r.fled], ['burst', r.bursting], ['volley', r.volleying], ['chain', r.chainStun], ['smite', !!r.smite], ['low', r.low]] as const).filter(([, on]) => on).map(([name]) => name).join('+') || 'none';
 // The flee state ends when the flee hold (6 ticks after the last step away) has run out, no freeze holds the target and it stands within 2 tiles of us.
 export const fledEnds = (fled: boolean, gap: number, now: number, fleeingUntil: number, frozenUntil: number) => fled && gap <= 2 && now >= fleeingUntil && now >= frozenUntil;
 
@@ -978,6 +995,8 @@ export type SpecPlanInput = {
     specReserve?: number;
     burstOnHold?: boolean;
     burstOnStun?: boolean;
+    smiteBurst?: boolean;
+    holdSpecForDrain?: boolean;
     freezeShareHeld?: boolean;
     stunShare?: { until: number; overlap?: number; clock: () => number };
     hasWeaponAndShield: boolean;
@@ -992,9 +1011,10 @@ export type SpecPlanInput = {
 export function evaluateSpecPlan(i: SpecPlanInput) {
     const names = i.names ?? getObjNames();
     const stunOverlap = i.stunShare?.overlap ?? 1;
+    const smite = !!i.smiteBurst;
     const canSecondaryStun = !i.dying && !!i.stunSpec && i.canReachMelee && !i.bursting
         && i.energy >= i.stunSpec.cost && i.stunOpenForChain
-        && (i.fled || lowHealth(i.seen, i.stunSpec.below) || !!i.stunShare);
+        && (i.fled || smite || lowHealth(i.seen, i.stunSpec.below) || !!i.stunShare);
     const meleeSpecReady = !!i.spec && i.spec.style !== 'ranged' && i.energy >= i.spec.cost && i.canReachMelee;
     const spec: SpecConfig | undefined = canSecondaryStun ? i.stunSpec
         : i.bursting ? (i.lastSpecStyle === 'ranged' && meleeSpecReady ? i.spec : i.burstBow)
@@ -1008,13 +1028,14 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
     const chainStun = !!spec?.stun && !!i.stunShare && i.stunShare.until >= 0 && i.stunOpenForChain;
     const freezeHeld = !!i.burstOnHold && !!i.freezeShareHeld;
     const burstStun = !!i.burstOnStun && !spec?.stun && i.targetStunned;
+    const holdDrain = !!i.holdSpecForDrain && !smite && !spec?.stun;
     const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && i.hasWeaponAndShield && i.invLength >= 28;
     const axeHitsAlly = thrownAxeHitsAlly(spec, i.nearbyPlayers, i.allies, names);
-    const baseReady = !!spec && !i.dying && !axeHitsAlly && !specNeedsRoom && !i.kiteTarget && !specWaits && !stunWaits && i.energy >= spec.cost && (specStyle !== 'melee' || i.canReachMelee);
-    const prayerAllowed = !!spec && (!!spec.stun || !i.guarded.has(specStyle) || lowHealth(i.seen, 0.25));
-    const threatPass = !!spec && ((i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, spec.below));
-    const volleyThresholdPass = i.volleyBelow === undefined || (i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, i.volleyBelow);
-    const reservePass = !!spec && (i.fled || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, 0.3) || i.energy - spec.cost >= (i.specReserve ?? 0));
+    const baseReady = !!spec && !i.dying && !holdDrain && !axeHitsAlly && !specNeedsRoom && !i.kiteTarget && !specWaits && !stunWaits && i.energy >= spec.cost && (specStyle !== 'melee' || i.canReachMelee);
+    const prayerAllowed = !!spec && (!!spec.stun || !i.guarded.has(specStyle) || lowHealth(i.seen, 0.25) || smite);
+    const threatPass = !!spec && ((i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || smite || lowHealth(i.seen, spec.below));
+    const volleyThresholdPass = i.volleyBelow === undefined || (i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || smite || lowHealth(i.seen, i.volleyBelow);
+    const reservePass = !!spec && (i.fled || i.bursting || freezeHeld || burstStun || chainStun || smite || lowHealth(i.seen, 0.3) || i.energy - spec.cost >= (i.specReserve ?? 0));
     const inRange = gap <= (specStyle === 'melee' ? 1 : specRange);
     const triggerNoVolley = baseReady && prayerAllowed && threatPass && reservePass;
     return {
@@ -1026,6 +1047,7 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
         chainStun,
         freezeHeld,
         burstStun,
+        smite,
         specNeedsRoom,
         axeHitsAlly,
         stripBurstArmour,
@@ -1085,8 +1107,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     // An antipoison in the first tick after the poison (default). false: only in a tick with 3 ticks to the next attack, which
     // bow and dagger turns back to back do not give: in one live meeting 139 of 455 damage was poison and no antipoison was drunk.
     const cureNow = o.cureNow !== false;
-    // Protect Item on or off for this tick: see FightOptions.protectItem.
-    const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
+    // Protect Item on or off for this tick: see FightOptions.protectItem. Under neverSkull, an unexpected skull forces Protect Item ON.
+    const protectItemNow = () => (o.neverSkull && ownSkull(s.client) === true)
+        ? true
+        : o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
+    const skullGuard = o.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
+    let skullSeenEvent = 0, neverSkullLogged = false, unexpectedSkullHandled = false;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
     // The skull, the items and the Protect Item varp (%prayer8) of the last tick that we were alive, for the death line
@@ -1106,7 +1132,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             .filter(e => /(^|_)(platebody|chainbody)(_|$)/.test(names.get(e.id) ?? '')).map(e => e.id),
     );
     const allySet = o.allies?.length ? new Set(o.allies) : null;
-    const combatPlayers = (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players;
+    const combatPlayers = (s.client as { players?: ({ faceEntity?: number; primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
     for (;;) {
         if (!await nextTick(s)) { result.outcome = 'session ended'; log(`PK session ended against ${targetName}`); return result; }
         const now = s.tick(), state = sdk.getState(), me = state?.player;
@@ -1123,6 +1149,38 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 const risk = deathRisk([...state.inventory, ...state.equipment], itemCostOf, skullNow, protectItemNow());
                 log(`PK skull ${skullNow ? 'on' : 'off'}: a death keeps ${risk.kept.length} item${risk.kept.length === 1 ? '' : 's'} and loses ${risk.lostUnits} items worth ${risk.lostValue}`);
             }
+        }
+        if (skullGuard) {
+            skullSeenEvent = observeProvocations({
+                guard: skullGuard,
+                now,
+                selfSlot: localPlayerSlot(s.client),
+                allies: allySet ?? undefined,
+                nearbyPlayers: state.nearbyPlayers,
+                combatEvents: state.combatEvents,
+                seenEventId: skullSeenEvent,
+                minTick: start,
+                clientPlayers: combatPlayers,
+                isAttackAnim: anim => anim > 0,
+            });
+        }
+        if (o.neverSkull && skullNow === true && !unexpectedSkullHandled) {
+            unexpectedSkullHandled = true;
+            result.unexpectedSkull = true;
+            const risk = deathRisk([...state.inventory, ...state.equipment], itemCostOf, true, true);
+            log(`PK NEVER_SKULL VIOLATION: ownSkull=1 against ${targetName} at ${at.x},${at.z} lostValue=${risk.lostValue} — aborting offense and enabling Protect Item`);
+            o.onUnexpectedSkull?.({ tick: now, target: targetName, at, lostValue: risk.lostValue });
+            if (state.prayers.prayerPoints > 0 && !state.prayers.activePrayers[PRAYER.item] && (state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 1) >= 25) {
+                holdPrayers();
+                void sdk.sendTogglePrayer(PRAYER.item);
+            }
+            if (o.exitOnDanger !== false) {
+                result.outcome = 'danger';
+                result.danger = 'unexpected skull';
+                return result;
+            }
+            outnumbered = true;
+            if (o.escapeLatch) o.escapeLatch.outnumbered = true;
         }
         const stoodStill = !!prevSelf && at.x === prevSelf.x && at.z === prevSelf.z;
         if (prevSelf && (at.x !== prevSelf.x || at.z !== prevSelf.z)) selfFrozenUntil = now;
@@ -1461,7 +1519,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 potionReady = now + 3;
                 delayedUntil = Math.max(delayedUntil, now + 3);
                 nextAttack = Math.max(nextAttack, delayedUntil);
-                continue;
+                // Fall through so overhead/protect-item prayers still switch on tick `now` before p_delay(1) blocks now+1..now+2.
             }
         }
         // Chase: a target that flees covers 2 tiles a tick, and an attack that is done leaves us where we stand until
@@ -1493,6 +1551,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
         const dying = isDying(seen);
+        if (dying && o.stopOnDying) {
+            log(`PK target dying (${targetName}): stopping early to avoid dead ticks`);
+            return result;
+        }
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
@@ -1667,8 +1729,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
         const belowFreezeFloor = freezeRule === 'low' && o.freezeFloor !== undefined && now >= fleeingUntil && adjacent(at, target)
             && !!seen && seen.totalHealth > 0 && seen.health > 0 && seen.health / seen.totalHealth <= o.freezeFloor;
+        const smiteBurstNow = !!o.smiteBurst?.();
+        const holdSpecForDrainNow = !!o.holdSpecForDrain?.();
         const freezeWindowDue = freeze !== null && !dying && !belowFreezeFloor && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && (freezeRule === true || smiteBurstNow || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
             && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until);
         const energy = special(s.client);
         const stunOverlap = o.stunShare?.overlap ?? 1;
@@ -1680,6 +1744,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             spec: o.spec, stunSpec: o.stunSpec, burstBow, bursting, bowBurstArmour: o.bowBurstArmour,
             bowSpecFallback: o.spec ? bowSpec(o.kit, names) : undefined,
             fledSpec: o.fledSpec, specReserve: o.specReserve, burstOnHold: o.burstOnHold, burstOnStun: o.burstOnStun,
+            smiteBurst: smiteBurstNow, holdSpecForDrain: holdSpecForDrainNow,
             freezeShareHeld: !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1),
             stunShare: o.stunShare,
             hasWeaponAndShield: state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5),
@@ -1750,8 +1815,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
             // 1-tick fakie switch: hold a decoy weapon style during cooldown (accounting for upcoming melee/ranged specs), then swap back on the attack tick.
             const castingFreeze = now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2);
+            const drankThisTick = potionReady === now + 3;
             const fakieRealStyle = specPlan.triggerNoVolley ? specPlan.specStyle : freezeWindowDue ? 'magic' : upcomingTurn?.style;
-            if (o.fakieSwitch && fakieRealStyle && hasAttacked && now > lastAttackAt && now < nextAttack - 1 && !walkingToMelee && !castingFreeze && lastFakieAt < lastAttackAt && budget >= 1) {
+            if (o.fakieSwitch && fakieRealStyle && hasAttacked && !drankThisTick && now > lastAttackAt && now < nextAttack - 1 && !walkingToMelee && !castingFreeze && lastFakieAt < lastAttackAt && budget >= 1) {
                 const decoy = pickFakieWeapon({
                     kit: o.kit, realStyle: fakieRealStyle, preferred: o.fakieSwitch,
                     inventory: inv, equipment: state.equipment, names,
@@ -1766,6 +1832,37 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // kiteMelee: an attack tick with no freeze to cast is a step, not a hit.
         if (kiteTarget && !kiteCast) continue;
+        // Never waste an attack cooldown on a 0-HP dying corpse.
+        if (dying) continue;
+        // Hard pre-attack Never-Skull invariant: never dispatch any melee, ranged, magic, or special attack
+        // unless this target has provably attacked THIS account first (pk_skull.rs2 deserves_pk_skull).
+        if (o.neverSkull) {
+            const externalProvoked = typeof o.provokedBy === 'function'
+                ? o.provokedBy(target.name, target.index)
+                : o.provokedBy?.has(target.name.toLowerCase()) === true;
+            const provokedNow = externalProvoked || (skullGuard?.canAttackSafely(target.name, now) ?? false);
+            if (!provokedNow) {
+                if (!neverSkullLogged) {
+                    neverSkullLogged = true;
+                    log(`PK never-skull bait hold: waiting for ${target.name} to attack first`);
+                }
+                if (prayers.prayerPoints > 0 && sentEvents < 5) {
+                    const plan = planPrayerTick({
+                        now, nextAttack: now + 4, lastAttackAt, walkingToMelee: false, prayerBase, overhead,
+                        activePrayers: believedView(), prayerDrainAt, flickAt, flickEvery: o.flickEvery ?? 4,
+                        zeroDrainFlick: o.zeroDrainFlick === true, prayerFlick: o.prayerFlick !== false,
+                        offensiveFlick: false, upcomingStyle: null, specMeleeLikely: false,
+                        defencePrayer: o.defencePrayer !== false, protectItem: protectItemNow(), budget: 5 - sentEvents,
+                    });
+                    for (const p of plan.toggles) { togglePrayer(p); sentEvents++; }
+                    prayerDrainAt = plan.nextDrainAt;
+                    flickAt = plan.nextFlickAt;
+                    if (plan.didFlick) result.flicks = (result.flicks ?? 0) + 1;
+                }
+                continue;
+            }
+            neverSkullLogged = false;
+        }
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
         // that the server still has in hand. One try each 6 ticks, until the game confirms it or varp 272 > 0.
         const chargeVarp = chargeVarpTicks(s.client);
@@ -1812,7 +1909,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
             } else if (specPlan.volleyJoinEligible && (vs.ready.has(myKey) && allyNearTarget > 0)) continue;
         }
-        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || freezeHeld || burstStun;
+        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || freezeHeld || burstStun || specPlan.smite;
         if (spec && (specPlan.triggerNoVolley || (volleying && specPlan.volleyJoinEligible))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -1834,7 +1931,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
             // The reasons that let this special go (specReasons): which path fired it, so that a special at full health names the rule that allowed it.
-            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth} by ${specReasons({ fled: fled && o.fledSpec !== false, bursting, volleying, chainStun, low: lowHealth(seen, spec.below) })}`);
+            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth} by ${specReasons({ fled: fled && o.fledSpec !== false, bursting, volleying, chainStun, smite: specPlan.smite, low: lowHealth(seen, spec.below) })}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;

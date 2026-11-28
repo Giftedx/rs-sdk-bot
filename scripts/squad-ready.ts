@@ -35,7 +35,7 @@ import { wildernessLevel } from '../packages/core/src/prayer-guard';
 import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
 import { BANK_MEETS } from '../packages/workers/src/logistics/location';
 import { makeOrder, writeFleetOrder } from './fleet-order';
-import { castableFreeze, defaultSpec, ITEMS } from './pk';
+import { assessZeroRiskKit, castableFreeze, defaultSpec, enforceZeroRiskGear, itemCostOf, ITEMS, type ZeroRiskAssessment, type ZeroRiskSlotCandidate } from './pk';
 import { packOf } from '../packages/workers/src/pvp/pk-gang';
 import { FOOD_LIST } from '../packages/workers/src/pvp/hunt-kits';
 import { kitItems } from './pk-kits';
@@ -75,6 +75,11 @@ export type Rule = {
     bisSupplies?: boolean;
     waveBC?: boolean;
     comboFood?: boolean;
+    /** Enforces zero-risk 3+1 unskulled death protection: downgrades excess armour so zero weapons or valuable gear are risked. */
+    zeroRisk?: boolean;
+    keepLimit?: 3 | 4;
+    /** Requires Ring of recoil (2550) in the ring slot (reflects damage with zero skull risk per pvp_combat.rs2:189). */
+    requireRecoil?: boolean;
 };
 export const SUPPLY_QUESTS = ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'Tai Bwo Wannai Trio'] as const;
 export const TRIBRID_BIS_ITEMS = {
@@ -124,6 +129,17 @@ export const TRIBRID_POTION_DOSE_IDS: Readonly<Record<string, readonly [id: numb
 };
 export const RULES: Readonly<Record<string, Rule>> = {
     'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100, antipoisonHolders: 2 },
+    'gang-bait-3plus1': {
+        name: 'gang-bait-3plus1',
+        benchKit: 'live-walker-iron-rune-chain-bind',
+        maxBankAgeHours: 6,
+        maxDonorBankAgeHours: 168,
+        minArrows: 100,
+        antipoisonHolders: 2,
+        zeroRisk: true,
+        keepLimit: 4,
+        requireRecoil: true,
+    },
     'gang-tribrid-bis': {
         name: 'gang-tribrid-bis',
         benchKit: 'live-walker-iron-rune-chain-bind',
@@ -284,7 +300,7 @@ export function wearable(g: Gear, a: Account): boolean {
 export type Need = { what: string; count: number; blocking: boolean; id?: number; accept: (item: Item) => boolean };
 export type Pick = { account: string; ready: boolean; reasons: string[]; notes: string[]; worn: Worn[]; carried: Item[]; food: number; foodRows: Item[]; foodSlots: number; foodHeld: number; foodStock: Item[];
     styles: string[]; special: string | null; escape: string | null; freeze: string | null; needs: Need[]; pack: ReturnType<typeof packOf>;
-    endurance?: ReturnType<typeof enduranceHours>; questBlockers?: string[] };
+    endurance?: ReturnType<typeof enduranceHours>; questBlockers?: string[]; zeroRisk?: ZeroRiskAssessment };
 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
 
@@ -379,6 +395,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         if (e.slot === 13 && benchArrow === undefined) { benchArrow = e.id; wantArrows = e.count; }
     }
     const worn: Worn[] = [];
+    const alternativesBySlot = new Map<number, ZeroRiskSlotCandidate<Worn>[]>();
     const wear = (i: Item | undefined, slot: number, count = 1) => { if (i) worn.push({ id: i.id, name: i.name, count, slot }); };
     // Armour and accessory slots: body and legs must reach half the melee defence of the bench kit's piece.
     // Back, hands, feet and ring allow 0 melee defence (Climbing boots, Ring of recoil) and only require/note when the bench kit specifies one.
@@ -390,22 +407,28 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             ? (gRow.bonuses.rangeAttack ?? 0) * 10 + armour(gRow)
             : slot === 'feet'
                 ? (gRow.bonuses.strength ?? 0) * 100 + armour(gRow)
-                : slot === 'back' || slot === 'ring'
-                    ? (bench && gRow.id === bench.id ? 1000 : 0) + armour(gRow)
-                    : armour(gRow);
+                : slot === 'ring'
+                    ? (gRow.id === TRIBRID_BIS_ITEMS.ringOfRecoil ? 2000 : 0) + (bench && gRow.id === bench.id ? 1000 : 0) + armour(gRow)
+                    : slot === 'back'
+                        ? (bench && gRow.id === bench.id ? 1000 : 0) + armour(gRow)
+                        : armour(gRow);
         const fits = (i: Item, who: (i: Item) => boolean) => { const row = g(i); return !!row && row.slot === slot && armour(row) >= floor && (slot !== 'lefthand' || /shield$/i.test(row.name)) && who(i); };
         const pool = wearableBySlot.get(slot) ?? [];
+        const slotNum = SLOT[slot]!;
+        const slotAlts: ZeroRiskSlotCandidate<Worn>[] = [];
         let best: Item | undefined;
         let bestRow: Gear | undefined;
         let bestScore = -Infinity;
         for (let k = 0; k < pool.length; k++) {
             const { item, row } = pool[k]!;
-            if (armour(row) < floor) continue;
             if (slot === 'lefthand' && !/shield$/i.test(row.name)) continue;
             const sc = slotRank(row);
+            slotAlts.push({ item: { id: item.id, name: item.name, count: 1, slot: slotNum }, id: item.id, name: item.name, cost: itemCostOf(item.id), score: sc });
+            if (armour(row) < floor) continue;
             if (sc > bestScore) { bestScore = sc; best = item; bestRow = row; }
         }
-        wear(best, SLOT[slot]!);
+        if (slotAlts.length) alternativesBySlot.set(slotNum, slotAlts);
+        wear(best, slotNum);
         if (!best && required) needs.push({ what: `${slot === 'torso' ? 'body' : 'leg'} armour (melee defence ${floor} or more)`, count: 1, blocking: true, ...(bench ? { id: bench.id } : {}), accept: i => fits(i, canWear) && g(i)!.tradeable !== false });
         else if (bench && (!bestRow || (armourSlot ? armour(bestRow) < armour(bench) : bestScore < slotRank(bench)))) {
             if (!(!best && rule.waveBC && slot === 'back')) {
@@ -416,17 +439,23 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             }
         }
     }
+    if (rule.requireRecoil && !worn.some(w => w.id === TRIBRID_BIS_ITEMS.ringOfRecoil)) {
+        needs.push({ what: 'Ring of recoil', id: TRIBRID_BIS_ITEMS.ringOfRecoil, count: 1, blocking: true, accept: i => i.id === TRIBRID_BIS_ITEMS.ringOfRecoil });
+    }
     // Amulet: a charged glory, else the piece with the most strength.
     let amulet: Item | undefined;
     let amuletGlory = -1;
     let amuletStr = -Infinity;
+    const amuletAlts: ZeroRiskSlotCandidate<Worn>[] = [];
     for (const { item, row } of wearableBySlot.get('front') ?? []) {
         const glory = /glory\([1-4]\)/i.test(item.name) ? 1 : 0;
         const str = row.bonuses.strength ?? 0;
+        amuletAlts.push({ item: { id: item.id, name: item.name, count: 1, slot: SLOT.front! }, id: item.id, name: item.name, cost: itemCostOf(item.id), score: glory * 100 + str });
         if (glory > amuletGlory || (glory === amuletGlory && str > amuletStr)) {
             amuletGlory = glory; amuletStr = str; amulet = item;
         }
     }
+    if (amuletAlts.length) alternativesBySlot.set(SLOT.front!, amuletAlts);
     wear(amulet, SLOT.front!);
     if (!amulet) notes.push('no amulet');
     // Melee weapon: a dragon dagger first (the gang-hunter profile's special), then the other special weapons, then a
@@ -538,14 +567,35 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
     // squadStartFood), so the missing meals are a want; under the floor they block.
     if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
+    // Zero-risk 3+1 enforcement: downgrade excess high-cost armour when rule.zeroRisk is active so zero weapons or valuable gear are risked.
+    let finalWorn = worn;
+    let zeroRisk: ZeroRiskAssessment;
+    if (rule.zeroRisk) {
+        const enforced = enforceZeroRiskGear({
+            worn,
+            carried: [...carried, ...foodRows],
+            alternativesBySlot,
+            cost: itemCostOf,
+            nameOf,
+            keepLimit: rule.keepLimit ?? 4,
+        });
+        finalWorn = enforced.worn;
+        zeroRisk = enforced.assessment;
+        for (const d of enforced.downgraded) {
+            notes.push(`zero-risk 3+1 downgraded ${d.from} -> ${d.to ?? 'none'}`);
+        }
+        if (!zeroRisk.ok) reasons.push(`zero-risk 3+1 violation: ${zeroRisk.summary}`);
+    } else {
+        zeroRisk = assessZeroRiskKit([...worn, ...carried, ...foodRows], { cost: itemCostOf, nameOf, requireProtectItem: true });
+    }
     // The fight kit, the pack of a bank trip, the escape and the freeze, each from the code that the squad runs.
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
-    const fight = kitFrom(worn, carried), special = defaultSpec(fight)?.style ?? null;
+    const fight = kitFrom(finalWorn, carried), special = defaultSpec(fight)?.style ?? null;
     const eat = [{ text: 'Eat' }], none: { text: string }[] = [];
     const packInput: { id: number; count: number; optionsWithIndex: { text: string }[] }[] = [];
     for (const c of carried) packInput.push({ id: c.id, count: c.count, optionsWithIndex: none });
     for (const r of foodRows) for (let k = 0; k < r.count; k++) packInput.push({ id: r.id, count: 1, optionsWithIndex: eat });
-    const pack = packOf(packInput, worn);
+    const pack = packOf(packInput, finalWorn);
     for (const n of needs) if (n.blocking) reasons.push(`no ${n.what}${n.count > 1 ? ` (${n.count} short)` : ''}`);
     if (!fight.melee?.length && weapon) reasons.push('the fight kit holds no melee weapon');
     if (escapeSpell === null && !reasons.some(r => /Law rune|Air rune/.test(r))) reasons.push(`no escape teleport that Magic ${magic} can cast with the runes held`);
@@ -556,8 +606,8 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     // reads what the account wears and carries now, not what the bank and the pack together could make. Live: an account
     // whose pack a failed trip had deposited was called READY and fought with no bow, no runes and no escape.
     if (carry) {
-        for (const fault of carriedFaults(a, worn, carried, foodSlots, rule, nameOf)) reasons.push(fault);
-        const stock = stockFaults(a, worn, carried, rule, nameOf);
+        for (const fault of carriedFaults(a, finalWorn, carried, foodSlots, rule, nameOf)) reasons.push(fault);
+        const stock = stockFaults(a, finalWorn, carried, rule, nameOf);
         reasons.push(...stock.blocks);
         notes.push(...stock.notes);
     }
@@ -620,8 +670,8 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (rule.minHours !== undefined && endurance.hours < rule.minHours) {
         reasons.push(`trip endurance ${endurance.hours.toFixed(1)} h under ${rule.minHours}.0 h floor (limiting: ${endurance.limiting})`);
     }
-    return { account: a.name, ready: reasons.length === 0, reasons, notes, worn, carried, food, foodRows, foodSlots, foodHeld, foodStock, styles: Object.keys(fight), special,
-        escape: escapeSpell === null ? null : SPELL_NAME[escapeSpell] ?? `spell ${escapeSpell}`, freeze: freezeSpell === null ? null : 'Bind', needs, pack, endurance, questBlockers: missingQuests };
+    return { account: a.name, ready: reasons.length === 0, reasons, notes, worn: finalWorn, carried, food, foodRows, foodSlots, foodHeld, foodStock, styles: Object.keys(fight), special,
+        escape: escapeSpell === null ? null : SPELL_NAME[escapeSpell] ?? `spell ${escapeSpell}`, freeze: freezeSpell === null ? null : 'Bind', needs, pack, endurance, questBlockers: missingQuests, zeroRisk };
 }
 
 export type Move = { from: string; to: string; id: number; item: string; count: number; blocking: boolean; distance: number; donorBankAgeHours: number; reserved: boolean };
@@ -814,6 +864,7 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
         out.push(`  wears    ${[['helm', 0], ['body', 4], ['legs', 7], ['shield', 5], ['amulet', 2], ['weapon', 3]].map(([label, n]) => `${label} ${slot(n as number)?.name ?? '-'}`).join(' | ')} | quiver ${slot(13) ? `${slot(13)!.count} ${slot(13)!.name}` : '-'}`);
         out.push(`  carries  ${p.carried.map(c => (c.count > 1 ? `${c.count} ` : '') + c.name).join(', ') || '-'} | food ${p.food} of ${p.foodSlots}${p.foodRows.length ? ` (${p.foodRows.map(r => `${r.count} ${r.name}`).join(', ')})` : ''}; holds ${p.foodStock.map(f => `${f.count} ${f.name}`).join(', ') || 'none'}: ${Math.floor(p.foodHeld / Math.max(1, p.foodSlots))} full packs`);
         out.push(`  fights   ${p.styles.join('+') || 'no style'}${p.special ? ` with a ${p.special} special attack` : ''} | escape ${p.escape ?? 'none'} | freeze ${p.freeze ?? 'none'}`);
+        if (p.zeroRisk && (rule.zeroRisk || !p.zeroRisk.ok)) out.push(`  risk     ${p.zeroRisk.summary}`);
         if (p.endurance) out.push(`  sustain  ${p.endurance.hours.toFixed(1)} h (limiting: ${p.endurance.limiting}; food ${p.endurance.foodHours.toFixed(1)}h, combo ${p.endurance.comboHours.toFixed(1)}h, ammo ${p.endurance.ammoHours.toFixed(1)}h, runes ${p.endurance.runeHours.toFixed(1)}h, pots ${p.endurance.potionHours.toFixed(1)}h) | quests missing: ${p.questBlockers?.join(', ') || 'none'}`);
         for (const r of p.reasons) out.push(`  blocked  ${r}`);
         for (const n of p.notes) out.push(`  note     ${n}`);

@@ -1120,7 +1120,7 @@ test('rewearStart wears the starting armour that sits in the pack with its slot 
     let ticks = 0;
     expect(await rewearStart(s, [1163, 1127, 1079, 1215], l => logs.push(l), async () => { ticks++; return true; })).toBe(2);
     expect(used).toEqual([[3, 2], [4, 2]]);
-    expect(ticks).toBe(2);
+    expect(ticks).toBe(1);
     expect(logs).toEqual(['PK wore 2 pieces of the starting armour again']);
     // Nothing missing, nothing to wear.
     used.length = 0;
