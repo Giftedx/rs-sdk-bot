@@ -35,7 +35,7 @@ import {
     type OpenBotOptions,
 } from './rules';
 import { finish } from './settle';
-import { currentHostedScope } from '../host-scope';
+import { currentHostedScope } from './host-scope';
 
 const NO_GUARD_SCRIPT_RE = /quest|microbot/i;
 

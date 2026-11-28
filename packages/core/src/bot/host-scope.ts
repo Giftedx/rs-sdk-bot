@@ -4,9 +4,9 @@
 // hosted bot (the host waits for ever) and its RESULT line has no `[bot]` prefix for supervise-host.ts.
 // Each hosted bot runs inside its own execution context (worker-execution.ts). Nested contexts copy the parent
 // (`{ ...parent, signal }`), so the context's `log` function names the bot wherever the work goes.
-import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
-import type { Session } from './inprocess';
-import type { FinishDetail } from './bot/rules';
+import { executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
+import type { Session } from '../inprocess';
+import type { FinishDetail } from './rules';
 
 export interface HostedScope {
     name: string;

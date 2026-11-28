@@ -32,8 +32,7 @@ import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
 import { shareLocIndex } from './loc-index-share';
 import { workerExecution } from './worker-execution';
-import { bindHostedScope, currentHostedScope } from './host-scope';
-import type { FinishDetail } from './bot/rules';
+import { bindHostedScope, currentHostedScope } from './bot';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -198,7 +197,7 @@ interface Instance {
     log(line: string): void;
     exit(code?: number): never;
     openBot(name: string, opts?: OpenOptions): Promise<Session>;
-    finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never>;
+    finish(sessions: Session[], ok: boolean, detail: Parameters<typeof settle>[2]): Promise<never>;
     sessions: Session[];
     result: string;
     done: Promise<number>;
@@ -228,7 +227,7 @@ function install(out: (line: string) => void, guard: boolean): void {
         },
     });
     // Code the host does not rewrite (helper modules) prints and exits through the hosted bot that runs it, so its
-    // RESULT and LEDGER lines carry the `[bot]` prefix and its exit ends that bot, not the host (host-scope.ts).
+    // RESULT and LEDGER lines carry the `[bot]` prefix and its exit ends that bot, not the host (bot/host-scope.ts).
     for (const level of ['log', 'info', 'warn', 'error'] as const) {
         const original = console[level].bind(console);
         console[level] = (...a: unknown[]) => { const hosted = currentHostedScope(); if (hosted) hosted.log(fmt(a)); else original(...a); };
@@ -265,7 +264,7 @@ function createInstance(name: string, id: string, script: string, args: string[]
     const done = new Promise<number>(r => { resolveDone = r; });
     let finished = false;
     const never = new Promise<never>(() => {});
-    // One function per instance: it names this bot to code the host does not rewrite (host-scope.ts).
+    // One function per instance: it names this bot to code the host does not rewrite (bot/host-scope.ts).
     const contextLog = (level: 'log' | 'warn' | 'error', args: unknown[]) => inst.console[level](...args);
     const inst: Instance = {
         id,

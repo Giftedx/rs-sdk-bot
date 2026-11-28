@@ -16,7 +16,7 @@ import {
     statuses,
 } from './monitors';
 import type { FinishDetail, SettlementOptions } from './rules';
-import { currentHostedScope } from '../host-scope';
+import { currentHostedScope } from './host-scope';
 
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
 const RECORD_FLUSH_MS = 3000;
