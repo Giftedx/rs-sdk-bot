@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795871180528,
+ "at": 1795871251226,
  "jobs": [
   {
    "account": "Balls",
@@ -77,6 +77,21 @@
    "role": "helper"
   },
   {
+   "account": "bigpackage",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=2000 -- foraging spawn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
    "account": "meatntwoveg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -132,7 +147,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "ballspinner",
-  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
