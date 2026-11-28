@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795823655488-bigpackage-pickpockdick-18ba54302e8d7898",
  "account": "Bigpackage",
  "partner": "PickpockDick",
@@ -10,15 +10,37 @@
  "item": "Air rune",
  "requested": 6,
  "claim": "e12e8984-c1eb-4fec-8b21-26a53200c0b8",
- "count": 0,
- "ok": false,
- "at": 1795835182938,
- "detail": "trade claimed",
+ "count": 6,
+ "ok": true,
+ "at": 1795835262065,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Nature rune",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 20,
+    "after": 0
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795835243712
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795835242904
+ },
+ "logout": {
+  "attemptId": "1795835182946-0000017616-0000000001",
+  "at": 1795835262056,
+  "sha256": "35c4601e151fff0b9189e0394f7ffa89a38e30c549e242e76ea25858d25ef999"
+ },
+ "screen": true
 }

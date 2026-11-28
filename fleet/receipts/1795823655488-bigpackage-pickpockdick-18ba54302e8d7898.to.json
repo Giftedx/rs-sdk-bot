@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795823655488-bigpackage-pickpockdick-18ba54302e8d7898",
+ "account": "PickpockDick",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 6,
+ "claim": "455b9922-7273-4a05-a296-9b8a7a77b65e",
+ "count": 6,
+ "ok": true,
+ "at": 1795835264061,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Nature rune",
+   "requested": 20,
+   "count": 20,
+   "inventory": {
+    "before": 0,
+    "after": 20
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795835263318
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795835262975
+ },
+ "logout": {
+  "attemptId": "1795835248872-0000025832-0000000001",
+  "at": 1795835264052,
+  "sha256": "1a536a17a471bdfb49bcdb7bc1f34f4b773c5181e57c719958568603f9d30358"
+ },
+ "screen": true
+}
