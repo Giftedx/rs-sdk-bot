@@ -286,12 +286,25 @@ export async function runInventoryBank(
                     if (!target || !Number.isSafeInteger(target.slot)) return false;
                     const before = count(need.id);
                     if (stopped()) return false;
-                    const response = await s.bot.withdrawItem(target, missing, { asNote: false });
-                    if (!response.success || !await waitUntil(s, () => count(need.id) === before + missing, { timeoutTicks: 8 })) return false;
+                    await s.bot.withdrawItem(target, missing, { asNote: false }).catch(() => undefined);
+                    let got = await waitUntil(s, () => count(need.id) === before + missing, { timeoutTicks: 8 });
+                    if (!got && !stopped() && s.sdk.getState()?.bank?.isOpen && count(need.id) === before) {
+                        const retryTarget = s.sdk.getState()?.bank?.items.find(i => i.id === need.id);
+                        if (retryTarget && Number.isSafeInteger(retryTarget.slot)) {
+                            await s.bot.withdrawItem(retryTarget, missing, { asNote: false }).catch(() => undefined);
+                            got = await waitUntil(s, () => count(need.id) === before + missing, { timeoutTicks: 8 });
+                        }
+                    }
+                    if (!got) return false;
                 }
                 if (stopped() || (r.extraSlot && inv().length >= 28)) return false;
                 await s.bot.closeBank();
-                if (!await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 })) return false;
+                let closed = await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+                if (!closed && !stopped()) {
+                    await s.direct({ type: 'closeModal', reason: 'production bank close' });
+                    closed = await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+                }
+                if (!closed) return false;
                 return !stopped();
             },
             use: async () => {

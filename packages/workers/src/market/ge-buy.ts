@@ -458,11 +458,21 @@ export async function runOwnedItem(
                 const coins = s.sdk.findBankItem(/^coins$/i);
                 const beforeBank = count(bankItems, i => i.id === 995);
                 const gen = bankObservation()?.generation ?? 0;
-                if (!coins || !(await s.bot.withdrawItem(coins, roundEscrow, { asNote: false })).success
-                    || !await waitUntil(s, () => {
-                        const bank = bankObservation();
-                        return held(995) === roundEscrow && (bank?.generation ?? 0) > gen && count(bank?.items ?? [], i => i.id === 995) === beforeBank - roundEscrow;
-                    }, { timeoutTicks: 10 })) {
+                const funded = () => {
+                    const bank = bankObservation();
+                    return held(995) === roundEscrow && (bank?.generation ?? 0) > gen && count(bank?.items ?? [], i => i.id === 995) === beforeBank - roundEscrow;
+                };
+                if (!coins) throw Error('owned order funding unobserved');
+                await s.bot.withdrawItem(coins, roundEscrow, { asNote: false }).catch(() => undefined);
+                let okFunded = await waitUntil(s, funded, { timeoutTicks: 10 }) && funded();
+                if (!okFunded && !over() && state()?.bank.isOpen && held(995) === 0 && count(bankObservation()?.items ?? [], i => i.id === 995) === beforeBank) {
+                    const retryCoins = s.sdk.findBankItem(/^coins$/i);
+                    if (retryCoins) {
+                        await s.bot.withdrawItem(retryCoins, roundEscrow, { asNote: false }).catch(() => undefined);
+                        okFunded = await waitUntil(s, funded, { timeoutTicks: 10 }) && funded();
+                    }
+                }
+                if (!okFunded) {
                     throw Error('owned order funding unobserved');
                 }
                 capture();

@@ -11,7 +11,8 @@
 // old script always went back to pickpocketing for 5 coins and only waited at HP 2. Now each step runs only when
 // its item or level is missing, the bot eats when HP is low, sells spare pack items at the Lumbridge general store,
 // and pickpockets only at HP 5 or more and only when coins are still short.
-import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
+import { accountOf, openBot, finish, countItems, getWorld, sessionDied } from '../../packages/core/src/bot';
+import { goTo } from '../../packages/core/src/walk';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
@@ -314,9 +315,19 @@ try {
     // Coins the missing items cost: the net (5) below Fishing 20; the rod (5) and 10 feathers (20) from Fishing 20.
     const coinsNeeded = () => (lvl() < 20 ? (has(NET) ? 0 : 5) : (has(ROD) ? 0 : 5) + (has(FEATHER) ? 0 : 20));
 
-    // ---- Step 0: food, knife (Lumbridge ground spawn), spare items sold, then coins from Lumbridge men only while
-    // the missing items cost more than the bot holds (two successes, 3 gp each, buy the net).
+    // ---- Step 0: food, safe travel back to Lumbridge when starting far away (e.g. Catherby west of White Wolf Mountain),
+    // knife (Lumbridge ground spawn), spare items sold, then coins from Lumbridge men only while missing items cost more.
     await eat(6);
+    const pStart = pos();
+    if (pStart && (pStart.level !== 0 || pStart.worldX < 2960 || cheb(LUMBRIDGE, pStart) > 150)) {
+        const w0 = now();
+        const routed = await goTo(s, await getWorld(), { ...LUMBRIDGE, level: 0 }, accountOf(s), { legTimeoutTicks: 120 });
+        walkTicks += now() - w0;
+        if (!routed.ok) {
+            lastFail = `goTo Lumbridge: ${routed.detail ?? 'unreachable'}`;
+            await end(false, `travel to Lumbridge (${routed.detail ?? 'unreachable'})`);
+        }
+    }
     function slotOfKnife() { return slotOf(/^knife$/i) !== undefined; }
     if (!slotOfKnife()) {
         await go([[KNIFE_AT.x, KNIFE_AT.z, 1]], 'to knife');

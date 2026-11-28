@@ -1006,6 +1006,19 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
     let cachedWalker: ReturnType<typeof sessionWalker> | undefined;
     const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
+        const p0 = pos();
+        if (p0 && (p0.level !== 0 || Math.max(Math.abs(p0.worldX - x), Math.abs(p0.worldZ - z)) > 40)) {
+            const routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 120 });
+            walkTicks += s.tick() - a;
+            if (!routed.ok) {
+                const detail = routed.detail ?? 'unreachable';
+                console.log(`WALK fail ${detail} ticks=${routed.ticks}`);
+                if (/walk danger|no route|no path/i.test(detail)) throw Error(`gather-fish travel failed: ${detail}`);
+                return false;
+            }
+            const p = pos();
+            return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol + 2;
+        }
         const walker = await (cachedWalker ??= sessionWalker(s));
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
@@ -1013,6 +1026,7 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
             const r = await walkPath(walker, [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
+                if (/walk danger|no path/i.test(r.detail ?? '')) throw Error(`gather-fish walk refused: ${r.detail}`);
                 await waitTicks(s, 1);
             }
         }
@@ -1021,14 +1035,21 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
 
+    let consecutiveBankFails = 0;
     const bank = async () => {
-        await walk(CATHERBY_BANK.x, CATHERBY_BANK.z, 2);
+        const reached = await walk(CATHERBY_BANK.x, CATHERBY_BANK.z, 2);
+        if (!reached) {
+            if (++consecutiveBankFails >= 2) throw Error(`gather-fish bank unreachable from ${pos()?.worldX},${pos()?.worldZ}`);
+            return;
+        }
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
+            if (++consecutiveBankFails >= 3) throw Error(`gather-fish openBank failed: ${b.message}`);
             await waitTicks(s, 1);
             return;
         }
+        consecutiveBankFails = 0;
         const currentFish = countFish();
         if (currentFish > 0) {
             for (const item of inv()) {
@@ -1383,6 +1404,12 @@ export async function supplySharks(s: Session, o: SharkOptions) {
         lastHp = hp();
         damageBase = hp();
         ready = true;
+        // Verify skill and HP prerequisites before travelling across the map to Catherby.
+        if ((s.sdk.getSkill('Fishing')?.level ?? 0) < 76 || (!o.rawOnly && (s.sdk.getSkill('Cooking')?.level ?? 0) < 80)) {
+            throw Error(o.rawOnly ? 'shark order requires Fishing76' : 'shark order requires Fishing76 Cooking80');
+        }
+        const preMaxHp = s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0;
+        if (preMaxHp < 40) throw Error('shark entry needs at least40 base HP');
         if (!sharkEntry(first)) {
             const there = await goTo(s, await getWorld(), { x: SHARK_BANK.x, z: SHARK_BANK.z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
             if (!there.ok) throw Error(`shark travel to Catherby failed: ${there.detail}`);
@@ -1390,9 +1417,6 @@ export async function supplySharks(s: Session, o: SharkOptions) {
         }
         const entry = sharkEntry(first);
         if (!entry) throw Error('shark entry requires west bank or Catherby ground floor');
-        if ((s.sdk.getSkill('Fishing')?.level ?? 0) < 76 || (!o.rawOnly && (s.sdk.getSkill('Cooking')?.level ?? 0) < 80)) {
-            throw Error(o.rawOnly ? 'shark order requires Fishing76' : 'shark order requires Fishing76 Cooking80');
-        }
         await open();
         initial = assets();
         await store(true);
@@ -3316,7 +3340,7 @@ function parseVillageOrder(cfg: NormalizedGatherConfig): VillageOrder {
     };
 }
 
-export const KARAMBWANJI_LAKE = { x: 2799, z: 3014, level: 0 } as const;
+export const KARAMBWANJI_LAKE = { x: 2801, z: 3009, level: 0 } as const;
 export const KARAMBWAN_POINT = { x: 2901, z: 3113, level: 0 } as const;
 export const SHILO_FISH_BANK = { x: 2852, z: 2955, level: 0 } as const;
 export const DRAYNOR_FISH_BANK = { x: 3092, z: 3243, level: 0 } as const;

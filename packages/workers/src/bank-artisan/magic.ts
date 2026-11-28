@@ -256,6 +256,21 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
             await waitTicks(s, 1);
             effect = itemSpellEffect(recipe, costs, before, counts(), x0, xp());
         }
+        // A level-up continue dialog can silently block spellOnItem on 2004scape; dismiss and retry once when zero effect occurred.
+        if (effect === 'none' && !over() && (state()?.dialog?.isOpen || state()?.interface?.isOpen)) {
+            await s.bot.dismissBlockingUI();
+            if (!over()) {
+                const retryItem = inv().find(i => i.id === recipe.target);
+                if (retryItem) {
+                    const retryResult = (await s.direct({ type: 'spellOnItem', slot: retryItem.slot, spellComponent: componentId(recipe.spell), reason: 'SDK' })) as { success?: boolean };
+                    if (retryResult?.success === false) throw Error('item spell dispatch refused');
+                    await waitUntil(s, () => over() || xp() !== x0 || Object.keys(counts()).some(id => counts()[Number(id)] !== before[Number(id)]), {
+                        timeoutTicks: Math.min(12, Math.max(1, o.cap - (s.tick() - start))),
+                    });
+                    effect = itemSpellEffect(recipe, costs, before, counts(), x0, xp());
+                }
+            }
+        }
         if (effect !== 'cast') throw Error('item spell effect ' + effect);
         casts++;
         console.log('ITEM_MAGIC_CAST ' + JSON.stringify({ cast: casts, tick: s.tick(), mode: recipe.name, inputs: costs, product: recipe.product, output: recipe.output }));

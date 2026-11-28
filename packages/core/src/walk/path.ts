@@ -646,7 +646,11 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 if (ahead) { openDoorNow(ahead); return; }
                 // No tile gained for 2 ticks: plan again from where the bot stands.
                 if (still >= 2) {
-                    const span = still >= 3 ? Math.ceil(look / 2) : look;
+                    const span = rejectedWalks >= 2
+                        ? Math.max(2, Math.floor(look / 4))
+                        : rejectedWalks === 1 || still >= 3
+                            ? Math.ceil(look / 2)
+                            : look;
                     if (rejectedWalks === 0) {
                         replanThen(p, `still ${still}`, `no path from ${p.x},${p.z}`, () => clickAhead(span));
                         return;
@@ -659,7 +663,12 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 if (still >= 1 || target < 0 || target - idx <= reclickAt) {
                     // The last click already ends at the goal, and the bot is still moving toward it.
                     if (target === tiles.length - 1 && still === 0) return;
-                    clickAhead(look);
+                    const span = rejectedWalks >= 2
+                        ? Math.max(2, Math.floor(look / 4))
+                        : rejectedWalks === 1
+                            ? Math.ceil(look / 2)
+                            : look;
+                    clickAhead(span);
                 }
             };
             const decide = () => {

@@ -236,7 +236,7 @@ describe('Banked karambwanji/karambwan fishing & multiobj2 karambwan cooking', (
         expect(karambwanBankTile(new Set(['shilo village']), 'draynor')).toEqual(DRAYNOR_FISH_BANK);
         expect(karambwanTripCapacity(27, false)).toBe(27);
         expect(karambwanTripCapacity(27, true)).toBe(26);
-        expect(KARAMBWANJI_LAKE).toEqual({ x: 2799, z: 3014, level: 0 });
+        expect(KARAMBWANJI_LAKE).toEqual({ x: 2801, z: 3009, level: 0 });
         expect(KARAMBWAN_POINT).toEqual({ x: 2901, z: 3113, level: 0 });
     });
 
@@ -274,7 +274,7 @@ describe('Banked karambwanji/karambwan fishing & multiobj2 karambwan cooking', (
                         ],
                         quests: [{ name: 'Shilo Village', state: 'complete' }],
                         nearbyNpcs: [
-                            { id: 1174, index: 10, name: 'Fishing spot', x: 2799, z: 3013, distance: 1, reachable: true, optionsWithIndex: [{ opIndex: 1, text: 'Net' }] },
+                            { id: 1174, index: 10, name: 'Fishing spot', x: 2801, z: 3010, distance: 1, reachable: true, optionsWithIndex: [{ opIndex: 1, text: 'Net' }] },
                             { id: 1176, index: 11, name: 'Fishing spot', x: 2901, z: 3114, distance: 1, reachable: true, optionsWithIndex: [{ opIndex: 1, text: 'Fish' }] },
                         ],
                         bank: { isOpen: bankOpen, items: bank },
@@ -356,7 +356,7 @@ describe('Banked karambwanji/karambwan fishing & multiobj2 karambwan cooking', (
             expect(res1.ok).toBe(true);
             expect(res1.delta?.items).toEqual({ 3150: 1 });
             expect(bank.find(i => i.id === 3150)?.count).toBe(3);
-            expect(visited).toContain('2799,3014');
+            expect(visited).toContain('2801,3009');
 
             // Deposit small fishing net so karambwan trip starts clean from bank.
             inv.length = 0;
