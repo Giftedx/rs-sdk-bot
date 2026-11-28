@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795850209341,
+ "at": 1795850280737,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,21 +206,6 @@
    ]
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -234,6 +219,21 @@
    "repeat": false,
    "goal": "goal:supply_chain:377",
    "role": "army"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "helper"
   },
   {
    "account": "SporranBulge",
@@ -325,6 +325,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
+   "role": "helper"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
   },
   {
