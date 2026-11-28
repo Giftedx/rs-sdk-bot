@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857857311,
+ "at": 1795857877474,
  "jobs": [
   {
    "account": "Balls",
@@ -45,67 +45,20 @@
    "role": "pvp"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "cage",
-    "cage"
-   ],
-   "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army",
-   "resources": [
-    "catherby-lobsters"
-   ]
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "cage",
-    "cage"
-   ],
-   "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper",
-   "resources": [
-    "catherby-lobsters"
-   ]
-  },
-  {
    "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "fishing",
-    "cage",
-    "cage"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=94 PRODUCT_TARGET=94 MAX_ORE=94 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1880 TARGET_COUNT=188 PRODUCT_TARGET=188 MAX_ORE=188 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=94 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=94 STALL_TICKS=280 -- smithing smelt 2280 steel"
    ],
    "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army",
-   "resources": [
-    "catherby-lobsters"
-   ]
+   "goal": "campaign:haggis:item:2353",
+   "role": "army"
   },
   {
    "account": "Abracadickra",
@@ -118,14 +71,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "462",
+    "MAX_ITEMS": "475",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20480",
+    "FLOAT": "21000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "462"
+    "BATCH_UNITS": "475"
    },
    "enabled": true,
    "repeat": false,
@@ -136,9 +89,9 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=85 PRODUCT_TARGET=91 MAX_ORE=85 -- mining ore",
-    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1820 TARGET_COUNT=182 PRODUCT_TARGET=182 MAX_ORE=182 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=91 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=91 STALL_TICKS=280 -- smithing smelt 2220 steel"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=86 PRODUCT_TARGET=94 MAX_ORE=86 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1880 TARGET_COUNT=188 PRODUCT_TARGET=188 MAX_ORE=188 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=94 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=94 STALL_TICKS=280 -- smithing smelt 2280 steel"
    ],
    "env": {
     "ROUNDS": "1"
@@ -147,6 +100,41 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 STALL_TICKS=280 -- cooking stock",
+    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=211 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=211 MAX_MAKE=211 CAP=2088 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
   },
   {
    "account": "Deeppockets",
@@ -180,47 +168,42 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "shop-buy",
+    "magicshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "74",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "74"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "auto"
   },
   {
    "account": "Hocuspokeus",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=27 -- woodcutting yews"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1513",
+   "goal": "campaign:haggis:item:1515",
    "role": "army"
   },
   {
@@ -228,7 +211,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=27 -- woodcutting yews"
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=94 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
@@ -239,10 +222,25 @@
    "role": "army"
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/ranged-train.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=3460 TARGET_COUNT=346 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=4360 TARGET_COUNT=436 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:PickpockDick:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
@@ -254,7 +252,7 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
+   "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
