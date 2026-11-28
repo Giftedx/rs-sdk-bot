@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795825154133,
+ "at": 1795825237340,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -197,29 +197,13 @@
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "116",
+    "BATCH_UNITS": "76",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
@@ -238,6 +222,31 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "2",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "helper"
   }
  ],
  "army": [
