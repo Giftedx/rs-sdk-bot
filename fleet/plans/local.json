@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795840133496,
+ "at": 1795840152123,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -440,26 +440,7 @@
    "role": "helper"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "shark"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "400"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "auto",
-   "resources": [
-    "catherby-sharks"
-   ]
-  },
-  {
-   "account": "BoneToPick",
+   "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
@@ -471,10 +452,25 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1470",
-   "role": "auto"
+   "role": "helper"
   },
   {
-   "account": "SporranBulge",
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing fishcook",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -487,7 +483,41 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "helper"
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1472",
+   "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "essence"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
   },
   {
    "account": "Nockitoff",
@@ -567,7 +597,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "204"
    },
    "enabled": true,
    "repeat": false,
@@ -593,25 +623,6 @@
    "repeat": false,
    "goal": "goal:pk_army:ChaosInPants",
    "role": "auto"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "317"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "helper",
-   "resources": [
-    "essence-mine"
-   ]
   }
  ],
  "army": [
@@ -628,7 +639,6 @@
   "bowbeforeme",
   "mmtha0205",
   "mmthv2350",
-  "pocketpython",
   "pocketrocket",
   "sausagefest"
  ],
