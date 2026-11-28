@@ -31,7 +31,7 @@ import {
 } from '../../workers/src/bank-artisan/recipes';
 import { nativeNpcSpell } from '../../core/src/magic-data';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
-import { fileStatStamp, readJsonStatCached } from './json-cache';
+import { fileStatStamp } from './json-cache';
 import { GUARD_FOOD_IDS, type CombatSurvivabilityFloor, type StartArea } from './preflight';
 
 const XP_MULTIPLIER = 25;
@@ -258,10 +258,6 @@ const QUEST_ESTIMATE_TICKS: Readonly<Record<string, number>> = {
     runemysteries: 2950,
     legends: 3900,
 };
-
-function safeReadJson<T>(path: string, fallback: T): T {
-    return readJsonStatCached<T>(path) ?? fallback;
-}
 
 function estimateTravelTicksFromNearestBank(location: WorkerTile | undefined, banks: readonly { x: number; z: number; level?: number }[]): number {
     if (!location) return 8;
@@ -822,10 +818,10 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     const readFreshJson = <T>(p: string, fallback: T): T => {
         try { return JSON.parse(readFileSync(p, 'utf8')) as T; } catch { return fallback; }
     };
-    const items = safeReadJson<KnowledgeItem[]>(join(root, 'knowledge', 'items.json'), []);
+    const items = readFreshJson<KnowledgeItem[]>(join(root, 'knowledge', 'items.json'), []);
     const skills = readFreshJson<KnowledgeSkillRow[]>(join(root, 'knowledge', 'skills.json'), []);
     const rates = readFreshJson<KnowledgeRateRow[]>(join(root, 'knowledge', 'rates.json'), []);
-    const questsJson = safeReadJson<KnowledgeQuestRow[]>(join(root, 'knowledge', 'quests.json'), []);
+    const questsJson = readFreshJson<KnowledgeQuestRow[]>(join(root, 'knowledge', 'quests.json'), []);
     const travelData = readFreshJson<TravelCacheData>(join(root, 'packages', 'planner', 'src', 'haggis-travel.json'), {});
     const travelBanks = Object.values(travelData.banks ?? HUB_TILES);
 

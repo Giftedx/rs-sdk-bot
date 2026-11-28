@@ -5,6 +5,8 @@ import { runGate } from './plans';
 
 // One state for everyone: built every 2 s only while a client watches, serialized once, sent to each SSE client.
 let latest = { at: 0, json: '' };
+let lastGcAt = 0;
+const STATE_GC_INTERVAL_MS = 30_000;
 // A page that connects gets the last built state at once, and the next tick sends a new one. A build holds the
 // server for 150 to 300 ms, and each other request of the loading page waits behind it. The publisher reads the
 // state each 60 s, so the last state is younger than this limit while the publisher runs.
@@ -17,7 +19,12 @@ function current() {
             // One replace on the finished text masks every value and every key.
             const t0 = performance.now(), json = JSON.stringify(buildState()).replace(SECRET_RE, SECRET_MARK);
             setBuildMs(Math.round(performance.now() - t0));
-            latest = { at: Date.now(), json };
+            const now = Date.now();
+            latest = { at: now, json };
+            if (now - lastGcAt >= STATE_GC_INTERVAL_MS) {
+                lastGcAt = now;
+                Bun.gc(false);
+            }
         } catch (e) {
             // A malformed status file or a transient read failure must not stop the dashboard for every client.
             // Keep the last good state, and expose the failure so the page can show it.

@@ -24,7 +24,7 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import { evaluateMissions, loadMissionManifests, type MissionEvaluation } from './missions';
-import { fileStatStamp, readJsonStatCached } from './json-cache';
+import { fileStatStamp, readJsonOnce } from './json-cache';
 import {
     isValidGeAskQuote,
     loadShopCatalogByItem,
@@ -162,7 +162,7 @@ function loadItemGpValues(root: string): Record<number, number> {
         : join(repoRoot, 'knowledge', 'items.json');
     const key = `${resolve(filePath)}|${fileStatStamp(filePath)}`;
     if (cachedItemGpValues && cachedItemGpValues.key === key) return cachedItemGpValues.values;
-    const raw = readJsonStatCached<unknown>(filePath);
+    const raw = readJsonOnce<unknown>(filePath);
     const out: Record<number, number> = {};
     if (Array.isArray(raw)) {
         for (const item of raw) {
@@ -184,7 +184,7 @@ function loadDefaultGearTargets(root: string): GearCollectionTarget[] {
         : join(repoRoot, 'knowledge', 'gear.json');
     const key = `${resolve(filePath)}|${fileStatStamp(filePath)}`;
     if (cachedDefaultGearTargets && cachedDefaultGearTargets.key === key) return cachedDefaultGearTargets.targets;
-    const raw = readJsonStatCached<unknown>(filePath);
+    const raw = readJsonOnce<unknown>(filePath);
     if (!Array.isArray(raw)) return [];
 
     const bestBySlot = new Map<string, Array<{ entry: GearCollectionTarget; score: number }>>();

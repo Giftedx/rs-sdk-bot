@@ -67,7 +67,15 @@ export type QuestSweepNeeds = {
 
 const EMPTY = (quest: string): QuestSweepNeeds => ({ quest, start: { x: 0, z: 0, level: 0 }, bank: [], shop: [], fees: [], coins: 0 });
 const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer', 'Magic', 'Ranged'] as const;
+const MAX_MEMO = 128;
 const memo = new Map<string, QuestSweepNeeds>();
+function setMemo(key: string, value: QuestSweepNeeds): void {
+    if (memo.size >= MAX_MEMO) {
+        const oldest = memo.keys().next().value;
+        if (oldest !== undefined) memo.delete(oldest);
+    }
+    memo.set(key, value);
+}
 
 // Preset items that the quest takes before every started stage: the sweep stages none of them for a started journal.
 // An item spent only from a later stage stays a need, because the brain does not know the stage.
@@ -98,7 +106,7 @@ export function questSweepNeeds(quest: string, level: (skill: string) => number,
         preset = presetFor(quest);
     } catch {
         const empty = EMPTY(quest);
-        memo.set(key, empty);
+        setMemo(key, empty);
         return empty;
     }
     let base = needs(preset, false, quest);
@@ -141,7 +149,7 @@ export function questSweepNeeds(quest: string, level: (skill: string) => number,
         }
     }
     const out = { quest, start: at, bank, shop, fees, coins };
-    memo.set(key, out);
+    setMemo(key, out);
     return out;
 }
 

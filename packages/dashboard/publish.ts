@@ -16,7 +16,7 @@ import {createHash} from 'node:crypto';
 import {join,posix,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {expandQuests} from './quest-pack';
-import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocksValue} from './publish-relay';
+import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocksHashValue} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {leanBunEnv} from '../core/src/lean-bun-env';
@@ -409,13 +409,13 @@ async function cycle(){
  writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
-  const controlStable=withoutClocksValue(controlObj);
+  const controlStable=withoutClocksHashValue(controlObj);
   if(pushDue(control,lastControl,now,controlStable)){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl={stable:controlStable,at:now};}else note+=' data=unchanged';
   const pages=await checkPages(pagesWatch,now,gh,REPO);pagesWatch=pages.watch;note+=pages.note;
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
-  const pubStable=pubObj!==null?withoutClocksValue(pubObj):undefined;
+  const pubStable=pubObj!==null?withoutClocksHashValue(pubObj):undefined;
   if(pub!==null&&pushDue(pub,lastPublic,now,pubStable)&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
@@ -428,7 +428,7 @@ async function cycle(){
    if(names){mkdirSync(join(site,'api'),{recursive:true});writeFileSync(join(site,'api','our-names'),names);}
    // A refused folder waits a whole push period too: the next try copies main's site/ again.
    const {result}=await pushAuditedSite(site);note+=` site=${result}`;lastSitePush=now;
-   if(result==='pushed'||result==='unchanged'){lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;}
+   if(result==='pushed'||result==='unchanged'){lastPublic={stable:withoutClocksHashValue(pubObj),at:now};deployedPage=page;}
    if(result==='pushed'){const head=await git(site,'rev-parse','HEAD');if(head.ok)pagesWatch=watchPush(pagesWatch,head.out,now);}
   }
  }
@@ -459,6 +459,7 @@ if(import.meta.main){
   }
   try{await cycle();}catch(e){log(`PUBLISH fail ${String(e).slice(0,300)}`);if(once)process.exit(1);}
   if(once)break;
+  Bun.gc(false);
   await Bun.sleep(CYCLE_MS);
  }
 }

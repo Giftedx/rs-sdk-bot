@@ -654,6 +654,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         }
         if (once && !running.size) break;
         const soon = orders.some(o => o.end > now && o.start - now < LEAD && (sideOf(o.from, owners) === side || sideOf(o.to, owners) === side));
+        Bun.gc(false);
         await Bun.sleep(soon || running.size ? 60_000 : CYCLE);
     }
 }

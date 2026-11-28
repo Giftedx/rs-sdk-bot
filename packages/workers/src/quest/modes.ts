@@ -2,8 +2,12 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Step } from '../../../core/src/chain-step';
 import { QUEST_NAMES, questShortfall } from './chain';
-import { QUEST_FINDS, PRAYER_POTIONS, needs, prayerCovers, presetFor, wornKitPlan } from './sweep-plan';
 import { REPO_ROOT, type SweepApiOptions } from './types';
+
+let sweepPlanMod: typeof import('./sweep-plan') | undefined;
+function getSweepPlan(): typeof import('./sweep-plan') {
+    return (sweepPlanMod ??= require('./sweep-plan') as typeof import('./sweep-plan'));
+}
 
 export interface QuesterModeSpec {
     mode: string;
@@ -132,6 +136,7 @@ export function assessQuestReadiness(
     if (slug === 'hero') blockers.push('Heroes requires an explicit owned pair order');
     if (slug === 'arrav') blockers.push('Shield of Arrav requires a pair partner (scripts/generated/quest-arrav.ts <main> <helper>)');
     try {
+        const { QUEST_FINDS, PRAYER_POTIONS, needs, prayerCovers, presetFor, wornKitPlan } = getSweepPlan();
         const preset = presetFor(slug);
         const missingItems: Record<number, number> = {};
         const required = wornKitPlan(slug, needs(preset, false, slug), [], [], []).need;

@@ -359,7 +359,7 @@ export function startHiscoreRefresh(root: string, onEnd: () => void, spawnFn: ty
     let ended = false;
     const end = () => { if (!ended) { ended = true; onEnd(); } };
     try {
-        const child = spawnFn(cmd[0]!, cmd.slice(1), { cwd: root, windowsHide: true, stdio: ['ignore', fd, fd] });
+        const child = spawnFn(cmd[0]!, ['--smol', ...cmd.slice(1)], { cwd: root, env: leanBunEnv(process.env), windowsHide: true, stdio: ['ignore', fd, fd] });
         child.on('exit', end);
         child.on('error', end);
     } catch (error) {
@@ -892,7 +892,13 @@ export function brainDropKeep(o: {
 
 // The demand of a brain run is active with work left in the brain goals, and no defect holds its activity for the account.
 export function brainJobOpen(
-    brain: Pick<BrainCycleResult, 'fleetState' | 'world'>,
+    brain: {
+        readonly fleetState: {
+            readonly goals: readonly { readonly id: string; readonly active: boolean; readonly remaining: number }[];
+            readonly quarantinedDefects: BrainCycleResult['fleetState']['quarantinedDefects'];
+        };
+        readonly world: { readonly accounts: Readonly<Record<string, Pick<BrainCycleResult['world']['accounts'][string], 'skills'>>> };
+    },
     run: Pick<Run, 'activityId' | 'demandId'>,
     account: string,
     now: number,
@@ -1010,7 +1016,6 @@ export function clearAccountAutoStops(account: string, root: string): boolean {
 }
 
 const statusDataCache = new Map<string, { mtimeMs: number; size: number; ino: number; data: any }>();
-const statusRawCache = new Map<string, { mtimeMs: number; size: number; ino: number; raw: Buffer; data: any }>();
 
 function readCachedStatusData(filePath: string, nowWall: number): { mtimeMs: number; data: any } | null {
     try {
@@ -1020,7 +1025,7 @@ function readCachedStatusData(filePath: string, nowWall: number): { mtimeMs: num
             return { mtimeMs: st.mtimeMs, data: hit.data };
         }
         const data = JSON.parse(readFileSync(filePath, 'utf8'));
-        if (statusDataCache.size > 4096) statusDataCache.clear();
+        if (statusDataCache.size >= 512) statusDataCache.clear();
         statusDataCache.set(filePath, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, data });
         return { mtimeMs: st.mtimeMs, data };
     } catch {
@@ -1029,12 +1034,8 @@ function readCachedStatusData(filePath: string, nowWall: number): { mtimeMs: num
     }
 }
 
-export function readAccountStatus(
-    root: string,
-    account: string,
-): { file: string; mtimeMs: number; raw: Buffer; data: any } | null {
+function findAccountStatusFile(root: string, account: string): string | null {
     const lower = `${account.toLowerCase()}.json`;
-    const nowWall = Date.now();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
         const exact = join(dir, `${account}.json`);
@@ -1046,32 +1047,45 @@ export function readAccountStatus(
                 if (match) target = join(dir, match);
             } catch { /* unreadable status dir */ }
         }
-        if (!target) continue;
-        try {
-            const st = statSync(target);
-            const hit = statusRawCache.get(target);
-            if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size && hit.ino === st.ino) {
-                return { file: target, mtimeMs: hit.mtimeMs, raw: hit.raw, data: hit.data };
-            }
-            const raw = readFileSync(target);
-            const data = JSON.parse(raw.toString('utf8'));
-            if (statusRawCache.size > 4096) statusRawCache.clear();
-            statusRawCache.set(target, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, raw, data });
-            if (statusDataCache.size > 4096) statusDataCache.clear();
-            statusDataCache.set(target, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, data });
-            return { file: target, mtimeMs: st.mtimeMs, raw, data };
-        } catch {
-            statusRawCache.delete(target);
-            /* incomplete record */
-        }
+        if (target) return target;
     }
     return null;
+}
+
+function readAccountStatusData(
+    root: string,
+    account: string,
+): { file: string; mtimeMs: number; data: any } | null {
+    const target = findAccountStatusFile(root, account);
+    if (!target) return null;
+    const hit = readCachedStatusData(target, Date.now());
+    return hit ? { file: target, mtimeMs: hit.mtimeMs, data: hit.data } : null;
+}
+
+export function readAccountStatus(
+    root: string,
+    account: string,
+): { file: string; mtimeMs: number; raw: Buffer; data: any } | null {
+    const target = findAccountStatusFile(root, account);
+    if (!target) return null;
+    try {
+        const st = statSync(target);
+        const raw = readFileSync(target);
+        const data = JSON.parse(raw.toString('utf8'));
+        if (statusDataCache.size >= 512) statusDataCache.clear();
+        statusDataCache.set(target, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, data });
+        return { file: target, mtimeMs: st.mtimeMs, raw, data };
+    } catch {
+        statusDataCache.delete(target);
+        return null;
+    }
 }
 
 function readAllStatusEntries(root: string): { statuses: unknown[]; byLower: Map<string, { file: string; mtimeMs: number; data: any }> } {
     const statuses: unknown[] = [];
     const byLower = new Map<string, { file: string; mtimeMs: number; data: any }>();
     const seen = new Set<string>();
+    const seenPaths = new Set<string>();
     const nowWall = Date.now();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
@@ -1082,6 +1096,7 @@ function readAllStatusEntries(root: string): { statuses: unknown[]; byLower: Map
             if (!key.endsWith('.json') || seen.has(key)) continue;
             seen.add(key);
             const filePath = join(dir, file);
+            seenPaths.add(filePath);
             const hit = readCachedStatusData(filePath, nowWall);
             if (!hit) continue;
             statuses.push(hit.data);
@@ -1090,6 +1105,9 @@ function readAllStatusEntries(root: string): { statuses: unknown[]; byLower: Map
             if (!byLower.has(rowKey)) byLower.set(rowKey, { file: filePath, mtimeMs: hit.mtimeMs, data: hit.data });
             if (!byLower.has(stem)) byLower.set(stem, { file: filePath, mtimeMs: hit.mtimeMs, data: hit.data });
         }
+    }
+    for (const cachedPath of statusDataCache.keys()) {
+        if (!seenPaths.has(cachedPath)) statusDataCache.delete(cachedPath);
     }
     return { statuses, byLower };
 }
@@ -1755,7 +1773,16 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const classifier = new OutcomeClassifier({ rateStore, root, persist: true });
     const brainCycleMsRaw = Number(process.env.BRAIN_CYCLE_MS);
     const brainCycleMs = Number.isFinite(brainCycleMsRaw) && brainCycleMsRaw >= 1000 ? brainCycleMsRaw : DEFAULT_BRAIN_CYCLE_MS;
-    let lastBrainResult: BrainCycleResult | null = null;
+    type RetainedBrainResult = {
+        readonly dispatchedPlans: BrainCycleResult['dispatchedPlans'];
+        readonly world: { readonly accounts: Record<string, Pick<BrainCycleResult['world']['accounts'][string], 'name' | 'role' | 'skills'>> };
+        readonly fleetPlan: { readonly accountPlans: Record<string, Pick<BrainCycleResult['fleetPlan']['accountPlans'][string], 'steps' | 'idleReason'>> };
+        readonly fleetState: {
+            readonly goals: readonly Pick<BrainCycleResult['fleetState']['goals'][number], 'id' | 'active' | 'remaining'>[];
+            readonly quarantinedDefects: BrainCycleResult['fleetState']['quarantinedDefects'];
+        };
+    };
+    let lastBrainResult: RetainedBrainResult | null = null;
     let lastBrainAt = 0;
     // Accounts whose brain run this swarm stopped, and when. For two brain cycles such an account is no hub-trade
     // party, unless the stop was the planned fleet_trade handoff: a trade that names a just-stopped account is the
@@ -1806,7 +1833,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
     let tickStatusByLower: Map<string, { file: string; mtimeMs: number; data: any }> | null = null;
-    const statusHit = (a: string) => tickStatusByLower?.get(a.toLowerCase()) ?? readAccountStatus(root, a);
+    const statusHit = (a: string) => tickStatusByLower?.get(a.toLowerCase()) ?? readAccountStatusData(root, a);
     const statusAge = (a: string) => {
         const hit = statusHit(a);
         if (!hit || hit.data?.server !== LIVE_SERVER) return Infinity;
@@ -1972,7 +1999,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     }
                     if (run.accounts.length === 1) {
                         try {
-                            const endStatus = readAccountStatus(root, account)?.data;
+                            const endStatus = readAccountStatusData(root, account)?.data;
                             // A recovery run has no activity, so no outcome above ends its stranded hold. The end tile
                             // of its RESULT line is where it stands now; the status file is the fallback.
                             const endTile = resultEndTile(lastResultLine) ?? (isPlainTile(endStatus?.pos) ? endStatus.pos : undefined);
@@ -2063,7 +2090,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const logName = p.host ? `host-${accounts[0]}.log` : `${accounts[0]}.log`, logPath = join(logDir, logName);
         rotateLog(logPath);
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
-        const fingerprint = accounts.length === 1 && !p.host ? statusFingerprint(readAccountStatus(root, accounts[0]!)?.data) : undefined;
+        const fingerprint = accounts.length === 1 && !p.host ? statusFingerprint(readAccountStatusData(root, accounts[0]!)?.data) : undefined;
         const baseline = accounts.length === 1 && job.activityId
             ? captureRunBaseline(root, accounts[0]!, LIVE_SERVER) ?? undefined
             : undefined;
@@ -2264,15 +2291,34 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     // A cycle that throws keeps the last result: without brain jobs in the plan, the stop pass
                     // below would write SWARM_STOP.removed for every brain-dispatched worker.
                     try {
-                        lastBrainResult = runBrainCycle({
+                        const rawBrain = runBrainCycle({
                             root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
                             catalog, rateStore, classifier, infraBreaker,
                             activeAccounts: activeMap, persist: true, consumeCommands: true,
                             heldPlan, clearDeath, transferPartyHold,
                         });
+                        // Retain only the slim fields swarm.ts reads between ticks (drops banks/inventories/quests/diagnostics).
+                        const slimAccounts: Record<string, Pick<BrainCycleResult['world']['accounts'][string], 'name' | 'role' | 'skills'>> = {};
+                        for (const [k, a] of Object.entries(rawBrain.world.accounts)) {
+                            slimAccounts[k] = { name: a.name, role: a.role, skills: a.skills };
+                        }
+                        const slimPlans: Record<string, Pick<BrainCycleResult['fleetPlan']['accountPlans'][string], 'steps' | 'idleReason'>> = {};
+                        for (const [k, p] of Object.entries(rawBrain.fleetPlan.accountPlans)) {
+                            slimPlans[k] = { steps: p.steps, ...(p.idleReason !== undefined ? { idleReason: p.idleReason } : {}) };
+                        }
+                        lastBrainResult = {
+                            dispatchedPlans: rawBrain.dispatchedPlans,
+                            world: { accounts: slimAccounts },
+                            fleetPlan: { accountPlans: slimPlans },
+                            fleetState: {
+                                goals: rawBrain.fleetState.goals.map(g => ({ id: g.id, active: g.active, remaining: g.remaining })),
+                                quarantinedDefects: rawBrain.fleetState.quarantinedDefects,
+                            },
+                        };
                         lastBrainAt = nowMs;
                         lastBrainPlanMtime = planMtime;
                         brainDirty = false;
+                        for (const [k, at] of brainDropAt) if (nowMs - at >= 2 * brainCycleMs) brainDropAt.delete(k);
                     } catch (error) {
                         console.log(`SWARM brain cycle failed, last plan kept: ${String(error)}`);
                     }
@@ -2546,6 +2592,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             if (!poolSlotAlive(pool)) { pools.delete(id); continue; }
             const idleExpired = poolIdleExpired(pool, poolActiveCount(id), nowWall);
             if (pendingUpdate || stopAll || pool.launches >= POOL_MAX_LAUNCHES || idleExpired) drainPool(pool);
+        }
+        if (poolExited.size > 0) {
+            for (const id of [...poolExited]) {
+                if (!pools.has(id) && poolActiveCount(id) === 0) poolExited.delete(id);
+            }
         }
         if (pendingUpdate) {
             const drainRuns: DrainRun[] = [...runs].map(([key, run]) => {

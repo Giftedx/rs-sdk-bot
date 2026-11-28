@@ -3,7 +3,7 @@ import type { Outcome } from '../../core/src/act';
 import type { Tile } from '../../core/src/world';
 import { walkWithFerryFallback as logisticsWalk } from '../../workers/src/logistics/walk';
 import { walkWithFerryFallback as marketWalk } from '../../workers/src/market/walk';
-import { ferryFallbackFare } from '../src/ferry-fare';
+import { ferryFallbackFare, loadFerryTravelEdges } from '../src/ferry-fare';
 
 const ARDOUGNE_NORTH: Tile = { x: 2619, z: 3332, level: 0 };
 const VARROCK_WEST: Tile = { x: 3185, z: 3436, level: 0 };
@@ -44,4 +44,10 @@ test('with no route to Ardougne North, the walk east from Kandarin stages no far
         expect(out.ok).toBe(true);
         expect(staged).toBe(0);
     }
+});
+
+test('loadFerryTravelEdges returns only the 5 ferry and toll entries without loading full travel graph', () => {
+    const edges = loadFerryTravelEdges();
+    expect(edges.length).toBe(5);
+    expect(edges.every(e => typeof e.id === 'string' && e.from !== null && Number.isFinite(e.coins))).toBe(true);
 });

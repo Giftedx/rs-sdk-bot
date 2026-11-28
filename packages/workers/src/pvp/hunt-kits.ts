@@ -21,8 +21,13 @@ import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './fight';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, connectRadar, hasVarrockTeleport, itemCost, planWildernessEscape, Radar, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './wild-rules';
-import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../../../core/src/item-requirements';
+import type { ItemCount, ItemRequirement, RequirementResolution } from '../../../core/src/item-requirements';
 import { lootCapacity } from '../../../core/src/loot-policy';
+
+let itemReqMod: typeof import('../../../core/src/item-requirements') | undefined;
+function getItemReqs(): typeof import('../../../core/src/item-requirements') {
+    return (itemReqMod ??= require('../../../core/src/item-requirements') as typeof import('../../../core/src/item-requirements'));
+}
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -168,7 +173,7 @@ export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemC
     const out: ItemRequirement[] = [];
     for (let i = 0; i < trip.length; i++) {
         const row = trip[i]!;
-        const unit = nativeRequirementMetadata(row.id)?.unit;
+        const unit = getItemReqs().nativeRequirementMetadata(row.id)?.unit;
         if (row.minDoses !== undefined && row.minCharges !== undefined || (row.minCount !== undefined && unit?.kind !== undefined) || !Number.isSafeInteger(row.count) || row.count < 1) {
             out.push({ id: row.id, count: NaN });
             continue;
@@ -209,8 +214,10 @@ export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemC
     }
     return out;
 }
-const resolveTrip = (stock: readonly ItemCount[], trip: readonly TripItem[], worn: readonly ItemCount[] = []) =>
-    resolveItemRequirements(tripRequirements(trip, worn, stock), stock, nativeRequirementMetadata);
+const resolveTrip = (stock: readonly ItemCount[], trip: readonly TripItem[], worn: readonly ItemCount[] = []) => {
+    const { nativeRequirementMetadata, resolveItemRequirements } = getItemReqs();
+    return resolveItemRequirements(tripRequirements(trip, worn, stock), stock, nativeRequirementMetadata);
+};
 export const invalidTrip = (trip: readonly TripItem[]) => resolveTrip([], trip).shortages.filter(row => ['invalid', 'unknown', 'noted'].includes(row.reason));
 // The trip a bank can fill. `shallow`: every hunt spot is at Wilderness level 30 or less; the bow trip is first there.
 // Else the snare trip where the bank holds all of it, else the staff trip.
@@ -269,6 +276,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
         for (const [id, count] of stockTotals) {
             remaining.push({ id, count: Math.max(0, count - (reserved.get(id) ?? 0)) });
         }
+        const { nativeRequirementMetadata, resolveItemRequirements } = getItemReqs();
         const boost = resolveItemRequirements([{ id: doses[0], kind: 'doses', minUnits: 1, maxSlots: 1 }], remaining, nativeRequirementMetadata);
         if (!boost.ok) continue;
         for (const row of boost.items) { boosts.push(row); reserved.set(row.id, (reserved.get(row.id) ?? 0) + row.count); }
@@ -279,6 +287,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     // since the pack was taken must not end a trip (live: `required 21, available 20`, `required 16, available 15`).
     const foodOwned = FOOD_LIST.reduce((n, f) => n + total(f.id), 0);
     if (foodOwned < food && foodOwned >= Math.ceil(food * FOOD_START_FLOOR)) food = foodOwned;
+    const { nativeRequirementMetadata, resolveItemRequirements } = getItemReqs();
     const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], initialStock, nativeRequirementMetadata);
     if (!target.ok) return fail(target);
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);

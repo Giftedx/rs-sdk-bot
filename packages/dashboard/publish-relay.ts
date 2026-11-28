@@ -2,6 +2,7 @@
 // (server.ts /api/state, already masked: every string has the main account's name replaced by ⟦MAIN⟧) and its
 // operator metadata (/api/control). control.json is for the signed-in owner; public.json is a whitelist of the
 // same data without the main account (see publicView).
+import { createHash } from 'node:crypto';
 import {priceName,projectItemPrices,type ItemPrice,type ItemPrices,type PriceIdentity} from './item-prices';
 import {examineName,projectItemExamine,type ExamineTables} from './item-examine';
 
@@ -381,6 +382,9 @@ export const HEARTBEAT_MS=10*60_000;
 const clockReplacer=(_k:string,v:unknown)=>typeof v==='number'&&v>1.5e12&&v<3e12?0:v;
 export function withoutClocksValue(value:unknown):string{
  return JSON.stringify(value,clockReplacer);
+}
+export function withoutClocksHashValue(value:unknown):string{
+ return createHash('sha256').update(withoutClocksValue(value)).digest('hex');
 }
 export function withoutClocks(json:string):string{
  return JSON.stringify(JSON.parse(json),clockReplacer);

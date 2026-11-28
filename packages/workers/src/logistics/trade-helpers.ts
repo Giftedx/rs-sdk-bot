@@ -28,6 +28,7 @@ import { fleetStateFile } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { pidAlive } from '../../../core/src/session-takeover';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
+import { ARDY_BANK, DRAYNOR_BANK, type CourierTile } from './courier-banks';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import type { Tile } from '../../../core/src/world';
 import { withExecutionDeadline } from '../../../../vendor/rs-sdk/sdk/execution-context';
@@ -327,14 +328,13 @@ export function noteCourierOwned(
     return owned;
 }
 
-export type CourierTile = { x: number; z: number };
-export const ARDY_BANK: CourierTile = { x: 2654, z: 3283 };
+export { ARDY_BANK, DRAYNOR_BANK, type CourierTile };
+
 export const NORTH_BANK: CourierTile = { x: 2619, z: 3332 };
 export const SARIM: CourierTile = { x: 3029, z: 3217 };
 export const NORTH_TO_SOUTH: CourierTile = { x: 2644, z: 3293 };
 export const BOAT_FARES_OUT = 60;
 export const BOAT_FARES_ROUND = 120;
-export const DRAYNOR_BANK: CourierTile = { x: 3092, z: 3243 };
 export type OutboundStart = 'boat-south' | 'boat-north' | 'land' | 'refuse';
 export type RoutePoint = [number, number, number];
 export const LUMBRIDGE_TO_DRAYNOR: RoutePoint[] = [

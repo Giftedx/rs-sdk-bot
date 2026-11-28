@@ -57,6 +57,33 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
  return{at:now,sides,orders:open};
 }
 
+// Compact pre-projection for an expired unsettled order so historical trade JSON objects do not stay pinned in RAM
+// while preserving exact fleetSidesView() state parity across v2 (pending open/half, failed, reconcile) and legacy receipts.
+export function compactExpiredOrderSummary(order:any,orderReceipts:readonly any[],now:number):{order:any;receipts:any[]}{
+ const slimOrder={id:order.id,from:order.from,to:order.to,item:order.item,count:order.count,start:order.start,end:order.end};
+ let slimReceipts:any[];
+ if(orderReceipts.some(r=>r?.version!==undefined)){
+  if(!validOrder(order)){
+   slimReceipts=[{id:order.id,version:2,role:'from',state:'reconcile'}];
+  }else{
+   const s=tradeSettlement(order,orderReceipts,now).state;
+   if(s==='failed')slimReceipts=[{id:order.id,ok:false}];
+   else if(s==='pending'){
+    const half=orderReceipts.some(r=>terminalTradeReceipt(order,r.role,r,now)&&r.state==='settled');
+    slimReceipts=half?[{id:order.id,role:'from',ok:true}]:[];
+   }else{
+    slimReceipts=[{id:order.id,version:2,role:'from',state:s}];
+   }
+  }
+ }else if(orderReceipts.some(r=>r?.ok===false)){
+  slimReceipts=[{id:order.id,ok:false}];
+ }else{
+  const okRoles=new Set<string>(orderReceipts.filter(r=>r?.ok===true).map(r=>r.role));
+  slimReceipts=[...okRoles].map(role=>({id:order.id,role,ok:true}));
+ }
+ return{order:slimOrder,receipts:slimReceipts};
+}
+
 type Seen={x:number;z:number;level:number;combat:number;seen:number};
 const dated=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;
 // Explicit HP dates stay intact; legacy HP uses the status recording time. Roster and publication times never refresh it.

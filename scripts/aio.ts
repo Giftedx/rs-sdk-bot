@@ -12,30 +12,47 @@
 //   bun scripts/aio.ts --list
 //   bun scripts/aio.ts <category> <account> <method|target|mode|quest|role> [args...] [KEY=value...]
 import {existsSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import {join,resolve} from 'node:path';
 import {isStopFilePresent} from '../packages/workers/src/stop';
 import {runChild,runDirectChild} from '../packages/core/src/run-child';
 import {formatStep,tokenizeStep,runChainSteps,type Step} from '../packages/core/src/chain-step';
-import {SKILLER_ROUTES,skillerCatalogSummary,resolveSkillerStep,planProgressiveSkiller,discoverBankedProduction} from './aio-skiller';
-import {FIGHTER_PROFILES,resolveFighterStep,planAutoFighterBand} from './aio-fighter';
-import {BOSS_ENCOUNTERS,resolveBossStep,assessBossReadiness} from './aio-boss';
-import {PVP_MODES,resolvePvpStep,pvpCombatBracket,assessTribridReadiness} from './aio-pvp';
-import {QUESTER_MODES,listGeneratedQuestScripts,resolveQuesterStep,assessQuestReadiness,prioritizeQuestsForAccount} from './aio-quester';
-import {MARKET_MODES,resolveMarketStep,planGeRestockOrders} from './aio-market';
-import {LOGISTICS_ROLES,resolveLogisticsStep,planFleetDistribution} from './aio-logistics';
 
-export {
- planProgressiveSkiller,
- discoverBankedProduction,
- planAutoFighterBand,
- assessBossReadiness,
- pvpCombatBracket,
- assessTribridReadiness,
- assessQuestReadiness,
- prioritizeQuestsForAccount,
- planGeRestockOrders,
- planFleetDistribution,
-};
+const require = createRequire(import.meta.url);
+type SkillerMod = typeof import('./aio-skiller');
+type FighterMod = typeof import('./aio-fighter');
+type BossMod = typeof import('./aio-boss');
+type PvpMod = typeof import('./aio-pvp');
+type QuesterMod = typeof import('./aio-quester');
+type MarketMod = typeof import('./aio-market');
+type LogisticsMod = typeof import('./aio-logistics');
+
+let skillerMod: SkillerMod | undefined;
+let fighterMod: FighterMod | undefined;
+let bossMod: BossMod | undefined;
+let pvpMod: PvpMod | undefined;
+let questerMod: QuesterMod | undefined;
+let marketMod: MarketMod | undefined;
+let logisticsMod: LogisticsMod | undefined;
+
+const getSkiller = () => (skillerMod ??= require('./aio-skiller') as SkillerMod);
+const getFighter = () => (fighterMod ??= require('./aio-fighter') as FighterMod);
+const getBoss = () => (bossMod ??= require('./aio-boss') as BossMod);
+const getPvp = () => (pvpMod ??= require('./aio-pvp') as PvpMod);
+const getQuester = () => (questerMod ??= require('./aio-quester') as QuesterMod);
+const getMarket = () => (marketMod ??= require('./aio-market') as MarketMod);
+const getLogistics = () => (logisticsMod ??= require('./aio-logistics') as LogisticsMod);
+
+export const planProgressiveSkiller: SkillerMod['planProgressiveSkiller'] = (...a) => getSkiller().planProgressiveSkiller(...a);
+export const discoverBankedProduction: SkillerMod['discoverBankedProduction'] = (...a) => getSkiller().discoverBankedProduction(...a);
+export const planAutoFighterBand: FighterMod['planAutoFighterBand'] = (...a) => getFighter().planAutoFighterBand(...a);
+export const assessBossReadiness: BossMod['assessBossReadiness'] = (...a) => getBoss().assessBossReadiness(...a);
+export const pvpCombatBracket: PvpMod['pvpCombatBracket'] = (...a) => getPvp().pvpCombatBracket(...a);
+export const assessTribridReadiness: PvpMod['assessTribridReadiness'] = (...a) => getPvp().assessTribridReadiness(...a);
+export const assessQuestReadiness: QuesterMod['assessQuestReadiness'] = (...a) => getQuester().assessQuestReadiness(...a);
+export const prioritizeQuestsForAccount: QuesterMod['prioritizeQuestsForAccount'] = (...a) => getQuester().prioritizeQuestsForAccount(...a);
+export const planGeRestockOrders: MarketMod['planGeRestockOrders'] = (...a) => getMarket().planGeRestockOrders(...a);
+export const planFleetDistribution: LogisticsMod['planFleetDistribution'] = (...a) => getLogistics().planFleetDistribution(...a);
 
 export type AioCategory = 'skiller' | 'fighter' | 'boss' | 'pvp' | 'quester' | 'market' | 'logistics';
 
@@ -50,58 +67,59 @@ export const AIO_CATEGORIES: readonly AioCategory[] = [
 ];
 
 export function aioCatalog() {
- const quests = listGeneratedQuestScripts();
+ const sk = getSkiller(), fi = getFighter(), bo = getBoss(), pv = getPvp(), qu = getQuester(), mk = getMarket(), lo = getLogistics();
+ const quests = qu.listGeneratedQuestScripts();
  return {
   categories: {
    skiller: {
     pluginName: 'Vortex All In One (Skiller)',
     entry: 'scripts/aio-skiller.ts',
-    summary: skillerCatalogSummary(),
-    routes: SKILLER_ROUTES,
+    summary: sk.skillerCatalogSummary(),
+    routes: sk.SKILLER_ROUTES,
    },
    fighter: {
     pluginName: 'Auto Fighter (Combat & Drops)',
     entry: 'scripts/aio-fighter.ts',
-    profiles: FIGHTER_PROFILES,
+    profiles: fi.FIGHTER_PROFILES,
    },
    boss: {
     pluginName: 'PvM Helper (Bosses & Minigames)',
     entry: 'scripts/aio-boss.ts',
-    encounters: BOSS_ENCOUNTERS,
+    encounters: bo.BOSS_ENCOUNTERS,
    },
    pvp: {
     pluginName: 'PK Fighter (Wilderness PvP & Tribrid)',
     entry: 'scripts/aio-pvp.ts',
-    modes: PVP_MODES,
+    modes: pv.PVP_MODES,
    },
    quester: {
     pluginName: 'Quest Helper & Clue Solver',
     entry: 'scripts/aio-quester.ts',
-    modes: QUESTER_MODES,
+    modes: qu.QUESTER_MODES,
     questScriptsCount: quests.length,
     questScripts: quests,
    },
    market: {
     pluginName: 'MK Auto Buyer & GE Trader',
     entry: 'scripts/aio-market.ts',
-    modes: MARKET_MODES,
+    modes: mk.MARKET_MODES,
    },
    logistics: {
     pluginName: 'RC Runners, Loadouts & Fleet Mules',
     entry: 'scripts/aio-logistics.ts',
-    roles: LOGISTICS_ROLES,
+    roles: lo.LOGISTICS_ROLES,
    },
   },
   totals: {
    categories: AIO_CATEGORIES.length,
-   skillerRoutes: SKILLER_ROUTES.length,
-   fighterProfiles: FIGHTER_PROFILES.length,
-   bossEncounters: BOSS_ENCOUNTERS.length,
-   pvpModes: PVP_MODES.length,
-   questerModes: QUESTER_MODES.length,
+   skillerRoutes: sk.SKILLER_ROUTES.length,
+   fighterProfiles: fi.FIGHTER_PROFILES.length,
+   bossEncounters: bo.BOSS_ENCOUNTERS.length,
+   pvpModes: pv.PVP_MODES.length,
+   questerModes: qu.QUESTER_MODES.length,
    questScripts: quests.length,
-   marketModes: MARKET_MODES.length,
-   logisticsRoles: LOGISTICS_ROLES.length,
+   marketModes: mk.MARKET_MODES.length,
+   logisticsRoles: lo.LOGISTICS_ROLES.length,
   },
  };
 }
@@ -111,13 +129,13 @@ export function resolveAioStep(categoryInput: string, args: readonly string[]): 
  const [first, ...rest] = args;
  if (!first) throw Error(`aio: category "${category}" requires a target/method argument`);
  switch (category) {
-  case 'skiller': return resolveSkillerStep(first, rest[0], rest.slice(1));
-  case 'fighter': return resolveFighterStep(first, rest);
-  case 'boss': return resolveBossStep(first, rest);
-  case 'pvp': return resolvePvpStep(first, rest);
-  case 'quester': return resolveQuesterStep(first, rest);
-  case 'market': return resolveMarketStep(first, rest);
-  case 'logistics': return resolveLogisticsStep(first, rest);
+  case 'skiller': return getSkiller().resolveSkillerStep(first, rest[0], rest.slice(1));
+  case 'fighter': return getFighter().resolveFighterStep(first, rest);
+  case 'boss': return getBoss().resolveBossStep(first, rest);
+  case 'pvp': return getPvp().resolvePvpStep(first, rest);
+  case 'quester': return getQuester().resolveQuesterStep(first, rest);
+  case 'market': return getMarket().resolveMarketStep(first, rest);
+  case 'logistics': return getLogistics().resolveLogisticsStep(first, rest);
   default:
    throw Error(`aio: unknown category "${categoryInput}"; known: ${AIO_CATEGORIES.join(', ')}`);
  }
@@ -200,7 +218,7 @@ function recommendAuthoredAioJob(
    return {
     category: 'skiller',
     reason: `Thieving ${thieving}/55; bootstrap to 55 before Ardougne knights`,
-    step: resolveSkillerStep('thieving', 'bootstrap55', ['TARGET=55', 'CAP=3000']),
+    step: getSkiller().resolveSkillerStep('thieving', 'bootstrap55', ['TARGET=55', 'CAP=3000']),
    };
   }
   // The banked fish and bakery food accepted by goldfarm.ts FOOD_ORDER.
@@ -213,7 +231,7 @@ function recommendAuthoredAioJob(
    ].find(fish => cooking >= fish.level && (account.ownedItems[fish.id] ?? 0) > 0);
    if (raw) return {
     category: 'skiller', reason: `Food stock low (${foodCount}); cook owned ${raw.kind} before knight pickpocketing`,
-    step: resolveSkillerStep('cooking', 'food', ['2000', raw.kind]),
+    step: getSkiller().resolveSkillerStep('cooking', 'food', ['2000', raw.kind]),
    };
    if ((s.Fishing ?? 1) < 40 || cooking < 40) return {
     category: null, status: 'blocked', step: null,
@@ -225,13 +243,13 @@ function recommendAuthoredAioJob(
    return {
     category: 'skiller',
     reason: `Food stock low (${foodCount}); fish lobsters for the cooking step`,
-    step: resolveSkillerStep('fishing', 'cage', ['cage', '3000']),
+    step: getSkiller().resolveSkillerStep('fishing', 'cage', ['cage', '3000']),
    };
   }
   return {
    category: 'skiller',
    reason: `Thieving ${thieving} ready with food stock (${foodCount}); pickpocket Ardougne knights`,
-   step: resolveSkillerStep('thieving', 'knights'),
+   step: getSkiller().resolveSkillerStep('thieving', 'knights'),
   };
  }
  if (goal === 'pk-tribrid') {
@@ -246,38 +264,38 @@ function recommendAuthoredAioJob(
   }
   if ((s.Ranged ?? 1) < 99) return {
    category: 'fighter', reason: `Maxed tribrid needs Ranged 99 (${s.Ranged ?? 1}); train on Khazard troopers`,
-   step: resolveFighterStep('trooper', ['TRAIN_SKILL=Ranged', 'TARGET_LEVEL=99']),
+   step: getFighter().resolveFighterStep('trooper', ['TRAIN_SKILL=Ranged', 'TARGET_LEVEL=99']),
   };
   if ((s.Magic ?? 1) < 99) return {
    category: 'skiller', reason: `Maxed tribrid needs Magic 99 (${s.Magic ?? 1}); stage runes and train alchemy`,
-   step: resolveSkillerStep('magic', 'alch-train', ['99', '5000']),
+   step: getSkiller().resolveSkillerStep('magic', 'alch-train', ['99', '5000']),
   };
   if ((s.Prayer ?? 1) < 99) {
    const bone = [536, 532, 526].find(id => (account.ownedItems[id] ?? 0) > 6);
    return bone ? {
     category: 'skiller', reason: `Maxed tribrid needs Prayer 99 (${s.Prayer ?? 1}); bury owned bones above the reserve`,
-    step: resolveSkillerStep('prayer', 'bury', ['99', `BONE_ID=${bone}`, 'BURY_HELD=1']),
+    step: getSkiller().resolveSkillerStep('prayer', 'bury', ['99', `BONE_ID=${bone}`, 'BURY_HELD=1']),
    } : {
     category: 'fighter', reason: `Maxed tribrid needs Prayer 99 (${s.Prayer ?? 1}); gather and bury trooper bones`,
-    step: resolveFighterStep('trooper', ['TRAIN_SKILL=Hitpoints', 'TARGET_LEVEL=99', 'GIANT_KILLS=500', 'GIANT_BURY=1']),
+    step: getFighter().resolveFighterStep('trooper', ['TRAIN_SKILL=Hitpoints', 'TARGET_LEVEL=99', 'GIANT_KILLS=500', 'GIANT_BURY=1']),
    };
   }
   if (hp < 99) return {
    category: 'fighter', reason: `Maxed tribrid needs Hitpoints 99 (${hp}); finish on Khazard troopers`,
-   step: resolveFighterStep('trooper', ['TRAIN_SKILL=Hitpoints', 'TARGET_LEVEL=99']),
+   step: getFighter().resolveFighterStep('trooper', ['TRAIN_SKILL=Hitpoints', 'TARGET_LEVEL=99']),
   };
   const kitCheck = assessTribridReadiness(account.ownedItems);
   if (!kitCheck.ready) {
    return {
     category: 'pvp',
     reason: `Missing tribrid kit items (${Object.keys(kitCheck.missing).join(',')}); stage PvP kit at bank`,
-    step: resolvePvpStep('stage-kit'),
+    step: getPvp().resolvePvpStep('stage-kit'),
    };
   }
   return {
    category: 'pvp',
    reason: 'Combat and tribrid kit ready; launch Wilderness PK pilot',
-   step: resolvePvpStep('pilot', ['10', '20']),
+   step: getPvp().resolvePvpStep('pilot', ['10', '20']),
   };
  }
  if (goal === 'quest-sweep') {
@@ -312,7 +330,7 @@ function recommendAuthoredAioJob(
  if (lowest.name === 'Herblore' && lowest.level < 3) {
   const unlock = assessQuestReadiness('druid', account.ownedItems, account.completedQuests, s);
   if (!unlock.ready) return {category: null, step: null, status: 'blocked', reason: `Herblore needs Druidic Ritual: ${unlock.blockers.concat(Object.entries(unlock.missingItems).map(([id, count]) => `${count}x${id}`)).join(', ') || 'refresh the observed Herblore level'}`};
-  return {category: 'quester', reason: 'Unlock Herblore with Druidic Ritual before training', step: resolveQuesterStep('sweep', ['druid'])};
+  return {category: 'quester', reason: 'Unlock Herblore with Druidic Ritual before training', step: getQuester().resolveQuesterStep('sweep', ['druid'])};
  }
  if (combatSkills.has(lowest.name)) {
   const band = planAutoFighterBand({
@@ -333,7 +351,7 @@ function recommendAuthoredAioJob(
   return {
    category: 'fighter',
    reason: `Lowest skill Ranged (${lowest.level}); train to ${goalLvl}`,
-   step: troopers ? resolveFighterStep('trooper', ['TRAIN_SKILL=Ranged', `TARGET_LEVEL=${goalLvl}`]) : resolveFighterStep('ranged', [`TARGET_LEVEL=${goalLvl}`]),
+   step: troopers ? getFighter().resolveFighterStep('trooper', ['TRAIN_SKILL=Ranged', `TARGET_LEVEL=${goalLvl}`]) : getFighter().resolveFighterStep('ranged', [`TARGET_LEVEL=${goalLvl}`]),
   };
  }
  const band = planProgressiveSkiller(lowest.name.toLowerCase(), lowest.level, Math.min(99, lowest.level + 15), 25, account.ownedItems)[0]!;

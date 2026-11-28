@@ -33,19 +33,26 @@ let cache:
 function load() {
     if (cache) return cache;
     const shops = new Map(read<{ inv: string; stock: { item: string }[] }[]>('shops.json').map(s => [s.inv, s.stock.map(i => i.item)]));
-    const npcs = new Map(read<{ name: string; debugname: string }[]>('npcs.json').map(n => [n.debugname, n.name]));
-    const items = new Map<string, string>();
-    for (const i of read<{ name?: string; debugname?: string }[]>('items.json')) {
-        if (i.debugname && i.name) items.set(i.debugname, i.name);
-    }
+    const neededItems = new Set<string>();
+    for (const stock of shops.values()) for (const item of stock) neededItems.add(item);
     const spawns = new Map<string, { npc: string; x: number; z: number; level: number }[]>();
+    const neededNpcs = new Set<string>();
     for (const n of read<{ shopNpcs: { shop: string; npc: string; spawns: { x: number; z: number; level: number }[] }[] }>('gear-sources.json').shopNpcs) {
+        neededNpcs.add(n.npc);
         let list = spawns.get(n.shop);
         if (!list) {
             list = [];
             spawns.set(n.shop, list);
         }
         for (const s of n.spawns) list.push({ npc: n.npc, ...s });
+    }
+    const npcs = new Map<string, string>();
+    for (const n of read<{ name: string; debugname: string }[]>('npcs.json')) {
+        if (neededNpcs.has(n.debugname)) npcs.set(n.debugname, n.name);
+    }
+    const items = new Map<string, string>();
+    for (const i of read<{ name?: string; debugname?: string }[]>('items.json')) {
+        if (i.debugname && i.name && neededItems.has(i.debugname)) items.set(i.debugname, i.name);
     }
     return (cache = { shops, npcs, items, spawns });
 }

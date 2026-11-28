@@ -2,7 +2,9 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { compactExpiredOrderSummary, fleetSidesView } from './fleet-view';
 import { scanJsonlTail, tailJsonlFile, tailLines } from './jsonl-tail';
+import { pushDue, withoutClocksHashValue } from './publish-relay';
 import { encodeMapCache, readCachedMapBytes, type MapSpec } from './server/build-map';
 
 const dirs: string[] = [];
@@ -60,5 +62,84 @@ describe('dashboard memory caches', () => {
         const nextSec = (st.mtimeMs + 5000) / 1000;
         utimesSync(collisionFile, nextSec, nextSec);
         expect(readCachedMapBytes(cacheFile, collisionFile, map)).toBeNull();
+    });
+
+    test('withoutClocksHashValue produces compact 64-hex digest invariant to epoch timestamps', () => {
+        const a = { now: 1_780_000_000_000, bots: [{ name: 'Alpha', at: 1_780_000_001_000, hp: 50 }] };
+        const b = { now: 1_780_000_060_000, bots: [{ name: 'Alpha', at: 1_780_000_061_000, hp: 50 }] };
+        const c = { now: 1_780_000_060_000, bots: [{ name: 'Alpha', at: 1_780_000_061_000, hp: 49 }] };
+        const ha = withoutClocksHashValue(a);
+        const hb = withoutClocksHashValue(b);
+        const hc = withoutClocksHashValue(c);
+        expect(ha).toMatch(/^[a-f0-9]{64}$/);
+        expect(ha).toBe(hb);
+        expect(ha).not.toBe(hc);
+        expect(pushDue(JSON.stringify(b), { stable: ha, at: 1_780_000_000_000 }, 1_780_000_060_000, hb)).toBe(false);
+        expect(pushDue(JSON.stringify(c), { stable: ha, at: 1_780_000_000_000 }, 1_780_000_060_000, hc)).toBe(true);
+    });
+
+    test('compactExpiredOrderSummary preserves fleetSidesView state parity for v2 pending (open/half), failed, reconcile, and legacy orders', () => {
+        const start = 1_780_000_000_000;
+        const end = start + 600_000;
+        const order = {
+            id: 'ord-v2-parity',
+            server: 'rs-sdk-demo.fly.dev',
+            from: 'Giver',
+            to: 'Taker',
+            item: 'Coins',
+            count: 1000,
+            start,
+            end,
+        };
+        const claim = '12345678-1234-1234-1234-123456789abc';
+        const sha = 'a'.repeat(64);
+        const mkV2 = (role: 'from' | 'to', state: 'prepared' | 'settled' | 'failed', at: number) => ({
+            version: 2 as const,
+            id: order.id,
+            role,
+            account: role === 'from' ? order.from : order.to,
+            partner: role === 'from' ? order.to : order.from,
+            side: 'local',
+            server: order.server,
+            item: order.item,
+            requested: order.count,
+            count: state === 'settled' ? order.count : 0,
+            ok: state === 'settled',
+            state,
+            claim,
+            at,
+            detail: state,
+            inventory: role === 'from'
+                ? { before: 1000, after: state === 'settled' ? 0 : 1000 }
+                : { before: 0, after: state === 'settled' ? 1000 : 0 },
+            ...(role === 'to' && state === 'settled' ? { bank: { count: 1000, at: at - 500 } } : {}),
+            logout: { attemptId: `${start}-1-1`, at: at - 100, sha256: sha },
+        });
+
+        const cases: Array<{ label: string; ord: any; recs: any[]; now: number; want: string }> = [
+            // v2 pending -> open (prepared receipt while window open)
+            { label: 'v2-pending-open', ord: order, recs: [mkV2('from', 'prepared', start + 10_000)], now: start + 20_000, want: 'open' },
+            // v2 pending -> half (one terminal settled receipt while window open)
+            { label: 'v2-pending-half', ord: order, recs: [mkV2('from', 'settled', start + 10_000)], now: start + 20_000, want: 'half' },
+            // v2 expired -> failed (both terminal failed)
+            { label: 'v2-expired-failed', ord: order, recs: [mkV2('from', 'failed', start + 10_000), mkV2('to', 'failed', start + 11_000)], now: end + 60_000, want: 'failed' },
+            // v2 expired -> reconcile (one prepared or one settled past end)
+            { label: 'v2-expired-reconcile', ord: order, recs: [mkV2('from', 'settled', start + 10_000)], now: end + 60_000, want: 'reconcile' },
+            // v2 invalid order -> reconcile
+            { label: 'v2-invalid-order', ord: { ...order, server: undefined }, recs: [mkV2('from', 'prepared', start + 10_000)], now: end + 60_000, want: 'reconcile' },
+            // legacy expired -> failed, half, open
+            { label: 'legacy-failed', ord: order, recs: [{ id: order.id, role: 'from', ok: false }], now: end + 60_000, want: 'failed' },
+            { label: 'legacy-half', ord: order, recs: [{ id: order.id, role: 'from', ok: true }], now: end + 60_000, want: 'half' },
+            { label: 'legacy-open', ord: order, recs: [], now: end + 60_000, want: 'open' },
+        ];
+
+        for (const c of cases) {
+            const full = fleetSidesView([], [c.ord], c.now, c.recs).orders;
+            const slim = compactExpiredOrderSummary(c.ord, c.recs, c.now);
+            const compact = fleetSidesView([], [slim.order], c.now, slim.receipts).orders;
+            expect(full, c.label).toHaveLength(1);
+            expect(full[0]!.state, c.label).toBe(c.want);
+            expect(compact, c.label).toEqual(full);
+        }
     });
 });

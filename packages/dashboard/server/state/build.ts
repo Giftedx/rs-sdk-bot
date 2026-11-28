@@ -16,7 +16,7 @@ import { xpForLevel } from '../../../planner/src/curve';
 import { ownerOfIn } from '../../../core/src/fleet-snapshots';
 import { isLocalServer } from '../../../core/src/localserver';
 import { findStopFile, fleetStateFile } from '../../../core/src/practice-paths';
-import { cached, dashboardDir, every, FILES, fleetList, getMapBytes, goalTraining, liveAccounts, MAIN, MAP, NL, OBJS, PAGE_FILE, practice, remoteNames, ROLE_SKILL, root, SCRIPT_ROLE, shortPhase, snapshotFiles, type Status } from '../config';
+import { cached, compactItemsCatalog, dashboardDir, every, FILES, fleetList, getMapBytes, goalTraining, liveAccounts, MAIN, MAP, NL, OBJS, PAGE_FILE, practice, remoteNames, ROLE_SKILL, root, SCRIPT_ROLE, shortPhase, snapshotFiles, type Status } from '../config';
 import { getItemPrices, getPricesAt, icons, itemExamines, keySupplyIds, marketById, npcLootPrices, vault } from '../market';
 import { boardTops, EXTRA, extraBoards, firstSeen, fmtTicks, inferRole, liveTop, NO_ROLE, parseTime, rankDelta, ranks, roster, serverTick, SKILL_BOARDS, snapshot, topOf, valueRanks, world } from '../world';
 import { getBuildMs, getCpuPct, getPrRows, procs, viewerTimings } from './host';
@@ -273,7 +273,7 @@ function buildState() {
     const currentRace=race(),currentGates=gates();
     const currentScoreboard=cached(FILES.scoreboard,text=>scoreboardView(JSON.parse(text)),scoreboardView(null));
     const goalInputs:GoalInputs={requirements:currentRace?.supplies??null,
-        items:cached<any[]>(join(root,'knowledge/items.json'),JSON.parse,[]),
+        items:compactItemsCatalog(),
         quests:cached<any[]>(join(root,'knowledge/quests.json'),JSON.parse,[]),
         questConstants:cached(join(root,'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant'),text=>text,''),
         receipts:Object.fromEntries(Object.entries(GOAL_RECEIPTS).map(([key,path])=>[key,cached<any>(join(root,path),JSON.parse,null)]))};
@@ -285,10 +285,35 @@ function buildState() {
         const paused = Boolean(findStopFile('swarm', root));
         if (!existsSync(file)) return coordinationView(null, 0, now, paused);
         try {
-            const parsed = cached<any>(file, JSON.parse, null);
+            // Project only the fields coordinationView reads so the full fleet-state.json (~800 KB) is not pinned in fileCache.
+            const projected = cached<{ emittedAt: number | null; state: unknown } | null>(file, text => {
+                const parsed = JSON.parse(text);
+                if (!parsed || parsed.schemaVersion !== 1 || !parsed.accounts || typeof parsed.accounts !== 'object' || Array.isArray(parsed.accounts) || !parsed.activeChains || typeof parsed.activeChains !== 'object' || Array.isArray(parsed.activeChains)) {
+                    return null;
+                }
+                const accounts: Record<string, { activeJob?: { startedAt?: number } }> = {};
+                for (const [k, a] of Object.entries(parsed.accounts as Record<string, any>)) {
+                    if (a?.activeJob) accounts[k] = { activeJob: { startedAt: a.activeJob.startedAt } };
+                }
+                return {
+                    emittedAt: typeof parsed.emittedAt === 'number' && Number.isFinite(parsed.emittedAt) ? parsed.emittedAt : null,
+                    state: {
+                        schemaVersion: 1,
+                        emittedAt: parsed.emittedAt,
+                        accounts,
+                        activeChains: parsed.activeChains,
+                        goals: Array.isArray(parsed.goals) ? parsed.goals.map((g: any) => ({ id: g?.id, goalKind: g?.goalKind, active: g?.active })) : [],
+                        quarantinedDefects: parsed.quarantinedDefects,
+                        campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns.map((c: any) => ({ id: c?.id, account: c?.account, board: c?.board, state: c?.state })) : [],
+                        missions: Array.isArray(parsed.missions) ? parsed.missions.map((m: any) => ({ id: m?.id, state: m?.state, participants: Array.isArray(m?.participants) ? [...m.participants] : [] })) : [],
+                        idleReasons: parsed.idleReasons,
+                        infraCircuitBreaker: parsed.infraCircuitBreaker,
+                    },
+                };
+            }, null);
             const mtime = statSync(file).mtimeMs;
-            const at = typeof parsed?.emittedAt === 'number' && Number.isFinite(parsed.emittedAt) ? parsed.emittedAt : mtime;
-            return coordinationView(parsed, at, now, paused);
+            const at = projected?.emittedAt ?? mtime;
+            return coordinationView(projected?.state ?? null, at, now, paused);
         } catch {
             return coordinationView(null, 0, now, paused);
         }
