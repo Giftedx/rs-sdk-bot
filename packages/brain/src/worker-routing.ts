@@ -262,9 +262,11 @@ export function resolveActivityWorkerRoute(
                 } else if (skill === 'crafting' && rawMethod === 'tanning' && args.length >= 4) {
                     const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
                     if (Number.isSafeInteger(units) && units > 0) {
-                        args[3] = String(units);
+                        // tanInventory operates on one unnoted pack (max 27 hides + coins).
+                        const capped = Math.min(27, units);
+                        args[3] = String(capped);
                         if (extraEnv.CAP !== undefined && args.length >= 5) args[4] = extraEnv.CAP;
-                        else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 200, units * 8 + 120));
+                        else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 200, capped * 8 + 120));
                     }
                 } else if (skill === 'fletching' && rawMethod === 'arrows' && (env.MODE === 'headless' || env.MODE === 'native-arrows')) {
                     // Arrow runs make MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless/runNativeArrows): the

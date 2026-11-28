@@ -116,13 +116,18 @@ function loadPkSquadParticipants(root: string): string[] {
     if (Array.isArray(swarm.bots)) {
         for (const bot of swarm.bots) {
             if (!isPlainRecord(bot)) continue;
-            if (isPvpRole(bot.role)) add(bot.name);
+            if (isPvpRole(bot.role)) add(bot.account ?? bot.name);
         }
     }
     if (Array.isArray(swarm.jobs)) {
         for (const job of swarm.jobs) {
             if (!isPlainRecord(job)) continue;
-            if (isPvpRole(job.role)) add(job.name);
+            if (isPvpRole(job.role)) {
+                add(job.account ?? job.name);
+                if (Array.isArray(job.accounts)) {
+                    for (const member of job.accounts) add(member);
+                }
+            }
         }
     }
     return participants;

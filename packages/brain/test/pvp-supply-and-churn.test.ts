@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MAX_ORDER_LINES } from '../../core/src/fleet-trade-settlement';
-import { PVP_COMBAT_STAGE_KIT, pvpStageReadiness } from '../../workers/src/logistics/stage-kit';
+import { isItemStackable } from '../../workers/src/bank-artisan/catalog';
+import { PACK_SLOTS, PVP_COMBAT_STAGE_KIT, pvpStageReadiness, stageKitSlots } from '../../workers/src/logistics/stage-kit';
 import { resolveAcquireItem, type ShopCatalogEntry } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
 import { marketCooldownKey, type AccountState, type GoalDemand, type WorldSnapshot } from '../src/contracts';
@@ -67,23 +68,24 @@ function makeWorld(accounts: readonly AccountState[]): WorldSnapshot {
 }
 
 describe('PvP BiS missions and self-sustaining supply chain', () => {
-    test('loadMissionManifests discovers PvP participants from swarm.jobs alongside swarm.army', () => {
+    test('loadMissionManifests discovers PvP participants from real swarm.jobs account fields alongside swarm.army', () => {
         const dir = mkdtempSync(join(tmpdir(), 'brain-supply-missions-'));
         try {
             const swarm = {
                 army: ['ArmyOne', 'ArmyTwo'],
                 jobs: [
-                    { name: 'ArmyOne', role: 'pvp' },
-                    { name: 'PvpAlpha', role: 'pvp' },
-                    { name: 'PvpTrainee', role: 'pk-trainee' },
-                    { name: 'SkillerBot', role: 'skiller' },
+                    { account: 'ArmyOne', role: 'pvp' },
+                    { account: 'PvpAlpha', role: 'pvp' },
+                    { account: 'PvpTrainee', role: 'pk-trainee' },
+                    { accounts: ['HostPvp1', 'HostPvp2'], role: 'pvp' },
+                    { account: 'SkillerBot', role: 'skiller' },
                 ],
             };
             writeFileSync(join(dir, 'swarm.json'), JSON.stringify(swarm));
             const missions = loadMissionManifests({ root: dir });
             const pk = missions.find((m) => m.id === 'mission:pk-squad');
             expect(pk).toBeDefined();
-            expect(pk!.participants).toEqual(['ArmyOne', 'ArmyTwo', 'PvpAlpha', 'PvpTrainee']);
+            expect(pk!.participants).toEqual(['ArmyOne', 'ArmyTwo', 'PvpAlpha', 'PvpTrainee', 'HostPvp1', 'HostPvp2']);
             expect(pk!.state).toBe('staging');
         } finally {
             rmSync(dir, { recursive: true, force: true });
@@ -105,11 +107,9 @@ describe('PvP BiS missions and self-sustaining supply chain', () => {
         const catalog = createActivityCatalog();
         const mustProduce = [
             385,  // Shark
-            3144, // Cooked karambwan
-            3142, // Raw karambwan
-            3150, // Raw karambwanji
-            2503, // Black d'hide body
-            2509, // Black dragon leather
+            2503, // Black d'hide body (via black-dhide-sets)
+            2497, // Black d'hide chaps
+            2491, // Black d'hide vambraces
             861,  // Magic shortbow
             1513, // Magic logs
             1777, // Bow string
@@ -133,14 +133,27 @@ describe('PvP BiS missions and self-sustaining supply chain', () => {
             (itemId) => catalog.findByOutputItem(itemId).filter((a) => a.trust !== 'experimental').length === 0,
         );
         expect(missing).toEqual([]);
-        // Coal (453) and gold ore (444) are registered and promote once bench-qualified.
-        expect(catalog.findByOutputItem(453).some((a) => a.id === 'gather:mining-coal')).toBe(true);
-        expect(catalog.findByOutputItem(444).some((a) => a.id === 'gather:mining-gold')).toBe(true);
+        // Magic log gathering must pass WOOD_GROVE=native-processing to select Seers magic trees.
+        const magicWc = catalog.get('gather:woodcutting-magic')!;
+        expect((magicWc.config.defaultEnv as Record<string, string>)?.WOOD_GROVE).toBe('native-processing');
+        // Pack-only / at-site routes stay experimental by default and promote once bench-qualified.
+        const experimentalIds = [
+            'gather:mining-coal',
+            'gather:mining-gold',
+            'bank-artisan:tanning-black-dragonhide',
+            'gather:fishing-karambwanji',
+            'gather:fishing-karambwan',
+            'bank-artisan:cooking-karambwan',
+        ];
+        for (const id of experimentalIds) {
+            expect(catalog.get(id)?.trust).toBe('experimental');
+        }
         const promotedCatalog = createActivityCatalog({
-            benchPassedIds: new Set(['gather:mining-coal', 'gather:mining-gold']),
+            benchPassedIds: new Set(experimentalIds),
         });
-        expect(promotedCatalog.findByOutputItem(453).some((a) => a.trust === 'practice_passed')).toBe(true);
-        expect(promotedCatalog.findByOutputItem(444).some((a) => a.trust === 'practice_passed')).toBe(true);
+        for (const id of experimentalIds) {
+            expect(promotedCatalog.get(id)?.trust).toBe('practice_passed');
+        }
 
         const pvpAcct = makeAccount({
             name: 'PvpHero',
@@ -238,7 +251,8 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
 
         const tan = catalog.get('bank-artisan:tanning-black-dragonhide')!;
         const tanRoute = resolveActivityWorkerRoute(tan, { BATCH_UNITS: '54' });
-        expect(tanRoute.args[3]).toBe('54');
+        // Pack-only tanning caps at 27 unnoted hides (+ coins slot).
+        expect(tanRoute.args[3]).toBe('27');
 
         const arrows = catalog.get('bank-artisan:fletching-rune-arrows')!;
         const arrowRoute = resolveActivityWorkerRoute(arrows, { BATCH_UNITS: '100' });
@@ -325,11 +339,15 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
         expect(tinyShop.ok).toBe(false);
     });
 
-    test('FleetScheduler consolidates multiple holder-targeted PvP demands from the same donor into one multi-line TransferOrder', () => {
+    test('FleetScheduler consolidates multiple holder-targeted PvP demands from the same donor while excluding untradeable and cooled-down items', () => {
         const pvp = makeAccount({
             name: 'PvpFighter',
             role: 'army',
             bank: { items: { 995: 5_000 }, observedAt: NOW - 5_000, trusted: true },
+            cooldowns: {
+                [marketCooldownKey(2442, 'hub_banker')]: NOW + 60_000,
+                [marketCooldownKey(2448, 'hub:varrock_west')]: NOW + 60_000,
+            },
         });
         const supplier = makeAccount({
             name: 'SupplyDonor',
@@ -341,7 +359,11 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
                     2434: 12,
                     2436: 6,
                     2440: 6,
+                    2442: 6,
+                    2448: 6,
                     892: 300,
+                    3150: 50, // Raw karambwanji (untradeable)
+                    772: 2,   // Dramen staff (untradeable)
                 },
                 observedAt: NOW - 5_000,
                 trusted: true,
@@ -353,7 +375,11 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
             { id: 'mission:pk:2434', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 800, target: { kind: 'item', itemId: 2434, itemName: 'Prayer potion(4)', count: 6, holder: 'PvpFighter' }, fulfilled: 0, remaining: 6, priorityWeight: 1, active: true },
             { id: 'mission:pk:2436', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 700, target: { kind: 'item', itemId: 2436, itemName: 'Super attack(4)', count: 2, holder: 'PvpFighter' }, fulfilled: 0, remaining: 2, priorityWeight: 1, active: true },
             { id: 'mission:pk:2440', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 650, target: { kind: 'item', itemId: 2440, itemName: 'Super strength(4)', count: 2, holder: 'PvpFighter' }, fulfilled: 0, remaining: 2, priorityWeight: 1, active: true },
+            { id: 'mission:pk:2442', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 640, target: { kind: 'item', itemId: 2442, itemName: 'Super defence(4)', count: 2, holder: 'PvpFighter' }, fulfilled: 0, remaining: 2, priorityWeight: 1, active: true },
+            { id: 'mission:pk:2448', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 630, target: { kind: 'item', itemId: 2448, itemName: 'Superantipoison(4)', count: 2, holder: 'PvpFighter' }, fulfilled: 0, remaining: 2, priorityWeight: 1, active: true },
             { id: 'mission:pk:892', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 600, target: { kind: 'item', itemId: 892, itemName: 'Rune arrow', count: 150, holder: 'PvpFighter' }, fulfilled: 0, remaining: 150, priorityWeight: 1, active: true },
+            { id: 'mission:pk:3150', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 590, target: { kind: 'item', itemId: 3150, itemName: 'Raw karambwanji', count: 20, holder: 'PvpFighter' }, fulfilled: 0, remaining: 20, priorityWeight: 1, active: true },
+            { id: 'mission:pk:772', goalKind: 'squad_supply', sourceId: 'mission:pk-squad', valueScore: 580, target: { kind: 'item', itemId: 772, itemName: 'Dramen staff', count: 1, holder: 'PvpFighter' }, fulfilled: 0, remaining: 1, priorityWeight: 1, active: true },
         ];
         const plan = scheduleFleet({
             world,
@@ -373,9 +399,12 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
         expect(order.items.length).toBeLessThanOrEqual(MAX_ORDER_LINES);
         const ids = new Set(order.items.map((i) => i.itemId));
         for (const id of [385, 2434, 2436, 2440, 892]) expect(ids.has(id)).toBe(true);
+        // Untradeables (3150, 772) and cooled-down items (2442 hub_banker, 2448 hub:varrock_west) must be excluded.
+        for (const excluded of [2442, 2448, 3150, 772]) expect(ids.has(excluded)).toBe(false);
     });
 
-    test('pvpStageReadiness flags missing kit items and drained prayer before combat', () => {
+    test('pvpStageReadiness flags missing kit items and drained prayer, and PVP_COMBAT_STAGE_KIT fits inside 28 pack slots', () => {
+        expect(stageKitSlots(PVP_COMBAT_STAGE_KIT, [], isItemStackable)).toBeLessThanOrEqual(PACK_SLOTS);
         const fullOwned: Record<number, number> = Object.fromEntries(PVP_COMBAT_STAGE_KIT.map((k) => [k.itemId, k.count]));
         expect(pvpStageReadiness(fullOwned, 43, 43).ready).toBe(true);
         const drained = pvpStageReadiness(fullOwned, 12, 43);
@@ -386,6 +415,6 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
         const missingShark = { ...fullOwned, 385: 4 };
         const short = pvpStageReadiness(missingShark, 43, 43);
         expect(short.ready).toBe(false);
-        expect(short.missingItems).toEqual([{ itemId: 385, count: 6 }]);
+        expect(short.missingItems).toEqual([{ itemId: 385, count: 5 }]);
     });
 });

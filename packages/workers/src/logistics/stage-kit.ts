@@ -118,9 +118,9 @@ export const PVP_COMBAT_STAGE_KIT: readonly StageKitItem[] = [
     { itemId: 2440, count: 1 }, // Super strength(4)
     { itemId: 2442, count: 1 }, // Super defence(4)
     { itemId: 2448, count: 1 }, // Superantipoison(4)
-    { itemId: 892, count: 100 }, // Rune arrows
-    { itemId: 385, count: 10 }, // Sharks
-    { itemId: 3144, count: 4 }, // Cooked karambwans
+    { itemId: 892, count: 100 }, // Rune arrows (stackable: 1 slot)
+    { itemId: 385, count: 9 },   // Sharks (9 slots -> total 28 pack slots)
+    { itemId: 3144, count: 4 },  // Cooked karambwans (4 slots)
 ];
 
 export interface PvpStageReadiness {

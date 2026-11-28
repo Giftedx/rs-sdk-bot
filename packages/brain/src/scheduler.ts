@@ -1094,6 +1094,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         // Piggyback other active holder-targeted item demands for the same (donor, recipient) pair
                         // onto this trade (up to MAX_ORDER_LINES) so kit and consumable top-ups finish in one login pair.
                         if (donor && ord.items.length < MAX_ORDER_LINES) {
+                            const itemsMap = loadItemsMap();
                             const recipLower = acct.name.toLowerCase();
                             const donorDemands = donorDemandItemIds.get(donorLower) ?? new Set<number>();
                             const existingIds = new Set(ord.items.map((l) => l.itemId));
@@ -1104,10 +1105,15 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                                 if (!d.target.holder || d.target.holder.toLowerCase() !== recipLower) continue;
                                 const itemId = d.target.itemId;
                                 if (itemId === 995 || existingIds.has(itemId) || donorDemands.has(itemId)) continue;
+                                if (itemsMap.get(itemId)?.tradeable === false) continue;
                                 const recentAt = recentReceivedAt?.get(`${donorLower}:${itemId}`);
                                 if (recentAt !== undefined && now - recentAt < antiPingPongWindowMs) continue;
-                                const venueKey = marketCooldownKey(itemId, `hub:${ord.hub}:${donorLower}`);
-                                if (isCooldownActive(acct.cooldowns, venueKey, now) || isCooldownActive(world.marketCooldowns, venueKey, now)) continue;
+                                const cooldownKeys = [
+                                    marketCooldownKey(itemId, 'hub_banker'),
+                                    marketCooldownKey(itemId, `hub:${ord.hub}`),
+                                    marketCooldownKey(itemId, `hub:${ord.hub}:${donorLower}`),
+                                ];
+                                if (cooldownKeys.some((k) => isCooldownActive(acct.cooldowns, k, now) || isCooldownActive(world.marketCooldowns, k, now))) continue;
                                 const stock = availableStockAfterReserves(donor, world, itemId, { includeBank: true, requireTrustedBank: true });
                                 const unworn = Math.max(0, stock.owned - (donor.equipment[itemId] ?? 0));
                                 const avail = Math.min(stock.available, unworn);
