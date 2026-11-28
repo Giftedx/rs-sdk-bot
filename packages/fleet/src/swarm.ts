@@ -385,6 +385,8 @@ export const POOL_ATTACH_BUDGET_GB = 0.15;
 export const POOL_MAX_BOTS = 8;
 export const POOL_MAX_LAUNCHES = 64;
 export const POOL_IDLE_EXIT_MS = 30_000;
+// Stop attaching new bots halfway through the pool's idle exit window so a start command cannot race pool shutdown.
+export const POOL_IDLE_DRAIN_MS = POOL_IDLE_EXIT_MS / 2;
 const START_RESERVE_MS = 30_000;
 
 export function activeExternalLive(statuses: readonly any[], managed: readonly string[], now: number): string[] {
@@ -683,7 +685,21 @@ export type HostPoolSlot = {
     source: string;
     launches: number;
     draining: boolean;
+    idleSince?: number;
 };
+
+// Tracks how long a pool has held zero active bots and returns true once it enters the pre-exit drain margin.
+export function poolIdleExpired(pool: HostPoolSlot, active: number, now: number, drainMs = POOL_IDLE_DRAIN_MS): boolean {
+    if (active > 0) {
+        pool.idleSince = undefined;
+        return false;
+    }
+    if (pool.idleSince === undefined) {
+        pool.idleSince = now;
+        return false;
+    }
+    return now - pool.idleSince >= drainMs;
+}
 
 // Picks the fullest eligible live pool matching `source` so active bots pack into fewer processes and idle pools drain out.
 export function selectHostPool(
@@ -693,6 +709,8 @@ export function selectHostPool(
     source: string,
     maxBots = POOL_MAX_BOTS,
     maxLaunches = POOL_MAX_LAUNCHES,
+    now = Date.now(),
+    idleDrainMs = POOL_IDLE_DRAIN_MS,
 ): HostPoolSlot | null {
     let best: HostPoolSlot | null = null;
     let bestActive = -1;
@@ -700,6 +718,7 @@ export function selectHostPool(
         if (pool.draining || pool.source !== source || pool.launches >= maxLaunches || !alive(pool)) continue;
         const n = activeCount(pool.id);
         if (n >= maxBots) continue;
+        if (n === 0 && pool.idleSince !== undefined && now - pool.idleSince >= idleDrainMs) continue;
         if (n > bestActive) {
             best = pool;
             bestActive = n;
@@ -2075,6 +2094,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 const existing = selectHostPool(pools.values(), poolActiveCount, poolSlotAlive, startSource);
                 poolSlot = existing ?? spawnHostPool(startSource);
                 poolAttached = existing !== null;
+                poolSlot.idleSince = undefined;
                 poolSlot.launches++;
                 sendPoolCommand(root, poolSlot.id, {
                     op: 'start',
@@ -2521,10 +2541,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         let endedByLower = endedMapByLower(ended);
         const buildLocked = existsSync(join(liveDir, 'build-lock.json'));
         const pendingUpdate = readPendingUpdateMark();
-        // Prune dead pools and drain pools whenever a live update is pending or stop-swarm is set.
+        // Prune dead pools and drain pools on live update, stop-swarm, launch cap, or halfway through idle timeout.
         for (const [id, pool] of [...pools]) {
             if (!poolSlotAlive(pool)) { pools.delete(id); continue; }
-            if (pendingUpdate || stopAll || pool.launches >= POOL_MAX_LAUNCHES) drainPool(pool);
+            const idleExpired = poolIdleExpired(pool, poolActiveCount(id), nowWall);
+            if (pendingUpdate || stopAll || pool.launches >= POOL_MAX_LAUNCHES || idleExpired) drainPool(pool);
         }
         if (pendingUpdate) {
             const drainRuns: DrainRun[] = [...runs].map(([key, run]) => {

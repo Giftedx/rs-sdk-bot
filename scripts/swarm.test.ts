@@ -1288,4 +1288,22 @@ test('host pool eligibility, selection, release pinning, and reduced attach admi
     const standalone = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, false), pending: 0, freeGB: FREE_FLOOR_GB + 0.3, minFreeGB: 0, maxBots: 25 });
     expect(standalone.allowed).toBe(false);
     expect(standalone.reason).toBe('memory');
+
+    // Empty pools enter drain halfway through POOL_IDLE_EXIT_MS so attaches cannot race pool idle shutdown.
+    const { poolIdleExpired, POOL_IDLE_DRAIN_MS } = await import('./swarm');
+    const idleSlot = { id: 'idle-1', pid: 9, started: 1000, source: 'rev-2', launches: 1, draining: false } as {
+        id: string; pid: number; started: number; source: string; launches: number; draining: boolean; idleSince?: number;
+    };
+    expect(poolIdleExpired(idleSlot, 1, 10_000)).toBe(false);
+    expect(idleSlot.idleSince).toBeUndefined();
+    expect(poolIdleExpired(idleSlot, 0, 10_000)).toBe(false);
+    expect(idleSlot.idleSince).toBe(10_000);
+    // Still selectable while well inside the drain margin.
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS - 1)?.id).toBe('idle-1');
+    // Refused once idle reaches POOL_IDLE_DRAIN_MS, and poolIdleExpired triggers drainPool.
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS)).toBeNull();
+    expect(poolIdleExpired(idleSlot, 0, 10_000 + POOL_IDLE_DRAIN_MS)).toBe(true);
+    // Becoming active clears idleSince.
+    expect(poolIdleExpired(idleSlot, 1, 10_000 + POOL_IDLE_DRAIN_MS + 100)).toBe(false);
+    expect(idleSlot.idleSince).toBeUndefined();
 });
