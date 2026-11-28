@@ -379,11 +379,13 @@ export function adoptedRunAlive(
 }
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
-export const START_BUDGET_GB = 1;
-// Measured marginal live session cost inside a shared host pool is ~15-30 MB private; 0.15 GiB leaves 5x headroom.
-export const POOL_ATTACH_BUDGET_GB = 0.15;
-export const POOL_MAX_BOTS = 8;
-export const POOL_MAX_LAUNCHES = 64;
+// Measured standalone/pool process base is ~116-130 MB private (~76 MB WS); 0.25 GiB (~256 MB) gives ~2x headroom.
+export const START_BUDGET_GB = 0.25;
+// Measured marginal live session cost inside a shared host pool is ~1.4 MB private (~0.93 MB WS / ~0.53 MB heap);
+// 0.025 GiB (~25.6 MB) leaves >18x headroom while keeping the 4 GiB FREE_FLOOR_GB inviolate.
+export const POOL_ATTACH_BUDGET_GB = 0.025;
+export const POOL_MAX_BOTS = 16;
+export const POOL_MAX_LAUNCHES = 128;
 export const POOL_IDLE_EXIT_MS = 30_000;
 // Stop attaching new bots halfway through the pool's idle exit window so a start command cannot race pool shutdown.
 export const POOL_IDLE_DRAIN_MS = POOL_IDLE_EXIT_MS / 2;

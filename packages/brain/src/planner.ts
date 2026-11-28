@@ -1615,8 +1615,9 @@ function planAccountCore(
         for (const pass of ['stock', 'buy'] as const) {
             for (const { activity: a, rate: r } of candidates) {
                 const inputs = (a.inputs ?? []).filter((io) => io.countPerUnit > 0);
+                const isDynamicHerblore = a.config?.skill === 'herblore' && a.config?.method === 'potions';
                 let units: number | undefined;
-                if (inputs.length > 0) {
+                if (inputs.length > 0 || isDynamicHerblore) {
                     if (inputs.some((io) => workInputs.has(io.itemId))) continue;
                     const xpPerUnit = activityXpPerUnit(a, r, skill) * xpRate;
                     if (!(xpPerUnit > 0)) continue;

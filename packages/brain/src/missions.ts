@@ -41,17 +41,39 @@ export interface MissionShortfallsOptions {
 
 export const DEFAULT_PK_KIT_TARGETS: readonly MissionKitTarget[] = [
     { itemId: 1333, itemName: 'Rune scimitar', countPerParticipant: 1, slot: 'weapon' },
+    { itemId: 1231, itemName: 'Dragon dagger(p)', countPerParticipant: 1, slot: 'special_weapon' },
     { itemId: 861, itemName: 'Magic shortbow', countPerParticipant: 1, slot: 'ranged_weapon' },
+    { itemId: 2503, itemName: "Black d'hide body", countPerParticipant: 1, slot: 'body' },
+    { itemId: 2497, itemName: "Black d'hide chaps", countPerParticipant: 1, slot: 'legs' },
+    { itemId: 2491, itemName: "Black d'hide vambraces", countPerParticipant: 1, slot: 'hands' },
+    { itemId: 1163, itemName: 'Rune full helm', countPerParticipant: 1, slot: 'head' },
+    { itemId: 1079, itemName: 'Rune platelegs', countPerParticipant: 1, slot: 'melee_legs' },
+    { itemId: 1201, itemName: 'Rune kiteshield', countPerParticipant: 1, slot: 'shield' },
     { itemId: 1712, itemName: 'Amulet of glory(4)', countPerParticipant: 1, slot: 'neck' },
+    { itemId: 1731, itemName: 'Amulet of power', countPerParticipant: 1, slot: 'neck_backup' },
+    { itemId: 1725, itemName: 'Amulet of strength', countPerParticipant: 1, slot: 'neck_melee' },
+    { itemId: 2550, itemName: 'Ring of recoil', countPerParticipant: 2, slot: 'ring_combat' },
     { itemId: 2552, itemName: 'Ring of dueling(8)', countPerParticipant: 1, slot: 'ring' },
+    { itemId: 1387, itemName: 'Staff of fire', countPerParticipant: 1, slot: 'magic_weapon' },
+    { itemId: 3105, itemName: 'Climbing boots', countPerParticipant: 1, slot: 'feet' },
 ];
 
 export const DEFAULT_PK_CONSUMABLES: readonly MissionConsumableTarget[] = [
     { itemId: 385, itemName: 'Shark', countPerParticipant: 40, minReservePerParticipant: 20 },
+    { itemId: 3144, itemName: 'Cooked karambwan', countPerParticipant: 20, minReservePerParticipant: 8 },
     { itemId: 2434, itemName: 'Prayer potion(4)', countPerParticipant: 6, minReservePerParticipant: 2 },
     { itemId: 2436, itemName: 'Super attack(4)', countPerParticipant: 2, minReservePerParticipant: 1 },
     { itemId: 2440, itemName: 'Super strength(4)', countPerParticipant: 2, minReservePerParticipant: 1 },
+    { itemId: 2442, itemName: 'Super defence(4)', countPerParticipant: 2, minReservePerParticipant: 1 },
+    { itemId: 2444, itemName: 'Ranging potion(4)', countPerParticipant: 2, minReservePerParticipant: 1 },
+    { itemId: 2448, itemName: 'Superantipoison(4)', countPerParticipant: 2, minReservePerParticipant: 1 },
     { itemId: 892, itemName: 'Rune arrow', countPerParticipant: 150, minReservePerParticipant: 50 },
+    { itemId: 556, itemName: 'Air rune', countPerParticipant: 300, minReservePerParticipant: 100 },
+    { itemId: 555, itemName: 'Water rune', countPerParticipant: 150, minReservePerParticipant: 50 },
+    { itemId: 557, itemName: 'Earth rune', countPerParticipant: 150, minReservePerParticipant: 50 },
+    { itemId: 561, itemName: 'Nature rune', countPerParticipant: 50, minReservePerParticipant: 20 },
+    { itemId: 563, itemName: 'Law rune', countPerParticipant: 30, minReservePerParticipant: 10 },
+    { itemId: 564, itemName: 'Cosmic rune', countPerParticipant: 30, minReservePerParticipant: 10 },
 ];
 
 const ACCOUNT_NAME_RE = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -89,12 +111,18 @@ function loadPkSquadParticipants(root: string): string[] {
     if (Array.isArray(swarm.army)) {
         for (const name of swarm.army) add(name);
     }
+    const isPvpRole = (role: unknown): boolean =>
+        role === 'pvp' || role === 'pk-trainee' || role === 'pk' || role === 'army';
     if (Array.isArray(swarm.bots)) {
         for (const bot of swarm.bots) {
             if (!isPlainRecord(bot)) continue;
-            if (bot.role === 'pvp' || bot.role === 'pk-trainee') {
-                add(bot.name);
-            }
+            if (isPvpRole(bot.role)) add(bot.name);
+        }
+    }
+    if (Array.isArray(swarm.jobs)) {
+        for (const job of swarm.jobs) {
+            if (!isPlainRecord(job)) continue;
+            if (isPvpRole(job.role)) add(job.name);
         }
     }
     return participants;

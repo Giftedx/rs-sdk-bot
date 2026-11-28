@@ -116,6 +116,18 @@ interface RawGearEntry {
     readonly bonuses?: Record<string, number>;
 }
 
+export const PVP_UNLOCK_QUESTS: readonly string[] = [
+    'druid',
+    'zanaris',
+    'dragon',
+    'death',
+    'magearena',
+    'hero',
+    'viking',
+    'tbwt',
+    'crest',
+];
+
 const KEY_UNLOCK_QUESTS = new Set([
     'waterfall',
     'hero',
@@ -128,6 +140,10 @@ const KEY_UNLOCK_QUESTS = new Set([
     'dragon',
     'dwarfcannon',
     'cook',
+    'death',
+    'magearena',
+    'viking',
+    'tbwt',
 ]);
 
 function isPlainRecord(v: unknown): v is Record<string, unknown> {
@@ -576,6 +592,61 @@ export class DemandEngine {
         return out;
     }
 
+    private emitPvpUnlockQuestDemands(snapshot: WorldSnapshot): GoalDemand[] {
+        const w = Math.max(this.goalWeights.pk_army, this.goalWeights.quest_board);
+        if (w <= 0) return [];
+        const armyAccounts = Object.values(snapshot.accounts)
+            .filter(
+                (a) =>
+                    !a.protectedClock &&
+                    a.lifecycle !== 'paused_owner' &&
+                    a.lifecycle !== 'dead' &&
+                    a.role === 'army',
+            )
+            .sort((a, b) => a.name.localeCompare(b.name));
+        if (armyAccounts.length === 0) return [];
+
+        const runnableSlugs = PVP_UNLOCK_QUESTS.filter((slug) =>
+            this.catalog.findByQuest(slug).some((a) => a.trust !== 'experimental'),
+        );
+        if (runnableSlugs.length === 0) return [];
+
+        const out: GoalDemand[] = [];
+        for (const acct of armyAccounts) {
+            const doneKeys = new Set<string>();
+            for (const [qKey, qState] of Object.entries(acct.quests)) {
+                if (qState !== 'complete') continue;
+                doneKeys.add(qKey.toLowerCase());
+                for (const ck of questCandidateKeys(qKey)) doneKeys.add(ck);
+            }
+            for (const slug of runnableSlugs) {
+                let completed = doneKeys.has(slug);
+                if (!completed) {
+                    for (const ck of questCandidateKeys(slug)) {
+                        if (doneKeys.has(ck)) {
+                            completed = true;
+                            break;
+                        }
+                    }
+                }
+                if (completed) continue;
+                out.push({
+                    id: `goal:pvp_unlock:${acct.name}:${slug}`,
+                    goalKind: 'quest_board',
+                    sourceId: 'owner:pvp_unlock',
+                    valueScore: 180 * w,
+                    target: { kind: 'quest', questSlug: slug },
+                    fulfilled: 0,
+                    remaining: 1,
+                    priorityWeight: w,
+                    assignedAccount: acct.name,
+                    active: true,
+                });
+            }
+        }
+        return out;
+    }
+
     private emitGearDemands(snapshot: WorldSnapshot): GoalDemand[] {
         const w = this.goalWeights.gear_collection;
         if (w <= 0) return [];
@@ -807,11 +878,19 @@ export class DemandEngine {
             }
         }
 
-        const hasShop = (itemId: number): boolean =>
-            Boolean((shopCatalog.get(itemId) as readonly ShopCatalogEntry[] | undefined)?.length);
+        const hasAbundantShop = (itemId: number, needed: number): boolean => {
+            const entries = shopCatalog.get(itemId) as readonly ShopCatalogEntry[] | undefined;
+            if (!entries || entries.length === 0) return false;
+            return entries.some((shop) => {
+                if (shop.requiresQuest || shop.requiresSkill || shop.requiresQuestPoints) return false;
+                if (shop.cost > 50) return false;
+                const restock = Math.max(5, shop.restockTicks ?? 30);
+                return (shop.stock >= 50 && restock <= 100) || (shop.stock >= needed && restock <= 30);
+            });
+        };
 
         const consumeGeFor = (itemId: number, needed: number): number => {
-            if (hasShop(itemId)) return needed;
+            if (hasAbundantShop(itemId, needed)) return needed;
             const avail = remainingGeSell.get(itemId) ?? 0;
             if (avail <= 0) return 0;
             const take = Math.min(needed, avail);
@@ -837,7 +916,7 @@ export class DemandEngine {
                 const satScore = (act: ActivityDefinition): number => {
                     let hits = 0;
                     for (const inp of act.inputs ?? []) {
-                        if (hasShop(inp.itemId)
+                        if (hasAbundantShop(inp.itemId, inp.countPerUnit)
                             || (remainingStock.get(inp.itemId) ?? 0) >= inp.countPerUnit
                             || (remainingGeSell.get(inp.itemId) ?? 0) >= inp.countPerUnit) {
                             hits++;
@@ -997,6 +1076,7 @@ export class DemandEngine {
         }
 
         rawDemands.push(...this.emitQuestDemands(snapshot));
+        rawDemands.push(...this.emitPvpUnlockQuestDemands(snapshot));
         rawDemands.push(...this.emitGearDemands(snapshot));
         rawDemands.push(...this.emitPkArmyDemands(snapshot));
         rawDemands.push(...this.emitSkillDemands(snapshot));

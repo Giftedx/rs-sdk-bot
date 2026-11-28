@@ -33,8 +33,8 @@ import {
     type WorkerWorldView,
 } from '../../workers/src/contracts';
 import { questSweepCoins, questSweepNeeds } from '../../workers/src/quest/bank-needs';
-import { BREW_STOCK_IDS, brewShortfall } from '../../workers/src/bank-artisan/herblore-recipes';
-import { isCooldownActive, type NoRouteFact } from './contracts';
+import { BOUGHT_SECONDARY, BREW_STOCK_IDS, RECIPES, brewShortfall, selectRecipe } from '../../workers/src/bank-artisan/herblore-recipes';
+import { isCooldownActive, marketCooldownKey, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
 import { noRouteForActivity, noRouteMessage, noRouteTo, routeDangerFor } from './no-route';
 
@@ -1160,6 +1160,8 @@ export interface PreflightSpec {
     readonly startArea?: StartArea;
     // The worker runs only while the account's xp in the skill is at most this much (a fresh-account route).
     readonly maxSkillXp?: Readonly<Record<string, number>>;
+    // The worker exits immediately with zero progress once the account reaches this skill level.
+    readonly maxSkillLevel?: Readonly<Record<string, number>>;
 }
 
 // A half-open box of world tiles on one level: x0 <= x < x1, z0 <= z < z1.
@@ -1303,6 +1305,21 @@ export function evaluatePreflight(
                 blockers.push({
                     kind: 'invalid_config',
                     message: `${skill} xp ${xp} above ${max}: the route runs only for a fresh account`,
+                });
+            }
+        }
+    }
+
+    if (spec.maxSkillLevel) {
+        for (const [skill, max] of Object.entries(spec.maxSkillLevel)) {
+            const level = cachedAccountSkillLevel(acct, skill, _acctCache);
+            if (level >= max) {
+                blockers.push({
+                    kind: 'max_level_cap',
+                    skill,
+                    maxLevel: max,
+                    current: level,
+                    message: `${skill} ${level} reached activity level cap ${max}`,
                 });
             }
         }
@@ -1519,6 +1536,7 @@ interface StaticActivityPreflight {
     readonly questSweep: { readonly slug: string; readonly name: string } | undefined;
     readonly startArea: StartArea | undefined;
     readonly maxSkillXp: Readonly<Record<string, number>> | undefined;
+    readonly maxSkillLevel: Readonly<Record<string, number>> | undefined;
 }
 
 // The items and coins that the quest sweep takes from the bank for an account (packages/workers/src/quest/bank-needs.ts):
@@ -1607,6 +1625,12 @@ function extractStaticActivityPreflight(activity: {
             if (typeof v === 'number' && Number.isFinite(v) && v >= 0) (maxSkillXp ??= {})[k] = v;
         }
     }
+    let maxSkillLevel: Record<string, number> | undefined;
+    if (cfg.maxSkillLevel && typeof cfg.maxSkillLevel === 'object') {
+        for (const [k, v] of Object.entries(cfg.maxSkillLevel as Record<string, unknown>)) {
+            if (typeof v === 'number' && Number.isSafeInteger(v) && v >= 1) (maxSkillLevel ??= {})[k] = v;
+        }
+    }
     const trainingSkills = [
         ...(activity.skill ? [activity.skill] : []),
         ...(activity.skills ?? []),
@@ -1643,6 +1667,7 @@ function extractStaticActivityPreflight(activity: {
             : undefined,
         startArea: parseStartArea(cfg.startArea),
         maxSkillXp,
+        maxSkillLevel,
     };
     staticPreflightCache.set(activity, spec);
     return spec;
@@ -1680,13 +1705,46 @@ export function activityPreflightFromConfig(
     }
     // A brew run refuses at its first bank visit without herbs and a secondary for one recipe at the account's
     // level (workers/src/bank-artisan/herblore-recipes.ts), so the preflight requires the item that it lacks.
+    let extraCooldownKeys: string[] | undefined;
     if (base.brewRecipe) {
+        const herbLevel = cachedAccountSkillLevel(acct, 'Herblore', opts?._acctCache);
         const stock = Object.fromEntries(BREW_STOCK_IDS.map((id) => [id, reserveAdjustedStock(
             accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }),
             cachedEffectiveItemReserve(acct, world, id, opts?._acctCache),
         )]));
-        const short = brewShortfall(cachedAccountSkillLevel(acct, 'Herblore', opts?._acctCache), stock, base.brewRecipe);
-        if (short) requiredItems = [...requiredItems, { itemId: short.itemId, count: 1 }];
+        const short = brewShortfall(herbLevel, stock, base.brewRecipe);
+        if (short) {
+            requiredItems = [...requiredItems, { itemId: short.itemId, count: 1 }];
+        } else if (base.brewRecipe !== 'unf') {
+            const chosen = selectRecipe(herbLevel, stock, base.brewRecipe);
+            const boughtNewtAvailable =
+                !isCooldownActive(acct.cooldowns, marketCooldownKey(BOUGHT_SECONDARY, 'shop:jatix'), world.at)
+                && !isCooldownActive(world.marketCooldowns, marketCooldownKey(BOUGHT_SECONDARY, 'shop:jatix'), world.at)
+                && !isCooldownActive(acct.cooldowns, 'shop:jatix', world.at)
+                && !isCooldownActive(world.marketCooldowns, 'shop:jatix', world.at);
+            if (chosen.sec === BOUGHT_SECONDARY && (stock[BOUGHT_SECONDARY] ?? 0) < 1 && !boughtNewtAvailable) {
+                extraCooldownKeys = [marketCooldownKey(BOUGHT_SECONDARY, 'shop:jatix')];
+            } else if (batchUnits > 1) {
+                const candidateRecipes = base.brewRecipe === 'auto'
+                    ? Object.values(RECIPES).filter((r) => r.level <= herbLevel)
+                    : [chosen];
+                let totalBrewable = 0;
+                let shortSecItem: number | undefined;
+                for (const r of candidateRecipes) {
+                    const herbs = (stock[r.dirty] ?? 0) + (stock[r.clean] ?? 0) + (stock[r.unf] ?? 0);
+                    if (herbs <= 0) continue;
+                    const secAvail = r.sec === BOUGHT_SECONDARY
+                        ? (boughtNewtAvailable ? herbs : (stock[BOUGHT_SECONDARY] ?? 0))
+                        : (stock[r.sec] ?? 0);
+                    const brewable = Math.min(herbs, secAvail);
+                    totalBrewable += brewable;
+                    if (brewable < herbs && shortSecItem === undefined) shortSecItem = r.sec;
+                }
+                if (totalBrewable < batchUnits) {
+                    requiredItems = [...requiredItems, { itemId: shortSecItem ?? chosen.dirty, count: batchUnits }];
+                }
+            }
+        }
     }
     let coinsRequired = base.coinsRequired;
     if (base.questSweep) {
@@ -1714,10 +1772,12 @@ export function activityPreflightFromConfig(
             combatSurvivability: base.combatSurvivability,
             spotId: base.spotId,
             maxConcurrentAccounts: base.maxConcurrentAccounts,
+            ...(extraCooldownKeys ? { cooldownKeys: extraCooldownKeys } : {}),
             ...(activity.id ? { activityId: activity.id } : {}),
             ...(base.boatEastFromKandarin ? { boatEastFromKandarin: true } : {}),
             ...(base.startArea ? { startArea: base.startArea } : {}),
             ...(base.maxSkillXp ? { maxSkillXp: base.maxSkillXp } : {}),
+            ...(base.maxSkillLevel ? { maxSkillLevel: base.maxSkillLevel } : {}),
         },
         world,
         opts?._acctCache,

@@ -222,16 +222,28 @@ export function resolveActivityWorkerRoute(
                 if (skill === 'smithing' && rawMethod === 'anvil') {
                     if (env.ORDER_ACTION === undefined) env.ORDER_ACTION = 'smith';
                     if (env.BAR_RESERVE === undefined) env.BAR_RESERVE = '0';
-                    if (extraEnv.TARGET_COUNT) {
-                        env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.MAX_MAKE = String(units);
                     }
-                    if (extraEnv.CAP && args.length >= 3) args[2] = extraEnv.CAP;
+                    if (extraEnv.CAP && args.length >= 3) {
+                        args[2] = extraEnv.CAP;
+                    } else if (extraEnv.CAP === undefined && Number.isSafeInteger(units) && units > 1 && args.length >= 3) {
+                        args[2] = String(Math.max(Number(args[2]) || 1500, units * 25 + 400));
+                    }
                 } else if (skill === 'smithing' && rawMethod === 'smelt') {
                     if (env.ORE_RESERVE === undefined) env.ORE_RESERVE = '0';
-                    if (extraEnv.TARGET_COUNT) {
-                        env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.MAX_MAKE = String(units);
                     }
-                    if (extraEnv.CAP && args.length >= 3) args[2] = extraEnv.CAP;
+                    if (extraEnv.CAP && args.length >= 3) {
+                        args[2] = extraEnv.CAP;
+                    } else if (extraEnv.CAP === undefined && Number.isSafeInteger(units) && units > 28 && args.length >= 3) {
+                        args[2] = String(Math.max(Number(args[2]) || 1500, units * 20 + 400));
+                    }
                 } else if (skill === 'crafting' && rawMethod === 'inventory') {
                     if (extraEnv.TARGET_COUNT) {
                         env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
@@ -247,25 +259,44 @@ export function resolveActivityWorkerRoute(
                             if (env.ORDER_MODE === undefined) env.ORDER_MODE = 'best-effort';
                         }
                     }
-                } else if (skill === 'fletching' && rawMethod === 'arrows' && env.MODE === 'headless') {
-                    // The headless run makes MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless): the planned
-                    // count rounded up to a whole set, not the worker default.
+                } else if (skill === 'crafting' && rawMethod === 'tanning' && args.length >= 4) {
+                    const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
+                    if (Number.isSafeInteger(units) && units > 0) {
+                        args[3] = String(units);
+                        if (extraEnv.CAP !== undefined && args.length >= 5) args[4] = extraEnv.CAP;
+                        else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 200, units * 8 + 120));
+                    }
+                } else if (skill === 'fletching' && rawMethod === 'arrows' && (env.MODE === 'headless' || env.MODE === 'native-arrows')) {
+                    // Arrow runs make MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless/runNativeArrows): the
+                    // planned count rounded up to a whole set, not the worker default.
                     const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
                     if (extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
                         env.MAX_MAKE = String(Math.ceil(units / 15) * 15);
                     }
                 } else if (skill === 'crafting' && rawMethod === 'jewellery-trip') {
-                    if (extraEnv.TARGET_COUNT) {
-                        env.TARGET = extraEnv.TARGET ?? extraEnv.TARGET_COUNT;
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && extraEnv.TARGET === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.TARGET = String(units);
                     }
+                    const retTicks = Number(env.RETURN_TICKS ?? 100);
                     if (extraEnv.CAP) {
-                        const retTicks = Number(env.RETURN_TICKS ?? 100);
                         const capNum = Math.max(retTicks + 150, Number(extraEnv.CAP));
                         env.CAP = String(capNum);
+                    } else if (Number.isSafeInteger(units) && units > 1) {
+                        env.CAP = String(Math.max(retTicks + 150, Number(env.CAP) || 1500, units * 30 + 300));
                     }
                 } else if (skill === 'magic' && rawMethod === 'items' && args.length >= 4) {
-                    if (extraEnv.TARGET_COUNT) args[4] = extraEnv.TARGET_COUNT;
-                    if (extraEnv.CAP) args[5] = extraEnv.CAP;
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && Number.isSafeInteger(units) && units > 0) {
+                        args[4] = String(units);
+                    }
+                    if (extraEnv.CAP) {
+                        args[5] = extraEnv.CAP;
+                    } else if (Number.isSafeInteger(units) && units > 1 && args.length >= 6) {
+                        args[5] = String(Math.max(Number(args[5]) || 1200, units * 12 + 300));
+                    }
                 }
             }
 
@@ -458,8 +489,15 @@ export function resolveActivityWorkerRoute(
             const role = typeof cfg.role === 'string'
                 ? cfg.role
                 : aioRoute ?? inferred.method ?? 'walk-to';
-            if (role === 'charge-glory' && extraEnv.TARGET_COUNT) {
-                env.MAX_GLORIES = extraEnv.MAX_GLORIES ?? extraEnv.TARGET_COUNT;
+            if (role === 'charge-glory') {
+                const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                const units = Number(rawUnits);
+                if (rawUnits && extraEnv.MAX_GLORIES === undefined && Number.isSafeInteger(units) && units > 0) {
+                    env.MAX_GLORIES = String(units);
+                }
+                if (extraEnv.CAP === undefined && Number.isSafeInteger(units) && units > 1) {
+                    env.CAP = String(Math.max(Number(env.CAP) || 2000, Math.ceil(units / 28) * 600 + 800));
+                }
             }
             return {
                 family: 'logistics',

@@ -1,5 +1,5 @@
 import { test, expect, describe, afterEach } from 'bun:test';
-import { demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile,pinControllerRelease } from './swarm';
+import { demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile,pinControllerRelease,START_BUDGET_GB } from './swarm';
 import { assertWorkerRelease } from '../packages/core/src/worker-release';
 
 test('a controller restarted with no pin, or respawned with a stale one, pins the source it starts on',()=>{
@@ -17,7 +17,7 @@ test('a controller restarted with no pin, or respawned with a stale one, pins th
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
  expect(()=>admitRecovery(v,()=>{releases++;})).not.toThrow();expect(releases).toBe(1);
- for(const patch of [{active:['rod']},{running:17},{external:17},{pending:1,freeGB:FREE_FLOOR_GB+1.5}])expect(()=>admitRecovery({...v,...patch},()=>{releases++;})).toThrow();
+ for(const patch of [{active:['rod']},{running:17},{external:17},{pending:1,freeGB:FREE_FLOOR_GB+START_BUDGET_GB*1.5}])expect(()=>admitRecovery({...v,...patch},()=>{releases++;})).toThrow();
  expect(releases).toBe(1);expect(()=>admitRecovery(v,()=>{throw Error('source changed');})).toThrow('source changed');
 });
 
@@ -343,16 +343,16 @@ test('a host or orchestrate job reserves one startup heap; separate bots reserve
     expect(startReserve({host:false,job},2)).toBe(2);
 });
 test('admission reserves pending heaps and a new account before enforcing the free-memory floor', () => {
-    const base={running:3,external:0,starting:1,pending:0,freeGB:10.5,minFreeGB:8,maxBots:6};
+    const base={running:3,external:0,starting:1,pending:0,freeGB:8+START_BUDGET_GB*2.5,minFreeGB:8,maxBots:6};
     expect(admissionDecision(base).allowed).toBe(true);
-    expect(admissionDecision({...base,running:4,pending:1}).projectedFreeGB).toBe(8.5);
+    expect(admissionDecision({...base,running:4,pending:1}).projectedFreeGB).toBeCloseTo(8+START_BUDGET_GB*0.5,6);
     expect(admissionDecision({...base,running:4,pending:1}).allowed).toBe(true);
     const third=admissionDecision({...base,running:5,pending:2});
-    expect(third.reason).toBe('memory');expect(third.projectedFreeGB).toBe(7.5);
+    expect(third.reason).toBe('memory');expect(third.projectedFreeGB).toBeCloseTo(8-START_BUDGET_GB*0.5,6);
     expect(admissionDecision({...base,running:5,external:1}).reason).toBe('maxBots');
-    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+1,minFreeGB:0}).allowed).toBe(true);
-    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+0.9,minFreeGB:0}).reason).toBe('memory');
-    expect(admissionDecision({...base,starting:3,freeGB:10.5}).reason).toBe('memory');
+    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+START_BUDGET_GB,minFreeGB:0}).allowed).toBe(true);
+    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+START_BUDGET_GB*0.9,minFreeGB:0}).reason).toBe('memory');
+    expect(admissionDecision({...base,starting:3,freeGB:8+START_BUDGET_GB*2.5}).reason).toBe('memory');
     expect(admissionDecision({...base,freeGB:NaN}).allowed).toBe(false);
 });
 
@@ -399,10 +399,10 @@ test('an open recovery gets the bot slot that frees at a full fleet, before a wa
 
     // The held slot changes the bot count only. A memory refusal stays a memory refusal, for the job and the recovery.
     slot = recoverySlot({ until: 0 }, { leaseHeld: true, started: [], now });
-    const held = job('Planner', 10, FREE_FLOOR_GB + 1), free = admissionDecision({ ...cap, freeGB: FREE_FLOOR_GB + 1, running: 10, starting: 1, startingReserve: 1 });
+    const held = job('Planner', 10, FREE_FLOOR_GB + START_BUDGET_GB), free = admissionDecision({ ...cap, freeGB: FREE_FLOOR_GB + START_BUDGET_GB, running: 10, starting: 1, startingReserve: 1 });
     expect(held.allowed).toBe(true); expect(held.projectedFreeGB).toBe(free.projectedFreeGB);
-    expect(job('Planner', 10, FREE_FLOOR_GB + 0.9).reason).toBe('memory');
-    expect(() => recovery(24, FREE_FLOOR_GB + 0.9)).toThrow('recovery admission waiting: memory');
+    expect(job('Planner', 10, FREE_FLOOR_GB + START_BUDGET_GB * 0.9).reason).toBe('memory');
+    expect(() => recovery(24, FREE_FLOOR_GB + START_BUDGET_GB * 0.9)).toThrow('recovery admission waiting: memory');
 
     // The lease counts while its file is younger than RECOVERY_LEASE_MAX_MS: a lease that a dead process left holds no slot.
     const dir = mkdtempSync(join(tmpdir(), 'recovery-lease-')), lease = join(dir, 'swarm-repair.json.lease');
@@ -1234,7 +1234,7 @@ test('a drain stop clears once its run has ended, and no other stop text is touc
 });
 
 test('host pool eligibility, selection, release pinning, and reduced attach admission reserve', async () => {
-    const { canUseHostPool, selectHostPool, poolCommand, POOL_ATTACH_BUDGET_GB, START_BUDGET_GB, POOL_MAX_BOTS } = await import('./swarm');
+    const { canUseHostPool, selectHostPool, poolCommand, POOL_ATTACH_BUDGET_GB, START_BUDGET_GB, POOL_MAX_BOTS, POOL_MAX_LAUNCHES } = await import('./swarm');
     const parseOk = (j: Job) => { const p = parseJob(j); if ('error' in p) throw Error(p.error); return p; };
     const brainSkiller = parseOk({ account: 'Nockitoff', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining'], enabled: true, repeat: true });
     const brainChain = parseOk({ account: 'BoneToPick', script: 'scripts/chain.ts', args: ['scripts/aio-market.ts ge-buy'], enabled: true, repeat: true });
@@ -1262,7 +1262,7 @@ test('host pool eligibility, selection, release pinning, and reduced attach admi
         { id: 'full', pid: 3, started: 1, source: 'rev-2', launches: 8, draining: false },
         { id: 'sparse', pid: 4, started: 1, source: 'rev-2', launches: 2, draining: false },
         { id: 'dense', pid: 5, started: 1, source: 'rev-2', launches: 5, draining: false },
-        { id: 'maxed-launches', pid: 6, started: 1, source: 'rev-2', launches: 64, draining: false },
+        { id: 'maxed-launches', pid: 6, started: 1, source: 'rev-2', launches: POOL_MAX_LAUNCHES, draining: false },
     ];
     const activeByPool: Record<string, number> = { 'stale-src': 3, draining: 2, full: POOL_MAX_BOTS, sparse: 1, dense: 5, 'maxed-launches': 6 };
     const picked = selectHostPool(slots, id => activeByPool[id] ?? 0, () => true, 'rev-2');
@@ -1282,12 +1282,16 @@ test('host pool eligibility, selection, release pinning, and reduced attach admi
         { started: now - 500, accounts: ['B'], poolAttached: true },
         { started: now - 200, accounts: ['C'], poolAttached: true },
     ], now)).toBeCloseTo(1 + 2 * attachUnits, 6);
-    const attached = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, true), pending: 0, freeGB: FREE_FLOOR_GB + 0.3, minFreeGB: 0, maxBots: 25 });
+    const attached = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, true), pending: 0, freeGB: FREE_FLOOR_GB + 0.1, minFreeGB: 0, maxBots: 25 });
     expect(attached.allowed).toBe(true);
     expect(attached.reserveGB).toBeCloseTo(POOL_ATTACH_BUDGET_GB, 6);
-    const standalone = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, false), pending: 0, freeGB: FREE_FLOOR_GB + 0.3, minFreeGB: 0, maxBots: 25 });
+    const standalone = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, false), pending: 0, freeGB: FREE_FLOOR_GB + 0.1, minFreeGB: 0, maxBots: 25 });
     expect(standalone.allowed).toBe(false);
     expect(standalone.reason).toBe('memory');
+    // The 4 GiB RAM floor remains inviolate even for pool attaches.
+    const belowFloor = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, true), pending: 0, freeGB: FREE_FLOOR_GB, minFreeGB: 0, maxBots: 25 });
+    expect(belowFloor.allowed).toBe(false);
+    expect(belowFloor.reason).toBe('memory');
 
     // Empty pools enter drain halfway through POOL_IDLE_EXIT_MS so attaches cannot race pool idle shutdown.
     const { poolIdleExpired, POOL_IDLE_DRAIN_MS } = await import('./swarm');
@@ -1299,9 +1303,9 @@ test('host pool eligibility, selection, release pinning, and reduced attach admi
     expect(poolIdleExpired(idleSlot, 0, 10_000)).toBe(false);
     expect(idleSlot.idleSince).toBe(10_000);
     // Still selectable while well inside the drain margin.
-    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS - 1)?.id).toBe('idle-1');
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, POOL_MAX_LAUNCHES, 10_000 + POOL_IDLE_DRAIN_MS - 1)?.id).toBe('idle-1');
     // Refused once idle reaches POOL_IDLE_DRAIN_MS, and poolIdleExpired triggers drainPool.
-    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS)).toBeNull();
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, POOL_MAX_LAUNCHES, 10_000 + POOL_IDLE_DRAIN_MS)).toBeNull();
     expect(poolIdleExpired(idleSlot, 0, 10_000 + POOL_IDLE_DRAIN_MS)).toBe(true);
     // Becoming active clears idleSince.
     expect(poolIdleExpired(idleSlot, 1, 10_000 + POOL_IDLE_DRAIN_MS + 100)).toBe(false);

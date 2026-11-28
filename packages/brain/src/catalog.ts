@@ -378,6 +378,7 @@ interface SkillerSeed {
     readonly defaultArgs?: readonly string[];
     readonly defaultEnv?: Readonly<Record<string, string>>;
     readonly combatSurvivability?: CombatSurvivabilityFloor;
+    readonly maxSkillLevel?: Readonly<Record<string, number>>;
     // Fields that come from server data, read when the catalog is built and not when this module loads.
     readonly resolve?: () => Partial<SkillerSeed>;
 }
@@ -411,7 +412,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'fishing', method: 'cage', script: 'scripts/aio-skiller.ts', label: 'Cage lobsters at Catherby', location: HUB_TILES.catherby, spotId: 'catherby-lobsters', maxConcurrentAccounts: 6, xpPerTick: 45, unitsPerTick: 0.14, gpPerTick: 2.5, minBatchUnits: 27, requiredLevel: 40, outputs: [{ itemId: 377, countPerUnit: 1 }], defaultArgs: ['cage'], defaultEnv: { CAP: '3000' } },
     { skill: 'fishing', method: 'harpoon', script: 'scripts/aio-skiller.ts', label: 'Harpoon tuna/swordfish at Catherby', location: HUB_TILES.catherby, spotId: 'catherby-harpoon', maxConcurrentAccounts: 6, xpPerTick: 42, unitsPerTick: 0.12, gpPerTick: 2, minBatchUnits: 27, requiredLevel: 35, outputs: [{ itemId: 371, countPerUnit: 1 }], defaultArgs: ['harpoon'], defaultEnv: { CAP: '3000' } },
     { skill: 'fishing', method: 'fishcook', script: 'scripts/aio-skiller.ts', label: 'Lumbridge 3-tick fly fishing and cooking', location: HUB_TILES.lumbridge, spotId: 'lumbridge-fly-fish', maxConcurrentAccounts: 6, xpPerTick: 75, unitsPerTick: 0.25, gpPerTick: 0.5, minBatchUnits: 26, requiredLevel: 20, outputs: [{ itemId: 333, countPerUnit: 1 }] },
-    { skill: 'fishing', method: 'village', script: 'scripts/aio-skiller.ts', label: 'Barbarian Village fly/bait fishing', location: { x: 3106, z: 3433, level: 0 }, spotId: 'barbarian-fishing', maxConcurrentAccounts: 6, xpPerTick: 65, unitsPerTick: 0.22, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
+    { skill: 'fishing', method: 'village', script: 'scripts/aio-skiller.ts', label: 'Barbarian Village fly/bait fishing', location: { x: 3106, z: 3433, level: 0 }, spotId: 'barbarian-fishing', maxConcurrentAccounts: 6, xpPerTick: 65, unitsPerTick: 0.22, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 20, defaultEnv: { METHOD: 'fly', MODE: 'COOK_AND_DROP', TARGET: '100', BATCH: '24', CAP: '3000', RETURN_TICKS: '100', RESERVE: '0' } },
     { skill: 'fishing', method: 'staged', script: 'scripts/aio-skiller.ts', label: 'Staged native fishing profiles', location: HUB_TILES.lumbridge, xpPerTick: 55, unitsPerTick: 0.18, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     { skill: 'fishing', method: 'fly30', script: 'scripts/generated/fishing30.ts', label: 'Fresh account fly fishing to 30', location: HUB_TILES.lumbridge, xpPerTick: 45, unitsPerTick: 0.2, gpPerTick: 0, minBatchUnits: 25, requiredLevel: 1 },
     { skill: 'fishing', method: 'specialist', script: 'scripts/fishing-specialist.ts', label: 'Fishing 1-99 specialist route', location: HUB_TILES.lumbridge, xpPerTick: 165, unitsPerTick: 0.35, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
@@ -426,9 +427,9 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     // Woodcutting
     { skill: 'woodcutting', method: 'edgeville', script: 'scripts/aio-skiller.ts', label: 'Edgeville tree/oak/yew woodcutting', location: HUB_TILES.edgeville, spotId: 'edgeville-yews', maxConcurrentAccounts: 4, xpPerTick: 95, unitsPerTick: 0.14, gpPerTick: 2, minBatchUnits: 28, requiredLevel: 15, outputs: [{ itemId: 1521, countPerUnit: 1 }] },
     { skill: 'woodcutting', method: 'yews', script: 'scripts/aio-skiller.ts', label: 'Chop and bank yew logs', location: HUB_TILES.edgeville, spotId: 'edgeville-yews', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.04, gpPerTick: 6, minBatchUnits: 28, requiredLevel: 60, outputs: [{ itemId: 1515, countPerUnit: 1 }] },
-    // woodcutting.ts chops at Lumbridge unless WC_SITE names another site. Its Draynor site needs combat 15: the Draynor
-    // dark wizards hunt an account of combat 14 or less (woodcutting.ts SITES.draynor.minCombat).
-    { skill: 'woodcutting', method: 'fresh45', script: 'scripts/generated/woodcutting.ts', label: 'Fresh woodcutting 1-45 at Draynor', location: HUB_TILES.draynor, spotId: 'draynor-willows', maxConcurrentAccounts: 6, xpPerTick: 140, unitsPerTick: 0.22, gpPerTick: 0.5, minBatchUnits: 28, requiredLevel: 1, outputs: [{ itemId: 1519, countPerUnit: 1 }], defaultEnv: { WC_SITE: 'draynor' }, combatSurvivability: { minCombatLevel: 15 } },
+    // woodcutting.ts chops and drops logs at Draynor until Woodcutting 45 (exits with 0 XP at level >= 45).
+    // Its Draynor site needs combat 15: the Draynor dark wizards hunt an account of combat 14 or less.
+    { skill: 'woodcutting', method: 'fresh45', script: 'scripts/generated/woodcutting.ts', label: 'Fresh woodcutting 1-45 at Draynor', location: HUB_TILES.draynor, spotId: 'draynor-willows', maxConcurrentAccounts: 6, xpPerTick: 140, unitsPerTick: 0.22, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1, maxSkillLevel: { Woodcutting: 45 }, defaultEnv: { WC_SITE: 'draynor' }, combatSurvivability: { minCombatLevel: 15 } },
     { skill: 'woodcutting', method: 'loop', script: 'scripts/aio-skiller.ts', label: 'Continuous woodcutting loop', location: HUB_TILES.draynor, xpPerTick: 100, unitsPerTick: 0.16, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     { skill: 'woodcutting', method: 'specialist', script: 'scripts/woodcutting-specialist.ts', label: 'Woodcutting 1-99 specialist route', location: HUB_TILES.draynor, xpPerTick: 320, unitsPerTick: 0.3, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     // Firemaking
@@ -463,7 +464,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'crafting', method: 'legacy-jewelry', script: 'scripts/aio-skiller.ts', label: 'Gem cutting at Al Kharid bank', location: HUB_TILES.alkharid, xpPerTick: 450, unitsPerTick: 0.35, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 20 },
     { skill: 'crafting', method: 'glass', script: 'scripts/aio-skiller.ts', label: 'Smelt and blow molten glass', location: HUB_TILES.varrock_west, xpPerTick: 240, unitsPerTick: 0.18, gpPerTick: 1, minBatchUnits: 14, requiredLevel: 46 },
     { skill: 'crafting', method: 'tanning', script: 'scripts/aio-skiller.ts', label: 'Tan cowhides and dragonhides at Al Kharid', location: HUB_TILES.alkharid, xpPerTick: 0, unitsPerTick: 0.28, gpPerTick: 3, minBatchUnits: 27, requiredLevel: 1, outputs: [{ itemId: 1741, countPerUnit: 1 }], inputs: [{ itemId: 1739, countPerUnit: 1 }] },
-    { skill: 'crafting', method: 'black-dhide-sets', script: 'scripts/aio-skiller.ts', label: 'Tan black dhide and craft full sets', location: HUB_TILES.alkharid, xpPerTick: 520, unitsPerTick: 0.04, gpPerTick: 5, minBatchUnits: 5, requiredLevel: 84, inputs: [{ itemId: 1747, countPerUnit: 6 }] },
+    { skill: 'crafting', method: 'black-dhide-sets', script: 'scripts/aio-skiller.ts', label: 'Tan black dhide and craft full sets', location: HUB_TILES.alkharid, xpPerTick: 520, unitsPerTick: 0.04, gpPerTick: 5, minBatchUnits: 5, requiredLevel: 84, requiredTools: [1733], coinsRequired: 120, inputs: [{ itemId: 1747, countPerUnit: 6 }], outputs: [{ itemId: 2503, countPerUnit: 1 }, { itemId: 2497, countPerUnit: 1 }, { itemId: 2491, countPerUnit: 1 }] },
     { skill: 'crafting', method: 'soften-clay', script: 'scripts/aio-skiller.ts', label: 'Soften clay with water sources', location: HUB_TILES.varrock_west, xpPerTick: 0, unitsPerTick: 0.3, gpPerTick: 2, minBatchUnits: 14, requiredLevel: 1, outputs: [{ itemId: 1761, countPerUnit: 1 }], inputs: [{ itemId: 434, countPerUnit: 1 }] },
     { skill: 'crafting', method: 'inventory', script: 'scripts/aio-skiller.ts', label: 'Bank-staged inventory crafting (gems/leather/staves)', location: HUB_TILES.draynor, xpPerTick: 650, unitsPerTick: 0.35, gpPerTick: -2, minBatchUnits: 27, requiredLevel: 1 },
     { skill: 'crafting', method: 'progressive', script: 'scripts/aio-skiller.ts', label: 'Progressive inventory crafting', location: HUB_TILES.draynor, xpPerTick: 320, unitsPerTick: 0.28, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
@@ -549,7 +550,6 @@ export const COMBAT_FLOOR_EXEMPT_TARGETS: ReadonlySet<string> = new Set([
     'chompy-at-site',
     'ranged',
     'ranged-gather',
-    'ranged-camp',
     'ranged-starter',
     'loot-trip',
     'ranged-specialist',
@@ -612,7 +612,7 @@ const FIGHTER_SPECS: readonly FighterSeed[] = [
     // Ranged xp 0 and refuses any other start.
     { target: 'ranged-starter', script: 'scripts/aio-fighter.ts', label: 'Fresh Ranged starter bootstrap', location: HUB_TILES.lumbridge, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 65, unitsPerTick: 0.12, gpPerTick: 0, minBatchUnits: 20, startArea: TUTORIAL_ISLAND_AREA, maxSkillXp: { Ranged: 0 } },
     { target: 'ranged-gather', script: 'scripts/aio-fighter.ts', label: 'Safespot Ranged monster farm with arrow pickup', location: HUB_TILES.varrock_east, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 125, unitsPerTick: 0.08, gpPerTick: 2, minBatchUnits: 25 },
-    { target: 'ranged-camp', script: 'scripts/aio-fighter.ts', label: 'Safespot Ranged camp', location: HUB_TILES.falador_west, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 155, unitsPerTick: 0.05, gpPerTick: 5, minBatchUnits: 20 },
+    { target: 'ranged-camp', script: 'scripts/aio-fighter.ts', label: 'Safespot Ranged camp', location: HUB_TILES.falador_west, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 155, unitsPerTick: 0.05, gpPerTick: 5, minBatchUnits: 20, requiredSkills: { Hitpoints: 70, Magic: 25, Ranged: 40 }, kit: [{ itemId: 837, count: 1 }, { itemId: 1540, count: 1 }, { itemId: 877, count: 500 }, { itemId: 1590, count: 1 }, { itemId: 563, count: 1 }, { itemId: 556, count: 3 }, { itemId: 554, count: 1 }, { itemId: 385, count: 6 }], combatSurvivability: { minHitpoints: 70, requireAntiDragonShield: true, minFoodCount: 6, foodIds: SHARK_ONLY_FOOD_IDS } },
     { target: 'cannon', script: 'scripts/aio-fighter.ts', label: 'Dwarf multicannon Ranged training', location: HUB_TILES.edgeville, spotId: 'cannon-spiders', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 480, unitsPerTick: 0.15, gpPerTick: -25, minBatchUnits: 50, riskPerHour: 0.15, requiredQuests: ['dwarfcannon'], combatSurvivability: { minHitpoints: 40, minFoodCount: 10 }, defaultEnv: { SPOT: 'spiders' } },
     { target: 'ranged-specialist', script: 'scripts/ranged-specialist.ts', label: 'Ranged 1-99 specialist route', location: HUB_TILES.lumbridge, skill: 'Ranged', skills: ['Ranged'], xpPerTick: 420, unitsPerTick: 0.12, gpPerTick: 0, minBatchUnits: 50 },
     { target: 'loot-trip', script: 'scripts/aio-fighter.ts', label: 'Dedicated ground-item loot and bank trip', location: HUB_TILES.varrock_west, skill: 'Hitpoints', skills: ['Hitpoints'], xpPerTick: 0, unitsPerTick: 0.15, gpPerTick: 8, minBatchUnits: 10 },
@@ -726,6 +726,7 @@ const ENCHANT_PRODUCE_SPECS: readonly { mode: string; label: string; xpPerTick: 
     { mode: 'enchant:ruby_ring', label: 'Enchant ruby ring into Ring of forging', xpPerTick: 369 },
     { mode: 'enchant:diamond_ring', label: 'Enchant diamond ring into Ring of life', xpPerTick: 419 },
     { mode: 'enchant:dragonstone_ring', label: 'Enchant dragonstone ring into Ring of wealth', xpPerTick: 488 },
+    { mode: 'enchant:strung_sapphire_amulet', label: 'Enchant sapphire amulet into Amulet of magic', xpPerTick: 109 },
     { mode: 'enchant:strung_emerald_amulet', label: 'Enchant emerald amulet into Amulet of defence', xpPerTick: 231 },
     { mode: 'enchant:strung_ruby_amulet', label: 'Enchant ruby amulet into Amulet of strength', xpPerTick: 369 },
     { mode: 'enchant:strung_diamond_amulet', label: 'Enchant diamond amulet into Amulet of power', xpPerTick: 419 },
@@ -895,6 +896,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 ...(spec.defaultArgs ? { defaultArgs: spec.defaultArgs } : {}),
                 ...(spec.defaultEnv ? { defaultEnv: spec.defaultEnv } : {}),
                 ...(spec.combatSurvivability ? { combatSurvivability: spec.combatSurvivability } : {}),
+                ...(spec.maxSkillLevel ? { maxSkillLevel: spec.maxSkillLevel } : {}),
             },
             baselineRate: {
                 xpPerTick,
@@ -1147,7 +1149,13 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
 
     const isExposedInventoryRecipe = (name: string): boolean =>
         name.startsWith('decant:')
-        || name === 'string-dragonstone-amulet'
+        || /^string-(sapphire|emerald|ruby|diamond|dragonstone)-amulet$/.test(name)
+        || name === 'cut-bow:unstrung_magic_shortbow'
+        || name === 'bow-string:magic_shortbow'
+        || (name.startsWith('leather:') && (name.includes('dragonhide') || name.includes('dragon_vambraces') || name.includes('dhide')))
+        || name === 'poison:dragon-dagger'
+        || name === 'poison:rune-arrow'
+        || name === 'brew:weapon_poison'
         || name.startsWith('grind:')
         || name.startsWith('identify:')
         || name === 'strip:swamp-toad';
@@ -1258,6 +1266,101 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             location: HUB_TILES.alkharid,
             trust: trustFor(id, 'skiller:crafting:jewellery-trip'),
             protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
+        });
+    }
+
+    // 2c. Self-sustaining PvP BiS supply-chain producers backed by verified skiller/runecraft routes.
+    const pvpSupplyProducers: readonly {
+        readonly id: string;
+        readonly family: WorkerFamily;
+        readonly kind: WorkerKind;
+        readonly label: string;
+        readonly skill: string;
+        readonly aioRoute: string;
+        readonly routeSkill: string;
+        readonly routeMethod: string;
+        readonly requiredLevel: number;
+        readonly requiredQuests?: readonly string[];
+        readonly requiredTools?: readonly number[];
+        readonly coinsRequired?: number;
+        readonly defaultArgs?: readonly string[];
+        readonly defaultEnv?: Readonly<Record<string, string>>;
+        readonly inputs?: readonly ActivityIO[];
+        readonly outputs: readonly ActivityIO[];
+        readonly location: WorkerTile;
+        readonly spotId?: string;
+        readonly maxConcurrentAccounts?: number;
+        readonly xpPerTick: number;
+        readonly unitsPerTick: number;
+        readonly minBatchUnits: number;
+    }[] = [
+        // Dragonhide tanning (Al Kharid tanner Ellis)
+        { id: 'bank-artisan:tanning-black-dragonhide', family: 'bank-artisan', kind: 'produce', label: 'Tan black dragonhide at Al Kharid', skill: 'Crafting', aioRoute: 'crafting:tanning', routeSkill: 'crafting', routeMethod: 'tanning', requiredLevel: 1, coinsRequired: 540, defaultArgs: ['black', '27', '200'], inputs: [{ itemId: 1747, countPerUnit: 1 }], outputs: [{ itemId: 2509, countPerUnit: 1 }], location: HUB_TILES.alkharid, xpPerTick: 0, unitsPerTick: 0.25, minBatchUnits: 27 },
+        { id: 'bank-artisan:tanning-blue-dragonhide', family: 'bank-artisan', kind: 'produce', label: 'Tan blue dragonhide at Al Kharid', skill: 'Crafting', aioRoute: 'crafting:tanning', routeSkill: 'crafting', routeMethod: 'tanning', requiredLevel: 1, coinsRequired: 540, defaultArgs: ['blue', '27', '200'], inputs: [{ itemId: 1751, countPerUnit: 1 }], outputs: [{ itemId: 2505, countPerUnit: 1 }], location: HUB_TILES.alkharid, xpPerTick: 0, unitsPerTick: 0.25, minBatchUnits: 27 },
+        { id: 'bank-artisan:tanning-green-dragonhide', family: 'bank-artisan', kind: 'produce', label: 'Tan green dragonhide at Al Kharid', skill: 'Crafting', aioRoute: 'crafting:tanning', routeSkill: 'crafting', routeMethod: 'tanning', requiredLevel: 1, coinsRequired: 540, defaultArgs: ['green', '27', '200'], inputs: [{ itemId: 1753, countPerUnit: 1 }], outputs: [{ itemId: 1745, countPerUnit: 1 }], location: HUB_TILES.alkharid, xpPerTick: 0, unitsPerTick: 0.25, minBatchUnits: 27 },
+        // Coal and gold ore mining (smelting fuel for runite/steel bars and jewelry gold)
+        { id: 'gather:mining-coal', family: 'gather', kind: 'gather', label: 'Mine coal for bar smelting', skill: 'Mining', aioRoute: 'mining:at-site', routeSkill: 'mining', routeMethod: 'at-site', requiredLevel: 30, defaultArgs: ['coal_rock_table', '200', '3000'], outputs: [{ itemId: 453, countPerUnit: 1 }], location: { x: 3081, z: 3421, level: 0 }, spotId: 'barbarian-coal', maxConcurrentAccounts: 4, xpPerTick: 70, unitsPerTick: 0.1, minBatchUnits: 27 },
+        { id: 'gather:mining-gold', family: 'gather', kind: 'gather', label: 'Mine gold ore for PvP jewelry bars', skill: 'Mining', aioRoute: 'mining:at-site', routeSkill: 'mining', routeMethod: 'at-site', requiredLevel: 40, defaultArgs: ['gold_rock_table', '200', '3000'], outputs: [{ itemId: 444, countPerUnit: 1 }], location: { x: 2977, z: 3235, level: 0 }, spotId: 'rimmington-gold', maxConcurrentAccounts: 3, xpPerTick: 75, unitsPerTick: 0.08, minBatchUnits: 27 },
+        // Magic logs (Magic shortbow fletching chain)
+        { id: 'gather:woodcutting-magic', family: 'gather', kind: 'gather', label: 'Chop and bank Magic logs south of Seers', skill: 'Woodcutting', aioRoute: 'woodcutting:yews', routeSkill: 'woodcutting', routeMethod: 'yews', requiredLevel: 75, defaultEnv: { TREE: 'magic', REGION: 'seers', CAP: '3000' }, outputs: [{ itemId: 1513, countPerUnit: 1 }], location: { x: 2692, z: 3425, level: 0 }, spotId: 'seers-magic-trees', maxConcurrentAccounts: 3, xpPerTick: 90, unitsPerTick: 0.025, minBatchUnits: 27 },
+        // Karambwanji -> Raw Karambwan -> Cooked Karambwan combo food & Cooked Shark
+        { id: 'gather:fishing-karambwanji', family: 'gather', kind: 'gather', label: 'Net karambwanji bait south of Tai Bwo Wannai', skill: 'Fishing', aioRoute: 'fishing:staged', routeSkill: 'fishing', routeMethod: 'staged', requiredLevel: 5, requiredTools: [303], defaultEnv: { METHOD: 'karambwanji', CAP: '3000' }, outputs: [{ itemId: 3150, countPerUnit: 1 }], location: { x: 2799, z: 3014, level: 0 }, spotId: 'karambwanji-lake', maxConcurrentAccounts: 4, xpPerTick: 25, unitsPerTick: 0.25, minBatchUnits: 27 },
+        { id: 'gather:fishing-karambwan', family: 'gather', kind: 'gather', label: 'Catch raw karambwan at Musa Point', skill: 'Fishing', aioRoute: 'fishing:staged', routeSkill: 'fishing', routeMethod: 'staged', requiredLevel: 65, requiredQuests: ['tbwt'], requiredTools: [3157], defaultEnv: { METHOD: 'karambwan', CAP: '3000' }, inputs: [{ itemId: 3150, countPerUnit: 1 }], outputs: [{ itemId: 3142, countPerUnit: 1 }], location: { x: 2901, z: 3113, level: 0 }, spotId: 'karambwan-point', maxConcurrentAccounts: 4, xpPerTick: 65, unitsPerTick: 0.14, minBatchUnits: 26 },
+        { id: 'bank-artisan:cooking-shark', family: 'bank-artisan', kind: 'produce', label: 'Cook raw sharks at Catherby range', skill: 'Cooking', aioRoute: 'cooking:food', routeSkill: 'cooking', routeMethod: 'food', requiredLevel: 80, defaultArgs: ['shark'], defaultEnv: { FOOD_TYPE: 'shark' }, inputs: [{ itemId: 383, countPerUnit: 1 }], outputs: [{ itemId: 385, countPerUnit: 1 }], location: HUB_TILES.catherby, xpPerTick: 420, unitsPerTick: 0.22, minBatchUnits: 28 },
+        { id: 'bank-artisan:cooking-karambwan', family: 'bank-artisan', kind: 'produce', label: 'Cook raw karambwan into combo food', skill: 'Cooking', aioRoute: 'cooking:stock', routeSkill: 'cooking', routeMethod: 'stock', requiredLevel: 30, requiredQuests: ['tbwt'], defaultEnv: { FOOD_TYPE: 'karambwan' }, inputs: [{ itemId: 3142, countPerUnit: 1 }], outputs: [{ itemId: 3144, countPerUnit: 1 }], location: HUB_TILES.draynor, xpPerTick: 360, unitsPerTick: 0.22, minBatchUnits: 28 },
+        // Rune arrow tipping (Rune arrowtips + Headless arrows -> Rune arrows)
+        { id: 'bank-artisan:fletching-rune-arrows', family: 'bank-artisan', kind: 'produce', label: 'Tip headless arrows with rune arrowtips', skill: 'Fletching', aioRoute: 'fletching:arrows', routeSkill: 'fletching', routeMethod: 'arrows', requiredLevel: 75, defaultEnv: { MODE: 'native-arrows', TIP_TYPE: 'rune', MAX_MAKE: '90', HEADLESS_RESERVE: '200', TIP_RESERVE: '5' }, inputs: [{ itemId: 44, countPerUnit: 1, reserve: 5 }, { itemId: 53, countPerUnit: 1, reserve: 200 }], outputs: [{ itemId: 892, countPerUnit: 1 }], location: HUB_TILES.draynor, xpPerTick: 1400, unitsPerTick: 1.5, minBatchUnits: 90 },
+        // Dedicated PvP runecrafting altars (Water, Earth, Fire, Cosmic)
+        { id: 'runecraft:bank-craft-water', family: 'runecraft', kind: 'produce', label: 'Craft water runes from banked essence', skill: 'Runecraft', aioRoute: 'runecraft:bank-craft', routeSkill: 'runecraft', routeMethod: 'bank-craft', requiredLevel: 5, requiredQuests: ['runemysteries'], requiredTools: [1444], defaultEnv: { RUNE_ALTAR: 'water' }, inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 555, countPerUnit: 1 }], location: HUB_TILES.falador_east, xpPerTick: 48, unitsPerTick: 0.16, minBatchUnits: 27 },
+        { id: 'runecraft:bank-craft-earth', family: 'runecraft', kind: 'produce', label: 'Craft earth runes from banked essence', skill: 'Runecraft', aioRoute: 'runecraft:bank-craft', routeSkill: 'runecraft', routeMethod: 'bank-craft', requiredLevel: 9, requiredQuests: ['runemysteries'], requiredTools: [1440], defaultEnv: { RUNE_ALTAR: 'earth' }, inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 557, countPerUnit: 1 }], location: HUB_TILES.falador_east, xpPerTick: 50, unitsPerTick: 0.16, minBatchUnits: 27 },
+        { id: 'runecraft:bank-craft-fire', family: 'runecraft', kind: 'produce', label: 'Craft fire runes from banked essence', skill: 'Runecraft', aioRoute: 'runecraft:bank-craft', routeSkill: 'runecraft', routeMethod: 'bank-craft', requiredLevel: 14, requiredQuests: ['runemysteries'], requiredTools: [1442], defaultEnv: { RUNE_ALTAR: 'fire' }, inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 554, countPerUnit: 1 }], location: HUB_TILES.falador_east, xpPerTick: 54, unitsPerTick: 0.16, minBatchUnits: 27 },
+        { id: 'runecraft:bank-craft-cosmic', family: 'runecraft', kind: 'produce', label: 'Craft cosmic runes at Zanaris altar', skill: 'Runecraft', aioRoute: 'runecraft:bank-craft', routeSkill: 'runecraft', routeMethod: 'bank-craft', requiredLevel: 27, requiredQuests: ['runemysteries', 'zanaris'], requiredTools: [1454, 772], defaultEnv: { RUNE_ALTAR: 'cosmic' }, inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 564, countPerUnit: 1 }], location: HUB_TILES.draynor, xpPerTick: 58, unitsPerTick: 0.14, minBatchUnits: 27 },
+    ];
+
+    for (const p of pvpSupplyProducers) {
+        if (activities.has(p.id)) continue;
+        const inputsMap = p.inputs ? Object.fromEntries(p.inputs.map((i) => [i.itemId, i.countPerUnit])) : undefined;
+        const outputsMap = Object.fromEntries(p.outputs.map((o) => [o.itemId, o.countPerUnit]));
+        const setupTicks = estimateTravelTicksFromNearestBank(p.location, travelBanks) + 6;
+        register({
+            id: p.id,
+            workerId: p.family,
+            family: p.family,
+            kind: p.kind,
+            label: p.label,
+            skill: p.skill,
+            skills: [p.skill],
+            ...(p.spotId ? { spotId: p.spotId } : {}),
+            ...(p.maxConcurrentAccounts ? { maxConcurrentAccounts: p.maxConcurrentAccounts } : {}),
+            config: {
+                aioCategory: 'skiller',
+                aioRoute: p.aioRoute,
+                script: 'scripts/aio-skiller.ts',
+                skill: p.routeSkill,
+                method: p.routeMethod,
+                requiredLevel: p.requiredLevel,
+                ...(p.requiredQuests ? { requiredQuests: p.requiredQuests } : {}),
+                ...(p.requiredTools ? { requiredTools: p.requiredTools } : {}),
+                ...(p.coinsRequired !== undefined ? { coinsRequired: p.coinsRequired } : {}),
+                ...(p.defaultArgs ? { defaultArgs: p.defaultArgs } : {}),
+                ...(p.defaultEnv ? { defaultEnv: p.defaultEnv } : {}),
+            },
+            baselineRate: {
+                xpPerTick: p.xpPerTick,
+                ...(p.xpPerTick > 0 ? { skillXpPerTick: { [p.skill]: p.xpPerTick } } : {}),
+                unitsPerTick: p.unitsPerTick,
+                gpPerTick: 0,
+                setupTicks,
+                minBatchUnits: p.minBatchUnits,
+                confidence: 'model',
+                ...(inputsMap ? { inputsPerUnit: inputsMap } : {}),
+                outputsPerUnit: outputsMap,
+            },
+            ...(p.inputs ? { inputs: p.inputs } : {}),
+            outputs: p.outputs,
+            location: p.location,
+            trust: trustFor(p.id, `skiller:${p.aioRoute}`),
+            protectedAllowed: opts.launchQualifiedIds?.has(p.id) ?? false,
         });
     }
 
