@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795841402538-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "Fingerblastr",
+  "item": "Coins",
+  "count": 573,
+  "itemId": 995,
+  "start": 1795841402538,
+  "end": 1795842302538,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
