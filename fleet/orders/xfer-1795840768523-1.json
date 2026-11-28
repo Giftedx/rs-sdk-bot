@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795840768523-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "WellHung",
+  "item": "Rune essence",
+  "count": 1078,
+  "itemId": 1436,
+  "start": 1795840768523,
+  "end": 1795841668523,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

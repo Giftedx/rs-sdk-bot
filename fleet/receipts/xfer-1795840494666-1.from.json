@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840494666-1",
+ "account": "Shaftmaker",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant scimitar",
+ "requested": 1,
+ "claim": "913dacec-348a-4f1d-9e52-26d850c617f6",
+ "count": 0,
+ "ok": false,
+ "at": 1795840710476,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795840780438-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewGotWood",
+  "to": "CoinCock",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "start": 1795840780438,
+  "end": 1795841680438,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

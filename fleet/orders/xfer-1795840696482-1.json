@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795840696482-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "DropMyLoad",
+  "to": "mmtha0205",
+  "item": "Pestle and mortar",
+  "count": 1,
+  "itemId": 233,
+  "start": 1795840696482,
+  "end": 1795841596482,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

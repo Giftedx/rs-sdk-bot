@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795840726014-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Woodenstaff",
+  "item": "Coins",
+  "count": 59,
+  "itemId": 995,
+  "start": 1795840726014,
+  "end": 1795841626014,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
