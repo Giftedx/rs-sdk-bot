@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795844894810-1",
+ "account": "WellHung",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "2a48cae2-3e9b-43ed-a410-014137d33590",
+ "count": 0,
+ "ok": false,
+ "at": 1795845019215,
+ "detail": "trade claimed"
+}
