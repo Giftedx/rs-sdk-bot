@@ -101,18 +101,28 @@ export const BLOCKED_AIO_KEYS: ReadonlySet<string> = new Set([
 // the catalog the worker refuses at once (packages/fleet/test/catalog-launch-contract.test.ts).
 export const EXPERIMENTAL_AIO_KEYS: ReadonlySet<string> = new Set([
     'skiller:foraging:crystal-chest',
+    // At-site staged fishing defaults to METHOD=fly (Fishing 20) and does not travel or bank; banked karambwan/karambwanji are separate producers.
+    'skiller:fishing:staged',
     // The native spell and the NPC ID name the target.
     'skiller:magic:npc',
     // A job.json names the trip.
     'skiller:magic:trip',
+    // Finite ground loot requires caller-supplied LOOT_IDS/LOOT_NAMES/LOOT_MIN_VALUE policy env.
+    'skiller:mining:loot',
     // At-site air runecrafting fails from bank; runecraft:bank-craft-air handles banked trips.
     'skiller:runecraft:air',
     // Direct runecraft:nature requires a <job.json>; runecraft:bank-craft-nature handles banked Shilo trips.
     'skiller:runecraft:nature',
     // The tick cap and the kit that the bench case stages at the tower.
     'skiller:thieving:blood-chest',
+    // At-site nature chest requires CHEST_X/CHEST_Z/CHEST_LEVEL env and standing beside the level-1 chest.
+    'skiller:thieving:nature-chest',
     // The worker starts only at the Edgeville bank with an axe banked and does not travel there itself.
     'skiller:woodcutting:edgeville',
+    // Chompy trip requires HP30, Ranged30, Prayer43, completed quest, unarmed free slots, and ogre kit staged at Yanille bank.
+    'fighter:chompy',
+    // Loot trip requires an explicit <job.json> policy file path.
+    'fighter:loot-trip',
 ]);
 
 export const HUB_TILES = {
@@ -613,8 +623,8 @@ const FIGHTER_SPECS: readonly FighterSeed[] = [
     // stand 2655,3283 with 2 trout in the pack, and refuses any other start.
     { target: 'imp', startArea: { level: 0, x0: 2652, x1: 2659, z0: 3280, z1: 3287 }, startTile: { x: 2655, z: 3283, level: 0 }, kit: [{ itemId: 333, count: 2, includeBank: false }], script: 'scripts/aio-fighter.ts', label: 'Hunt imps for Imp Catcher beads', location: HUB_TILES.ardougne_south, spotId: 'ardougne-imps', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 25, unitsPerTick: 0.08, gpPerTick: 1, minBatchUnits: 10, outputs: [{ itemId: 1470, countPerUnit: 0.08 }, { itemId: 1472, countPerUnit: 0.08 }, { itemId: 1474, countPerUnit: 0.08 }, { itemId: 1476, countPerUnit: 0.08 }] },
     { target: 'shade', script: 'scripts/aio-fighter.ts', label: 'Fight shades in Mortton for shade remains', location: { x: 3510, z: 3480, level: 0 }, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 120, unitsPerTick: 0.04, gpPerTick: 8, minBatchUnits: 10, riskPerHour: 0.06, requiredQuests: ['priestperil'], combatSurvivability: { minHitpoints: 40, minDefence: 30, minFoodCount: 10 } },
-    { target: 'chompy', script: 'scripts/aio-fighter.ts', label: 'Chompy bird hunting trip', location: { x: 2614, z: 3093, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 85, unitsPerTick: 0.03, gpPerTick: 0, minBatchUnits: 5 },
-    { target: 'chompy-at-site', script: 'scripts/aio-fighter.ts', label: 'At-site Chompy bird hunting', location: { x: 2547, z: 2982, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.035, gpPerTick: 0, minBatchUnits: 5 },
+    { target: 'chompy', script: 'scripts/aio-fighter.ts', label: 'Chompy bird hunting trip', location: { x: 2614, z: 3093, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 85, unitsPerTick: 0.03, gpPerTick: 0, minBatchUnits: 5, requiredSkills: { Hitpoints: 30, Ranged: 30, Prayer: 43 }, requiredQuests: ['chompybird'] },
+    { target: 'chompy-at-site', script: 'scripts/aio-fighter.ts', label: 'At-site Chompy bird hunting', location: { x: 2547, z: 2982, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.035, gpPerTick: 0, minBatchUnits: 5, requiredSkills: { Hitpoints: 30, Ranged: 30, Prayer: 43 }, requiredQuests: ['chompybird'] },
     { target: 'ranged', script: 'scripts/ranged-train.ts', label: 'Progressive Ranged bow/arrow training', location: HUB_TILES.varrock_east, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 140, unitsPerTick: 0.09, gpPerTick: -1, minBatchUnits: 30 },
     // runRangedStarter (packages/workers/src/combat/ranged.ts freshRangedStart) runs only on Tutorial Island with
     // Ranged xp 0 and refuses any other start.
@@ -1321,7 +1331,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         { id: 'gather:woodcutting-magic', family: 'gather', kind: 'gather', label: 'Chop and bank Magic logs south of Seers', skill: 'Woodcutting', aioRoute: 'woodcutting:yews', routeSkill: 'woodcutting', routeMethod: 'yews', requiredLevel: 75, requiredToolAnyOf: [[1359, 1357, 1355, 1361, 1353, 1349, 1351]], defaultEnv: { TREE: 'magic', REGION: 'seers', WOOD_GROVE: 'native-processing', CAP: '3000' }, outputs: [{ itemId: 1513, countPerUnit: 1 }], location: { x: 2692, z: 3425, level: 0 }, spotId: 'seers-magic-trees', maxConcurrentAccounts: 3, xpPerTick: 90, unitsPerTick: 0.025, minBatchUnits: 27 },
         // Raw sharks, banked Karambwanji -> Raw Karambwan -> Cooked Karambwan combo food & Cooked Shark
         { id: 'gather:fishing-raw-shark', family: 'gather', kind: 'gather', label: 'Harpoon and bank raw sharks at Catherby', skill: 'Fishing', aioRoute: 'fishing:shark', routeSkill: 'fishing', routeMethod: 'shark', requiredLevel: 76, requiredSkills: { Fishing: 76, Hitpoints: 40 }, requiredTools: [311], defaultEnv: { RAW_ONLY: '1' }, outputs: [{ itemId: 383, countPerUnit: 1 }], location: HUB_TILES.catherby, spotId: 'catherby-sharks', maxConcurrentAccounts: 6, xpPerTick: 28, unitsPerTick: 0.09, minBatchUnits: 26 },
-        { id: 'gather:fishing-karambwanji', family: 'gather', kind: 'gather', label: 'Net and bank karambwanji bait south of Tai Bwo Wannai', skill: 'Fishing', aioRoute: 'fishing:staged', routeSkill: 'fishing', routeMethod: 'staged', requiredLevel: 5, requiredTools: [303], defaultEnv: { METHOD: 'karambwanji', BANKED: '1', CAP: '3000' }, outputs: [{ itemId: 3150, countPerUnit: 1 }], location: { x: 2799, z: 3014, level: 0 }, spotId: 'karambwanji-lake', maxConcurrentAccounts: 4, xpPerTick: 25, unitsPerTick: 0.25, minBatchUnits: 27 },
+        { id: 'gather:fishing-karambwanji', family: 'gather', kind: 'gather', label: 'Net and bank karambwanji bait south of Tai Bwo Wannai', skill: 'Fishing', aioRoute: 'fishing:staged', routeSkill: 'fishing', routeMethod: 'staged', requiredLevel: 5, requiredTools: [303], defaultEnv: { METHOD: 'karambwanji', BANKED: '1', CAP: '3000' }, outputs: [{ itemId: 3150, countPerUnit: 1 }], location: { x: 2801, z: 3009, level: 0 }, spotId: 'karambwanji-lake', maxConcurrentAccounts: 4, xpPerTick: 25, unitsPerTick: 0.25, minBatchUnits: 27 },
         { id: 'gather:fishing-karambwan', family: 'gather', kind: 'gather', label: 'Catch and bank raw karambwan at Musa Point', skill: 'Fishing', aioRoute: 'fishing:staged', routeSkill: 'fishing', routeMethod: 'staged', requiredLevel: 65, requiredQuests: ['tbwt'], requiredToolAnyOf: [[3157, 3159]], defaultEnv: { METHOD: 'karambwan', BANKED: '1', CAP: '3000' }, inputs: [{ itemId: 3150, countPerUnit: 1 }], outputs: [{ itemId: 3142, countPerUnit: 1 }], location: { x: 2901, z: 3113, level: 0 }, spotId: 'karambwan-point', maxConcurrentAccounts: 4, xpPerTick: 65, unitsPerTick: 0.14, minBatchUnits: 26 },
         { id: 'bank-artisan:cooking-shark', family: 'bank-artisan', kind: 'produce', label: 'Cook raw sharks at Catherby range', skill: 'Cooking', aioRoute: 'cooking:food', routeSkill: 'cooking', routeMethod: 'food', requiredLevel: 80, defaultEnv: { FOOD_TYPE: 'shark' }, inputs: [{ itemId: 383, countPerUnit: 1 }], outputs: [{ itemId: 385, countPerUnit: 1 }], location: HUB_TILES.catherby, xpPerTick: 420, unitsPerTick: 0.22, minBatchUnits: 28 },
         { id: 'bank-artisan:cooking-karambwan', family: 'bank-artisan', kind: 'produce', label: 'Cook raw karambwan into combo food at Catherby range', skill: 'Cooking', aioRoute: 'cooking:food', routeSkill: 'cooking', routeMethod: 'food', requiredLevel: 30, requiredQuests: ['tbwt'], defaultEnv: { FOOD_TYPE: 'karambwan' }, inputs: [{ itemId: 3142, countPerUnit: 1 }], outputs: [{ itemId: 3144, countPerUnit: 1 }], location: HUB_TILES.catherby, xpPerTick: 360, unitsPerTick: 0.22, minBatchUnits: 28 },
@@ -1381,7 +1391,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             ...(p.inputs ? { inputs: p.inputs } : {}),
             outputs: p.outputs,
             location: p.location,
-            trust: p.experimental ? trustFor(p.id, null) : trustFor(p.id, `skiller:${p.aioRoute}`),
+            trust: p.experimental
+                ? trustFor(p.id, null)
+                : trustFor(p.id, p.aioRoute === 'fishing:staged' && p.defaultEnv?.BANKED === '1' ? 'skiller:fishing:staged-banked' : `skiller:${p.aioRoute}`),
             protectedAllowed: opts.launchQualifiedIds?.has(p.id) ?? false,
         });
     }

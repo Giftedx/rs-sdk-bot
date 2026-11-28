@@ -222,14 +222,17 @@ function orphanedConfirmedPreNetworkClaim(
 }
 
 function abandonedBeforeNetwork(root: string, claim: FleetAccountClaim, target: ClaimIdentity) {
-    if (!claim.pid || savedProcessAlive(claim.pid, claim.at) || !owningCheckout(root, claim, target.side)) return;
-    let pending: {claim: string; inherited?: FleetSwarmClaim; inheritedHead?:string};
+    if (!claim.pid || !owningCheckout(root, claim, target.side)) return;
+    let pending: {claim: string; inherited?: FleetSwarmClaim; inheritedHead?:string; abandoned?: boolean};
     try { pending = JSON.parse(readFileSync(pendingPath(root, claim.nonce), 'utf8')); }
     catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
         throw error;
     }
     if (pending?.claim !== JSON.stringify(claim)) return;
+    // Pooled hosts keep one PID alive across many bots: an explicit pre-network abandonment marker written when
+    // push/admission fails before armNetwork proves startSession never ran even while the pool PID stays alive.
+    if (!pending.abandoned && savedProcessAlive(claim.pid, claim.at)) return;
     const attempts = listAttempts(target.account, target.server, lifecycleOptions(root));
     // A missing receipt alone proves nothing. Require the pre-push marker and refuse if
     // any receipt is unreadable or could belong to the marked attempt.
@@ -250,6 +253,15 @@ function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimI
 function writePending(root: string, claim: FleetAccountClaim, inherited?: FleetSwarmClaim, inheritedHead?:string) {
     mkdirSync(pendingDir(root), {recursive: true});
     writeFileSync(pendingPath(root, claim.nonce), JSON.stringify({claim: JSON.stringify(claim), inherited, inheritedHead}), {flag: 'wx'});
+}
+
+function markPendingAbandoned(root: string, nonce: string, now: () => number = Date.now) {
+    const file = pendingPath(root, nonce);
+    try {
+        if (!existsSync(file)) return;
+        const parsed = JSON.parse(readFileSync(file, 'utf8'));
+        writeFileSync(file, JSON.stringify({ ...parsed, abandoned: true, abandonedAt: now() }));
+    } catch { /* best-effort marker update; dead-PID fallback remains intact */ }
 }
 
 function forgetPending(root: string, nonce: string) {
@@ -345,12 +357,18 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     if (earlier && !(sameAbandoned && earlier === head)) throw Error('fleet trade order role already claimed');
     const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now(), ...claimOwner(root) };
     writePending(root, record);
-    commitAndPushTradeClaim(root, git, ref, head, subject, record, options);
+    try {
+        commitAndPushTradeClaim(root, git, ref, head, subject, record, options);
+    } catch (error) {
+        markPendingAbandoned(root, record.nonce, now);
+        throw error;
+    }
     if (pending && claim) cleanPending(root, claim.nonce);
     return {
         ...record,
         armNetwork: () => forgetPending(root, record.nonce),
         release: () => {
+            markPendingAbandoned(root, record.nonce, now);
             releaseFleetTradeClaim(root, record, now, options);
             cleanPending(root, record.nonce);
         },
@@ -472,17 +490,30 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
         let owned: string;
         if (!patient) {
-            owned = commitClaim(git, head, subject, record);
-            retryAttempt(() => pushFleetGitRecord(git, ref, owned), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+            try {
+                owned = commitClaim(git, head, subject, record);
+                retryAttempt(() => pushFleetGitRecord(git, ref, owned), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+            } catch (error) {
+                markPendingAbandoned(root, record.nonce, now);
+                throw error;
+            }
         } else {
             // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
             // is then no change. A push that the fast-forward rule rejected means that another writer has the ref: it is
             // never pushed again, unless a lagged ref check caught our own checkout releasing the held claim we read.
-            owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
+            try {
+                owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
+            } catch (error) {
+                markPendingAbandoned(root, record.nonce, now);
+                throw error;
+            }
             try {
                 again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned), fleetPushRetryable);
             } catch (error) {
-                if (casAttempt >= tries || fleetPushRetryable(error)) throw error;
+                if (casAttempt >= tries || fleetPushRetryable(error)) {
+                    markPendingAbandoned(root, record.nonce, now);
+                    throw error;
+                }
                 cleanPending(root, record.nonce);
                 wait(SWARM_CLAIM_PAUSE_MS);
                 const after = again(() => loadClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), account, server));
@@ -495,6 +526,7 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         }
         if (pending && current) cleanPending(root, current.nonce);
         let released = false;
+        let armed = false;
         const release = (restore?: FleetSwarmClaim) => {
             if (released) return;
             const releaseSubject = restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released';
@@ -512,8 +544,12 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         };
         return {
             nonce: record.nonce,
-            armNetwork: () => forgetPending(root, record.nonce),
-            abortBeforeNetwork: () => release(inheritedHold),
+            armNetwork: () => { armed = true; forgetPending(root, record.nonce); },
+            abortBeforeNetwork: () => {
+                if (armed) throw Error('fleet swarm claim already armed for network');
+                markPendingAbandoned(root, record.nonce, now);
+                release(inheritedHold);
+            },
             releaseAfterLogout(attemptId: string) {
                 const latest = matchedWorkerProof(root, record, input);
                 if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');

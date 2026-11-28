@@ -686,3 +686,36 @@ test('async off-path replan opens a shut door ahead and refreshes position/level
     expect(r2.detail).toBe('left level 0');
     expect(clicks2.length).toBe(beforeReleaseClicks);
 });
+
+test('repeated client walk rejection shrinks click span below half lookahead to clear corner rejections', async () => {
+    let pos = { x: 3000, z: 3200, level: 0 };
+    const listeners = new Set<() => void>();
+    const targets: number[] = [];
+    const deps: PathDeps = {
+        pos: () => ({ ...pos }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        locs: () => [],
+        interactLoc: () => {},
+        plan: (_l, _f, to) => [to],
+        walk: (x, z) => {
+            targets.push(x - pos.x);
+            // Reject clicks further than 6 tiles ahead (simulating a cliff/corner client BFS rejection); accept closer tiles.
+            if (x - pos.x > 6) {
+                return { success: false, phase: 'validation', reason: 'client_rejected', message: 'Failed to walk' };
+            }
+            pos = { x, z, level: 0 };
+            return { success: true };
+        },
+    };
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(deps, [{ x: 3020, z: 3200, tol: 1 }], { maxTicks: 30 }).then(r => result = r);
+    for (let i = 0; i < 40 && !result; i++) {
+        await Promise.resolve();
+        for (const cb of [...listeners]) cb();
+        await Promise.resolve();
+    }
+    const r = await done;
+    expect(r.ok).toBe(true);
+    // First click 20 -> rejected, second click 11 -> rejected, third click 6 -> accepted.
+    expect(targets.slice(0, 3)).toEqual([20, 11, 6]);
+});

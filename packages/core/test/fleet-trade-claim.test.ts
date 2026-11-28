@@ -317,6 +317,43 @@ test('an orphaned pre-network swarm claim on this checkout with a prior confirme
     });
 }, 30_000);
 
+test('a pooled host pre-network push failure marks its pending marker abandoned so the live PID does not block later logins', async () => {
+    await withRepos(async (a, b) => {
+        let pushedThenFailed = false;
+        const realWindow = claimApi.acquireFleetSwarmClaim;
+        // Simulate a push that reaches origin and then throws ETIMEDOUT on the client side while this PID stays alive.
+        const { fleetGitWindow } = await import('../src/fleet-lease');
+        expect(() => realWindow(a, swarmInput, {
+            gitWindow: (root, authority, budgetMs) => {
+                const git = fleetGitWindow(root, authority, budgetMs);
+                return (args: string[], stdin?: string) => {
+                    const out = git(args, stdin);
+                    if (args.includes('push') && !pushedThenFailed) {
+                        pushedThenFailed = true;
+                        throw Error('spawnSync git ETIMEDOUT');
+                    }
+                    return out;
+                };
+            },
+        })).toThrow('ETIMEDOUT');
+        expect(pushedThenFailed).toBe(true);
+
+        const abandoned = readFleetAccountClaim(a, swarmInput)!;
+        expect(abandoned).toMatchObject({ kind: 'swarm', phase: 'held', pid: process.pid });
+
+        // Foreign checkout still refuses.
+        expect(claimApi.fleetTradeClaimRefusal(b, abandoned, swarmInput, () => true)).toBe('fleet account claim held by swarm');
+        // Owning checkout accepts immediately even though process.pid is still alive (pooled host).
+        expect(claimApi.fleetTradeClaimRefusal(a, abandoned, swarmInput, () => true)).toBeUndefined();
+        const next = acquireFleetSwarmClaim(a, swarmInput, { ownerAlive: () => true });
+        expect(next.nonce).not.toBe(abandoned.nonce);
+        // Once armed for network, abortBeforeNetwork must refuse and active claim must stay held.
+        next.armNetwork();
+        expect(() => next.abortBeforeNetwork()).toThrow('already armed');
+        expect(claimApi.fleetTradeClaimRefusal(a, readFleetAccountClaim(a, swarmInput)!, swarmInput, () => true)).toBe('fleet account claim held by swarm');
+    });
+}, 30_000);
+
 test('a dead pre-login trade claim can be replaced only on its owning checkout', async () => {
     await withRepos(async (a, b) => {
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));

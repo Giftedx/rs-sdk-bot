@@ -1703,6 +1703,11 @@ export async function runEssenceGatherer(
     const walk = async (x: number, z: number, tol = 1): Promise<boolean> => {
         const p = pos();
         if (p && dist({ x, z }, p) <= tol) return true;
+        if (p && !isInMine() && (p.level !== 0 || dist({ x, z }, p) > 60)) {
+            const routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 120 });
+            if (routed.ok) return true;
+            if (/walk danger|no route|no path/i.test(routed.detail ?? '')) return false;
+        }
         const walker = await sessionWalker(s);
         const r = await walkPath(walker, [{ x, z, tol }], { stop: over, maxTicks: 120 });
         return r.ok;
@@ -1755,11 +1760,16 @@ export async function runEssenceGatherer(
                     receipt.items.filter(i => i.id === id).reduce((n, i) => n + i.count, 0) === stored + amount
                 );
             };
-            if (
-                !(await action('deposit-' + id, () => s.bot.depositItem(item, -1))).success ||
-                !(await waitUntil(s, () => over() || matched(), { timeoutTicks: 10 })) ||
-                !matched()
-            ) {
+            await action('deposit-' + id, () => s.bot.depositItem(item, -1)).catch(() => undefined);
+            let deposited = await waitUntil(s, () => over() || matched(), { timeoutTicks: 10 }) && matched();
+            if (!deposited && !over() && st()?.bank?.isOpen && count(id) === amount) {
+                const retryItem = inv().find(i => i.id === id);
+                if (retryItem) {
+                    await action('deposit-retry-' + id, () => s.bot.depositItem(retryItem, -1)).catch(() => undefined);
+                    deposited = await waitUntil(s, () => over() || matched(), { timeoutTicks: 10 }) && matched();
+                }
+            }
+            if (!deposited) {
                 throw new Error(`no essence progress: deposit debit/credit unobserved ${id}`);
             }
         }

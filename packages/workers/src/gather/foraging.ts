@@ -96,6 +96,7 @@ export async function runFlax(s: Session, o: FlaxOptions) {
             const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop, maxTicks: remaining });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
+                if (/walk danger|no path|no route/i.test(r.detail ?? '')) throw Error(r.detail!);
                 await waitTicks(s, 1);
             }
         }

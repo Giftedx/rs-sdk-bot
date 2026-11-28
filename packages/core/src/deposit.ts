@@ -69,7 +69,19 @@ export async function depositObserved(s: Session, item: { id: number; name: stri
         const after = s.bankObservation?.();
         return !!after && after.generation > generation && held() === 0 && stored(after.items) === bankBefore + amount;
     };
-    if (!await waitUntil(s, matched, { timeoutTicks: 10 }) || !matched())
+    let ok = await waitUntil(s, matched, { timeoutTicks: 10 }) && matched();
+    // A single dropped deposit click leaves bank open with pack and bank both unchanged: retry once while keeping
+    // the exact paired debit/credit predicate.
+    if (!ok && s.sdk.getState()?.bank?.isOpen && held() === amount && stored(s.bankObservation?.()?.items ?? []) === bankBefore) {
+        const retryTarget = s.sdk.getState()?.inventory.find(i => i.id === item.id && i.name === item.name);
+        if (retryTarget) {
+            try { const result = await s.bot.depositItem(retryTarget, -1); dispatchResult = result; sdkSuccess = result.success; }
+            catch (error) { dispatchResult = { error: String(error) }; }
+            trace('retry-reply');
+            ok = await waitUntil(s, matched, { timeoutTicks: 10 }) && matched();
+        }
+    }
+    if (!ok)
         throw Error(`no deposit progress: pack debit/bank credit unobserved ${item.id}`);
     const after = s.bankObservation!()!;
     console.log('DEPOSIT_RECEIPT ' + JSON.stringify({ account: s.name, itemId: item.id, name: item.name,

@@ -1399,19 +1399,36 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
 
     const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
+        const p0 = pos();
+        if (p0 && !local && !draynor && (p0.level !== 0 || Math.max(Math.abs(p0.worldX - x), Math.abs(p0.worldZ - z)) > 40)) {
+            const routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 120 });
+            walkTicks += s.tick() - a;
+            if (!routed.ok) {
+                const detail = routed.detail ?? 'unreachable';
+                console.log(`WALK fail ${detail} ticks=${routed.ticks}`);
+                if (/walk danger|no route|no path/i.test(detail)) throw Error(detail);
+                return false;
+            }
+            const p = pos();
+            const arrived = !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol + 2;
+            if (arrived) progressTick = s.tick();
+            return arrived;
+        }
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
             const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
+                if (/walk danger|no path|no route/i.test(r.detail ?? '')) throw Error(r.detail!);
                 await waitTicks(s, 1);
             }
         }
         walkTicks += s.tick() - a;
-        progressTick = s.tick();
         const p = pos();
-        return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
+        const arrived = !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
+        if (arrived) progressTick = s.tick();
+        return arrived;
     };
 
     const refusedWields = new Set<number>();
@@ -1437,7 +1454,9 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             }
         }
         if (draynor) await walk(3092, 3250, 1);
-        await walk(bankTile.x, bankTile.z, 2);
+        if (!(await walk(bankTile.x, bankTile.z, 2)) && !over()) {
+            throw new Error(`woodcutting bank route to ${bankTile.x},${bankTile.z} failed`);
+        }
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
@@ -1582,7 +1601,9 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                     }
                 }
                 if (draynor) await walk(3092, 3250, 1);
-                await walk(spot.x, spot.z, 4);
+                if (!(await walk(spot.x, spot.z, 4)) && !over()) {
+                    throw new Error(`woodcutting route to ${spot.x},${spot.z} failed`);
+                }
                 continue;
             }
 
