@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795828435052,
+ "at": 1795828867182,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -136,6 +136,55 @@
    "role": "pvp"
   },
   {
+   "account": "Billionaire",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Fatstack",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count); restore with .practice/gang-count/hold.ts restore",
+   "role": "pvp"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
+   "role": "pvp"
+  },
+  {
    "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -182,21 +231,17 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "billionaire",
   "bowbeforeme",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "swordinhand",
   "woodpecker"
  ],
  "builds": {
