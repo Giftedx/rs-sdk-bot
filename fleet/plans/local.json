@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864191973,
+ "at": 1795864224648,
  "jobs": [
   {
    "account": "Balls",
@@ -110,28 +110,6 @@
    ]
   },
   {
-   "account": "woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "army",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
    "account": "pullmybow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -149,28 +127,6 @@
    "role": "auto",
    "resources": [
     "chickens"
-   ]
-  },
-  {
-   "account": "yewgotwood",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "auto",
-   "resources": [
-    "draynor-normal-trees"
    ]
   },
   {
@@ -286,6 +242,43 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
+   "role": "army"
+  },
+  {
+   "account": "yewgotwood",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:yewgotwood",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:yewgotwood",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
+   "account": "woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   }
  ],

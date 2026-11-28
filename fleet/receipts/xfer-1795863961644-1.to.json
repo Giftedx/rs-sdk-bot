@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795863961644-1",
+ "account": "shaftmaker",
+ "partner": "knightrider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harpoon",
+ "requested": 1,
+ "claim": "bbbd5059-8a58-46bb-9131-f03fd3b0109e",
+ "count": 1,
+ "ok": true,
+ "at": 1795864222364,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795864221542
+ },
+ "logout": {
+  "attemptId": "1795864210240-0000000768-0000000001",
+  "at": 1795864222282,
+  "sha256": "722fd601d240256e57cd2419d4c759ce99fb54cf3a53e7585e961b41dd63b7c2"
+ },
+ "screen": true
+}

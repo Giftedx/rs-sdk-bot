@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795863961644-1",
  "account": "knightrider",
  "partner": "shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Harpoon",
  "requested": 1,
  "claim": "a3f10010-b1c9-4408-bd6d-06a6a0d7c6b3",
- "count": 0,
- "ok": false,
- "at": 1795864044822,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795864220694,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795864207548
+ },
+ "logout": {
+  "attemptId": "1795864044829-0000027156-0000000001",
+  "at": 1795864220686,
+  "sha256": "8e215aadaf6989a4c20be4ae3a446faa1d7c2b94385c21d890760532cc9d899b"
+ },
+ "screen": true
 }
