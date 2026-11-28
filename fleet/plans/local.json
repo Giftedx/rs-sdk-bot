@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795846025489,
+ "at": 1795846035535,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,44 +186,22 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "chicken"
+    "foraging",
+    "wool"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:supply_chain:1759",
+    "BATCH_UNITS": "338"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "goal:supply_chain:1759",
+   "role": "auto"
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -275,6 +253,24 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "Bigpackage",
