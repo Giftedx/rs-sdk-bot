@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795826727232,
+ "at": 1795826815851,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,22 @@
    "role": "pvp"
   },
   {
+   "account": "InTheSack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
    "account": "Nockitoff",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -205,7 +221,7 @@
    "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
     "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
@@ -215,25 +231,6 @@
    "repeat": false,
    "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
-  },
-  {
-   "account": "InTheSack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "helper",
-   "resources": [
-    "essence-mine"
-   ]
   },
   {
    "account": "MeatNTwoVeg",
