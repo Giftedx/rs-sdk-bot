@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795856586478-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballspinner",
+  "to": "OreElse",
+  "item": "Chisel",
+  "count": 1,
+  "itemId": 1755,
+  "extra": [
+    {
+      "item": "Uncut emerald",
+      "count": 15,
+      "itemId": 1621
+    }
+  ],
+  "start": 1795856586478,
+  "end": 1795857486478,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

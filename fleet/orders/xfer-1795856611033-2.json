@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795856611033-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Hocuspokeus",
+  "item": "Air talisman",
+  "count": 1,
+  "itemId": 1438,
+  "start": 1795856611033,
+  "end": 1795857511033,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856548295,
+ "at": 1795856657269,
  "jobs": [
   {
    "account": "Balls",
@@ -46,38 +46,17 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "cage",
-    "cage"
-   ],
-   "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "army",
-   "resources": [
-    "catherby-lobsters"
-   ]
-  },
-  {
-   "account": "Bigchopper",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=13 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=13 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:dwarf_weed"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
+   "goal": "goal:supply_chain:267",
    "role": "army"
   },
   {
@@ -116,22 +95,6 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -140,7 +103,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "1999"
    },
    "enabled": true,
    "repeat": false,
@@ -202,39 +165,33 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "cut-sapphire"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
+   "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 PRODUCT_TARGET=1 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:139 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:3doseprayerrestore"
+    "scripts/aio-market.ts ITEM_ID=1603 ITEMS=Ruby MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=ruby_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1641 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:139",
+   "goal": "campaign:haggis:item:1641",
+   "role": "auto"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-2357-27-o0-p3459 ITEM_ID=2357 QUANTITY=27 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=27 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=27 STALL_TICKS=280 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1639",
    "role": "army"
   },
   {
@@ -242,24 +199,24 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "arheinstore",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
+    "ITEM_ID": "2347",
+    "ITEMS": "Hammer",
     "MAX_ITEMS": "1",
+    "STOCK_TARGET": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "100",
     "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "1"
+    "FILL_ORDER": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -288,27 +245,7 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "prayer",
-    "bury"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "TRAIN_SKILL": "Prayer",
-    "TARGET_LEVEL": "70",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "42",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
-  },
-  {
-   "account": "Ballbag",
+   "account": "Masterbaiter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -318,19 +255,41 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "1",
+    "MAX_ITEMS": "120",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "120"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
-   "role": "helper"
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "iron"
+   ],
+   "env": {
+    "BAR_TYPE": "iron",
+    "MAX_MAKE": "2",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "2",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "Nockitoff",
@@ -351,55 +310,6 @@
    "resources": [
     "chickens"
    ]
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "CAP": "1000",
-    "TARGET_COUNT": "11",
-    "PRODUCT_TARGET": "13",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:245",
-   "role": "army"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:556",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:556",
-    "BATCH_UNITS": "324"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:556",
-   "role": "army"
   }
  ],
  "army": [
@@ -413,14 +323,16 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
-  "fingerblastr",
+  "fatstack",
+  "hocuspokeus",
+  "kiltlifter",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",

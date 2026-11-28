@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795856586478-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BackdoorMan",
+  "to": "Knightstick",
+  "item": "Air rune",
+  "count": 3,
+  "itemId": 556,
+  "start": 1795856586478,
+  "end": 1795857486478,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

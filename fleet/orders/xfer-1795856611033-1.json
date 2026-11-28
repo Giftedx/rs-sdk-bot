@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795856611033-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Kiltlifter",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795856611033,
+  "end": 1795857511033,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

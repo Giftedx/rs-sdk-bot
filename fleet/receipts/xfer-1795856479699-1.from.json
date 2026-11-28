@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856479699-1",
+ "account": "Fingerblastr",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harpoon",
+ "requested": 1,
+ "claim": "6ea1de94-d83e-4847-a065-0f113a066178",
+ "count": 1,
+ "ok": true,
+ "at": 1795856632732,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795856613627
+ },
+ "logout": {
+  "attemptId": "1795856604552-0000020172-0000000001",
+  "at": 1795856632722,
+  "sha256": "77b67254044ec8e73ae0da6f3d9669893704d4cbec86ba9e508ce8339b36c9f0"
+ },
+ "screen": true
+}

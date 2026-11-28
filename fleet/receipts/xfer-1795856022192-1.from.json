@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795856022192-1",
  "account": "PickpockDick",
  "partner": "Abracadickra",
@@ -10,15 +10,37 @@
  "item": "Gold bar",
  "requested": 12,
  "claim": "81148001-39d1-487e-90b6-7f44df593b60",
- "count": 0,
- "ok": false,
- "at": 1795856357710,
- "detail": "trade claimed",
+ "count": 12,
+ "ok": true,
+ "at": 1795856599547,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Emerald",
    "requested": 15,
-   "count": 0
+   "count": 15,
+   "inventory": {
+    "before": 15,
+    "after": 0
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795856530788
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 12,
+  "after": 0
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795856529991
+ },
+ "logout": {
+  "attemptId": "1795856357717-0000024108-0000000001",
+  "at": 1795856599538,
+  "sha256": "b45d2005a3b30cf7751a15682e7ee8f553e62a939d517f5ab6cb2add5db454ce"
+ },
+ "screen": true
 }
