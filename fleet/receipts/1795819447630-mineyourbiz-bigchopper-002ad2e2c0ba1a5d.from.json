@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795819447630-mineyourbiz-bigchopper-002ad2e2c0ba1a5d",
+ "account": "MineYourBiz",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 30,
+ "claim": "e460ca05-20f9-4eff-b9ea-7a587949bae2",
+ "count": 30,
+ "ok": true,
+ "at": 1795827944377,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795827906835
+ },
+ "logout": {
+  "attemptId": "1795827901236-0000024352-0000000001",
+  "at": 1795827944367,
+  "sha256": "665a6f06562916bc84182a7843fb3f5c0dbd7284eb6c320caba2d5b8a0ec4311"
+ },
+ "screen": true
+}

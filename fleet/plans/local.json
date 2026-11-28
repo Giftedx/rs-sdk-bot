@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795827856458,
+ "at": 1795827948362,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,7 +202,7 @@
    ]
   },
   {
-   "account": "Nockitoff",
+   "account": "Pocketrocket",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -213,26 +213,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "auto",
+   "role": "army",
    "resources": [
     "draynor-willows"
    ]
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
@@ -250,6 +234,28 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "iron"
+   ],
+   "env": {
+    "BAR_TYPE": "iron",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "22",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
    "role": "auto"
   }
  ],
@@ -273,7 +279,6 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
