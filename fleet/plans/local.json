@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842638068,
+ "at": 1795842647732,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -294,219 +294,6 @@
    "repeat": false,
    "goal": "goal:quest_board:vampire",
    "role": "auto"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "1311",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1311",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "21",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
-    "STALL_TICKS": "224"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "helper"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "2",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "helper"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
   }
  ],
  "army": [
@@ -522,8 +309,13 @@
   "UnderMyKilt",
   "bowbeforeme",
   "fingerblastr",
+  "fingersmith",
+  "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "pocketpython",
+  "pocketrocket",
+  "quickhandjob",
   "sausagefest"
  ],
  "builds": {
