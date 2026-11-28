@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795830723937,
+ "at": 1795830885806,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -220,6 +220,23 @@
    "role": "auto",
    "resources": [
     "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
    ]
   },
   {
