@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870178091,
+ "at": 1795870249711,
  "jobs": [
   {
    "account": "Balls",
@@ -49,7 +49,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "archeryshop2",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
@@ -83,6 +83,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:91",
    "role": "army"
+  },
+  {
+   "account": "wellhung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "helper"
   },
   {
    "account": "hocuspokeus",
@@ -123,6 +138,27 @@
    ]
   },
   {
+   "account": "woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "cage",
+    "cage"
+   ],
+   "env": {
+    "CAP": "3000",
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "catherby-lobsters"
+   ]
+  },
+  {
    "account": "meatntwoveg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -139,21 +175,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "wellhung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "helper"
   }
  ],
  "army": [
@@ -188,7 +209,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
