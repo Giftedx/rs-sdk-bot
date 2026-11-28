@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795826815851,
+ "at": 1795826905196,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,20 +185,22 @@
    "role": "pvp"
   },
   {
-   "account": "InTheSack",
-   "script": "scripts/aio-skiller.ts",
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
+   "role": "auto"
   },
   {
    "account": "Nockitoff",
@@ -218,6 +220,21 @@
    ]
   },
   {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
+  },
+  {
    "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
@@ -233,22 +250,19 @@
    "role": "helper"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-logistics.ts",
+   "account": "TackleBox",
+   "script": "scripts/chain.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1719 -- thieving knights-stable"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "role": "auto"
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
   }
  ],
  "army": [
