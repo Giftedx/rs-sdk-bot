@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795829417758,
+ "at": 1795830048610,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,22 +185,6 @@
    "role": "pvp"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -217,6 +201,22 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   },
   {
    "account": "BoneToPick",
