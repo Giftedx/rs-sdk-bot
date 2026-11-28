@@ -12,6 +12,7 @@ import {
     accountFrozenValue,
     canScheduleTransferOrder,
     compareRecoveryPriority,
+    isCooldownActive,
     isProtectedAccountName,
     marketCooldownKey,
     type AccountPlan,
@@ -45,7 +46,7 @@ import {
     type RateEstimator,
     type RateStoreLike,
 } from './planner';
-import { loadItemsMap } from './preflight';
+import { availableStockAfterReserves, loadItemsMap } from './preflight';
 
 export interface FleetSchedulerInput {
     readonly world: WorldSnapshot;
@@ -1086,7 +1087,54 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                               idleReason: 'transfer_safety_gate_unmet',
                           };
                 } else {
-                    for (const ord of stagedOrders) {
+                    for (let oi = 0; oi < stagedOrders.length; oi++) {
+                        let ord = stagedOrders[oi]!;
+                        const donorLower = ord.from.toLowerCase();
+                        const donor = accountsByLower.get(donorLower);
+                        // Piggyback other active holder-targeted item demands for the same (donor, recipient) pair
+                        // onto this trade (up to MAX_ORDER_LINES) so kit and consumable top-ups finish in one login pair.
+                        if (donor && ord.items.length < MAX_ORDER_LINES) {
+                            const itemsMap = loadItemsMap();
+                            const recipLower = acct.name.toLowerCase();
+                            const donorDemands = donorDemandItemIds.get(donorLower) ?? new Set<number>();
+                            const existingIds = new Set(ord.items.map((l) => l.itemId));
+                            const extraLines: { itemId: number; itemName?: string; count: number }[] = [];
+                            for (const d of getAvailableDemands()) {
+                                if (ord.items.length + extraLines.length >= MAX_ORDER_LINES) break;
+                                if (!d.active || d.remaining <= 0 || d.target.kind !== 'item') continue;
+                                if (!d.target.holder || d.target.holder.toLowerCase() !== recipLower) continue;
+                                const itemId = d.target.itemId;
+                                if (itemId === 995 || existingIds.has(itemId) || donorDemands.has(itemId)) continue;
+                                if (itemsMap.get(itemId)?.tradeable === false) continue;
+                                const recentAt = recentReceivedAt?.get(`${donorLower}:${itemId}`);
+                                if (recentAt !== undefined && now - recentAt < antiPingPongWindowMs) continue;
+                                const cooldownKeys = [
+                                    marketCooldownKey(itemId, 'hub_banker'),
+                                    marketCooldownKey(itemId, `hub:${ord.hub}`),
+                                    marketCooldownKey(itemId, `hub:${ord.hub}:${donorLower}`),
+                                ];
+                                if (cooldownKeys.some((k) => isCooldownActive(acct.cooldowns, k, now) || isCooldownActive(world.marketCooldowns, k, now))) continue;
+                                const stock = availableStockAfterReserves(donor, world, itemId, { includeBank: true, requireTrustedBank: true });
+                                const unworn = Math.max(0, stock.owned - (donor.equipment[itemId] ?? 0));
+                                const avail = Math.min(stock.available, unworn);
+                                const take = Math.min(Math.ceil(d.remaining), Math.floor(avail));
+                                if (take < 1) continue;
+                                existingIds.add(itemId);
+                                extraLines.push({
+                                    itemId,
+                                    ...(d.target.itemName ? { itemName: d.target.itemName } : {}),
+                                    count: take,
+                                });
+                            }
+                            if (extraLines.length > 0) {
+                                ord = {
+                                    ...ord,
+                                    items: [...ord.items, ...extraLines],
+                                    reason: `${ord.reason}; consolidated ${extraLines.map((l) => `${l.count}x ${l.itemName ?? l.itemId}`).join(', ')}`,
+                                };
+                                stagedOrders[oi] = ord;
+                            }
+                        }
                         transferOrders.push(ord);
                         assignedIdleDonors.add(ord.from.toLowerCase());
                         activeTransferParties.add(ord.from.toLowerCase());

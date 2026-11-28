@@ -428,12 +428,13 @@ describe('tools/specialist-launch CLI', () => {
         writeHolderStagingInputs(tempRoot, 'YewFirst', 'Dipstick', fx.requirements);
         writeJsonRel(tempRoot, 'swarm.json', { maxBots: 17, minFreeGB: 4, jobs: [] });
 
+        const need2 = 4 + 2 * START_BUDGET_GB;
         expect(() =>
             runSpecialistLaunch(
                 ['tipmyshaft', '--holder', 'YewFirst', '--skip-hiscores', '--launch', '--run-id', 'launch-tip-2'],
-                { root: tempRoot, now: NOW, log: () => {}, freeGB: 5.5 },
+                { root: tempRoot, now: NOW, log: () => {}, freeGB: need2 - 0.1 },
             ),
-        ).toThrow(/2 sessions need 6\.0 GiB/);
+        ).toThrow(new RegExp(`2 sessions need ${need2.toFixed(1).replace('.', '\\.')} GiB`));
         expect(existsSync(join(tempRoot, specialistTokenPath('tipmyshaft')))).toBe(false);
 
         const res = runSpecialistLaunch(
@@ -642,9 +643,13 @@ describe('specialist launch companions', () => {
     });
 
     test('a launch needs the memory floor plus the swarm start budget for every session', () => {
-        expect(START_BUDGET_GB).toBe(1);
-        expect(() => assertLaunchMemory(5, 9.0, 4)).not.toThrow();
-        expect(() => assertLaunchMemory(5, 8.9, 4)).toThrow('host has 8.9 GiB free; 5 sessions need 9.0 GiB (floor 4 + 1 each), so the first-login window would expire');
-        expect(() => assertLaunchMemory(1, 5.5, 5)).toThrow(/need 6\.0 GiB \(floor 5/);
+        expect(START_BUDGET_GB).toBe(0.25);
+        const need5 = 4 + 5 * START_BUDGET_GB;
+        const need1 = 5 + START_BUDGET_GB;
+        expect(() => assertLaunchMemory(5, need5, 4)).not.toThrow();
+        expect(() => assertLaunchMemory(5, need5 - 0.1, 4)).toThrow(
+            `host has ${(need5 - 0.1).toFixed(1)} GiB free; 5 sessions need ${need5.toFixed(1)} GiB (floor 4 + ${START_BUDGET_GB} each), so the first-login window would expire`,
+        );
+        expect(() => assertLaunchMemory(1, need1 - 0.1, 5)).toThrow(new RegExp(`need ${need1.toFixed(1).replace('.', '\\.')} GiB \\(floor 5`));
     });
 });

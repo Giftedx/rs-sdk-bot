@@ -103,3 +103,72 @@ export async function withdrawStageKit(s: Session, kit: readonly StageKitItem[],
     const left = stageKitShortfall(kit, s.sdk.getInventory());
     if (left.length) throw Error(`stage kit: pack still short ${left.map(k => `${k.itemId}:${k.count}`).join(',')}`);
 }
+
+export const PVP_COMBAT_STAGE_KIT: readonly StageKitItem[] = [
+    { itemId: 1333, count: 1 }, // Rune scimitar
+    { itemId: 1231, count: 1 }, // Dragon dagger(p)
+    { itemId: 861, count: 1 },  // Magic shortbow
+    { itemId: 2503, count: 1 }, // Black d'hide body
+    { itemId: 2497, count: 1 }, // Black d'hide chaps
+    { itemId: 2491, count: 1 }, // Black d'hide vambraces
+    { itemId: 1712, count: 1 }, // Amulet of glory(4)
+    { itemId: 2550, count: 1 }, // Ring of recoil
+    { itemId: 2434, count: 2 }, // Prayer potion(4)
+    { itemId: 2436, count: 1 }, // Super attack(4)
+    { itemId: 2440, count: 1 }, // Super strength(4)
+    { itemId: 2442, count: 1 }, // Super defence(4)
+    { itemId: 2448, count: 1 }, // Superantipoison(4)
+    { itemId: 892, count: 100 }, // Rune arrows (stackable: 1 slot)
+    { itemId: 385, count: 9 },   // Sharks (9 slots -> total 28 pack slots)
+    { itemId: 3144, count: 4 },  // Cooked karambwans (4 slots)
+];
+
+export interface PvpStageReadiness {
+    readonly ready: boolean;
+    readonly missingItems: readonly StageKitItem[];
+    readonly needsPrayerRestore: boolean;
+    readonly prayerCurrent: number;
+    readonly prayerBase: number;
+}
+
+export function pvpStageReadiness(
+    ownedCounts: Readonly<Record<number, number>>,
+    prayerCurrent: number,
+    prayerBase: number,
+    kit: readonly StageKitItem[] = PVP_COMBAT_STAGE_KIT,
+): PvpStageReadiness {
+    const missingItems: StageKitItem[] = [];
+    for (const item of kit) {
+        const have = ownedCounts[item.itemId] ?? 0;
+        if (have < item.count) missingItems.push({ itemId: item.itemId, count: item.count - have });
+    }
+    const needsPrayerRestore = prayerBase > 1 && prayerCurrent < prayerBase;
+    return {
+        ready: missingItems.length === 0 && !needsPrayerRestore,
+        missingItems,
+        needsPrayerRestore,
+        prayerCurrent,
+        prayerBase,
+    };
+}
+
+// Withdraws a staged PvP kit from the nearest bank and restores drained prayer at the nearest safe altar.
+export async function stagePvpKitAndRestorePrayer(
+    s: Session,
+    kit: readonly StageKitItem[] = PVP_COMBAT_STAGE_KIT,
+    keep: ReadonlyMap<number, number> = new Map(),
+): Promise<{ ok: boolean; prayerRestored: boolean; detail: string }> {
+    await withdrawStageKit(s, kit, keep);
+    const prayer = s.sdk.getSkill('Prayer');
+    const current = prayer?.level ?? 0;
+    const base = prayer?.baseLevel ?? 1;
+    if (base > 1 && current < base) {
+        const { nearestAltar, prayAtAltar } = await import('./recover');
+        const pos = s.sdk.getState()?.player;
+        const altar = nearestAltar({ x: pos?.worldX ?? 3094, z: pos?.worldZ ?? 3491, level: pos?.level ?? 0 });
+        const prayed = await prayAtAltar(s, altar);
+        if (!prayed.ok) return { ok: false, prayerRestored: false, detail: `stage prayer restore failed: ${prayed.detail}` };
+        return { ok: true, prayerRestored: true, detail: `staged kit and ${prayed.detail}` };
+    }
+    return { ok: true, prayerRestored: false, detail: `staged kit (prayer full ${current}/${base})` };
+}

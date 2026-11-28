@@ -552,13 +552,16 @@ export function resolveAcquireItem(
                 const runTicksFor = (qty: number) => travelTicks + Math.ceil(qty / 10) + restockWaitFor(qty) + 15;
                 // One run must fill the order. A partial order takes what the shop restocks inside the cap; a full
                 // order goes to the next source (the Ardougne gem stall restocks its 2 sapphires each 15000 ticks).
+                const minPartialFloor = req.allowPartial === true && req.quantity >= 20 && (itemMeta?.cost ?? 0) < 5000
+                    ? Math.min(req.quantity, Math.max(5, Math.min(25, Math.ceil(req.quantity * 0.1))))
+                    : 1;
                 let shopQty = req.quantity;
                 if (runTicksFor(shopQty) > SHOP_BUY_CAP_TICKS) {
                     const cycles = Math.floor((SHOP_BUY_CAP_TICKS - travelTicks - 15 - Math.ceil(shopQty / 10)) / restockTicks) + 1;
                     // The first shelf, then one full shelf for each restock inside the cap.
                     const fits = cycles < 1 ? 0 : Math.max(0, Math.min(shopQty, firstShelf + (cycles - 1) * stockPerCycle));
-                    if (req.allowPartial !== true || fits < 1) {
-                        if (!skipDiag) shopRejectReason = `shop ${shop.shop} restock wait ${restockWaitFor(shopQty)} + travel ${travelTicks} > cap ${SHOP_BUY_CAP_TICKS} ticks`;
+                    if (req.allowPartial !== true || fits < minPartialFloor) {
+                        if (!skipDiag) shopRejectReason = `shop ${shop.shop} restock wait ${restockWaitFor(shopQty)} + travel ${travelTicks} > cap ${SHOP_BUY_CAP_TICKS} ticks (fits ${fits} < min batch ${minPartialFloor})`;
                         continue;
                     }
                     shopQty = fits;
@@ -610,7 +613,10 @@ export function resolveAcquireItem(
             if (ctx.marketQuotes) {
                 const quote = ctx.marketQuotes[req.itemId];
                 const baseCost = itemMeta?.cost ?? 1;
-                const minSell = req.allowPartial === true ? 1 : req.quantity;
+                const minPartialGe = req.allowPartial === true && req.quantity >= 20 && baseCost < 5000
+                    ? Math.min(req.quantity, Math.max(5, Math.min(25, Math.ceil(req.quantity * 0.1))))
+                    : 1;
+                const minSell = req.allowPartial === true ? minPartialGe : req.quantity;
                 if (isValidGeAskQuote(quote, baseCost, minSell)) {
                     unitPrice = Math.ceil(quote.ask);
                     if (req.allowPartial === true) {
@@ -752,7 +758,13 @@ export function resolveAcquireItem(
                 const transferQty = req.allowPartial === true
                     ? Math.min(req.quantity, Math.floor(donorSurplus))
                     : req.quantity;
-                if (transferQty <= 0 || (!req.allowPartial && donorSurplus < req.quantity)) {
+                const minPartialTransfer = req.allowPartial === true
+                    && req.itemId !== COINS_ITEM_ID
+                    && req.quantity >= 20
+                    && (itemMeta?.cost ?? 0) < 5000
+                    ? Math.min(req.quantity, Math.max(5, Math.min(25, Math.ceil(req.quantity * 0.1))))
+                    : 1;
+                if (transferQty < minPartialTransfer || (!req.allowPartial && donorSurplus < req.quantity)) {
                     continue;
                 }
                 const hub = nearestHub(acct.pos, donor.pos ? nearestHub(donor.pos) : 'varrock_west');
