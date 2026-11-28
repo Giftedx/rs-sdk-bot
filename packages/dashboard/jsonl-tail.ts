@@ -1,6 +1,7 @@
 // The last n lines of a JSON-lines file, read from its end in chunks: a 10 MB log costs the bytes of its tail, not its size.
 // tailLines is the pure part; scanJsonlTail streams lines without holding a full-file buffer or N-element array.
 import { closeSync, fstatSync, openSync, readSync, statSync } from 'node:fs';
+import { StringDecoder } from 'node:string_decoder';
 
 const CHUNK = 256 * 1024;
 
@@ -33,13 +34,14 @@ export function scanTailLines(file: string, n: number, visit: (line: string) => 
         if (size <= 0) return;
         let pos = tailStartOffset(fd, size, n);
         const buf = Buffer.allocUnsafe(Math.min(CHUNK, size - pos));
+        const decoder = new StringDecoder('utf8');
         let carry = '';
         while (pos < size) {
             const len = Math.min(buf.length, size - pos);
             const got = readSync(fd, buf, 0, len, pos);
             if (got <= 0) break;
             pos += got;
-            const text = carry + buf.toString('utf8', 0, got);
+            const text = carry + decoder.write(got === buf.length ? buf : buf.subarray(0, got));
             let start = 0;
             for (let nl = text.indexOf('\n'); nl !== -1; nl = text.indexOf('\n', start)) {
                 if (nl > start) {
@@ -50,6 +52,7 @@ export function scanTailLines(file: string, n: number, visit: (line: string) => 
             }
             carry = text.slice(start);
         }
+        carry += decoder.end();
         const last = carry.endsWith('\r') ? carry.slice(0, -1) : carry;
         if (last) visit(last);
     } catch { /* unreadable */ }

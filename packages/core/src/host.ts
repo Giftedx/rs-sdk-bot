@@ -25,14 +25,13 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { inspect } from 'node:util';
-import { openBot, settle } from './bot';
+import { bindHostedScope, currentHostedScope, openBot, settle } from './bot';
 import { parseStep, runChainSteps, type Step } from './chain-step';
 import type { Session } from './inprocess';
 import { hasStopFile } from './practice-paths';
 import { noteStatusLine } from './status';
 import { shareLocIndex } from './loc-index-share';
 import { workerExecution } from './worker-execution';
-import { bindHostedScope, currentHostedScope } from './bot';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
