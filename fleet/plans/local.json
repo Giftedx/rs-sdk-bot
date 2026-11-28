@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795827970136,
+ "at": 1795828056797,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,13 +186,20 @@
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=7 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "smithing",
+    "smelt",
+    "1500",
+    "iron"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BAR_TYPE": "iron",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "7",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
@@ -217,7 +224,7 @@
    ]
   },
   {
-   "account": "Pocketrocket",
+   "account": "Pullmybow",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -228,7 +235,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "army",
+   "role": "auto",
    "resources": [
     "draynor-willows"
    ]
@@ -272,6 +279,7 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
