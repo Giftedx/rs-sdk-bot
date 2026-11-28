@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795862872498-1",
+ "account": "OreElse",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "f0ac68c5-3a8f-4cdf-80ef-a0c64d13463c",
+ "count": 0,
+ "ok": false,
+ "at": 1795863299862,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron bar",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}
