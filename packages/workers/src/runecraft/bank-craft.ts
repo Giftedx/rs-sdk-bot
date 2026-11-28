@@ -22,8 +22,10 @@ import {
     ZANARIS_BANK,
     type RuneAltar,
     chooseRuneAltar,
+    entranaContraband,
     inZanarisCosmic,
     insideRuneAltar,
+    nearestBankForAltar,
     ruinTarget,
     runeAltarStaging,
 } from './altars';
@@ -243,8 +245,9 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
     let ledger: RuneBankLedger | undefined, consumed = 0, crafted = 0, trips = 0, level0 = 0, xp0 = 0;
     const tripResults: { altar: string; level: number; consumed: number; crafted: number; xp: number }[] = [];
     let chosen: RuneAltar | undefined;
-    const activeAltars = forced === 'cosmic' ? [COSMIC_ALTAR] : RUNE_ALTARS;
-    const bankSpot = forced === 'cosmic' ? ZANARIS_BANK : BANK;
+    const forcedAltar = forced !== undefined ? ALL_ALTARS_BY_NAME.get(forced) : undefined;
+    const activeAltars = forcedAltar && !RUNE_ALTARS.includes(forcedAltar) ? [forcedAltar] : RUNE_ALTARS;
+    const bankSpot = () => nearestBankForAltar(forced ?? chosen?.name ?? 'air');
     const runeCount = () => {
         let n = 0;
         for (let i = 0; i < activeAltars.length; i++) n += count(activeAltars[i]!.rune);
@@ -514,7 +517,7 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
         while (true) {
             check();
             stage = 'bank';
-            await travel(bankSpot);
+            await travel(bankSpot());
             await open();
             ledger ??= {
                 essence0: held0.essence + bankCount(ESSENCE),
@@ -549,6 +552,10 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
             if (n < 1) throw Error('next acquisition: free pack slots for rune essence');
             await withdraw(ESSENCE, n);
             await close();
+            if (chosen.name === 'law') {
+                const banned = entranaContraband(inv(), state()?.equipment ?? []);
+                if (banned.length > 0) throw Error(`law altar Entrana contraband held or worn: ${banned.map(i => i.name).join(', ')}`);
+            }
             stage = 'altar';
             await travel(runeAltarStaging(chosen));
             await enter(chosen);

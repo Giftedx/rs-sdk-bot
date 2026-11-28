@@ -60,11 +60,14 @@ export function validateEntranaDungeonEntry(input: {
     prayerPoints: number;
     prayerPotCount: number;
     windBolt: boolean;
+    hitpointsBase?: number;
+    defenceBase?: number;
 }): string | null {
     if (input.foodCount < ZANARIS_MIN_FOOD) {
         return `Lost City entry unsafe before cave monk: need >= ${ZANARIS_MIN_FOOD} sharks/lobsters/swordfish, held ${input.foodCount}`;
     }
-    if (!input.windBolt && input.prayerBase >= ZANARIS_PRAYER_MIN
+    const sturdyMelee = (input.hitpointsBase ?? 0) >= 90 && (input.defenceBase ?? 0) >= 90 && input.foodCount >= 10;
+    if (!input.windBolt && !sturdyMelee && input.prayerBase >= ZANARIS_PRAYER_MIN
         && input.prayerPoints < ZANARIS_PRAYER_MIN && input.prayerPotCount < 1) {
         return `Lost City entry unsafe before cave monk: need Prayer points >= ${ZANARIS_PRAYER_MIN} or >= 1 Prayer potion before 95% drain (Prayer ${input.prayerPoints}/${input.prayerBase})`;
     }
@@ -103,8 +106,8 @@ try {
     const setPrayer = async (i: number, on: boolean) => {
         if (prayOn(i) === on || (on && points() <= 0)) return;
         const required = i === PFM ? 43 : i === ULT_STR ? 31 : 34;
-        if (windBolt && on && (q.s.sdk.getSkill('Prayer')?.baseLevel ?? 0) < required) return;
-        await q.step(`prayer ${i} ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }), () => prayOn(i) === on, 3, 3);
+        if (on && (q.s.sdk.getSkill('Prayer')?.baseLevel ?? 0) < required) return;
+        await q.step(`prayer ${i} ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }), () => prayOn(i) === on || (on && points() <= 0), 3, 3);
     };
     const keepPrayer = async () => {
         if (points() > 6) return;
@@ -180,6 +183,8 @@ try {
                 prayerPoints: points(),
                 prayerPotCount: ITEM.prayerPot.reduce((sum, id) => sum + q.cnt(id), 0),
                 windBolt: !!windBolt,
+                hitpointsBase: q.s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0,
+                defenceBase: q.s.sdk.getSkill('Defence')?.baseLevel ?? 0,
             });
             if (unsafe) await q.fail(unsafe);
             await q.talk('cave monk', /^cave monk$/i, [/well that is a risk i will have to take/i], () => z() > 9000, CAVE_MONK, 60, true);

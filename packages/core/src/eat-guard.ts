@@ -37,7 +37,7 @@
 
 import { basename } from 'node:path';
 import { attackTarget, IDLE_TICKS, NEUTRAL } from './prayer-guard';
-import { allFoodIds, defaultEatAt, registerSessionEater, selectQuestFood } from './sustain';
+import { allFoodIds, defaultEatAt, registerSessionEater, selectComboFood, selectQuestFood } from './sustain';
 
 export interface EatGuardSession {
     sdk: { getState(): any };
@@ -76,6 +76,10 @@ export const noGuardScript = (script: string): boolean => /quest|microbot/i.test
 export interface EatGuardOptions {
     // Item ids the guard can eat. Default: PLAIN_FOOD.
     food?: readonly number[];
+    // Optional zero-delay combo foods (e.g. cooked karambwan 3144) stacked in the same tick at or below comboAt.
+    comboFood?: readonly number[];
+    // Combo-eat threshold (default: urgentAt when comboFood is configured).
+    comboAt?: Level;
     // Eat at this Hitpoints level or below. Default: sustain.ts defaultEatAt.
     eatAt?: Level;
     // At this level or below, an open window or a pending interaction does not stop the eat. Default: half of the
@@ -117,7 +121,7 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
     let pending: Pending = { kind: 'none' };
     let lastHp: number | undefined, hpFirst: number | undefined, hpMin: number | undefined;
     let lastX = NaN, lastZ = NaN, lastLevel = NaN, hpIdx = -1;
-    let sent: { id: number; before: number; hp: number; at: number } | null = null;
+        let sent: { id: number; before: number; comboId?: number; comboBefore?: number; hp: number; at: number } | null = null;
     let lateEat: { action: Action; id: number } | null = null;
 
     const count = (st: any, id: number): number => {
@@ -200,26 +204,46 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         lastHp = hp; hpFirst ??= hp; hpMin = Math.min(hpMin ?? hp, hp);
 
         if (sent) {
-            if (count(st, sent.id) < sent.before) { stats.eats++; stats.healed += Math.max(0, hp - sent.hp); sent = null; }
-            else if (now - sent.at >= EAT_TICKS) { stats.refused++; sent = null; }
+            const primaryDone = count(st, sent.id) < sent.before;
+            const comboDone = sent.comboId === undefined || count(st, sent.comboId) < sent.comboBefore!;
+            if (primaryDone && comboDone) { stats.eats += sent.comboId !== undefined ? 2 : 1; stats.healed += Math.max(0, hp - sent.hp); sent = null; }
+            else if (now - sent.at >= EAT_TICKS) {
+                if (primaryDone) { stats.eats++; stats.healed += Math.max(0, hp - sent.hp); stats.refused++; }
+                else stats.refused++;
+                sent = null;
+            }
         }
         if (stats.yielded || holders > 0 || sent || now - ateAt < EAT_TICKS) return;
 
         const eatLevel = level(o.eatAt ?? defaultEatAt, max);
         if (hp > eatLevel) return;
-        const urgent = hp <= (o.urgentAt === undefined ? Math.floor(eatLevel / 2) : level(o.urgentAt, max));
+        const urgentLevel = o.urgentAt === undefined ? Math.floor(eatLevel / 2) : level(o.urgentAt, max);
+        const urgent = hp <= urgentLevel;
         if (fightOnly && !fought) return;
         if (now - damageAt > calm) return;
-        const choice = selectQuestFood(st, { food, eatAt: eatLevel, reserved: o.reserved?.() });
+        const reserved = o.reserved?.();
+        const comboLevel = o.comboAt === undefined ? urgentLevel : level(o.comboAt, max);
+        const comboChoice = o.comboFood?.length && hp <= comboLevel
+            ? selectComboFood(st, { food, comboFood: o.comboFood, eatAt: eatLevel, comboAt: comboLevel, reserved })
+            : null;
+        const choice = comboChoice?.primary ?? selectQuestFood(st, { food, eatAt: eatLevel, reserved });
         if (!choice || !/^eat$/i.test(choice.item.optionsWithIndex?.find(v => v.opIndex === choice.opIndex)?.text ?? '')) return;
+        const validCombo = comboChoice && /^eat$/i.test(comboChoice.combo.item.optionsWithIndex?.find(v => v.opIndex === comboChoice.combo.opIndex)?.text ?? '')
+            ? comboChoice.combo : null;
         const windows = !!(st.modalOpen || st.dialog?.isOpen || st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen);
         if (!urgent && (windows || pending.kind === 'other')) { stats.holds++; return; }
         if (pending.kind === 'attack' && !attackTarget(pending.action, st)) pending = { kind: 'none' };
         const attack = pending.kind === 'attack' ? pending.action : null;
-        if (inputs + (attack ? 2 : 1) > MAX_INPUTS) { stats.waits++; return; }
+        const useCombo = !!validCombo && inputs + (attack ? 3 : 2) <= MAX_INPUTS;
+        if (inputs + (useCombo ? 2 : 1) + (attack ? 1 : 0) > MAX_INPUTS) { stats.waits++; return; }
 
         send({ type: 'useInventoryItem', slot: choice.item.slot, optionIndex: choice.opIndex, reason: 'SDK' });
-        sent = { id: choice.item.id, before: count(st, choice.item.id), hp, at: now };
+        if (useCombo) send({ type: 'useInventoryItem', slot: validCombo!.item.slot, optionIndex: validCombo!.opIndex, reason: 'SDK' });
+        sent = {
+            id: choice.item.id, before: count(st, choice.item.id),
+            ...(useCombo ? { comboId: validCombo!.item.id, comboBefore: count(st, validCombo!.item.id) } : {}),
+            hp, at: now,
+        };
         ateAt = now;
         if (urgent) stats.urgent++;
         // The eat cleared every interaction: one that is not an attack is the script's to send again.

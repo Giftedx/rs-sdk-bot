@@ -856,13 +856,14 @@ export async function runProgressiveProductionCli(
 
 // ---- Tanner (microbot-c-tanner.ts) ----
 
+// Buttons verified against vendor/rs-sdk/server/content/scripts/areas/area_alkharid/scripts/tanner.rs2:67-131.
 export const tanningRecipes = {
-    soft: { input: 1739, output: 1741, cost: 1, button: 'tanner:com_96' },
-    hard: { input: 1739, output: 1743, cost: 3, button: 'tanner:com_101' },
-    green: { input: 1753, output: 1745, cost: 20, button: 'tanner:com_106' },
-    blue: { input: 1751, output: 2505, cost: 20, button: 'tanner:com_111' },
-    red: { input: 1749, output: 2507, cost: 20, button: 'tanner:com_116' },
-    black: { input: 1747, output: 2509, cost: 20, button: 'tanner:com_121' },
+    soft: { input: 1739, output: 1741, cost: 1, button: 'tanner:com_96', button5: 'tanner:com_95', buttonAll: 'tanner:com_93' },
+    hard: { input: 1739, output: 1743, cost: 3, button: 'tanner:com_101', button5: 'tanner:com_100', buttonAll: 'tanner:com_98' },
+    green: { input: 1753, output: 1745, cost: 20, button: 'tanner:com_106', button5: 'tanner:com_105', buttonAll: 'tanner:com_103' },
+    blue: { input: 1751, output: 2505, cost: 20, button: 'tanner:com_111', button5: 'tanner:com_110', buttonAll: 'tanner:com_108' },
+    red: { input: 1749, output: 2507, cost: 20, button: 'tanner:com_116', button5: 'tanner:com_115', buttonAll: 'tanner:com_113' },
+    black: { input: 1747, output: 2509, cost: 20, button: 'tanner:com_121', button5: 'tanner:com_120', buttonAll: 'tanner:com_118' },
 } as const;
 
 export type TanKind = keyof typeof tanningRecipes;
@@ -870,6 +871,21 @@ type TanAssets = { input: number; output: number; coins: number };
 
 export function tanningEffect(before: TanAssets, after: TanAssets, cost: number): boolean {
     return before.input - after.input === 1 && after.output - before.output === 1 && before.coins - after.coins === cost;
+}
+
+export function tanningBatchEffect(before: TanAssets, after: TanAssets, cost: number, qty: number): boolean {
+    if (!Number.isSafeInteger(qty) || qty < 1) return false;
+    return before.input - after.input === qty && after.output - before.output === qty && before.coins - after.coins === cost * qty;
+}
+
+export function selectTanChunk(
+    remaining: number,
+    heldInput: number,
+    recipe: (typeof tanningRecipes)[TanKind],
+): { button: string; qty: number } {
+    if (remaining >= 5 && remaining === heldInput) return { button: recipe.buttonAll, qty: remaining };
+    if (remaining >= 5) return { button: recipe.button5, qty: 5 };
+    return { button: recipe.button, qty: 1 };
 }
 
 export async function tanInventory(s: Session, kind: TanKind, maximum: number, cap: number, stop: () => boolean = () => false) {
@@ -893,16 +909,19 @@ export async function tanInventory(s: Session, kind: TanKind, maximum: number, c
             const npc = s.sdk.getState()?.nearbyNpcs.find(n => /^Tanner$/i.test(n.name));
             if (!npc) throw Error('Al Kharid Tanner must be nearby');
             const before = assets();
+            const chunk = selectTanChunk(maximum - made, before.input, r);
             const traded = await s.sdk.sendInteractNpc(npc.index, 3);
             if (!traded.success) throw Error('tanner trade refused');
             if (!await waitUntil(s, () => !!s.sdk.getState()?.interface?.isOpen || over(), { timeoutTicks: Math.min(8, Math.max(1, cap - (s.tick() - start))) })) {
                 throw Error('tanning interface timeout');
             }
             if (over()) break;
-            await s.sdk.sendClickComponent(componentId(r.button));
-            await waitUntil(s, () => tanningEffect(before, assets(), r.cost) || over(), { timeoutTicks: Math.min(8, Math.max(1, cap - (s.tick() - start))) });
-            if (!tanningEffect(before, assets(), r.cost)) throw Error('tanning item/coin reconciliation failed');
-            made++;
+            await s.sdk.sendClickComponent(componentId(chunk.button));
+            await waitUntil(s, () => tanningBatchEffect(before, assets(), r.cost, chunk.qty) || over(), {
+                timeoutTicks: Math.min(8, Math.max(1, cap - (s.tick() - start))),
+            });
+            if (!tanningBatchEffect(before, assets(), r.cost, chunk.qty)) throw Error('tanning item/coin reconciliation failed');
+            made += chunk.qty;
         }
         if (made !== maximum) throw Error('tanning budget or stop');
     } catch (error) {
@@ -1132,7 +1151,62 @@ export const SET_PIECES = [
     { recipe: 'leather:black_dragon_vambraces', product: 2491, leather: 1, level: 79 },
 ] as const;
 
+export type DhideTier = 'green' | 'blue' | 'red' | 'black';
+export type DhideTierPiece = { recipe: string; product: number; leather: number; level: number };
+export type DhideTierSpec = {
+    tier: DhideTier;
+    hide: number;
+    leather: number;
+    tanCost: number;
+    pieces: readonly [DhideTierPiece, DhideTierPiece, DhideTierPiece];
+};
+
+// Pinned content/pack/obj.pack & leather.dbrow specs for all four dragonhide PvP tiers (Green/Blue/Red/Black).
+export const DHIDE_TIERS: Readonly<Record<DhideTier, DhideTierSpec>> = {
+    green: {
+        tier: 'green',
+        hide: tanningRecipes.green.input,
+        leather: tanningRecipes.green.output,
+        tanCost: tanningRecipes.green.cost,
+        pieces: [
+            { recipe: 'leather:dragonhide_body', product: 1135, leather: 3, level: 63 },
+            { recipe: 'leather:dragonhide_chaps', product: 1099, leather: 2, level: 60 },
+            { recipe: 'leather:dragon_vambraces', product: 1065, leather: 1, level: 57 },
+        ],
+    },
+    blue: {
+        tier: 'blue',
+        hide: tanningRecipes.blue.input,
+        leather: tanningRecipes.blue.output,
+        tanCost: tanningRecipes.blue.cost,
+        pieces: [
+            { recipe: 'leather:blue_dragonhide_body', product: 2499, leather: 3, level: 71 },
+            { recipe: 'leather:blue_dragonhide_chaps', product: 2493, leather: 2, level: 68 },
+            { recipe: 'leather:blue_dragon_vambraces', product: 2487, leather: 1, level: 66 },
+        ],
+    },
+    red: {
+        tier: 'red',
+        hide: tanningRecipes.red.input,
+        leather: tanningRecipes.red.output,
+        tanCost: tanningRecipes.red.cost,
+        pieces: [
+            { recipe: 'leather:red_dragonhide_body', product: 2501, leather: 3, level: 77 },
+            { recipe: 'leather:red_dragonhide_chaps', product: 2495, leather: 2, level: 75 },
+            { recipe: 'leather:red_dragon_vambraces', product: 2489, leather: 1, level: 73 },
+        ],
+    },
+    black: {
+        tier: 'black',
+        hide: tanningRecipes.black.input,
+        leather: tanningRecipes.black.output,
+        tanCost: tanningRecipes.black.cost,
+        pieces: SET_PIECES,
+    },
+};
+
 export type DhidePiece = 'body' | 'chaps' | 'vambraces';
+const PIECE_INDEX: Readonly<Record<DhidePiece, 0 | 1 | 2>> = { body: 0, chaps: 1, vambraces: 2 };
 const PIECE_BY_NAME: Readonly<Record<DhidePiece, (typeof SET_PIECES)[number]>> = {
     body: SET_PIECES[0],
     chaps: SET_PIECES[1],
@@ -1147,13 +1221,14 @@ const TANNER = { x: 3274, z: 3191, level: 0 };
 const DOMMIK = { x: 3320, z: 3194, level: 0 };
 
 function planFor(
-    pieces: readonly (typeof SET_PIECES)[number][],
+    pieces: readonly DhideTierPiece[],
     want: number,
     hides: number,
     leather: number,
     thread: number,
     coins: number,
     needle = false,
+    tanCost: number = TAN_COST,
 ): { count: number; tan: number; thread: number; coins: number } {
     if (![want, hides, leather, thread, coins].every(n => Number.isSafeInteger(n) && n >= 0)) return { count: 0, tan: 0, thread: 0, coins: 0 };
     const totalLeather = pieces.reduce((n, p) => n + p.leather, 0);
@@ -1162,7 +1237,7 @@ function planFor(
     const cost = (n: number) => {
         const tan = Math.max(0, n * totalLeather - leather);
         const buy = Math.max(0, Math.ceil((n * pieces.length) / THREAD_MAKES) + 1 - thread);
-        return { count: n, tan, thread: buy, coins: tan * TAN_COST + (buy > 0 || needle ? SHOP_COINS : 0) };
+        return { count: n, tan, thread: buy, coins: tan * tanCost + (buy > 0 || needle ? SHOP_COINS : 0) };
     };
     while (count > 0 && cost(count).coins > coins) count--;
     return cost(count);
@@ -1171,6 +1246,22 @@ function planFor(
 export function setPlan(want: number, hides: number, leather: number, thread: number, coins: number, needle = false): { sets: number; tan: number; thread: number; coins: number } {
     const r = planFor(SET_PIECES, want, hides, leather, thread, coins, needle);
     return { sets: r.count, tan: r.tan, thread: r.thread, coins: r.coins };
+}
+
+export function dhideSetPlan(
+    tier: DhideTier,
+    want: number,
+    hides: number,
+    leather: number,
+    thread: number,
+    coins: number,
+    needle = false,
+    piece?: DhidePiece,
+): { sets: number; tan: number; thread: number; coins: number; spec: DhideTierSpec } {
+    const spec = DHIDE_TIERS[tier];
+    const pieces = piece ? [spec.pieces[PIECE_INDEX[piece]]] : spec.pieces;
+    const r = planFor(pieces, want, hides, leather, thread, coins, needle, spec.tanCost);
+    return { sets: r.count, tan: r.tan, thread: r.thread, coins: r.coins, spec };
 }
 
 export function piecePlan(piece: DhidePiece, want: number, hides: number, leather: number, thread: number, coins: number, needle = false): { count: number; tan: number; thread: number; coins: number } {
@@ -1192,9 +1283,18 @@ export async function runBlackDhideSetsSession(
         }),
     );
     const want = Number(argEnv.SETS ?? env.SETS ?? 0);
+    const tierRaw = (argEnv.TIER ?? env.TIER ?? 'black').trim().toLowerCase() as DhideTier;
+    const tierSpec = Object.hasOwn(DHIDE_TIERS, tierRaw) ? DHIDE_TIERS[tierRaw] : undefined;
     const pieceName = (argEnv.PIECE ?? env.PIECE)?.trim().toLowerCase() as DhidePiece | '' | undefined;
-    const selected = pieceName ? (pieceName in PIECE_BY_NAME ? [PIECE_BY_NAME[pieceName as DhidePiece]] : null) : [...SET_PIECES];
+    const selected = !tierSpec
+        ? null
+        : pieceName
+          ? pieceName in PIECE_INDEX
+              ? [tierSpec.pieces[PIECE_INDEX[pieceName as DhidePiece]]]
+              : null
+          : [...tierSpec.pieces];
     try {
+        if (!tierSpec) throw Error(`unknown TIER=${tierRaw}`);
         if (!selected) throw Error(`unknown PIECE=${pieceName}`);
         if (!Number.isSafeInteger(want) || want < 0 || want > 50) throw Error('SETS 0-50');
         const st = () => s.sdk.getState();
@@ -1214,7 +1314,6 @@ export async function runBlackDhideSetsSession(
         const closeBank = async () => {
             await s.bot.closeBank();
             await waitFor(() => !st()?.bank?.isOpen, 10);
-            await waitTicks(s, 2);
         };
         const bankPack = async (label: string) => {
             for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
@@ -1245,21 +1344,21 @@ export async function runBlackDhideSetsSession(
         await openBank('stage');
         await bankPack('stage');
         const needle = banked(NEEDLE) < 1;
-        const plan = planFor(selected, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS), needle);
+        const plan = planFor(selected, want, banked(tierSpec.hide), banked(tierSpec.leather), banked(THREAD), banked(COINS), needle, tierSpec.tanCost);
         if (plan.count < 1) {
             await closeBank();
-            throw Error(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
+            throw Error(`no craft: ${banked(tierSpec.hide)} hides, ${banked(tierSpec.leather)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
         }
         let tanned = 0;
         let spent = 0;
         while (tanned < plan.tan) {
             if (stop()) throw Error('stopped');
             const n = Math.min(TAN_TRIP, plan.tan - tanned);
-            await take(BLACK_HIDE, n);
-            await take(COINS, n * TAN_COST);
+            await take(tierSpec.hide, n);
+            await take(COINS, n * tierSpec.tanCost);
             await closeBank();
             await go(TANNER, 'the tanner');
-            const r = await tanInventory(s, 'black', n, 60 + n * 12, stop);
+            const r = await tanInventory(s, tierSpec.tier, n, 60 + n * 12, stop);
             tanned += r.made;
             spent += r.coinsSpent;
             if (!r.ok) throw Error(`tanning: ${r.detail} made=${r.made} of ${n}`);
@@ -1283,7 +1382,6 @@ export async function runBlackDhideSetsSession(
                 await waitFor(() => held(THREAD) >= plan.thread, 6);
             }
             await s.bot.closeShop();
-            await waitTicks(s, 2);
             spent += coins - held(COINS);
             if ((needle && held(NEEDLE) < 1) || held(THREAD) < plan.thread) {
                 throw Error(`dommik: needle=${held(NEEDLE)} thread=${held(THREAD)} of ${plan.thread}`);
@@ -1304,8 +1402,8 @@ export async function runBlackDhideSetsSession(
         await openBank('end');
         await bankPack('end');
         const sets = Math.min(...selected.map(p => banked(p.product)));
-        const hidesLeft = banked(BLACK_HIDE);
-        const leatherLeft = banked(BLACK_LEATHER);
+        const hidesLeft = banked(tierSpec.hide);
+        const leatherLeft = banked(tierSpec.leather);
         await closeBank();
         const ok = made.every(n => n === plan.count);
         const detail = selected.map((p, idx) => `${p.recipe.endsWith('body') ? 'bodies' : p.recipe.endsWith('chaps') ? 'chaps' : 'vambraces'}=${made[idx]}`).join(' ');

@@ -245,18 +245,25 @@ export async function runItemMagic(s: Session, recipe: ItemMagicRecipe, o: { cou
         if (recipe.name === 'superheat:iron' && (before[objId('coal')] ?? 0) > 1) throw Error('iron batch contains steel coal');
         const item = inv().find(i => i.id === recipe.target);
         if (!item) throw Error('target missing');
+        const castTick = s.tick();
         const result = (await s.direct({ type: 'spellOnItem', slot: item.slot, spellComponent: componentId(recipe.spell), reason: 'SDK' })) as { success?: boolean };
         if (result?.success === false) throw Error('item spell dispatch refused');
         await waitUntil(s, () => over() || xp() !== x0 || Object.keys(counts()).some(id => counts()[Number(id)] !== before[Number(id)]), {
             timeoutTicks: Math.min(12, Math.max(1, o.cap - (s.tick() - start))),
         });
-        await waitTicks(s, 1);
-        const effect = itemSpellEffect(recipe, costs, before, counts(), x0, xp());
+        let effect = itemSpellEffect(recipe, costs, before, counts(), x0, xp());
+        if (effect !== 'cast' && !over()) {
+            await waitTicks(s, 1);
+            effect = itemSpellEffect(recipe, costs, before, counts(), x0, xp());
+        }
         if (effect !== 'cast') throw Error('item spell effect ' + effect);
         casts++;
         console.log('ITEM_MAGIC_CAST ' + JSON.stringify({ cast: casts, tick: s.tick(), mode: recipe.name, inputs: costs, product: recipe.product, output: recipe.output }));
         const gap = Number(process.env.ITEM_MAGIC_GAP ?? spellDelay(recipe.name));
-        if (gap > 0 && casts < o.count && !over()) await waitTicks(s, Math.min(gap, Math.max(1, o.cap - (s.tick() - start))));
+        const remainingDelay = Math.max(0, gap - Math.max(0, s.tick() - castTick));
+        if (remainingDelay > 0 && casts < o.count && !over()) {
+            await waitTicks(s, Math.min(remainingDelay, Math.max(1, o.cap - (s.tick() - start))));
+        }
     }
     return { ok: casts === o.count, stop, casts, ticks: s.tick() - start, magicXp: xp() - xp0, product: recipe.product, produced: casts * recipe.output };
 }
@@ -402,7 +409,7 @@ export async function runItemMagicBanked(s: Session, recipe: ItemMagicRecipe, o:
         let held = spellCastsHeld(perCast, counts());
         if (held < 1) {
             stages++;
-            const settleTicks = casts > 0 ? spellDelay(recipe.name) + 1 : 0;
+            const settleTicks = casts > 0 ? Math.max(3, spellDelay(recipe.name) + 1) : 0;
             held = (await stageSpellInputs(s, perCast, o.count - casts, { deposit: [recipe.product], stop: o.stop, settleTicks })).casts;
             if (held < 1) {
                 stop = 'supplies';

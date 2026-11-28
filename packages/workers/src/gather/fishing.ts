@@ -840,6 +840,10 @@ export async function catchSharks(s: Session, amount: number, stop: () => boolea
             if (s.tick() - progress >= progressTicks) throw Error('shark fishing no progress');
             const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
             const until = (end: number) => Math.max(1, Math.min(end, progress + progressTicks) - s.tick());
+            if (s.sdk.getState()?.dialog?.isOpen) {
+                await s.sdk.sendCloseModal?.();
+                active = undefined;
+            }
             if (active) {
                 const a = active;
                 if (!npcs.some(n => same(n, a))) {
@@ -847,20 +851,33 @@ export async function catchSharks(s: Session, amount: number, stop: () => boolea
                     active = undefined;
                     continue;
                 }
-                await waitUntil(s, st => stop() || count() > last || still >= SHARK_IDLE_TICKS || !st.nearbyNpcs.some((n: NearbyNpc) => same(n, a)), {
-                    timeoutTicks: until(progress + progressTicks),
-                });
+                await waitUntil(
+                    s,
+                    st =>
+                        stop() ||
+                        count() > last ||
+                        still >= SHARK_IDLE_TICKS ||
+                        !!st.dialog?.isOpen ||
+                        !st.nearbyNpcs.some((n: NearbyNpc) => same(n, a)),
+                    {
+                        timeoutTicks: until(progress + progressTicks),
+                    },
+                );
                 if (count() > last) {
                     last = count();
                     progress = s.tick();
                     a.at = s.tick();
+                } else if (s.sdk.getState()?.dialog?.isOpen) {
+                    await s.sdk.sendCloseModal?.();
+                    active = undefined;
                 } else if (still >= SHARK_IDLE_TICKS) {
                     trace.record('action-ended', { ...a, still });
                     active = undefined;
                 }
                 continue;
             }
-            const spot = npcs.filter(sharkSpot).sort((a, b) => a.distance - b.distance)[0];
+            const reachableSpots = npcs.filter(n => sharkSpot(n) && n.reachable !== false);
+            const spot = (reachableSpots.length ? reachableSpots : npcs.filter(sharkSpot)).sort((a, b) => a.distance - b.distance)[0];
             if (!spot) {
                 await waitTicks(s, 1);
                 continue;
@@ -986,12 +1003,14 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
     let bankTrips = 0;
     let walkTicks = 0;
 
+    let cachedWalker: ReturnType<typeof sessionWalker> | undefined;
     const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
+        const walker = await (cachedWalker ??= sessionWalker(s));
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
+            const r = await walkPath(walker, [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 await waitTicks(s, 1);
@@ -1007,7 +1026,7 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
             return;
         }
         const currentFish = countFish();
@@ -1017,6 +1036,7 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
                     await s.bot.depositItem(item.name, -1);
                 }
             }
+            if (countFish() >= currentFish) await waitUntil(s, () => over() || countFish() < currentFish, { timeoutTicks: 3 });
         }
         if (!inv().some(i => requiredTool.test(i.name))) {
             const toolId = isCage ? 301 : 311;
@@ -1033,7 +1053,6 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
                 throw Error(`no ${toolName} in the pack, bank, or Harry's shop (${ensured.reason ?? 'unavailable'})`);
             }
         }
-        await waitTicks(s, 1);
         // Count only the fish that left the pack; a refused deposit keeps them in countFish().
         caughtTotal += Math.max(0, currentFish - countFish());
         await s.bot.closeInterface();
@@ -1042,34 +1061,65 @@ export async function runCatherbyGatherFish(s: Session, cfg: NormalizedGatherCon
     };
 
     console.log(`START gather-fish ${s.name} method=${method} at=${pos()?.worldX},${pos()?.worldZ}`);
+    let activeSpot: { index: number; x: number; z: number } | undefined;
     while (!over()) {
         if (countFish() >= bankAt || freeSpace() === 0 || !inv().some(i => requiredTool.test(i.name))) {
+            activeSpot = undefined;
             await bank();
             continue;
         }
         const p = pos();
         if (!p || Math.max(Math.abs(p.worldX - BEACH_SPOT.x), Math.abs(p.worldZ - BEACH_SPOT.z)) > 12) {
+            activeSpot = undefined;
             await walk(BEACH_SPOT.x, BEACH_SPOT.z, 3);
             continue;
         }
-        const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
-        const spot = npcs.find(n => /fishing spot/i.test(n.name) && n.options.includes(targetOp));
+        const stNow = s.sdk.getState();
+        if (stNow?.dialog?.isOpen) {
+            await s.sdk.sendCloseModal?.();
+            activeSpot = undefined;
+        }
+        const npcs = stNow?.nearbyNpcs ?? [];
+        const sameActive = activeSpot && npcs.find(n => n.index === activeSpot!.index && n.x === activeSpot!.x && n.z === activeSpot!.z && n.options.includes(targetOp));
+        const spot = sameActive ?? npcs
+            .filter(n => /fishing spot/i.test(n.name) && n.options.includes(targetOp) && n.reachable !== false)
+            .sort((a, b) => a.distance - b.distance)[0]
+            ?? npcs.find(n => /fishing spot/i.test(n.name) && n.options.includes(targetOp));
         if (!spot) {
-            await waitTicks(s, 3);
+            activeSpot = undefined;
+            await waitTicks(s, 1);
             continue;
         }
         const invBefore = inv().length;
         const opt = spot.optionsWithIndex.find(o => new RegExp(`^${targetOp}$`, 'i').test(o.text));
         if (!opt) {
-            await waitTicks(s, 2);
+            activeSpot = undefined;
+            await waitTicks(s, 1);
             continue;
         }
-        await s.sdk.sendInteractNpc(spot.index, opt.opIndex);
-        for (let t = 0; t < 15 && !over(); t++) {
-            await waitTicks(s, 1);
-            if (inv().length > invBefore || freeSpace() === 0) break;
-            if (!s.sdk.getState()?.nearbyNpcs.some(n => n.index === spot.index)) break;
+        if (!sameActive) {
+            await s.sdk.sendInteractNpc(spot.index, opt.opIndex);
+            activeSpot = { index: spot.index, x: spot.x, z: spot.z };
         }
+        let idleStreak = 0;
+        await waitUntil(
+            s,
+            st => {
+                if (over() || inv().length > invBefore || freeSpace() === 0 || !!st.dialog?.isOpen) return true;
+                if (!st.nearbyNpcs.some((n: NearbyNpc) => n.index === spot.index && n.x === spot.x && n.z === spot.z)) {
+                    activeSpot = undefined;
+                    return true;
+                }
+                const anim = st.player?.animId ?? -1;
+                if (anim !== -1) idleStreak = 0;
+                else if (++idleStreak >= 6) {
+                    activeSpot = undefined;
+                    return true;
+                }
+                return false;
+            },
+            { timeoutTicks: 40 },
+        );
     }
 
     const total = caughtTotal + countFish();
@@ -1096,13 +1146,14 @@ export function sharkOrderConfig(args: readonly string[], env: Record<string, st
         target: Number(args[0] ?? env.MAX_COOKED ?? env.SHARK_COUNT ?? 25),
         maxTicks: Number(args[1] ?? env.CAP ?? 9000),
         consumer: env.SHARK_CONSUMER ?? 'high-HP endgame combat staging',
+        rawOnly: env.RAW_ONLY === '1' || env.SHARK_RAW_ONLY === '1',
     };
 }
 
 /** The shark order a run executes: cfg.target overrides the args and env values. */
 export function effectiveSharkOrder(cfg: Pick<NormalizedGatherConfig, 'args' | 'env' | 'target'>) {
     const o = sharkOrderConfig(cfg.args, cfg.env);
-    return { target: cfg.target?.count ?? o.target, maxTicks: cfg.target?.capTicks ?? o.maxTicks, consumer: o.consumer };
+    return { target: cfg.target?.count ?? o.target, maxTicks: cfg.target?.capTicks ?? o.maxTicks, consumer: o.consumer, rawOnly: o.rawOnly };
 }
 
 export function sharkOrderProblem(o: { target: number; maxTicks: number; consumer: string }): string | undefined {
@@ -1200,10 +1251,13 @@ export function harpoonPurchase(price: number, stock: number, cash: number, maxC
     return fishingToolPurchase(price, stock, cash, maxCost, reserve);
 }
 
+export const SHARK_TRAVEL_FOOD_IDS = [333, 329, 379, 373, 385] as const;
+
 export type SharkOptions = {
     target: number;
     maxTicks: number;
     consumer: string;
+    rawOnly?: boolean;
     stop?: () => boolean;
     recoveryTicks?: number;
     walker?: (s: Session) => Promise<PathDeps>;
@@ -1304,10 +1358,11 @@ export async function supplySharks(s: Session, o: SharkOptions) {
         }
     };
     const store = async (all = false, count = !all) => {
+        const creditId = o.rawOnly ? 383 : 385;
         for (const item of [...new Map(inv().map(i => [i.id, i])).values()]) {
             if (all || [383, 385, 387].includes(item.id)) {
                 const n = await depositObserved(s, item);
-                if (count && item.id === 385) r.banked += n;
+                if (count && item.id === creditId) r.banked += n;
             }
         }
     };
@@ -1335,35 +1390,44 @@ export async function supplySharks(s: Session, o: SharkOptions) {
         }
         const entry = sharkEntry(first);
         if (!entry) throw Error('shark entry requires west bank or Catherby ground floor');
-        if ((s.sdk.getSkill('Fishing')?.level ?? 0) < 76 || (s.sdk.getSkill('Cooking')?.level ?? 0) < 80) {
-            throw Error('shark order requires Fishing76 Cooking80');
+        if ((s.sdk.getSkill('Fishing')?.level ?? 0) < 76 || (!o.rawOnly && (s.sdk.getSkill('Cooking')?.level ?? 0) < 80)) {
+            throw Error(o.rawOnly ? 'shark order requires Fishing76' : 'shark order requires Fishing76 Cooking80');
         }
         await open();
         initial = assets();
         await store(true);
         const maxHp = s.sdk.getSkill('Hitpoints')!.baseLevel;
         if (maxHp < 40) throw Error('shark entry needs at least40 base HP');
-        for (let n = 0; hp() < maxHp - 3 && n < 12; n++) {
+        let healsUsed = 0;
+        while (hp() < maxHp - 3 && healsUsed < 12) {
             if (stop()) throw Error('shark entry budget/health stop');
-            const food = observe()?.items.find(i => [333, 329, 379].includes(i.id) && i.count > 0);
+            const food = observe()?.items.find(i => (SHARK_TRAVEL_FOOD_IDS as readonly number[]).includes(i.id) && i.count > 0);
             if (!food) throw Error('missing owned travel food');
-            await withdraw(food.id, new RegExp(`^${food.name}$`, 'i'), 1);
+            const healEst = food.id === 385 ? 20 : food.id === 373 ? 14 : food.id === 379 ? 12 : food.id === 329 ? 9 : 7;
+            const want = Math.max(1, Math.min(12 - healsUsed, Math.ceil((maxHp - 3 - hp()) / healEst), food.count, 28 - inv().length));
+            await withdraw(food.id, new RegExp(`^${food.name}$`, 'i'), want);
             await s.bot.closeInterface();
-            const item = inv().find(i => i.id === food.id)!;
-            const before = held(food.id);
-            const h = hp();
-            await s.bot.eatFood(item);
-            if (!(await waitUntil(s, () => held(food.id) === before - 1 && hp() > h, { timeoutTicks: 8 }))) {
-                throw Error('travel food debit/heal unobserved');
+            for (let k = 0; k < want && hp() < maxHp - 3 && healsUsed < 12; k++) {
+                if (stop()) throw Error('shark entry budget/health stop');
+                const item = inv().find(i => i.id === food.id);
+                if (!item) break;
+                const before = held(food.id);
+                const h = hp();
+                await s.bot.eatFood(item);
+                if (!(await waitUntil(s, () => held(food.id) === before - 1 && hp() > h, { timeoutTicks: 8 }))) {
+                    throw Error('travel food debit/heal unobserved');
+                }
+                r.consumed[food.id] = (r.consumed[food.id] ?? 0) + 1;
+                healsUsed++;
             }
-            r.consumed[food.id] = (r.consumed[food.id] ?? 0) + 1;
             await open();
+            if (held(food.id) > 0) await store(true);
         }
         if (hp() < maxHp - 3) throw Error('entry heal budget exhausted');
         damageBase = hp();
         lastHp = hp();
         if ((observe()?.items.find(i => i.id === 311)?.count ?? 0) > 0) await withdraw(311, /^harpoon$/i, 1);
-        const travel = observe()?.items.find(i => [333, 329, 379].includes(i.id) && i.count >= 2);
+        const travel = observe()?.items.find(i => (SHARK_TRAVEL_FOOD_IDS as readonly number[]).includes(i.id) && i.count >= 2);
         if (!travel) throw Error('missing return food reserve');
         await withdraw(travel.id, new RegExp(`^${travel.name}$`, 'i'), 2);
         if (!held(311)) {
@@ -1411,26 +1475,30 @@ export async function supplySharks(s: Session, o: SharkOptions) {
             const rawBefore = held(383);
             try {
                 await catchSharks(s, amount, stop);
-                await walk([{ x: 2816, z: 3443, tol: 1 }]);
+                if (!o.rawOnly) await walk([{ x: 2816, z: 3443, tol: 1 }]);
             } finally {
                 r.caught += held(383) - rawBefore;
             }
-            const cookedBefore = held(385);
-            const burntBefore = held(387);
-            try {
-                if (!o.cookSharks) throw Error('supplySharks requires deps.cookSharks');
-                await o.cookSharks(s, stop);
-            } finally {
-                r.cooked += held(385) - cookedBefore;
-                r.burnt += held(387) - burntBefore;
+            if (!o.rawOnly) {
+                const cookedBefore = held(385);
+                const burntBefore = held(387);
+                try {
+                    if (!o.cookSharks) throw Error('supplySharks requires deps.cookSharks');
+                    await o.cookSharks(s, stop);
+                } finally {
+                    r.cooked += held(385) - cookedBefore;
+                    r.burnt += held(387) - burntBefore;
+                }
             }
             await returnBank();
-            await s.bot.closeInterface();
+            if (r.banked < o.target) await s.bot.closeInterface();
             console.log('SHARK_PROGRESS ' + JSON.stringify(r));
         }
-        await open();
+        if (!state()?.bank?.isOpen) await open();
         r.assets = sharkAssetCheck(initial, assets(), r);
-        r.ok = r.banked === o.target && r.caught === r.cooked + r.burnt && r.assets && !stop();
+        r.ok = o.rawOnly
+            ? r.banked === o.target && r.caught === r.banked && r.cooked === 0 && r.burnt === 0 && r.assets && !stop()
+            : r.banked === o.target && r.caught === r.cooked + r.burnt && r.assets && !stop();
         if (!r.ok) throw Error('shark final asset/life/target mismatch');
     } catch (error) {
         r.failure = String(error);

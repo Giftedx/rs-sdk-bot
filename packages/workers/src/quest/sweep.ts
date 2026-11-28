@@ -51,6 +51,8 @@ import {
     WORN_KIT,
     BANKS,
     bareDeposits,
+    bareRoomDeposits,
+    bareWornDeposits,
     buildPack,
     catalogItem,
     countItems,
@@ -807,13 +809,20 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
             if (!opened.success) return fail('bank did not open');
             await waitUntil(s, () => (st()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 10 });
             if (bare) {
-                const bankRows = async () => {
-                    for (const id of bareDeposits(quest, pack(), need, food, tradeableId)) {
+                const depositIds = async (ids: readonly number[], label: string): Promise<string | null> => {
+                    for (const id of ids) {
                         const row = (st()?.inventory ?? []).find((i: any) => i.id === id);
                         if (!row) continue;
                         await s.bot.depositItem(row, -1);
-                        if (!(await waitUntil(s, () => countItems(pack(), id) === 0, { timeoutTicks: 10 }))) return `bare deposit unobserved ${id}`;
+                        if (!(await waitUntil(s, () => countItems(pack(), id) === 0, { timeoutTicks: 10 }))) return `${label} unobserved ${id}`;
                     }
+                    return null;
+                };
+                const bankRows = async (extraIds: readonly number[] = []) => {
+                    const baseErr = await depositIds(bareDeposits(quest, pack(), need, food, tradeableId), 'bare deposit');
+                    if (baseErr) return baseErr;
+                    const extraErr = await depositIds(extraIds, 'bare worn deposit');
+                    if (extraErr) return extraErr;
                     if (quest === 'ikov') {
                         for (const { id, deposit } of ikovExcessMeals(pack(), food)) {
                             let rem = deposit;
@@ -837,21 +846,33 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 // A required worn-kit item stays on: banked, it came back into the pack to be worn again, and a resumed
                 // Temple of Ikov with the pendant of Lucien needed one slot more than the pack has.
                 const keepOn = new Set((WORN_KIT[quest] ?? []).filter((k) => k.required).map((k) => k.id));
-                const worn = [...s.sdk.getEquipment()].filter((item) => !keepOn.has(item.id));
-                for (const item of worn) {
-                    await s.bot.unequipItem(item);
-                    if (!(await waitUntil(s, () => !s.sdk.getEquipment().some((e) => e.slot === item.slot), { timeoutTicks: 8 }))) {
-                        return fail(`worn item ${item.id} did not come off`);
+                const removedIds: number[] = [];
+                for (let round = 0; round < 3; round++) {
+                    const worn = [...s.sdk.getEquipment()].filter((item) => !keepOn.has(item.id));
+                    if (!worn.length) break;
+                    // Free pack slots before unequipping so a full PvP pack (sharks + runes) never rejects unequipItem.
+                    const roomIds = bareRoomDeposits(pack(), worn.length);
+                    if (roomIds.length) {
+                        const roomErr = await depositIds(roomIds, 'bare room deposit');
+                        if (roomErr) return fail(roomErr);
                     }
-                }
-                if (worn.length) {
+                    const freeSlots = 28 - pack().length;
+                    if (freeSlots < 1) return fail(`bare unequip has no free pack slot for worn item ${worn[0]!.id}`);
+                    const batch = worn.slice(0, freeSlots);
+                    for (const item of batch) {
+                        await s.bot.unequipItem(item);
+                        if (!(await waitUntil(s, () => !s.sdk.getEquipment().some((e) => e.slot === item.slot), { timeoutTicks: 8 }))) {
+                            return fail(`worn item ${item.id} did not come off`);
+                        }
+                        removedIds.push(item.id);
+                    }
                     if (!(await s.bot.openBank()).success || !(await waitUntil(s, () => !!st()?.bank?.isOpen, { timeoutTicks: 10 }))) {
                         return fail('bank did not reopen for the worn items');
                     }
-                    const second = await bankRows();
+                    const second = await bankRows(bareWornDeposits(quest, removedIds, need));
                     if (second) return fail(second);
                 }
-                console.log(`QUEST_SWEEP_BARE ${JSON.stringify({ worn: worn.map((i) => i.id), left: s.sdk.getEquipment().length, pack: pack().map((i) => i.id) })}`);
+                console.log(`QUEST_SWEEP_BARE ${JSON.stringify({ worn: removedIds, left: s.sdk.getEquipment().length, pack: pack().map((i) => i.id) })}`);
             }
             const rows = (): Item[] => (st()?.bank?.items ?? []).map((i: any) => ({ id: i.id, count: i.count }));
             // A lit light source that the quest pack needs and that the account can light from an unlit one: before the

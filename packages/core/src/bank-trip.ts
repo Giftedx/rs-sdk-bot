@@ -94,3 +94,152 @@ export function planBankTripSchedule(options:{
   ready:missingTools.length===0&&Object.keys(shortfalls).length===0,
  };
 }
+
+// Server reads up to 5 USER_EVENT inputs per tick (NetworkPlayer.ts:70). Bank slots never shift while open
+// (bank.rs2: ~reorganize_inv runs only on openbank/closebank) and inventory slots never shift on deposit, so up to
+// BANK_BATCH_MAX preset-button (1, 5, 10, -1/All) withdrawals or deposits execute in a single tick with zero sleeps.
+export const BANK_BATCH_MAX = 5;
+export const isInstantBankAmount = (amount: number): boolean => amount === 1 || amount === 5 || amount === 10 || amount === -1;
+
+export interface FastBankSession {
+ tick(): number;
+ sdk: { getState(): any };
+ onTick(cb: () => void): () => void;
+ direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
+ bot?: { openBank?(): Promise<{ success: boolean; message?: string }>; closeBank?(): Promise<unknown> };
+ ended?: Promise<{ reason: string }>;
+}
+
+// Ensures the bank interface is open without redundant openBank() calls when already open.
+export async function ensureBankOpen(s: FastBankSession): Promise<{ ok: boolean; opened: boolean; message?: string }> {
+ if (s.sdk.getState()?.bank?.isOpen) return { ok: true, opened: false };
+ if (typeof s.bot?.openBank !== 'function') return { ok: false, opened: false, message: 'openBank unavailable' };
+ const r = await s.bot.openBank();
+ return { ok: r.success === true, opened: r.success === true, ...(r.message ? { message: r.message } : {}) };
+}
+
+function countById(rows: readonly { id: number; count: number }[] | undefined, id: number): number {
+ if (!Array.isArray(rows)) return 0;
+ let total = 0;
+ for (let i = 0; i < rows.length; i++) {
+  const row = rows[i]!;
+  if (row.id === id) total += row.count;
+ }
+ return total;
+}
+
+// Batches up to BANK_BATCH_MAX instant bank withdrawals per tick (amounts 1, 5, 10, or -1 for all) without
+// sleeping between items in the same tick. Non-preset amounts (requiring p_countdialog) run individually.
+export async function withdrawBatchFast(
+ s: FastBankSession,
+ requests: readonly { id: number; amount: number }[],
+ waitUntilFn: (pred: () => boolean, timeoutTicks: number) => Promise<boolean>,
+ options: { timeoutTicks?: number } = {},
+): Promise<{ ok: boolean; withdrawn: Record<number, number>; ticks: number; missing?: number }> {
+ const start = s.tick(), timeoutTicks = options.timeoutTicks ?? 6;
+ const withdrawn: Record<number, number> = {};
+ if (!requests.length) return { ok: true, withdrawn, ticks: 0 };
+ const state0 = s.sdk.getState();
+ if (!state0?.bank?.isOpen) return { ok: false, withdrawn, ticks: s.tick() - start };
+ const indexBank = (items: readonly { slot: number; id: number; count: number }[]) => {
+  const map = new Map<number, { slot: number; id: number; count: number }>();
+  for (let k = 0; k < items.length; k++) {
+   const row = items[k]!;
+   if (row.count > 0 && !map.has(row.id)) map.set(row.id, row);
+  }
+  return map;
+ };
+ const initialById = indexBank(state0.bank.items ?? []);
+ for (const req of requests) {
+  if (!initialById.has(req.id)) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
+ }
+ let i = 0;
+ while (i < requests.length) {
+  const liveState = s.sdk.getState();
+  if (!liveState?.bank?.isOpen) return { ok: false, withdrawn, ticks: s.tick() - start };
+  const byId = indexBank(liveState.bank.items ?? []);
+  const batch: { id: number; slot: number; amount: number; before: number; expectedMin: number }[] = [];
+  const curInv = liveState.inventory;
+  if (isInstantBankAmount(requests[i]!.amount)) {
+   const seenIds = new Set<number>();
+   while (i < requests.length && batch.length < BANK_BATCH_MAX && isInstantBankAmount(requests[i]!.amount) && !seenIds.has(requests[i]!.id)) {
+    const req = requests[i]!;
+    const row = byId.get(req.id);
+    if (!row || row.count <= 0) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
+    const before = countById(curInv, req.id);
+    const expectedMin = req.amount === -1 ? 1 : Math.min(req.amount, row.count);
+    seenIds.add(req.id);
+    batch.push({ id: req.id, slot: row.slot, amount: req.amount, before, expectedMin });
+    i++;
+   }
+  } else {
+   const req = requests[i]!;
+   const row = byId.get(req.id);
+   if (!row || row.count <= 0) return { ok: false, withdrawn, ticks: s.tick() - start, missing: req.id };
+   batch.push({ id: req.id, slot: row.slot, amount: req.amount, before: countById(curInv, req.id), expectedMin: Math.min(req.amount, row.count) });
+   i++;
+  }
+  await Promise.all(batch.map(b => s.direct({ type: 'bankWithdraw', slot: b.slot, amount: b.amount, reason: 'SDK' }).catch(() => undefined)));
+  const settled = await waitUntilFn(() => {
+   const inv = s.sdk.getState()?.inventory;
+   for (let k = 0; k < batch.length; k++) {
+    const b = batch[k]!;
+    if (countById(inv, b.id) < b.before + b.expectedMin) return false;
+   }
+   return true;
+  }, timeoutTicks);
+  const invAfter = s.sdk.getState()?.inventory;
+  for (const b of batch) withdrawn[b.id] = (withdrawn[b.id] ?? 0) + Math.max(0, countById(invAfter, b.id) - b.before);
+  if (!settled) return { ok: false, withdrawn, ticks: s.tick() - start };
+ }
+ return { ok: true, withdrawn, ticks: s.tick() - start };
+}
+
+// Batches up to BANK_BATCH_MAX instant bank deposits (-1/1/5/10) per tick without sleeping between items.
+export async function depositBatchFast(
+ s: FastBankSession,
+ requests: readonly { id: number; amount?: number }[],
+ waitUntilFn: (pred: () => boolean, timeoutTicks: number) => Promise<boolean>,
+ options: { timeoutTicks?: number } = {},
+): Promise<{ ok: boolean; deposited: Record<number, number>; ticks: number }> {
+ const start = s.tick(), timeoutTicks = options.timeoutTicks ?? 6;
+ const deposited: Record<number, number> = {};
+ if (!requests.length) return { ok: true, deposited, ticks: 0 };
+ if (!s.sdk.getState()?.bank?.isOpen) return { ok: false, deposited, ticks: s.tick() - start };
+ let i = 0;
+ while (i < requests.length) {
+  const curInv: { slot: number; id: number; count: number }[] = s.sdk.getState()?.inventory ?? [];
+  const slotById = new Map<number, number>();
+  for (let k = 0; k < curInv.length; k++) if (!slotById.has(curInv[k]!.id)) slotById.set(curInv[k]!.id, curInv[k]!.slot);
+  const batch: { id: number; slot: number; amount: number; before: number }[] = [];
+  const seenIds = new Set<number>();
+  while (i < requests.length && batch.length < BANK_BATCH_MAX) {
+   const req = requests[i]!;
+   const amount = req.amount ?? -1;
+   if (batch.length > 0 && (!isInstantBankAmount(amount) || seenIds.has(req.id))) break;
+   const slot = slotById.get(req.id);
+   i++;
+   if (slot === undefined) continue;
+   const before = countById(curInv, req.id);
+   if (before <= 0) continue;
+   seenIds.add(req.id);
+   batch.push({ id: req.id, slot, amount, before });
+   if (!isInstantBankAmount(amount)) break;
+  }
+  if (!batch.length) continue;
+  await Promise.all(batch.map(b => s.direct({ type: 'bankDeposit', slot: b.slot, amount: b.amount, reason: 'SDK' }).catch(() => undefined)));
+  const settled = await waitUntilFn(() => {
+   const inv = s.sdk.getState()?.inventory;
+   for (let k = 0; k < batch.length; k++) {
+    const b = batch[k]!;
+    const expectedAfter = b.amount === -1 ? 0 : Math.max(0, b.before - b.amount);
+    if (countById(inv, b.id) > expectedAfter) return false;
+   }
+   return true;
+  }, timeoutTicks);
+  const invAfter = s.sdk.getState()?.inventory;
+  for (const b of batch) deposited[b.id] = (deposited[b.id] ?? 0) + Math.max(0, b.before - countById(invAfter, b.id));
+  if (!settled) return { ok: false, deposited, ticks: s.tick() - start };
+ }
+ return { ok: true, deposited, ticks: s.tick() - start };
+}

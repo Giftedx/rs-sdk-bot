@@ -135,35 +135,55 @@ export const itemIdOf = (name: string) => { ensureItems(); return ids!.get(name)
 type BankObservation={generation:number;items:{id:number;count:number}[]};
 type BankSession = { tick(): number; sdk: { getState(): any }; bankObservation?():BankObservation|null; bot: { openBank(): Promise<{ success: boolean; message?: string }>; withdrawItem(row: unknown, count: number): Promise<unknown>; closeBank(): Promise<unknown> } };
 type BankTakeResult={ok:boolean;detail:string;shortfalls?:Record<number,number>;unknown?:boolean};
+function countRowsById(rows: readonly { id: number; count: number }[] | undefined, id: number): number {
+    if (!rows) return 0;
+    let total = 0;
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!;
+        if (row.id === id) total += row.count;
+    }
+    return total;
+}
 // Takes the whole route supply only after a current bank observation funds every line. Each withdrawal needs paired
 // bank debit and pack credit in a newer bank generation; an unresolved action is never sent again here.
-export async function takeItems(s: BankSession, coins: number, want: Record<string, number>, waitTicks: (n: number) => Promise<unknown>, options:{stop?:()=>boolean;deadline?:number}={}): Promise<BankTakeResult> {
-    const held = (id: number) => (s.sdk.getState()?.inventory ?? []).filter((i: any) => i.id === id).reduce((n: number, i: any) => n + i.count, 0);
+export async function takeItems(s: BankSession, coins: number, want: Record<string, number>, waitTicks: (n: number) => Promise<unknown>, options:{stop?:()=>boolean;deadline?:number;keepOpen?:boolean}={}): Promise<BankTakeResult> {
+    const held = (id: number) => countRowsById(s.sdk.getState()?.inventory, id);
     const list = [...(coins > 0 ? [[995, coins] as const] : []), ...Object.entries(want).map(([n, c]) => [itemIdOf(n), c] as const)];
     if (list.some(([id]) => id === undefined)) return { ok: false, detail: `unknown item in ${JSON.stringify(want)}` };
     if(!Number.isSafeInteger(coins)||coins<0||list.some(([,n])=>!Number.isSafeInteger(n)||n<1))return {ok:false,detail:'invalid bank route supply count'};
     const required=new Map<number,number>();for(const[id,n]of list as [number,number][])required.set(id,(required.get(id)??0)+n);
     const stopped=()=>options.stop?.()||executionContext.getStore()?.signal.aborted||options.deadline!==undefined&&performance.now()>=options.deadline;
     const current=()=>s.sdk.getState()?.bank?.isOpen?s.bankObservation?.()??null:null;
-    const stored=(observation:BankObservation,id:number)=>observation.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+    const stored=(observation:BankObservation,id:number)=>countRowsById(observation.items,id);
     return withExecutionDeadline(Math.max(0,(options.deadline??performance.now()+30_000)-performance.now()),async()=>{
         let opening=false,dispatched=false,result:BankTakeResult;
         const perform=async():Promise<BankTakeResult>=>{
             if(stopped())return {ok:false,detail:'bank stop stopped'};
-            const prior=s.bankObservation?.(),wasCurrent=!!current(),generation=prior?.generation??-1;
-            opening=true;const opened=await s.bot.openBank();
-            if(!opened.success)return {ok:false,detail:`bank did not open: ${opened.message??''}`};
+            const prior=s.bankObservation?.(),alreadyCurrent=current(),wasCurrent=!!alreadyCurrent,generation=prior?.generation??-1;
+            opening=true;
+            if(!wasCurrent){
+                const opened=await s.bot.openBank();
+                if(!opened.success)return {ok:false,detail:`bank did not open: ${opened.message??''}`};
+            }
             const fresh=()=>{const observation=current();return observation&&(wasCurrent||observation.generation>generation)?observation:null;};
             for(let i=0;i<10&&!fresh()&&!stopped();i++)await waitTicks(1);
             const observation=fresh();if(!observation||stopped())return {ok:false,detail:'bank observation unavailable',unknown:true};
+            const obsCounts=new Map<number,number>();
+            for(let i=0;i<observation.items.length;i++){const row=observation.items[i]!;obsCounts.set(row.id,(obsCounts.get(row.id)??0)+row.count);}
             const shortfalls:Record<number,number>={};
-            for(const[id,n]of required){const short=n-stored(observation,id);if(short>0)shortfalls[id]=short;}
+            for(const[id,n]of required){const short=n-(obsCounts.get(id)??0);if(short>0)shortfalls[id]=short;}
             if(Object.keys(shortfalls).length)return {ok:false,detail:'withdraw short '+JSON.stringify(shortfalls),shortfalls};
-            // The SDK resolves exact bank slots from its own snapshot. Check every row before the first dispatch.
-            if([...required.keys()].some(id=>!(s.sdk.getState()?.bank?.items??[]).some((i:any)=>i.id===id)))return {ok:false,detail:'bank withdrawal rows unavailable',unknown:true};
+            // The SDK resolves exact bank slots from its own snapshot. Index rows once before the first dispatch.
+            const bankRows=new Map<number,any>();
+            const rawBankItems:any[]=s.sdk.getState()?.bank?.items??[];
+            for(let i=0;i<rawBankItems.length;i++){const row=rawBankItems[i];if(row&&!bankRows.has(row.id))bankRows.set(row.id,row);}
+            for(const id of required.keys())if(!bankRows.has(id))return {ok:false,detail:'bank withdrawal rows unavailable',unknown:true};
             for(const[id,n]of required){
                 if(stopped())return {ok:false,detail:'bank stop stopped'};
-                const row=(s.sdk.getState()?.bank?.items??[]).find((i:any)=>i.id===id),before=current();
+                const liveItems:any[]=s.sdk.getState()?.bank?.items??[];
+                let row=bankRows.get(id);
+                if(!row||!liveItems.includes(row))row=liveItems.find((i:any)=>i.id===id);
+                const before=current();
                 if(!row||!before)return {ok:false,detail:'bank observation unavailable before withdrawal',unknown:true};
                 const packBefore=held(id),bankBefore=stored(before,id),beforeGeneration=before.generation;
                 if(bankBefore<n)return {ok:false,detail:'bank stock changed before withdrawal '+id,shortfalls:{[id]:n-bankBefore}};
@@ -175,7 +195,7 @@ export async function takeItems(s: BankSession, coins: number, want: Record<stri
             return {ok:true,detail:`took ${[...required].map(([id,n])=>`${id}x${n}`).join(',')}`};
         };
         try{result=await perform();}catch(error){result={ok:false,detail:'bank stop '+String(error),unknown:dispatched||opening};}
-        if(opening)try{await s.bot.closeBank();}catch(error){result={...result,ok:false,detail:result.detail+'; bank close '+String(error),unknown:true};}
+        if(opening&&!options.keepOpen)try{await s.bot.closeBank();}catch(error){result={...result,ok:false,detail:result.detail+'; bank close '+String(error),unknown:true};}
         return result;
     },()=>({ok:false,detail:'bank stop deadline',unknown:true}));
 }

@@ -69,11 +69,12 @@ try {
         }
         q.milestone('dungeon');
         if (!inside()) await q.walk('to prison door', [{ x: DOOR.x - 1, z: DOOR.z, tol: 0 }]);
-        for (let i = 0; i < 8 && !inside(); i++) {
+        for (let i = 0; i < 12 && !inside(); i++) {
             await q.guard('prison door');
+            const wakes0 = q.msgCount(/comes to life/i);
             const d = q.findLoc(l => (l.id === 2143 || l.id === 2144) && l.x === DOOR.x);
             await q.opLoc(d ?? DOOR, q.opIndex(d, /open/i));
-            await q.waitUntil(() => inside() || q.msgCount(/comes to life/i) > i, 6);
+            await q.waitUntil(() => inside() || q.msgCount(/comes to life/i) > wakes0, 6);
         }
         if (!inside()) await q.fail('prison door');
         q.milestone('door');

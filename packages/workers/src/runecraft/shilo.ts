@@ -135,7 +135,6 @@ export function createShiloTransit(
         if (!result.ok || stop() || !alive() || (protectedWalk && !protectedNow())) {
             throw Error('Nature native route ' + (s.tick() - lastMove >= 12 ? 'no observed movement for12ticks' : result.detail ?? 'protection/life guard changed'));
         }
-        await waitTicks(s, 2);
     };
 
     const cross = async (loc: { id: number; x: number; z: number }, stand: { x: number; z: number }, land: { x: number; z: number }, stop: () => boolean) => {

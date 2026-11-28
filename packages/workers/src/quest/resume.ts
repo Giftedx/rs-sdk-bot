@@ -370,7 +370,71 @@ const SQUIRE_PIE = 2325;
 const DRUID_RAW_MEATS = [2132, 2134, 2136, 2138];
 const DRUID_ENCHANTED_MEATS = [522, 523, 524, 525];
 
+// Death Plateau: two independent tracks in death_journal.rs2:
+//   %death_equiproom (0, 10, 20, 30, 40, 50, 55, 60, 70, 80=complete)
+//   ~death_get_map   (0..8)
+// Encoded as equip * 10 + map (0 = not started, 100..708 = started, 800 = complete).
+export function deathJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return 800;
+    if (/I can start this quest by speaking to Denulth/i.test(text)) return 0;
+    let equip: number | undefined;
+    if (/I have found the combination to the equipment room and unlocked the door|I put the stone balls in the right places/i.test(text)) equip = 70;
+    else if (/It turned out the IOU was written on the back of the combination/i.test(text)) equip = 60;
+    else if (/gambled with the guard until he ran out of money/i.test(text)) equip = 55;
+    else if (/I bought the guard a drink and he seemed more helpful/i.test(text)) equip = 50;
+    else if (/Eohric says to buy the guard a drink/i.test(text)) equip = 40;
+    else if (/The guard wouldn't talk to me!/i.test(text)) equip = 30;
+    else if (/Eohric said that the equipment room guard is staying at the local inn/i.test(text)) equip = 20;
+    else if (/I have offered to help Denulth|I have found another way up Death Plateau for Denulth/i.test(text)) equip = 10;
+    if (equip === undefined) return undefined;
+    let map = 0;
+    if (/I checked the secret way and it is safe|I have found another way up Death Plateau for Denulth/i.test(text)) map = 8;
+    else if (/I need to check that the secret way is safe/i.test(text)) map = 7;
+    else if (/I gave Tenzing the ten loaves of bread, ten cooked trout and the Spiked boots/i.test(text)) map = 6;
+    else if (/I have given Dunstan the certificate to prove that his son has been signed up/i.test(text)) map = 5;
+    else if (/Denulth gave me a certificate to prove that Dunstan's son/i.test(text)) map = 4;
+    else if (/Dunstan will help me if I get his son signed up/i.test(text)) map = 3;
+    else if (/Tenzing will show me a secret way up Death Plateau/i.test(text)) map = 2;
+    else if (/Saba says that there is a sherpa living nearby/i.test(text)) map = 1;
+    return equip * 10 + map;
+}
+
+const DEATH_VALID_EQUIP = new Set([0, 10, 20, 30, 40, 50, 55, 60, 70]);
+export function deathFrom(stage: number): number | undefined {
+    const equip = Math.floor(stage / 10);
+    const map = stage % 10;
+    if (!DEATH_VALID_EQUIP.has(equip) || map < 0 || map > 8) return undefined;
+    if (equip === 0 && map > 0) return undefined;
+    return stage;
+}
+
+const DEATH_ALE = 1905, DEATH_BLURBERRY = 2064, DEATH_COINS = 995, DEATH_IRON = 2351, DEATH_BREAD = 2309, DEATH_TROUT = 333;
+const DEATH_IOU = 3103, DEATH_COMBO = 3102, DEATH_MAP = 3104, DEATH_BOOTS = 3105, DEATH_SPIKED = 3107, DEATH_CERT = 3114;
+
+export function deathSpent(stage: number): readonly number[] {
+    const equip = Math.floor(stage / 10);
+    const map = stage % 10;
+    const out: number[] = [];
+    if (equip >= 50) out.push(DEATH_ALE);
+    if (equip >= 55) out.push(DEATH_BLURBERRY, DEATH_COINS);
+    if (map >= 6) out.push(DEATH_IRON, DEATH_BREAD, DEATH_TROUT);
+    return out;
+}
+
+export function deathHeld(stage: number): readonly number[] {
+    const equip = Math.floor(stage / 10);
+    const map = stage % 10;
+    const out: number[] = [];
+    if (equip === 55) out.push(DEATH_IOU);
+    else if (equip >= 60) out.push(DEATH_COMBO);
+    if (map >= 2 && map <= 5) out.push(DEATH_BOOTS, DEATH_SPIKED, DEATH_CERT);
+    if (map >= 7) out.push(DEATH_MAP);
+    return out;
+}
+
 export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
+    death: { key: 'death', title: /Death Plateau/i, stage: deathJournalStage, complete: 800, from: deathFrom, spent: deathSpent, held: deathHeld },
     // Thurgo eats the redberry pie at stage 2 -> 3 (quest_squire.rs2:125-151).
     squire: { key: 'squire', title: /Knight's Sword/i, stage: squireJournalStage, complete: 7, spent: (stage) => (stage >= 3 ? [SQUIRE_PIE] : []) },
     // Sanfew takes the four enchanted meats at 2 -> 3 (sanfew.rs2:55-64). At 2 an earlier run can have dipped some

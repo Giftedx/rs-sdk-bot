@@ -35,6 +35,13 @@ describe('selectRecipe', () => {
     test('unf needs no secondary', () => {
         expect(selectRecipe(54, { 203: 5 }, 'unf').key).toBe('strength');
     });
+
+    test('auto selects super_antipoison and weapon_poison when herbs and ground or raw secondaries exist', () => {
+        expect(selectRecipe(48, { 209: 5, 235: 5 }).key).toBe('super_antipoison');
+        expect(selectRecipe(48, { 209: 5, 237: 5, 233: 1 }).key).toBe('super_antipoison');
+        expect(selectRecipe(60, { 213: 5, 241: 5 }).key).toBe('weapon_poison');
+        expect(selectRecipe(60, { 213: 5, 243: 5, 233: 1 }).key).toBe('weapon_poison');
+    });
 });
 
 describe('brewShortfall', () => {

@@ -70,6 +70,12 @@ export async function sessionWalker(s: {
         walk: (x, z) => s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' }),
         interactLoc: (l, op) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' }),
         runOn: () => s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' }),
+        runState: () => {
+            const p = s.sdk.getState()?.player;
+            const varps = (s.client as { var?: ArrayLike<number> } | undefined)?.var;
+            if (!p || !Number.isFinite(p.runEnergy) || !varps) return null;
+            return { enabled: varps[173] === 1, energy: p.runEnergy };
+        },
         locs: () => s.sdk.getState()?.nearbyLocs ?? [],
         messages: () => s.sdk.getState()?.gameMessages ?? [],
         fare: (level, loc) => fareCrossingAt(level, loc) ?? null,

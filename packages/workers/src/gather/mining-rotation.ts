@@ -207,6 +207,8 @@ export const MINING_SITES: readonly MiningSite[] = [
     },
     { key: 'wilderness-hobgoblin-iron', profile: 'iron_rock_table', center: { x: 3100, z: 3766, level: 0 }, radius: 2, bank: { x: 3094, z: 3493, level: 0 } },
     { key: 'varrock-east-iron', profile: 'iron_rock_table', center: { x: 3286, z: 3368, level: 0 }, radius: 3, bank: { x: 3253, z: 3420, level: 0 } },
+    // Pinned maps/m45_154.jm2: Heroes' Guild basement safe non-Wilderness Runite rocks (2937,9882 id=2107; 2941,9884 id=2106).
+    { key: 'heroes-guild-runite', profile: 'runite_rock_table', center: { x: 2939, z: 9883, level: 0 }, radius: 3, bank: { x: 2946, z: 3368, level: 0 } },
 ];
 
 export function siteTiles(p: MiningProfile, site: MiningSite): Tile[] {

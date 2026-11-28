@@ -1458,7 +1458,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                 await s.bot.depositItem(item.name, -1);
             }
         }
-        await waitTicks(s, 1);
+        if (heldLogs() > 0) await waitTicks(s, 1);
         const after = heldLogs();
         banked += n - after;
         if (!forceToolCheck || n > 0) bankTrips++;
@@ -1509,7 +1509,6 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             spot = grove!.spot;
         }
         await s.bot.closeInterface();
-        await waitTicks(s, 1);
         console.log(`MILESTONE bank t=${used()} banked=${banked} totalChops=${chops}`);
     };
 
@@ -1589,29 +1588,17 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
 
             const before = heldLogs();
             const nearbyLocs = s.sdk.getState()?.nearbyLocs ?? [];
-            let tree: (typeof nearbyLocs)[number] | undefined;
-            let trees: typeof nearbyLocs | undefined;
-            if (draynor) {
-                const matching = nearbyLocs.filter(
-                    l =>
-                        treeRe.test(l.name) &&
-                        (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
-                        grove!.contains(l.x, l.z) &&
-                        (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick(),
-                );
-                if (matching.length > 1) matching.sort((a, b) => a.distance - b.distance);
-                trees = matching;
-                tree = woodTreeOrder(trees, s.sdk.getState()?.nearbyPlayers ?? [])[0];
-            } else {
-                for (let i = 0; i < nearbyLocs.length; i++) {
-                    const l = nearbyLocs[i]!;
-                    if (!treeRe.test(l.name)) continue;
-                    if (local && (l.x < 3214 || l.x > 3239 || l.z < 3226 || l.z > 3250)) continue;
-                    if (!tree || l.distance < tree.distance) tree = l;
-                }
-            }
+            const matching = nearbyLocs.filter(
+                l =>
+                    treeRe.test(l.name) &&
+                    (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
+                    (!draynor || grove!.contains(l.x, l.z)) &&
+                    (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick(),
+            );
+            if (matching.length > 1) matching.sort((a, b) => a.distance - b.distance);
+            const tree = woodTreeOrder(matching, s.sdk.getState()?.nearbyPlayers ?? [])[0];
             if (!tree) {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             if (draynor) {
@@ -1635,21 +1622,23 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                         { timeoutTicks: 20 },
                     );
                 }
-                await waitTicks(s, 1);
                 if (heldLogs() > before && (s.sdk.getSkillXp('woodcutting') ?? 0) > xp) {
                     chops = banked + heldLogs();
                     progressTick = s.tick();
                 } else {
                     retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 20);
                     console.log(`WARN wood tree=${tree.id}@${tree.x},${tree.z} ticks=${s.tick() - a} no log and XP gain`);
+                    await waitTicks(s, 1);
                 }
             } else {
+                if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
                 const r = woodGroveArg === 'native-processing' ? await chopProcessingTree(s, tree, over) : await s.bot.chopTree(tree);
                 if (r.success) {
                     chops = banked + heldLogs();
                     if (heldLogs() > before) progressTick = s.tick();
                 } else {
-                    await waitTicks(s, 6);
+                    retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 15);
+                    await waitTicks(s, 1);
                 }
             }
         }
