@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861925862,
+ "at": 1795861955576,
  "jobs": [
   {
    "account": "Balls",
@@ -318,6 +318,26 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "army"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [

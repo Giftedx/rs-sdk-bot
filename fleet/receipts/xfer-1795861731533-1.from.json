@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795861731533-1",
+ "account": "Abracadickra",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire ring",
+ "requested": 2,
+ "claim": "8c9ccde7-d216-4c10-b1e1-7197ab4d858a",
+ "count": 2,
+ "ok": true,
+ "at": 1795861953193,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795861938828
+ },
+ "logout": {
+  "attemptId": "1795861931315-0000027552-0000000001",
+  "at": 1795861953182,
+  "sha256": "3182c9033e653bcb9fe4548018a3009a75b2c85e639e912c22f016067f643551"
+ },
+ "screen": true
+}
