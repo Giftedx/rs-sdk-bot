@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842573625-2",
+ "account": "Nockitoff",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 76,
+ "claim": "adbbb226-b67e-44eb-af8c-f62abb39e8d0",
+ "count": 76,
+ "ok": true,
+ "at": 1795842895783,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 76
+ },
+ "bank": {
+  "count": 76,
+  "at": 1795842894679
+ },
+ "logout": {
+  "attemptId": "1795842882068-0000026768-0000000001",
+  "at": 1795842895775,
+  "sha256": "99b87f7c113aea6511faab0af7f1828d0610e6affa3d97a050a172ccaf96336e"
+ },
+ "screen": true
+}
