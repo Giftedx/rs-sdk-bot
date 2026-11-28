@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855071934,
+ "at": 1795855222909,
  "jobs": [
   {
    "account": "Balls",
@@ -127,15 +127,31 @@
    "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Billionaire BATCH_UNITS=250 -- chicken"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:245",
+   "goal": "goal:pk_army:Billionaire",
+   "role": "auto"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=2860 TARGET_COUNT=286 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Wandwaver:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Wandwaver:zanaris",
    "role": "army"
   },
   {
@@ -155,21 +171,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=10630 TARGET_COUNT=1063 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:desertrescue",
-   "role": "army"
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -178,7 +179,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1062"
+    "BATCH_UNITS": "765"
    },
    "enabled": true,
    "repeat": false,
@@ -197,7 +198,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1062"
+    "BATCH_UNITS": "765"
    },
    "enabled": true,
    "repeat": false,
