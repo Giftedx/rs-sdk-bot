@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795826553033,
+ "at": 1795826642698,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,18 +202,18 @@
    ]
   },
   {
-   "account": "InTheSack",
+   "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=9220 TARGET_COUNT=922 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:blackknight",
+   "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
   },
   {
@@ -236,33 +236,38 @@
   },
   {
    "account": "Ballbag",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+    "sweep",
+    "scorpion"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:scorpion",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
+   "goal": "goal:quest_board:scorpion",
    "role": "helper"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/chain.ts",
+   "account": "InTheSack",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+    "mining",
+    "essence"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "helper"
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
