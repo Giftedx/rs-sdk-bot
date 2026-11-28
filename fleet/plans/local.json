@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795831324083,
+ "at": 1795831407196,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -201,23 +201,6 @@
    "role": "auto"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -234,6 +217,23 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
