@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823655488-bigpackage-pickpockdick-18ba54302e8d7898",
+ "account": "Bigpackage",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 6,
+ "claim": "e12e8984-c1eb-4fec-8b21-26a53200c0b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795835182938,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Nature rune",
+   "requested": 20,
+   "count": 0
+  }
+ ]
+}
