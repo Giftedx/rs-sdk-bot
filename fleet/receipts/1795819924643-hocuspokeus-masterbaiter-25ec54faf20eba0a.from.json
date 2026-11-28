@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819924643-hocuspokeus-masterbaiter-25ec54faf20eba0a",
  "account": "Hocuspokeus",
  "partner": "Masterbaiter",
@@ -10,15 +10,37 @@
  "item": "Bronze arrow",
  "requested": 300,
  "claim": "4e1801d2-ac62-48fc-b6fd-4e3e2947ec53",
- "count": 0,
- "ok": false,
- "at": 1795834043294,
- "detail": "trade claimed",
+ "count": 300,
+ "ok": true,
+ "at": 1795834122582,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Nature rune",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 20,
+    "after": 0
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795834104193
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795834103374
+ },
+ "logout": {
+  "attemptId": "1795834043318-0000016344-0000000001",
+  "at": 1795834122530,
+  "sha256": "d3cc42a112ff5f7af5e5adc23b5746e093e60ce469dfe9d6e719d404b06af1bd"
+ },
+ "screen": true
 }
