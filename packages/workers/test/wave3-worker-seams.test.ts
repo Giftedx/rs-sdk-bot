@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { componentId } from '../../core/src/logout';
 import {
+    artisanEstimate,
+    artisanPreflight,
     inventoryRecipes,
     runArtisan,
     runCookFood,
@@ -439,9 +441,47 @@ describe('Banked karambwanji/karambwan fishing & multiobj2 karambwan cooking', (
             expect(r2.ok).toBe(true);
             expect(r2.produced).toBe(1);
             expect(clicked).toEqual([expectedComp, expectedComp]);
+
+            // Non-numeric args[0] on cooking:food is treated as foodType while CAP stays numeric (never NaN).
+            inv.push({ slot: 2, id: 3142, name: 'Raw karambwan', count: 1 });
+            const r3 = await runArtisan(s, { skill: 'cooking', method: 'food', args: ['karambwan'], env: { CAP: '50', MAX_MAKE: '1' } });
+            expect(r3.ok).toBe(true);
+            expect(r3.produced).toBe(1);
+            expect(clicked).toEqual([expectedComp, expectedComp, expectedComp]);
         } finally {
             clock.stop();
         }
+    });
+
+    test('artisanPreflight and artisanEstimate align with karambwan cooking, TAN_BANKED/TAN_KIND, and dhide TIER', () => {
+        const makeAcct = (o: Record<string, any> = {}): any => ({
+            name: 'ArtisanTester',
+            skills: { Cooking: { level: 80, xp: 2_000_000 }, Crafting: { level: 63, xp: 400_000 } },
+            quests: {},
+            inventory: {},
+            equipment: {},
+            bank: { observedAt: 1, trusted: true, items: { 3142: 5, 1747: 10, 995: 5000 } },
+            pos: { x: 3269, z: 3167, level: 0 },
+            ...o,
+        });
+        const world: any = { tick: 10, accounts: {}, reserves: {}, globalReserves: {} };
+
+        // Karambwan food & batch preflight + estimate
+        expect(artisanPreflight(makeAcct(), { skill: 'cooking', method: 'food', args: ['karambwan'] }, world).ok).toBe(true);
+        expect(artisanPreflight(makeAcct({ bank: { observedAt: 1, trusted: true, items: {} } }), { skill: 'cooking', method: 'food', env: { FOOD_TYPE: 'karambwan' } }, world).missingItems?.map(m => m.itemId)).toContain(3142);
+        expect(artisanEstimate(makeAcct(), { skill: 'cooking', method: 'food', env: { FOOD_TYPE: 'karambwan' } }, world).inputsPerUnit).toEqual({ 3142: 1 });
+        expect(artisanPreflight(makeAcct(), { skill: 'cooking', method: 'batch', env: { FOOD_TYPE: 'karambwan' } }, world).ok).toBe(true);
+        expect(artisanPreflight(makeAcct({ bank: { observedAt: 1, trusted: true, items: {} } }), { skill: 'cooking', method: 'batch', env: { FOOD_TYPE: 'karambwan' } }, world).missingItems?.map(m => m.itemId)).toContain(3142);
+
+        // Banked tanning honors TAN_BANKED, TAN_KIND, MAX_MAKE, and allows qty=0 (tan all)
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'tanning', env: { TAN_BANKED: '1', TAN_KIND: 'black', MAX_MAKE: '0' } }, world).ok).toBe(true);
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'tanning', env: { TAN_BANKED: '1', TAN_KIND: 'black', MAX_MAKE: '10' } }, world).ok).toBe(true);
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'tanning', args: ['black', '0'] }, world).blockers[0]?.kind).toBe('invalid_config');
+
+        // black-dhide-sets honors TIER Crafting levels (green=63 passes at 63; black=84 fails at 63)
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'black-dhide-sets', env: { TIER: 'green' } }, world).ok).toBe(true);
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'black-dhide-sets', env: { TIER: 'black' } }, world).blockers[0]?.kind).toBe('skill_level');
+        expect(artisanPreflight(makeAcct(), { skill: 'crafting', method: 'black-dhide-sets', env: { TIER: 'bronze' } }, world).blockers[0]?.kind).toBe('invalid_config');
     });
 });
 

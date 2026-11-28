@@ -56,8 +56,9 @@ export async function runArtisan(
             case 'cooking': {
                 const { cookingRecipes, DEFAULT_FOOD_TYPE, foodRecipe, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runSessionCookingBatch, runWineSession, validateGeCookingOrder } = await import('./cooking');
                 if (cfg.method === 'food') {
-                    const cap = Number(cfg.args[0] ?? setting('CAP', '15000'));
-                    const foodType = (setting('FOOD_TYPE', cfg.args[1]) ?? DEFAULT_FOOD_TYPE).toLowerCase();
+                    const arg0IsCap = cfg.args[0] !== undefined && /^\d+$/.test(cfg.args[0]);
+                    const cap = Number(arg0IsCap ? cfg.args[0] : setting('CAP', '15000'));
+                    const foodType = (setting('FOOD_TYPE', arg0IsCap ? cfg.args[1] : cfg.args[0]) ?? DEFAULT_FOOD_TYPE).toLowerCase();
                     const rawMax = setting('MAX_MAKE') ?? setting('TARGET_COUNT') ?? setting('BATCH_UNITS');
                     const maximum = rawMax !== undefined ? Number(rawMax) : Infinity;
                     const r = await runCookFood(s, foodType, cap, halted, maximum);

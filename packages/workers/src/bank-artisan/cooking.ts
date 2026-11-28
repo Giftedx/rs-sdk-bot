@@ -1041,8 +1041,9 @@ export async function runCookingCli(
         return runGeCookingCli(account, args, deps);
     }
     if (method === 'food') {
-        const cap = Number(args[0] ?? env.CAP ?? 15000);
-        const foodType = args[1] ?? env.FOOD_TYPE ?? DEFAULT_FOOD_TYPE;
+        const arg0IsCap = args[0] !== undefined && /^\d+$/.test(args[0]);
+        const cap = Number(arg0IsCap ? args[0] : env.CAP ?? 15000);
+        const foodType = (arg0IsCap ? args[1] : args[0]) ?? env.FOOD_TYPE ?? DEFAULT_FOOD_TYPE;
         const rawMax = env.MAX_MAKE ?? env.TARGET_COUNT ?? env.BATCH_UNITS;
         const maximum = rawMax !== undefined && rawMax !== '' ? Number(rawMax) : Infinity;
         let stopped = false;
