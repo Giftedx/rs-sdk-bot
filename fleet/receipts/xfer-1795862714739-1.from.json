@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795862714739-1",
+ "account": "BoneToPick",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut sapphire",
+ "requested": 1,
+ "claim": "3ec4e75b-8cc2-43a6-8d21-7efd13813dbb",
+ "count": 0,
+ "ok": false,
+ "at": 1795863480292,
+ "detail": "trade claimed"
+}
