@@ -17,6 +17,7 @@ import { noOpRunsFile, NoOpRunGuard, statusFingerprint, type RunFingerprint } fr
 import { accountClassLevels, defectBlocksAccount } from '../../brain/src/planner';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { controllerNamed, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { FLEET_DIR, loadOwners, mySide, sideOf, type Owner } from '../../core/src/fleet';
@@ -1897,14 +1898,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: {
+                env: leanBunEnv({
                     ...process.env, ...job.env, ...botCountEnv(accounts),
                     SWARM_LEASE_HOLDER: lease.holder,
                     SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'),
                     WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1',
                     BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '',
                     STANDING: job.standing ? '1' : '',
-                },
+                }),
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
