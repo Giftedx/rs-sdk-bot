@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834698197,
+ "at": 1795834716139,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -243,17 +243,24 @@
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "1311",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1311",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
+   "goal": "campaign:haggis:item:1311",
    "role": "auto"
   },
   {
