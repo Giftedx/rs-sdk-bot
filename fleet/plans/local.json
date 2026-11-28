@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834437610,
+ "at": 1795834466453,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -243,22 +243,19 @@
   },
   {
    "account": "Pullmybow",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "mining",
-    "ore"
+    "sweep",
+    "elena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
   },
   {
    "account": "Fingersmith",
