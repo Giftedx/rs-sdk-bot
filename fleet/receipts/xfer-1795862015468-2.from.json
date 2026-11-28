@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795862015468-2",
+ "account": "SporranDip",
+ "partner": "RearEntry",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 30,
+ "claim": "478e9b4b-e6cf-45ad-99fb-0bad73bbdef3",
+ "count": 0,
+ "ok": false,
+ "at": 1795862645263,
+ "detail": "trade claimed"
+}

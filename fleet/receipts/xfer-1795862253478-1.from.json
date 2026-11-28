@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795862253478-1",
+ "account": "PickpockDick",
+ "partner": "Ballbag",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Super attack(3)",
+ "requested": 8,
+ "claim": "a7f32594-bf8c-414c-bc8a-7812927ece3d",
+ "count": 0,
+ "ok": false,
+ "at": 1795862606246,
+ "detail": "trade claimed"
+}

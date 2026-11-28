@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795862525369,
+ "at": 1795862715029,
  "jobs": [
   {
    "account": "Balls",
@@ -45,18 +45,53 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "shop-buy",
+    "gemshop2",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "1605",
+    "ITEMS": "Emerald",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:supply_chain:1605",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "goal:supply_chain:1605",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "120",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "120"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -75,27 +110,22 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Swordswallow",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Billionaire",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -135,7 +165,7 @@
    ]
   },
   {
-   "account": "Woodenstaff",
+   "account": "Shaftsinker",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -155,102 +185,23 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "74",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "74"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
-   ],
-   "env": {
-    "MAX_MAKE": "15",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:235",
-    "BATCH_UNITS": "15",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:235",
-   "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=17 PRODUCT_TARGET=18 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=18 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=18 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "auto"
-  },
-  {
-   "account": "TackleBox",
+   "account": "Woodenstaff",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
-    "essence"
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "helper",
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
    "resources": [
-    "essence-mine"
+    "varrock-se-mine"
    ]
   }
  ],
@@ -269,6 +220,7 @@
   "bigpackage",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",

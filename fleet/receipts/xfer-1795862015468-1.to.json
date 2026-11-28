@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795862015468-1",
+ "account": "BoneToPick",
+ "partner": "Nockitoff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "4acf0e9b-dcf8-4a22-939d-d4439f50ec33",
+ "count": 1,
+ "ok": true,
+ "at": 1795862645558,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795862644795
+ },
+ "logout": {
+  "attemptId": "1795862634346-0000013912-0000000001",
+  "at": 1795862645551,
+  "sha256": "1171bd42dcdc0137799309a80ae03dd0dbf03896367de43a94965481717eb710"
+ },
+ "screen": true
+}
