@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869377859,
+ "at": 1795869507242,
  "jobs": [
   {
    "account": "Balls",
@@ -66,22 +66,54 @@
   },
   {
    "account": "quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "knights"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 BANK_PACK=1 -- giant",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:ikov BATCH_UNITS=1 -- sweep ikov"
    ],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:995",
-    "BATCH_UNITS": "50"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:995",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "shaftsinker",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "sporranbulge",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
   },
   {
    "account": "meatntwoveg",
@@ -109,7 +141,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "828"
+    "BATCH_UNITS": "826"
    },
    "enabled": true,
    "repeat": false,
