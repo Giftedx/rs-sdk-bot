@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795863961644-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "knightrider",
+  "to": "shaftmaker",
+  "item": "Harpoon",
+  "count": 1,
+  "itemId": 311,
+  "start": 1795863961644,
+  "end": 1795864861644,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
