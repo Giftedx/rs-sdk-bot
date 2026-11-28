@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795837441832,
+ "at": 1795837528816,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "204",
+    "MAX_ITEMS": "139",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "204"
+    "BATCH_UNITS": "139"
    },
    "enabled": true,
    "repeat": false,
@@ -213,8 +213,8 @@
    "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2370 TARGET_COUNT=237 PRODUCT_TARGET=237 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=237 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2320 TARGET_COUNT=232 PRODUCT_TARGET=232 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=232 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -345,7 +345,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1569"
+    "BATCH_UNITS": "1607"
    },
    "enabled": true,
    "repeat": false,
