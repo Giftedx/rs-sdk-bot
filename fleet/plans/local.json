@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795858808378,
+ "at": 1795858863942,
  "jobs": [
   {
    "account": "Balls",
@@ -45,30 +45,115 @@
    "role": "pvp"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-fighter.ts",
+   "account": "PickpockDick",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "ranged-gather"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "475",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "475"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
    "role": "auto"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=211 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=211 MAX_MAKE=211 CAP=2088 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Wandwaver BATCH_UNITS=250 -- chicken"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Wandwaver",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "zanaris"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=31 STALL_TICKS=200 -- crafting progressive",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Kiltlifter:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Kiltlifter:zanaris",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-gather"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
     "DEMAND_ID": "goal:pk_army:Woodenstaff",
     "BATCH_UNITS": "250"
@@ -76,7 +161,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Moneyshot",
@@ -99,6 +187,22 @@
    "resources": [
     "draynor-normal-trees"
    ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "helper"
   },
   {
    "account": "Quickhandjob",
@@ -212,111 +316,24 @@
    "role": "army"
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 PRODUCT_TARGET=28 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 MAX_MAKE=28 CAP=1500 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "staged"
-   ],
-   "env": {
-    "METHOD": "karambwanji",
-    "BANKED": "1",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:3150",
-    "BATCH_UNITS": "239",
-    "AMOUNT": "239"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:3150",
-   "role": "army",
-   "resources": [
-    "karambwanji-lake"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "grind:unicorn_horn"
-   ],
-   "env": {
-    "MAX_MAKE": "3",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:235",
-    "BATCH_UNITS": "3",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "helper"
-  },
-  {
-   "account": "ChaosInPants",
+   "account": "BoneToPick",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-gather"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:ChaosInPants",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:ChaosInPants",
-   "role": "auto"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=31 STALL_TICKS=160 ORDER_MODE=level -- crafting inventory",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Kiltlifter:zanaris BATCH_UNITS=1 -- sweep zanaris"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Kiltlifter:zanaris",
-   "role": "army"
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
@@ -341,7 +358,6 @@
   "mmtha0205",
   "mmthv2350",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "pocketrocket",
   "sausagefest",
