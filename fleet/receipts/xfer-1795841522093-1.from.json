@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795841522093-1",
  "account": "Shaftsinker",
  "partner": "BowBeforeMe",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 9,
  "claim": "193d7e07-2b3f-45e0-9488-9bb62916d1cf",
- "count": 0,
- "ok": false,
- "at": 1795841924156,
- "detail": "trade claimed"
+ "count": 9,
+ "ok": true,
+ "at": 1795842102571,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2646,
+  "after": 2637
+ },
+ "logout": {
+  "attemptId": "1795841924166-0000004996-0000000001",
+  "at": 1795842102559,
+  "sha256": "784c423c7266ea50eca86a64383ab4489ce63364d01e84cb53c81a25f99a4887"
+ },
+ "screen": true
 }
