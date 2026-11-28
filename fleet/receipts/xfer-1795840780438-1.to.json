@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795840780438-1",
+ "account": "CoinCock",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "7849ca5d-8b23-44d7-9363-e401a22d9bad",
+ "count": 1,
+ "ok": true,
+ "at": 1795841038297,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795841037459
+ },
+ "logout": {
+  "attemptId": "1795841026743-0000023280-0000000001",
+  "at": 1795841038214,
+  "sha256": "7bc67c7e027f4b0f3c4d79185443e1645b382bcff8bd864f01651fb5544e0b1b"
+ },
+ "screen": true
+}

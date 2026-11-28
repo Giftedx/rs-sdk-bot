@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795840780438-1",
  "account": "YewGotWood",
  "partner": "CoinCock",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "5d049aa3-8cd8-4aa5-9c11-6ce1bb429a67",
- "count": 0,
- "ok": false,
- "at": 1795841006199,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795841036626,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795841016311
+ },
+ "logout": {
+  "attemptId": "1795841006207-0000005924-0000000001",
+  "at": 1795841036606,
+  "sha256": "447192f30b8032090accae9b6b95cec0e5a089ad3cbf774dd28d4374f76908d9"
+ },
+ "screen": true
 }
