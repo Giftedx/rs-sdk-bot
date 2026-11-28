@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795825972575,
+ "at": 1795826054905,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,47 +185,6 @@
    "role": "pvp"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "arheinstore",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1755",
-    "ITEMS": "Chisel",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1755",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1755",
-   "role": "helper"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "blackknight"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:blackknight",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:blackknight",
-   "role": "auto"
-  },
-  {
    "account": "Nockitoff",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -259,6 +218,54 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "blackknight"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:blackknight",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:blackknight",
+   "role": "helper"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "demon"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:demon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:demon",
+   "role": "helper"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "demon"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:demon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:demon",
+   "role": "helper"
   }
  ],
  "army": [
