@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864241507,
+ "at": 1795864263361,
  "jobs": [
   {
    "account": "Balls",
@@ -43,6 +43,31 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "yewfirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:560",
+   "role": "army"
   },
   {
    "account": "Mightyrod",
@@ -120,13 +145,17 @@
    "account": "woodpecker",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "glass"
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
    ],
    "env": {
+    "ORB_TRIP": "1",
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
+    "BATCH_UNITS": "776",
+    "STALL_TICKS": "700"
    },
    "enabled": true,
    "repeat": false,
@@ -229,46 +258,21 @@
    "args": [
     "crafting",
     "inventory",
-    "cut-bow:unstrung_magic_shortbow"
+    "bow-string:magic_shortbow"
    ],
    "env": {
-    "MAX_MAKE": "1",
+    "MAX_MAKE": "3",
     "CAP": "1000",
     "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:72",
-    "BATCH_UNITS": "1",
+    "DEMAND_ID": "mission:mission:pk-squad:item:861",
+    "BATCH_UNITS": "3",
     "ORDER_MODE": "best-effort",
     "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:72",
+   "goal": "mission:mission:pk-squad:item:861",
    "role": "auto"
-  },
-  {
-   "account": "yewfirst",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "80",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "80"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
   },
   {
    "account": "knightrider",
