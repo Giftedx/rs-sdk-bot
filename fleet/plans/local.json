@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870106419,
+ "at": 1795870178091,
  "jobs": [
   {
    "account": "Balls",
@@ -45,22 +45,82 @@
    "role": "pvp"
   },
   {
-   "account": "wandwaver",
-   "script": "scripts/aio-logistics.ts",
+   "account": "sporrandip",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "424",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "424"
    },
    "enabled": true,
    "repeat": false,
+   "goal": "campaign:haggis:item:43",
    "role": "army"
+  },
+  {
+   "account": "wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 PRODUCT_TARGET=1 STALL_TICKS=150 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
+  },
+  {
+   "account": "hocuspokeus",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "unicorn"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1113",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "edgeville-unicorns"
+   ]
+  },
+  {
+   "account": "shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "flax"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto",
+   "resources": [
+    "seers-flax"
+   ]
   },
   {
    "account": "meatntwoveg",
@@ -79,31 +139,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "sporrandip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "301",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "122400",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "301"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
   },
   {
    "account": "wellhung",
@@ -140,7 +175,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
