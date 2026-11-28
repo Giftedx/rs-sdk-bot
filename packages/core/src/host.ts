@@ -402,7 +402,9 @@ export function rewriteScript(src: string, id: string, scriptDir: string, botMod
     return `const __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\n${out}`;
 }
 
-const entryTranspiler = new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } });
+let entryTranspiler: Bun.Transpiler | null = null;
+const getEntryTranspiler = (): Bun.Transpiler =>
+    entryTranspiler ??= new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } });
 const hostedEntryCache = new Map<string, (id: string) => string>();
 const SCRIPT_LOAD_FILTER = new RegExp(`[?&]${SCRIPT_Q}=`);
 const SCRIPT_FN_LOAD_FILTER = new RegExp(`[?&]${SCRIPT_FN_Q}=1(?:&|$)`);
@@ -550,7 +552,7 @@ function splitHostedEsmBody(body: string): { imports: string[]; statements: stri
 }
 
 function compileHostedTemplate(src: string, scriptDir: string): (id: string) => string {
-    const entry = entryTranspiler.transformSync(src);
+    const entry = getEntryTranspiler().transformSync(src);
     let marker = '__RS_HOST_BOT_ID__';
     while (entry.includes(marker) || scriptDir.includes(marker) || BOT_MODULE.includes(marker)) marker += '_X';
     const rewritten = rewriteScript(entry, marker, scriptDir);
@@ -585,7 +587,7 @@ export function hostedEntrySource(src: string, id: string, scriptDir: string): s
 
 // Reusable hosted module entry: compiled and cached once per script file, avoiding per-launch ESM module retention.
 export function hostedCallableSource(src: string, scriptDir: string): string {
-    const entry = entryTranspiler.transformSync(src);
+    const entry = getEntryTranspiler().transformSync(src);
     const rewritten = rewriteScript(entry, BOT_CURRENT, scriptDir);
     const split = rewritten.indexOf('\n');
     const body = rewritten.slice(split + 1);
@@ -858,6 +860,7 @@ async function runInstance(inst: Instance): Promise<{ code: number; result: stri
     );
     const code = await inst.done;
     registry.delete(inst.id);
+    inst.sessions.length = 0;
     return { code, result: inst.result };
 }
 

@@ -1,4 +1,5 @@
 import type { BotSDK } from '../../../../vendor/rs-sdk/sdk/index';
+import { isPlayerChat } from '../../../../vendor/rs-sdk/sdk/types';
 import { ServerProt } from '../../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 import { assertActionScope } from '../action-scope';
 import { setEquipmentObserved } from '../container-observation';
@@ -88,7 +89,75 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     listeners.delete = (l: () => void) => { const deleted = rawListenerDelete(l); if (deleted) listenersDirty = true; return deleted; };
     const inventory = createInventoryTracker(client, () => stopped, () => tick);
 
-    const deliver = (msg: object) => s.handleMessage(JSON.stringify(msg));
+    // Real BotSDK instances accept direct in-process delivery, avoiding a full-state JSON.stringify + JSON.parse
+    // copy on every game tick and action. Unit doubles with custom handleMessage keep the JSON path.
+    const canDeliverDirect = !Object.prototype.hasOwnProperty.call(s, 'handleMessage')
+        && typeof s.chatHistory?.record === 'function'
+        && s.stateListeners instanceof Set
+        && s.pendingActions instanceof Map
+        && s.config && typeof s.config === 'object';
+    const deliver = (msg: { type: string; state?: any; stateReceivedAt?: number; actionId?: string; result?: unknown; maxMessageLength?: number }) => {
+        if (!canDeliverDirect) {
+            s.handleMessage(JSON.stringify(msg));
+            return;
+        }
+        if (msg.type === 'sdk_info' && typeof msg.maxMessageLength === 'number' && msg.maxMessageLength > 0) {
+            s.serverMaxMessageLength = msg.maxMessageLength;
+            return;
+        }
+        if (msg.type === 'sdk_state' && msg.state) {
+            const st = msg.state;
+            if (s.config.showChat === false && st.gameMessages) {
+                st.gameMessages = st.gameMessages.filter((m: { type: number }) => !isPlayerChat(m.type));
+            }
+            if (st.gameMessages) s.chatHistory.record(st.gameMessages);
+            if (st.nearbyPlayers) {
+                for (let i = 0; i < st.nearbyPlayers.length; i++) {
+                    const p = st.nearbyPlayers[i];
+                    if (p && p.worldX === undefined) { p.worldX = p.x; p.worldZ = p.z; }
+                }
+            }
+            if (st.trade) {
+                for (const list of [st.trade.myOffer, st.trade.theirOffer]) {
+                    if (!list) continue;
+                    for (let i = 0; i < list.length; i++) {
+                        const item = list[i];
+                        if (item && item.amount === undefined) item.amount = item.count;
+                    }
+                }
+            }
+            if (st.skills) {
+                const nameMap: Record<string, unknown> = Object.create(null);
+                for (let i = 0; i < st.skills.length; i++) {
+                    const skill = st.skills[i];
+                    if (skill && !/^Stat\d+$/i.test(skill.name)) nameMap[skill.name] = skill;
+                }
+                st.skills = new Proxy(st.skills, {
+                    get(target, prop, receiver) {
+                        if (typeof prop === 'string' && prop in nameMap) return nameMap[prop];
+                        return Reflect.get(target, prop, receiver);
+                    },
+                });
+            }
+            s.state = st;
+            s.stateReceivedAt = msg.stateReceivedAt || Date.now();
+            for (const listener of s.stateListeners as Set<(state: unknown) => void>) {
+                try { listener(st); } catch (e) { console.error('State listener error:', e); }
+            }
+            return;
+        }
+        if (msg.type === 'sdk_action_result' && msg.actionId) {
+            const pending = (s.pendingActions as Map<string, { resolve(r: unknown): void; reject(e: Error): void; timeout?: ReturnType<typeof setTimeout> }>).get(msg.actionId);
+            if (pending) {
+                if (pending.timeout) clearTimeout(pending.timeout);
+                s.pendingActions.delete(msg.actionId);
+                if (msg.result) pending.resolve(msg.result);
+                else pending.reject(Object.assign(new Error('No result in action response'), { name: 'ActionDispatchError', reason: 'error' }));
+            }
+            return;
+        }
+        s.handleMessage(JSON.stringify(msg));
+    };
     const pushState = (kind: 's' | 'p' = 'p') => {
         const state = client.collectBotState(tick);
         recorder?.publish(tick, state, kind);

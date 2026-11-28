@@ -19,6 +19,7 @@ import { fleetLeaseAllowsWorker } from '../../core/src/fleet-lease';
 import { hasStopFile } from '../../core/src/practice-paths';
 import { workerDrain } from '../../core/src/live-update-pending';
 import { baseProcessEnv, isChainScript, runHostedBot, type HostedBot, type RunHostedBotOpts } from '../../core/src/host';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { parseStep } from '../../core/src/chain-step';
 import { writeAtomicFile } from '../../core/src/atomic-file';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
@@ -408,7 +409,7 @@ export async function runHostPool(args: PoolArgs, deps: HostPoolDeps = {}): Prom
             } finally {
                 active.delete(key);
                 lastActiveAt = Date.now();
-                try { Bun.gc(false); } catch { /* optional GC hint */ }
+                try { Bun.gc(true); } catch { /* optional GC hint */ }
             }
         })();
         active.set(key, { bot: cmd.bot, cancel, task });
@@ -498,7 +499,7 @@ if (import.meta.main) {
         run: async active => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
-            const p = Bun.spawn(['bun', '--smol', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostOptions(parsed, active)], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
+            const p = Bun.spawn(['bun', '--smol', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostOptions(parsed, active)], { stdout: 'pipe', stderr: 'inherit', env: leanBunEnv(process.env) ,windowsHide:true});
             const stdout = await keepOutput(p.stdout, keptHostLine);
             return { stdout, exitCode: await p.exited };
         },

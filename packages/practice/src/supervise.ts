@@ -12,6 +12,7 @@ import {hasStopFile,readStopFile,statusReadDirs} from '../../core/src/practice-p
 import {DRAIN_STOP_TEXT,workerDrain} from '../../core/src/live-update-pending';
 import {killTree} from '../../core/src/proc';
 import {parseStep,runChainSteps,type Step} from '../../core/src/chain-step';
+import {leanBunEnv} from '../../core/src/lean-bun-env';
 import {childResult,indentWriter} from '../../core/src/run-child';
 import {existsSync,statSync} from 'node:fs';
 import {join} from 'node:path';
@@ -47,7 +48,7 @@ export async function runWorker(cmd: readonly string[], opts: {
 }): Promise<{ stdout: string; stderr: string; exitCode: number; stalled: boolean }> {
     const started = Date.now(), stallMs = opts.stallMs ?? STALL_MS;
     let lastOutput = started, stalled = false;
-    const p = Bun.spawn([...cmd], { cwd: opts.root, stdout: 'pipe', stderr: 'pipe', env: opts.env ?? process.env, windowsHide: true });
+    const p = Bun.spawn([...cmd], { cwd: opts.root, stdout: 'pipe', stderr: 'pipe', env: leanBunEnv(opts.env ?? process.env), windowsHide: true });
     const out = opts.write ?? { stdout: (c: string) => process.stdout.write(c), stderr: (c: string) => process.stderr.write(c) };
     const watch = setInterval(() => {
         const last = Math.max(started, lastOutput, newestStatusWrite(opts.accounts, opts.root));

@@ -74,14 +74,15 @@ test('the cache keeps the newest entries only', async () => {
 });
 
 test('the preload serves the vendor module: bunzip2 gives the same bytes as bunzip2Raw for a real bzip2 stream', async () => {
-    const probe = Bun.spawnSync(['bzip2', '--help'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exitCode;
+    const mod: any = await import(String('../../../vendor/rs-sdk/server/webclient/src/io/BZip2.js'));
+    expect(typeof mod.bunzip2Raw).toBe('function');
+    let probe: number | null | undefined;
+    try { probe = Bun.spawnSync(['bzip2', '--help'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exitCode; } catch { return; }
     if (probe === undefined || probe === null || probe > 1) return; // no system bzip2 here
     const dir = mkdtempSync(join(tmpdir(), 'bunzip-')), raw = join(dir, 'in.txt');
     let seed = 7;
     writeFileSync(raw, Buffer.from('interface text '.repeat(500) + Array.from({ length: 60000 }, () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) % 9973).join(',')));
     const packed = Bun.spawnSync(['bzip2', '-9', '-c', raw], { stdout: 'pipe', windowsHide: true }).stdout;
-    const mod: any = await import(String('../../../vendor/rs-sdk/server/webclient/src/io/BZip2.js'));
-    expect(typeof mod.bunzip2Raw).toBe('function');
     const prior = process.env.BUNZIP_CACHE_DIR;
     process.env.BUNZIP_CACHE_DIR = join(dir, 'cache');
     try {

@@ -40,6 +40,7 @@ import { currentHostedScope } from './host-scope';
 const NO_GUARD_SCRIPT_RE = /quest|microbot/i;
 const LIVE_GC_INTERVAL_MS = 10 * 60 * 1000;
 let liveGcTimer: ReturnType<typeof setInterval> | null = null;
+let cachedProtectByStyle: ReturnType<typeof import('../prayer-guard').protectByStyle> | null = null;
 
 function ensureLiveGcTimer(): void {
     if (liveGcTimer || process.env.SIM_LOCKSTEP === '1') return;
@@ -173,7 +174,10 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
     // connected client that does not answer holds the tick of a lockstep world for every other client.
     const guardTables = prayerGuardOn
-        ? { protect: prayerMod!.protectByStyle(attackStylesMod!.npcAttackStyles()), hunters: huntersMod!.npcHunters() }
+        ? {
+            protect: (cachedProtectByStyle ??= prayerMod!.protectByStyle(attackStylesMod!.npcAttackStyles())),
+            hunters: huntersMod!.npcHunters(),
+        }
         : null;
     // The loot job reads the item tables and the hunting NPCs: read them here too, for the same reason.
     const events = process.env.RANDOM_EVENTS !== '0', lootOn = process.env.LOOT_WATCH !== '0' && !recordRun(name);
@@ -238,7 +242,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
             guard: guardOn ? { tables: sharedLootTables(), minValue: GUARD_VALUE } : null,
             loot: lootTables ? {
                 tables: lootTables, name,
-                friends: new Set(ownerFriends!),
+                friends: ownerFriends!,
                 reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {},
             } : null,
         }));
