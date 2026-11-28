@@ -117,12 +117,47 @@ function isSettledOrder(order: any, receipts: any[], now: number): boolean {
     return ok.has('from') && ok.has('to');
 }
 
-// Keep only unresolved orders and their receipts in memory; settled orders retain only a stat stamp so thousands of historical trade files do not sit parsed in RAM.
+function projectCompactOrder(raw: any): any {
+    if (!raw || typeof raw !== 'object') return raw;
+    return {
+        id: raw.id,
+        server: raw.server,
+        from: raw.from,
+        to: raw.to,
+        item: raw.item,
+        count: raw.count,
+        start: raw.start,
+        end: raw.end,
+        ...(raw.itemId !== undefined ? { itemId: raw.itemId } : {}),
+        ...(raw.extra !== undefined ? { extra: raw.extra } : {}),
+        ...(raw.meet !== undefined ? { meet: raw.meet } : {}),
+    };
+}
+
+function projectExpiredOrder(raw: any): any {
+    if (!raw || typeof raw !== 'object') return raw;
+    return {
+        id: raw.id,
+        from: raw.from,
+        to: raw.to,
+        item: raw.item,
+        count: raw.count,
+        start: raw.start,
+        end: raw.end,
+    };
+}
+
+type ExpiredUnsettledEntry = { mtimeMs: number; size: number; receiptSig: string; order: any; receipts: any[] };
+const expiredUnsettledCache = new Map<string, ExpiredUnsettledEntry>();
+
+// Keep only unresolved orders and their receipts in memory; settled orders retain only a stat stamp and expired
+// unsettled orders keep a compact pre-projected summary so thousands of historical trade files do not sit parsed in RAM.
 function readOpenFleetOrdersAndReceipts(now: number): { orders: any[]; receipts: any[] } {
     return every(10_000, `open-fleet-orders:${FILES.fleet}`, () => {
         const ordersDir = join(FILES.fleet, 'orders'), receiptsDir = join(FILES.fleet, 'receipts');
         if (!existsSync(ordersDir)) {
             settledOrdersCache.clear();
+            expiredUnsettledCache.clear();
             openOrderJsonCache.clear();
             openReceiptJsonCache.clear();
             return { orders: [], receipts: [] };
@@ -169,6 +204,12 @@ function readOpenFleetOrdersAndReceipts(now: number): { orders: any[]; receipts:
             if (settled && settled.mtimeMs === st.mtimeMs && settled.size === st.size && settled.receiptSig === receiptSig) {
                 continue;
             }
+            const expiredHit = expiredUnsettledCache.get(f);
+            if (expiredHit && nowWall - st.mtimeMs > 1000 && expiredHit.mtimeMs === st.mtimeMs && expiredHit.size === st.size && expiredHit.receiptSig === receiptSig) {
+                orders.push(expiredHit.order);
+                if (expiredHit.receipts.length) receipts.push(...expiredHit.receipts);
+                continue;
+            }
             const order = readJsonCached(openOrderJsonCache, full, nowWall);
             if (!order) continue;
             const orderReceipts: any[] = [];
@@ -179,17 +220,45 @@ function readOpenFleetOrdersAndReceipts(now: number): { orders: any[]; receipts:
             }
             if (isSettledOrder(order, orderReceipts, now)) {
                 settledOrdersCache.set(f, { mtimeMs: st.mtimeMs, size: st.size, receiptSig });
+                expiredUnsettledCache.delete(f);
                 openOrderJsonCache.delete(full);
                 for (const rf of rFiles) openReceiptJsonCache.delete(join(receiptsDir, rf));
                 continue;
             }
             settledOrdersCache.delete(f);
+            if (Number.isFinite(order.end) && now > order.end && orderReceipts.every(r => !Number.isFinite(r?.at) || r.at <= now)) {
+                const slimOrder = projectExpiredOrder(order);
+                let slimReceipts: any[];
+                if (orderReceipts.some(r => r?.version !== undefined)) {
+                    if (!validOrder(order)) {
+                        slimReceipts = [{ id: order.id, version: 2, role: 'from', state: 'reconcile' }];
+                    } else {
+                        const s = tradeSettlement(order, orderReceipts, now).state;
+                        slimReceipts = s === 'failed'
+                            ? [{ id: order.id, ok: false }]
+                            : [{ id: order.id, version: 2, role: 'from', state: s }];
+                    }
+                } else if (orderReceipts.some(r => r?.ok === false)) {
+                    slimReceipts = [{ id: order.id, ok: false }];
+                } else {
+                    const okRoles = new Set<string>(orderReceipts.filter(r => r?.ok === true).map(r => r.role));
+                    slimReceipts = [...okRoles].map(role => ({ id: order.id, role, ok: true }));
+                }
+                expiredUnsettledCache.set(f, { mtimeMs: st.mtimeMs, size: st.size, receiptSig, order: slimOrder, receipts: slimReceipts });
+                openOrderJsonCache.delete(full);
+                for (const rf of rFiles) openReceiptJsonCache.delete(join(receiptsDir, rf));
+                orders.push(slimOrder);
+                if (slimReceipts.length) receipts.push(...slimReceipts);
+                continue;
+            }
+            expiredUnsettledCache.delete(f);
             activeOrderFiles.add(full);
-            orders.push(order);
+            orders.push(projectCompactOrder(order));
             for (const rf of rFiles) activeReceiptFiles.add(join(receiptsDir, rf));
             receipts.push(...orderReceipts);
         }
         for (const key of settledOrdersCache.keys()) if (!orderFiles.has(key)) settledOrdersCache.delete(key);
+        for (const key of expiredUnsettledCache.keys()) if (!orderFiles.has(key)) expiredUnsettledCache.delete(key);
         for (const key of openOrderJsonCache.keys()) if (!activeOrderFiles.has(key)) openOrderJsonCache.delete(key);
         for (const key of openReceiptJsonCache.keys()) if (!activeReceiptFiles.has(key)) openReceiptJsonCache.delete(key);
         return { orders, receipts };

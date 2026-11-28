@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { scanJsonlTail, tailJsonlFile, tailLines } from './jsonl-tail';
+import { pushDue, withoutClocksHashValue } from './publish-relay';
 import { encodeMapCache, readCachedMapBytes, type MapSpec } from './server/build-map';
 
 const dirs: string[] = [];
@@ -60,5 +61,19 @@ describe('dashboard memory caches', () => {
         const nextSec = (st.mtimeMs + 5000) / 1000;
         utimesSync(collisionFile, nextSec, nextSec);
         expect(readCachedMapBytes(cacheFile, collisionFile, map)).toBeNull();
+    });
+
+    test('withoutClocksHashValue produces compact 64-hex digest invariant to epoch timestamps', () => {
+        const a = { now: 1_780_000_000_000, bots: [{ name: 'Alpha', at: 1_780_000_001_000, hp: 50 }] };
+        const b = { now: 1_780_000_060_000, bots: [{ name: 'Alpha', at: 1_780_000_061_000, hp: 50 }] };
+        const c = { now: 1_780_000_060_000, bots: [{ name: 'Alpha', at: 1_780_000_061_000, hp: 49 }] };
+        const ha = withoutClocksHashValue(a);
+        const hb = withoutClocksHashValue(b);
+        const hc = withoutClocksHashValue(c);
+        expect(ha).toMatch(/^[a-f0-9]{64}$/);
+        expect(ha).toBe(hb);
+        expect(ha).not.toBe(hc);
+        expect(pushDue(JSON.stringify(b), { stable: ha, at: 1_780_000_000_000 }, 1_780_000_060_000, hb)).toBe(false);
+        expect(pushDue(JSON.stringify(c), { stable: ha, at: 1_780_000_000_000 }, 1_780_000_060_000, hc)).toBe(true);
     });
 });

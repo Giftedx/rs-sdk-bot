@@ -534,6 +534,59 @@ interface OrdersReceiptsCacheEntry {
 
 const ordersReceiptsCache = new Map<string, OrdersReceiptsCacheEntry>();
 
+// Compact per-directory stat caches keyed by filename so historical trade files keep minimal RAM.
+interface DirOrderCache {
+    readonly expired: Map<string, { mtimeMs: number; size: number; end: number; server: string | null }>;
+    readonly recent: Map<string, { mtimeMs: number; size: number; value: Order }>;
+    // receiptSummary: filename -> compact settled/meta summary; orderId is omitted when it equals the filename prefix (<orderId>.<role>.json).
+    readonly receiptSummary: Map<string, { mtimeMs: number; size: number; account: string | null; at: number; server: string | null; isSettled: boolean; orderId?: string }>;
+    readonly recentReceipt: Map<string, { mtimeMs: number; size: number; value: Receipt }>;
+}
+
+const dirOrderCaches = new Map<string, DirOrderCache>();
+function getDirOrderCache(dirKey: string): DirOrderCache {
+    let entry = dirOrderCaches.get(dirKey);
+    if (!entry) {
+        if (dirOrderCaches.size >= 8) dirOrderCaches.clear();
+        entry = {
+            expired: new Map(),
+            recent: new Map(),
+            receiptSummary: new Map(),
+            recentReceipt: new Map(),
+        };
+        dirOrderCaches.set(dirKey, entry);
+    }
+    return entry;
+}
+
+function readOrderStatCached(cache: DirOrderCache, fileName: string, full: string, st: { mtimeMs: number; size: number }, nowWall: number): Order | null {
+    const hit = cache.recent.get(fileName);
+    if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+        return hit.value;
+    }
+    const parsed = safeReadJson<Order>(full);
+    if (!parsed) {
+        cache.recent.delete(fileName);
+        return null;
+    }
+    cache.recent.set(fileName, { mtimeMs: st.mtimeMs, size: st.size, value: parsed });
+    return parsed;
+}
+
+function readReceiptStatCached(cache: DirOrderCache, fileName: string, full: string, st: { mtimeMs: number; size: number }, nowWall: number): Receipt | null {
+    const hit = cache.recentReceipt.get(fileName);
+    if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+        return hit.value;
+    }
+    const parsed = safeReadJson<Receipt>(full);
+    if (!parsed) {
+        cache.recentReceipt.delete(fileName);
+        return null;
+    }
+    cache.recentReceipt.set(fileName, { mtimeMs: st.mtimeMs, size: st.size, value: parsed });
+    return parsed;
+}
+
 // The later expiry wins for a key that both maps hold.
 function mergeLatestCooldowns(
     base: Readonly<Record<string, number>>,
@@ -595,32 +648,110 @@ function readOrdersAndReceipts(
         }
     }
 
+    const nowWall = Date.now();
+    const dirCache = getDirOrderCache(resolve(fleetDir));
+    const relevantOrders: Order[] = [];
+    const relevantOrderIds = new Set<string>();
+    const seenOrderFiles = new Set<string>();
+    const activeOrderFiles = new Set<string>();
+
+    for (const f of ordSig.files) {
+        seenOrderFiles.add(f);
+        const full = join(ordersDir, f);
+        let st: { mtimeMs: number; size: number };
+        try { st = statSync(full); } catch { continue; }
+        const stamp = dirCache.expired.get(f);
+        if (stamp && nowWall - st.mtimeMs > 1000 && stamp.mtimeMs === st.mtimeMs && stamp.size === st.size) {
+            if (stamp.end === -1 || (stamp.server !== null && stamp.server !== server)) continue;
+            if (now >= stamp.end && now - stamp.end >= TRANSFER_FAILURE_LOOKBACK_MS) continue;
+        }
+        const order = readOrderStatCached(dirCache, f, full, st, nowWall);
+        if (!validOrder(order)) {
+            dirCache.expired.set(f, { mtimeMs: st.mtimeMs, size: st.size, end: -1, server: null });
+            dirCache.recent.delete(f);
+            continue;
+        }
+        const orderServer = order.server.toLowerCase();
+        if (orderServer !== server) {
+            dirCache.expired.set(f, { mtimeMs: st.mtimeMs, size: st.size, end: order.end, server: orderServer });
+            dirCache.recent.delete(f);
+            continue;
+        }
+        if (now >= order.end && now - order.end >= TRANSFER_FAILURE_LOOKBACK_MS) {
+            dirCache.expired.set(f, { mtimeMs: st.mtimeMs, size: st.size, end: order.end, server: orderServer });
+            dirCache.recent.delete(f);
+            continue;
+        }
+        dirCache.expired.delete(f);
+        activeOrderFiles.add(f);
+        relevantOrders.push(order);
+        relevantOrderIds.add(order.id);
+    }
+    for (const key of dirCache.expired.keys()) if (!seenOrderFiles.has(key)) dirCache.expired.delete(key);
+    for (const key of dirCache.recent.keys()) if (!activeOrderFiles.has(key)) dirCache.recent.delete(key);
+
     const receiptsByOrderId = new Map<string, Receipt[]>();
     const settledTransferByAccount = new Map<string, number>();
+    const seenReceiptFiles = new Set<string>();
+    const activeReceiptFiles = new Set<string>();
 
     for (const f of recSig.files) {
-        const r = safeReadJson<Receipt>(join(receiptsDir, f));
-        if (!r || typeof r.id !== 'string') continue;
-        const list = receiptsByOrderId.get(r.id);
-        if (list) list.push(r);
-        else receiptsByOrderId.set(r.id, [r]);
-
-        const isSettled = ('version' in r && r.version === 2) ? r.state === 'settled' : r.ok === true;
-        if (!isSettled || typeof r.account !== 'string' || !Number.isFinite(r.at)) continue;
-        if ('server' in r && typeof r.server === 'string' && r.server.toLowerCase() !== server) continue;
-        const key = r.account.toLowerCase();
-        const prev = settledTransferByAccount.get(key) ?? 0;
-        if (r.at > prev) settledTransferByAccount.set(key, r.at);
+        seenReceiptFiles.add(f);
+        const full = join(receiptsDir, f);
+        let st: { mtimeMs: number; size: number };
+        try { st = statSync(full); } catch { continue; }
+        const dot = f.lastIndexOf('.', f.length - 6);
+        const prefixOrderId = dot > 0 ? f.slice(0, dot) : null;
+        let summary = dirCache.receiptSummary.get(f);
+        let parsed: Receipt | null = null;
+        if (!summary || nowWall - st.mtimeMs <= 1000 || summary.mtimeMs !== st.mtimeMs || summary.size !== st.size) {
+            parsed = safeReadJson<Receipt>(full);
+            if (!parsed || typeof parsed.id !== 'string') {
+                dirCache.receiptSummary.set(f, {
+                    mtimeMs: st.mtimeMs, size: st.size, account: null, at: 0, server: null, isSettled: false, orderId: '',
+                });
+                dirCache.recentReceipt.delete(f);
+                continue;
+            }
+            const isSettled = ('version' in parsed && parsed.version === 2) ? parsed.state === 'settled' : parsed.ok === true;
+            const rServer = 'server' in parsed && typeof parsed.server === 'string' ? parsed.server.toLowerCase() : null;
+            const rAccount = typeof parsed.account === 'string' ? parsed.account.toLowerCase() : null;
+            const rAt = Number.isFinite(parsed.at) ? parsed.at : 0;
+            summary = {
+                mtimeMs: st.mtimeMs, size: st.size, account: rAccount, at: rAt, server: rServer, isSettled,
+                ...(parsed.id !== prefixOrderId ? { orderId: parsed.id } : {}),
+            };
+            dirCache.receiptSummary.set(f, summary);
+            if (relevantOrderIds.has(parsed.id)) {
+                dirCache.recentReceipt.set(f, { mtimeMs: st.mtimeMs, size: st.size, value: parsed });
+            } else {
+                dirCache.recentReceipt.delete(f);
+            }
+        }
+        if (summary.isSettled && summary.account !== null && summary.at > 0 && (summary.server === null || summary.server === server)) {
+            const prev = settledTransferByAccount.get(summary.account) ?? 0;
+            if (summary.at > prev) settledTransferByAccount.set(summary.account, summary.at);
+        }
+        const effectiveOrderId = parsed ? parsed.id : (summary.orderId !== undefined ? summary.orderId : prefixOrderId);
+        if (effectiveOrderId && relevantOrderIds.has(effectiveOrderId)) {
+            const r = parsed ?? readReceiptStatCached(dirCache, f, full, st, nowWall);
+            if (r && relevantOrderIds.has(r.id)) {
+                activeReceiptFiles.add(f);
+                const list = receiptsByOrderId.get(r.id);
+                if (list) list.push(r);
+                else receiptsByOrderId.set(r.id, [r]);
+            }
+        }
     }
+    for (const key of dirCache.receiptSummary.keys()) if (!seenReceiptFiles.has(key)) dirCache.receiptSummary.delete(key);
+    for (const key of dirCache.recentReceipt.keys()) if (!activeReceiptFiles.has(key)) dirCache.recentReceipt.delete(key);
 
     const activeOrders: TransferOrder[] = [];
     const inTradeAccounts = new Set<string>();
     const transferEvents: TransferEvent[] = [];
     let nextOrderChangeAt = Number.POSITIVE_INFINITY;
 
-    for (const f of ordSig.files) {
-        const order = safeReadJson<Order>(join(ordersDir, f));
-        if (!validOrder(order) || order.server.toLowerCase() !== server) continue;
+    for (const order of relevantOrders) {
         const orderReceipts = receiptsByOrderId.get(order.id) ?? [];
         if (now - order.end < TRANSFER_FAILURE_LOOKBACK_MS) {
             const event = transferEvent(order, orderReceipts, now);

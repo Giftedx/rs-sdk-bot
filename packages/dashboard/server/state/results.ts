@@ -8,13 +8,25 @@ import { append, FILES, MAIN, practice, root, scanJsonl, statusDirs, type Status
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
 type Res = { at: number; name: string; goal: string; ok: boolean; text: string; started?: number };
-const RESULT_KEEP = 5000;
+const RESULT_KEEP = 2000;
+const MAX_TRACKED_ACCOUNTS = 1024;
 const allResults: Res[] = [];
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
-// fill it (three live farmer deaths vanished from the page that way).
+// fill it (three live farmer deaths vanished from the page that way). Cap maps with LRU eviction so ephemeral
+// practice accounts from historical results.jsonl do not accumulate tens of thousands of entries in RAM.
 const lastResult = new Map<string, { text: string; started?: number }>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
-const noteRes = (r: Res) => { const key = r.name.toLowerCase(); lastResult.set(key, { text: r.text, started: r.started }); newestRes.set(key, r); if (died(r.text)) newestDeath.set(key, r); };
+function setBounded<V>(map: Map<string, V>, key: string, value: V, limit: number) {
+    if (map.has(key)) map.delete(key);
+    else if (map.size >= limit) map.delete(map.keys().next().value!);
+    map.set(key, value);
+}
+const noteRes = (r: Res) => {
+    const key = r.name.toLowerCase();
+    setBounded(lastResult, key, { text: r.text, started: r.started }, MAX_TRACKED_ACCOUNTS);
+    setBounded(newestRes, key, r, MAX_TRACKED_ACCOUNTS);
+    if (died(r.text)) setBounded(newestDeath, key, r, MAX_TRACKED_ACCOUNTS);
+};
 // Stream the last 100,000 rows without holding all 100,000 parsed objects in memory; keep only the newest RESULT_KEEP.
 const ring = new Array<Res>(RESULT_KEEP);
 let ringCount = 0;

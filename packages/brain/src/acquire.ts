@@ -45,7 +45,7 @@ import {
 } from './preflight';
 import { ferryFallbackFare } from './ferry-fare';
 import { noRouteTo, type NoRouteFact } from './no-route';
-import { readJsonStatCached } from './json-cache';
+import { readJsonOnce } from './json-cache';
 import { hubRouteCooldownKey, RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
@@ -173,8 +173,8 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     for (const meta of items.values()) {
         byDebug.set(meta.debugname, meta);
     }
-    const shops = readJsonStatCached<Shop[]>(resolve(REPO_ROOT, 'knowledge', 'shops.json')) ?? [];
-    const sources = readJsonStatCached<GearSources>(resolve(REPO_ROOT, 'knowledge', 'gear-sources.json')) ?? { shopNpcs: [], npc: [], quest: [], clue: [] };
+    const shops = readJsonOnce<Shop[]>(resolve(REPO_ROOT, 'knowledge', 'shops.json')) ?? [];
+    const sources = readJsonOnce<GearSources>(resolve(REPO_ROOT, 'knowledge', 'gear-sources.json')) ?? { shopNpcs: [], npc: [], quest: [], clue: [] };
     const shopTiles = new Map<string, { x: number; z: number; level: number }>();
     for (const row of sources.shopNpcs) {
         const nonEntrana = row.spawns.find((t) => !isEntranaTile(t));

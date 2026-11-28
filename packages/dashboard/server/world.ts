@@ -44,7 +44,10 @@ function connectFeed() {
                 for (const p of m.p) {
                     const n = String(p[1]).toLowerCase();
                     present.add(n);
-                    if (!firstSeen.has(n)) firstSeen.set(n, now);
+                    if (!firstSeen.has(n)) {
+                        if (firstSeen.size >= 4096) firstSeen.delete(firstSeen.keys().next().value!);
+                        firstSeen.set(n, now);
+                    }
                     roster.set(n, { name: String(p[1]), x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
                 }
                 // RosterFeed makes each roster message the full player set, so an absent name has left.
@@ -142,12 +145,19 @@ async function refreshLiveTops() {
         await Bun.sleep(1000);
     }
 }
-const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
 const snapshotTopByBoard = new Map<string, { name: string; level: number; ticks: number }>();
-for (const entry of snapshot?.boards ?? []) {
-    const row = entry?.rows?.[0];
-    if (entry?.board && row) snapshotTopByBoard.set(entry.board, row);
-}
+const snapshot: { takenAt: string } | null = (() => {
+    try {
+        const parsed = JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8'));
+        for (const entry of parsed?.boards ?? []) {
+            const row = entry?.rows?.[0];
+            if (entry?.board && row) {
+                snapshotTopByBoard.set(entry.board, { name: row.name, level: row.level, ticks: row.ticks });
+            }
+        }
+        return typeof parsed?.takenAt === 'string' ? { takenAt: parsed.takenAt } : null;
+    } catch { return null; }
+})();
 const snapshotTakenAt = snapshot?.takenAt ? (Date.parse(snapshot.takenAt) || 0) : 0;
 function topOf(board: string): { name: string; level: number; ticks: number; at: number; live: boolean } | null {
     const l = liveTop.get(board);

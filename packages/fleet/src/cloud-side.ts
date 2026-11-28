@@ -16,6 +16,7 @@ import { FLEET_WORKTREE, SIDE_NAME } from '../../core/src/fleet';
 import { withFleetDataWrite } from '../../core/src/fleet-owner-claim';
 import { putCredential, restoreCredential, vaultKey } from '../../core/src/fleet-vault';
 import { MAIN_ACCOUNT } from '../../core/src/haggisgate';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { withPlanWrite } from '../../core/src/plan-lock';
 import { liveRoot, repoRoot } from '../../core/src/practice-paths';
 import { commandLine } from '../../core/src/proc';
@@ -110,6 +111,18 @@ export type DaemonRecord = { pid: number; started: number; restarts: number[]; n
 export function daemonCommand(name: Daemon, plan: string): string[] {
     if (name === 'swarm') return ['scripts/swarm.ts', plan];
     return ['scripts/fleet-agent.ts'];
+}
+
+export function daemonSpawnArgs(command: readonly string[], extra: readonly string[] = []): string[] {
+    return ['--smol', ...command, ...extra];
+}
+
+export function cloudSideEnv(
+    side: string,
+    bounded: boolean,
+    base: Record<string, string | undefined> = process.env,
+): Record<string, string> {
+    return leanBunEnv({ ...base, FLEET_SIDE: side, DEMO_OK: '1', ...(bounded ? { FLEET_ADOPT: '0' } : {}) }) as Record<string, string>;
 }
 
 export function managedCommands(recover: boolean, plan: string, inspect = false): Record<string, string[]> {
@@ -277,7 +290,7 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
     mkdirSync(dir, { recursive: true });
     const log = (line: string) => appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`);
     const bounded = !!(o.recover || o.inspect);
-    const env = { ...process.env, FLEET_SIDE: o.side, DEMO_OK: '1', ...(bounded ? { FLEET_ADOPT: '0' } : {}) } as Record<string, string>;
+    const env = cloudSideEnv(o.side, bounded, process.env);
     const run = (cmd: string[], cwd = root, timeoutMs = 900_000) => {
         const p = spawnSync(cmd[0]!, cmd.slice(1), { cwd, env, encoding: 'utf8', timeout: timeoutMs, windowsHide: true });
         log(`$ ${cmd.join(' ')} -> ${p.status}${p.status === 0 ? '' : ` ${(p.stdout + p.stderr).replace(/\s+/g, ' ').slice(-300)}`}`);
@@ -313,7 +326,7 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
         return null;
     });
     if (unrepaired) fail(`fleet worktree: ${unrepaired}`);
-    if (!run(['bun', 'scripts/fleet-sync.ts', '--no-push'])) fail('fleet sync failed');
+    if (!run(['bun', '--smol', 'scripts/fleet-sync.ts', '--no-push'])) fail('fleet sync failed');
     run(['git', '-C', FLEET_WORKTREE, 'config', 'rebase.autoStash', 'true']);
 
     let plan = join(root, '.practice', 'cloud-handoff', 'swarm.json');
@@ -336,7 +349,7 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
     for (const a of mine) {
         let r: string;
         try { r = restoreCredential(a.name, { key }); } catch (e) { r = 'error'; log(`credential ${a.name}: ${String(e)}`); }
-        if ((r === 'missing' || r === 'no-key') && !a.home && process.env.FLEET_SEED) r = run(['bun', 'scripts/fleet.ts', 'create', a.name]) ? 'seeded' : 'error';
+        if ((r === 'missing' || r === 'no-key') && !a.home && process.env.FLEET_SEED) r = run(['bun', '--smol', 'scripts/fleet.ts', 'create', a.name]) ? 'seeded' : 'error';
         else if (r === 'present' && key) { try { putCredential(a.name, key); } catch { /* seal later */ } }
         credentials[r] = (credentials[r] ?? 0) + 1;
     }
@@ -399,7 +412,10 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
     const start = (name: string) => {
         const out = openSync(join(dir, `${name}.log`), 'a');
         const nonce = name === 'swarm' ? randomUUID() : undefined;
-        const args = nonce ? [...commands[name]!, `--nonce=${nonce}`, ...(!o.inspect ? [`--watch-id=${binding.watchId}`] : [])] : commands[name]!;
+        const args = daemonSpawnArgs(
+            commands[name]!,
+            nonce ? [`--nonce=${nonce}`, ...(!o.inspect ? [`--watch-id=${binding.watchId}`] : [])] : [],
+        );
         const child = spawn(process.execPath, args, { cwd: root, env, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
         closeSync(out);
         if (!child.pid) throw Error(`cloud-side failed to spawn ${name}`);

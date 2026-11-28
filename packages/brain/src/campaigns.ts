@@ -14,7 +14,7 @@ import {
     scheduleOverall,
 } from '../../planner/src/haggis';
 import { accountOwnedItemCount } from '../../workers/src/contracts';
-import { fileStatStamp, readJsonStatCached } from './json-cache';
+import { fileStatStamp, readJsonOnce, readJsonStatCached } from './json-cache';
 import { loadItemsMap } from './preflight';
 import {
     RETIRED_SPECIALIST_CAMPAIGN_SPECS,
@@ -75,7 +75,6 @@ interface KnowledgeItemRow {
 }
 
 interface ItemLookup {
-    readonly items: readonly KnowledgeItemRow[];
     readonly byId: ReadonlyMap<number, KnowledgeItemRow>;
     readonly resolve: (rawId: unknown, rawName: unknown) => { readonly itemId: number; readonly itemName: string } | undefined;
 }
@@ -130,12 +129,17 @@ function buildItemLookup(root: string): ItemLookup {
     const itemsPath = existsSync(localItemsPath) ? localItemsPath : join(repoRoot, 'knowledge', 'items.json');
     const cacheKey = `${resolve(itemsPath)}|${fileStatStamp(itemsPath)}`;
     if (cachedItemLookup && cachedItemLookup.key === cacheKey) return cachedItemLookup.lookup;
-    const raw = readJsonStatCached<unknown>(itemsPath);
-    const items: KnowledgeItemRow[] = [];
+    const raw = readJsonOnce<unknown>(itemsPath);
     const byId = new Map<number, KnowledgeItemRow>();
     const byName = new Map<string, KnowledgeItemRow>();
-    const idsByExactLower = new Map<string, number[]>();
-    const idsByDebug = new Map<string, number[]>();
+    const bestByVialDebug = new Map<string, KnowledgeItemRow>();
+
+    const betterCandidate = (prev: KnowledgeItemRow | undefined, cur: KnowledgeItemRow): boolean => {
+        if (!prev) return true;
+        const prevPenalty = prev.debugname?.startsWith('unstrung_') || prev.debugname?.startsWith('cert_') ? 1 : 0;
+        const curPenalty = cur.debugname?.startsWith('unstrung_') || cur.debugname?.startsWith('cert_') ? 1 : 0;
+        return curPenalty < prevPenalty || (curPenalty === prevPenalty && cur.tradeable === true && prev.tradeable !== true);
+    };
 
     if (Array.isArray(raw)) {
         for (const entry of raw) {
@@ -150,44 +154,31 @@ function buildItemLookup(root: string): ItemLookup {
                 ...(typeof entry.cost === 'number' ? { cost: entry.cost } : {}),
                 ...(typeof entry.tradeable === 'boolean' ? { tradeable: entry.tradeable } : {}),
             };
-            items.push(row);
             byId.set(id, row);
             const key = name.toLowerCase();
-            const idList = idsByExactLower.get(key);
-            if (idList) idList.push(id);
-            else idsByExactLower.set(key, [id]);
-            if (row.debugname) {
-                const dbgList = idsByDebug.get(row.debugname);
-                if (dbgList) dbgList.push(id);
-                else idsByDebug.set(row.debugname, [id]);
-            }
-            const prev = byName.get(key);
-            const prevPenalty =
-                prev && (prev.debugname?.startsWith('unstrung_') || prev.debugname?.startsWith('cert_')) ? 1 : 0;
-            const curPenalty =
-                row.debugname?.startsWith('unstrung_') || row.debugname?.startsWith('cert_') ? 1 : 0;
-            if (!prev || curPenalty < prevPenalty || (curPenalty === prevPenalty && row.tradeable && !prev.tradeable)) {
+            if (betterCandidate(byName.get(key), row)) {
                 byName.set(key, row);
+            }
+            if (row.debugname && row.debugname.endsWith('vial') && betterCandidate(bestByVialDebug.get(row.debugname), row)) {
+                bestByVialDebug.set(row.debugname, row);
             }
         }
     }
 
     const resolvedByNameCache = new Map<string, { readonly itemId: number; readonly itemName: string } | null>();
-    const idsForFast = (trimmed: string): number[] => {
+    const resolveFast = (trimmed: string): KnowledgeItemRow | undefined => {
         const want = trimmed.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim();
         const unf = want.match(/^(.+) potion \(unf\)$/);
-        if (unf) return idsByDebug.get(unf[1]!.replace(/\s+/g, '') + 'vial') ?? [];
-        const matched: number[] = [];
+        if (unf) return bestByVialDebug.get(unf[1]!.replace(/\s+/g, '') + 'vial');
+        let best: KnowledgeItemRow | undefined;
         const seenForms = new Set<string>();
         for (const form of [want, want.replace(/s$/, ''), want.replace(/ies$/, 'y'), want.replace(/us$/, 'i')]) {
             if (seenForms.has(form)) continue;
             seenForms.add(form);
-            const list = idsByExactLower.get(form);
-            if (list) {
-                for (const id of list) matched.push(id);
-            }
+            const candidate = byName.get(form);
+            if (candidate && betterCandidate(best, candidate)) best = candidate;
         }
-        return matched;
+        return best;
     };
 
     const resolveItem = (rawId: unknown, rawName: unknown) => {
@@ -201,29 +192,11 @@ function buildItemLookup(root: string): ItemLookup {
             const trimmed = rawName.trim();
             const cached = resolvedByNameCache.get(trimmed);
             if (cached !== undefined) return cached ?? undefined;
-            const matchedIds = idsForFast(trimmed);
-            if (matchedIds.length > 0) {
-                let best: KnowledgeItemRow | undefined;
-                for (const id of matchedIds) {
-                    const candidate = byId.get(id);
-                    if (!candidate) continue;
-                    const bestPenalty =
-                        best && (best.debugname?.startsWith('unstrung_') || best.debugname?.startsWith('cert_')) ? 1 : 0;
-                    const curPenalty =
-                        candidate.debugname?.startsWith('unstrung_') || candidate.debugname?.startsWith('cert_') ? 1 : 0;
-                    if (
-                        !best ||
-                        curPenalty < bestPenalty ||
-                        (curPenalty === bestPenalty && candidate.tradeable && !best.tradeable)
-                    ) {
-                        best = candidate;
-                    }
-                }
-                if (best) {
-                    const res = { itemId: best.id, itemName: best.name };
-                    resolvedByNameCache.set(trimmed, res);
-                    return res;
-                }
+            const fast = resolveFast(trimmed);
+            if (fast) {
+                const res = { itemId: fast.id, itemName: fast.name };
+                resolvedByNameCache.set(trimmed, res);
+                return res;
             }
             const norm = normalizeItemKey(trimmed);
             const known = byName.get(trimmed.toLowerCase()) ?? byName.get(norm);
@@ -237,7 +210,7 @@ function buildItemLookup(root: string): ItemLookup {
         return undefined;
     };
 
-    const lookup = { items, byId, resolve: resolveItem };
+    const lookup = { byId, resolve: resolveItem };
     cachedItemLookup = { key: cacheKey, lookup };
     return lookup;
 }
@@ -572,7 +545,7 @@ function buildHaggisCampaign(
         }
     }
 
-    const boardsData = plannedTicks === 0 ? readJsonStatCached<unknown>(boardsFile) : undefined;
+    const boardsData = plannedTicks === 0 ? readJsonOnce<unknown>(boardsFile) : undefined;
     if (plannedTicks === 0 && isPlainRecord(boardsData) && Array.isArray(boardsData.activities)) {
         for (const act of boardsData.activities) {
             if (!isPlainRecord(act)) continue;

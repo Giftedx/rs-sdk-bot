@@ -45,6 +45,14 @@ export function readJsonStatCached<T>(filePath: string): T | null {
     }
 }
 
+export function readJsonOnce<T>(filePath: string): T | null {
+    try {
+        return JSON.parse(readFileSync(resolve(filePath), 'utf8')) as T;
+    } catch {
+        return null;
+    }
+}
+
 export function clearBrainJsonCache(): void {
     jsonCache.clear();
 }

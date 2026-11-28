@@ -62,6 +62,28 @@ export type Status = Record<string, any> & { name: string; at: number; server: s
 export type Item = PriceIdentity & { name: string; count: number; unconfirmed?: true };
 export type Row = { board: string; rank: number; level: number; time: string };
 
+export type CompactCatalogItem = { id: number; name: string; debugname?: string; cost?: number; tradeable?: boolean; baseId?: number };
+export function compactItemsCatalog(file = join(root, 'knowledge', 'items.json')): CompactCatalogItem[] {
+    return cached<CompactCatalogItem[]>(file, text => {
+        const raw = JSON.parse(text);
+        if (!Array.isArray(raw)) return [];
+        const out: CompactCatalogItem[] = [];
+        for (let i = 0; i < raw.length; i++) {
+            const it = raw[i];
+            if (!it || typeof it !== 'object') continue;
+            out.push({
+                id: it.id,
+                name: it.name,
+                ...(it.debugname !== undefined ? { debugname: it.debugname } : {}),
+                ...(it.cost !== undefined ? { cost: it.cost } : {}),
+                ...(it.tradeable !== undefined ? { tradeable: it.tradeable } : {}),
+                ...(it.baseId !== undefined ? { baseId: it.baseId } : {}),
+            });
+        }
+        return out;
+    }, []);
+}
+
 export const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
 
 export function tailJsonl<T>(file: string, n: number): T[] { return tailJsonlFile<T>(file, n); }

@@ -95,6 +95,12 @@ describe('cloud side bootstrap', () => {
     test('daemons and restarts', () => {
         expect(daemonCommand('swarm', 'p.json')).toEqual(['scripts/swarm.ts', 'p.json']);
         expect(daemonCommand('fleet-agent', 'p.json')).toEqual(['scripts/fleet-agent.ts']);
+        expect(cloudSide.daemonSpawnArgs(daemonCommand('swarm', 'p.json'), ['--nonce=n1'])).toEqual(['--smol', 'scripts/swarm.ts', 'p.json', '--nonce=n1']);
+        const env = cloudSide.cloudSideEnv('cloud', false, {});
+        expect(env.FLEET_SIDE).toBe('cloud');
+        expect(env.DEMO_OK).toBe('1');
+        expect(env.BUN_JSC_forceMiniVMMode).toBe('1');
+        expect(env.BUN_JSC_useDFGJIT).toBe('0');
         const now = 10 * 60 * 60_000, recent = Array.from({ length: MAX_RESTARTS_PER_HOUR }, (_, i) => now - i * 60_000);
         expect(mayRestart(recent, now)).toBe(false);
         expect(mayRestart(recent.map(t => t - 60 * 60_000), now)).toBe(true);

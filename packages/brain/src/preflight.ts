@@ -17,7 +17,7 @@ import { routeFares, type Account as WorldAccount, type Tile, type World } from 
 import type { Gear, Skill } from '../../knowledge/src/gear';
 import { canWear } from '../../knowledge/src/gear-query';
 import { npcThreat } from '../../knowledge/src/npc-threat';
-import { readJsonStatCached } from './json-cache';
+import { readJsonOnce } from './json-cache';
 import {
     accountOwnedItemCount,
     availableCoinsAfterReserves,
@@ -34,7 +34,6 @@ import {
 } from '../../workers/src/contracts';
 import { questSweepCoins, questSweepNeeds } from '../../workers/src/quest/bank-needs';
 import { BREW_STOCK_IDS, brewShortfall } from '../../workers/src/bank-artisan/herblore-recipes';
-import { loadTravel } from '../../core/src/travel';
 import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
 import { noRouteForActivity, noRouteMessage, noRouteTo, routeDangerFor } from './no-route';
@@ -208,7 +207,7 @@ let cachedQuests: KnowledgeQuestRow[] | undefined;
 
 export function loadGearMap(): ReadonlyMap<number, Gear> {
     if (cachedGearById) return cachedGearById;
-    const raw = readJsonStatCached<Gear[]>(resolve(REPO_ROOT, 'knowledge', 'gear.json')) ?? [];
+    const raw = readJsonOnce<Gear[]>(resolve(REPO_ROOT, 'knowledge', 'gear.json')) ?? [];
     const map = new Map<number, Gear>();
     for (const g of raw) {
         if (g.staffOnly) continue;
@@ -232,18 +231,18 @@ export function loadGearMap(): ReadonlyMap<number, Gear> {
 
 export function loadItemsMap(): ReadonlyMap<number, ItemMeta> {
     if (cachedItemsById) return cachedItemsById;
-    const rows = readJsonStatCached<ItemMeta[]>(resolve(REPO_ROOT, 'knowledge', 'items.json')) ?? [];
+    const rows = readJsonOnce<ItemMeta[]>(resolve(REPO_ROOT, 'knowledge', 'items.json')) ?? [];
     cachedItemsById = new Map(rows.map((r) => [r.id, r]));
     return cachedItemsById;
 }
 
 export function loadQuestRows(): readonly KnowledgeQuestRow[] {
     if (cachedQuests) return cachedQuests;
-    cachedQuests = readJsonStatCached<KnowledgeQuestRow[]>(resolve(REPO_ROOT, 'knowledge', 'quests.json')) ?? [];
+    cachedQuests = readJsonOnce<KnowledgeQuestRow[]>(resolve(REPO_ROOT, 'knowledge', 'quests.json')) ?? [];
     return cachedQuests;
 }
 
-const QUEST_STRING_CACHE_LIMIT = 4096;
+const QUEST_STRING_CACHE_LIMIT = 512;
 const NORM_QUEST_CACHE = new Map<string, { norm: string; collapsed: string }>();
 const QUEST_KEYS_CACHE = new Map<string, ReadonlySet<string>>();
 
@@ -888,7 +887,7 @@ function evaluateTileReachabilityUncached(
     // From Kandarin it walks to Ardougne North first. With no route there, it walks its own route and takes no boat.
     const pos = acct.pos;
     const staged = opts.boatEastFromKandarin ? () => true : (t: Tile) => !noRouteTo(noRoutes, pos, t, world.at);
-    fare = Math.max(fare, ferryFallbackFare(pos, target, loadTravel, staged));
+    fare = Math.max(fare, ferryFallbackFare(pos, target, undefined, staged));
 
     const sameBand = (acct.pos.z >= 6400) === (target.z >= 6400);
     const normZ = (z: number) => (z >= 6400 ? z - 6400 : z);

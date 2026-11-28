@@ -6,28 +6,33 @@
 import {
     LOGISTICS_ROLES,
     findLogisticsRole,
-    importAioLoadout,
     planFleetDistribution,
-    registerBootstrapRuntime,
-    registerSpecialistSupplyRuntime,
     resolveLogisticsStep,
-    runLogisticsRole,
     type LogisticsRoleSpec,
-} from '../packages/workers/src/logistics';
+} from '../packages/workers/src/logistics/types';
+import { ARDY_BANK, DRAYNOR_BANK } from '../packages/workers/src/logistics/location';
+import {
+    importAioLoadout,
+    runLogisticsRole,
+} from '../packages/workers/src/logistics/module';
 
-export * from '../packages/workers/src/logistics';
+export { ARDY_BANK, DRAYNOR_BANK };
 
 let runtimeRegistered = false;
 async function ensureLogisticsRuntime(role: string) {
     if (runtimeRegistered) return;
     if (role === 'bootstrap-fighter') {
-        const { trainChickens } = await import('../packages/workers/src/combat/chickens');
+        const [{ registerBootstrapRuntime }, { trainChickens }] = await Promise.all([
+            import('../packages/workers/src/logistics/stage'),
+            import('../packages/workers/src/combat/chickens'),
+        ]);
         registerBootstrapRuntime({ trainChickens });
         return;
     }
     if (role === 'specialist-supplier' || role === 'gathering-supplier') {
         runtimeRegistered = true;
-        const [{ restockAtBank }, { FIREMAKING_SPECIALIST_SUPPLIES, serveFiremakingSupplier }, { startHelperTradeArm }] = await Promise.all([
+        const [{ registerSpecialistSupplyRuntime }, { restockAtBank }, { FIREMAKING_SPECIALIST_SUPPLIES, serveFiremakingSupplier }, { startHelperTradeArm }] = await Promise.all([
+            import('../packages/workers/src/logistics/specialist-supply'),
             import('./fast-skills-lib'),
             import('./firemaking-specialist'),
             import('./gathering-specialist-lib'),

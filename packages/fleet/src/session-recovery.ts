@@ -9,6 +9,7 @@ import { hostname } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadOwners, mySide } from '../../core/src/fleet';
 import { readFleetAccountClaim } from '../../core/src/fleet-trade-claim';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { isLocalServer } from '../../core/src/localserver';
 import { atomicJson } from '../../core/src/plan-lock';
 import {
@@ -985,6 +986,7 @@ export async function executeControlledLiveRecovery(
     const runId = `fleet-recovery-${nowFn()}-${randomUUID().slice(0, 8)}`;
     const nonce = randomUUID();
     const childArgs = [
+        '--smol',
         join(resolvedRoot, 'packages', 'fleet', 'src', 'session-recovery.ts'),
         '--dispatch-one',
         `--root=${resolvedRoot}`,
@@ -1002,7 +1004,7 @@ export async function executeControlledLiveRecovery(
             cwd: resolvedRoot,
             windowsHide: true,
             stdio: ['ignore', 'pipe', 'pipe'],
-            env: process.env,
+            env: leanBunEnv(process.env),
         });
         let stdout = '';
         let stderr = '';

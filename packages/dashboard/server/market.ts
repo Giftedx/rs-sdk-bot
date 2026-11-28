@@ -7,7 +7,7 @@ import { createVaultItems, type VaultItem } from '../vault-items';
 import { isLocalServer } from '../../core/src/localserver';
 import { marketRows, writeMarketCache, type MarketItem } from '../../core/src/market-cache';
 import { gameDialAddress } from '../../core/src/websocket-proxy';
-import { BANKER, cached, dashboardDir, DEMO, FILES, liveAccounts, NL, OBJS, root, sourceRoot, type Item } from './config';
+import { BANKER, cached, compactItemsCatalog, dashboardDir, DEMO, FILES, liveAccounts, NL, OBJS, root, sourceRoot, type Item } from './config';
 
 // ---------- Grand Exchange prices and item icons ----------
 // Icons: export-item-icons.ts renders items.png from the installed game config and models.
@@ -17,7 +17,7 @@ const itemIds = new Map<string, number>(Object.entries((() => { try { return JSO
 const marketIds = new Map<string, number>();
 const iconId = (name: string) => marketIds.get(name.toLowerCase()) ?? itemIds.get(name.toLowerCase()) ?? null;
 const prices = new Map<string, number>();
-const priceCatalogue = cached<PriceCatalogItem[]>(join(root, 'knowledge', 'items.json'), JSON.parse, []);
+const priceCatalogue = compactItemsCatalog() as PriceCatalogItem[];
 let itemPrices: ItemPrices = buildItemPrices([], priceCatalogue);
 const marketById = new Map<number, { name: string; ask: number | null; bid: number | null; stock: number; vwap: number | null; base: number | null }>();
 // Key supplies for the main run: the ids in research/market-2026-10-23.json.
