@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795859520912,
+ "at": 1795859623338,
  "jobs": [
   {
    "account": "Balls",
@@ -45,21 +45,6 @@
    "role": "pvp"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "auto"
-  },
-  {
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
@@ -98,7 +83,7 @@
    "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=3460 TARGET_COUNT=346 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=4360 TARGET_COUNT=436 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Pocketpython:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
@@ -239,6 +224,26 @@
    "repeat": false,
    "goal": "mission:mission:pk-squad:item:2550",
    "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-2357-4-o19-p3459",
+    "ITEM_ID": "2357",
+    "QUANTITY": "4",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "3459",
+    "EXPECTED_OWNED": "19"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1639",
+   "role": "auto"
   },
   {
    "account": "PickpockDick",
