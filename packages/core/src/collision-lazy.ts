@@ -41,8 +41,10 @@ export default {
     get zones() { globalThis.__rsPathEnsure?.(); return restored() ? [] : full().zones; },
     get tiles() { return restored() ? [] : full().tiles; },
     // "doors" is the file's last key: read and parse only its array, not the 27 MB of tiles before it.
+    // Released on the next timer turn after initPathfinding/ensureDoorIndex populates doorIndex.
     get doors() {
-        return doors ??= doorsFromTail() ?? full().doors;
+        if (!doors) { doors = doorsFromTail() ?? full().doors; setTimeout(() => { doors = undefined; }, 0); }
+        return doors;
     },
 };`;
 }

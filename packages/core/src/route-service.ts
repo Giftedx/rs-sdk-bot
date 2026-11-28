@@ -21,9 +21,14 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export { SERVICE_FILE, checkoutRev, launchService, pidAlive, readServiceInfo, routeServiceEnv, usableService, type ServiceInfo };
 export const SERVICE_LOG = join(repoRoot, '.practice', 'route-service', 'service.log');
 // Two workers: one cold search (up to about a minute) does not hold every other bot's plan or walk query.
-// Overflow workers (slot >= 1) open only on concurrency spikes and close after OVERFLOW_WORKER_IDLE_MS idle.
+// Overflow workers (slot >= 1) open only when work waits past DEFAULT_OVERFLOW_DELAY_MS and close after
+// OVERFLOW_WORKER_IDLE_MS idle. Slot 0 also closes after PRIMARY_WORKER_IDLE_MS idle or when idle above
+// DEFAULT_RECYCLE_RSS_BYTES so long-lived services drop accumulated native/WASM/danger memory without dropping requests.
 export const DEFAULT_WORKERS = 2;
-export const OVERFLOW_WORKER_IDLE_MS = 60_000;
+export const OVERFLOW_WORKER_IDLE_MS = 30_000;
+export const DEFAULT_OVERFLOW_DELAY_MS = 1_500;
+export const PRIMARY_WORKER_IDLE_MS = 5 * 60_000;
+export const DEFAULT_RECYCLE_RSS_BYTES = 512 * 1024 * 1024;
 // The service stops this long after its last request, so a host with no walking bots holds no route workers.
 export const DEFAULT_IDLE_MS = 15 * 60_000;
 const REV_POLL_MS = 30_000;
@@ -56,11 +61,12 @@ export function claimLaunch(lock = `${SERVICE_FILE}.lock`, now = Date.now()): bo
 function launchDetached(): void {
     mkdirSync(dirname(SERVICE_LOG), { recursive: true });
     const out = openSync(SERVICE_LOG, 'a');
-    try { spawn(process.execPath, [import.meta.path], { cwd: repoRoot, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: routeServiceEnv(process.env) }).unref(); }
+    try { spawn(process.execPath, ['--smol', import.meta.path], { cwd: repoRoot, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: routeServiceEnv(process.env) }).unref(); }
     finally { closeSync(out); }
 }
 
 type WorkerReply = { id: number; plan?: unknown; result?: unknown; error?: string };
+type QueuedRequest = { msg: object; attachAreas: boolean; resolve(m: { plan?: unknown; result?: unknown; error?: string }): void };
 type Slot = {
     w: Worker;
     pending: Map<number, { resolve(m: { plan?: unknown; result?: unknown; error?: string }): void }>;
@@ -68,34 +74,112 @@ type Slot = {
     idleTimer: ReturnType<typeof setTimeout> | null;
 };
 
-// The pool: each request goes to the worker with the fewest requests in flight (preferring slot 0 so steady-state
-// load keeps one worker warm). Overflow workers (slot >= 1) terminate after `overflowIdleMs` idle so momentary bursts
-// do not pin a second WASM + world-graph worker forever. A failed worker fails its requests and is replaced on demand.
+export type WorkerPoolOptions = {
+    overflowIdleMs?: number;
+    overflowDelayMs?: number;
+    primaryIdleMs?: number;
+    recycleRssBytes?: number;
+    rssBytes?: () => number;
+    sharedAreas?: () => SharedLabels | null;
+};
+
+// The pool: steady-state load stays on slot 0. When `overflowDelayMs` > 0 and slot 0 is busy while overflow slots
+// are closed, requests wait in a FIFO queue up to `overflowDelayMs` before opening an overflow worker, so short
+// concurrent bursts avoid committing a second ~250 MB WASM worker. Overflow workers terminate after `overflowIdleMs`
+// idle; slot 0 terminates after `primaryIdleMs` idle or when idle above `recycleRssBytes`.
 export function workerPool(
     size: number,
     make: () => Worker = () => new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions),
-    opts: { overflowIdleMs?: number; sharedAreas?: () => SharedLabels | null } = {},
+    opts: WorkerPoolOptions = {},
 ) {
     const overflowIdleMs = opts.overflowIdleMs ?? OVERFLOW_WORKER_IDLE_MS;
+    const overflowDelayMs = Math.max(0, opts.overflowDelayMs ?? 0);
+    const primaryIdleMs = Math.max(0, opts.primaryIdleMs ?? 0);
+    const recycleRssBytes = Math.max(0, opts.recycleRssBytes ?? 0);
+    const readRss = opts.rssBytes ?? (() => process.memoryUsage().rss);
     const getSharedAreas = opts.sharedAreas;
     const slots: (Slot | null)[] = Array.from({ length: size }, () => null);
+    const queue: QueuedRequest[] = [];
+    let overflowTimer: ReturnType<typeof setTimeout> | null = null;
     let next = 0;
+    const clearOverflowTimer = () => {
+        if (overflowTimer) { clearTimeout(overflowTimer); overflowTimer = null; }
+    };
     const clearIdle = (slot: Slot) => {
         if (slot.idleTimer) { clearTimeout(slot.idleTimer); slot.idleTimer = null; }
+    };
+    const reclaimAfterTerminate = () => {
+        const gc = (globalThis as { Bun?: { gc?: (sync?: boolean) => void } }).Bun?.gc;
+        if (!gc) return;
+        const t = setTimeout(() => { gc(true); }, 50);
+        (t as { unref?(): void }).unref?.();
     };
     const closeSlot = (i: number, slot: Slot) => {
         if (slots[i] !== slot) return;
         clearIdle(slot);
         slots[i] = null;
         void slot.w.terminate();
+        reclaimAfterTerminate();
     };
-    const scheduleOverflowIdle = (i: number, slot: Slot) => {
-        if (i === 0 || overflowIdleMs <= 0 || slot.pending.size > 0) return;
+    const scheduleIdle = (i: number, slot: Slot) => {
+        const delay = i === 0 ? primaryIdleMs : overflowIdleMs;
+        if (delay <= 0 || slot.pending.size > 0) return;
         clearIdle(slot);
         slot.idleTimer = setTimeout(() => {
             if (slots[i] === slot && slot.pending.size === 0) closeSlot(i, slot);
-        }, overflowIdleMs);
+        }, delay);
         (slot.idleTimer as { unref?(): void }).unref?.();
+    };
+    const sendToSlot = (i: number, slot: Slot, req: QueuedRequest) => {
+        const id = ++next;
+        clearIdle(slot);
+        const sharedAreas = req.attachAreas && !slot.sentAreas ? getSharedAreas?.() ?? undefined : undefined;
+        slot.pending.set(id, { resolve: req.resolve });
+        try {
+            slot.w.postMessage(sharedAreas ? { ...req.msg, id, sharedAreas } : { ...req.msg, id });
+            if (sharedAreas) slot.sentAreas = true;
+        } catch (error) {
+            slot.pending.delete(id);
+            scheduleIdle(i, slot);
+            req.resolve({ error: String(error) });
+        }
+    };
+    const armOverflowTimer = () => {
+        if (overflowTimer || overflowDelayMs <= 0 || queue.length === 0) return;
+        const closedIdx = slots.findIndex((s, i) => i > 0 && s === null);
+        if (closedIdx < 0) return;
+        overflowTimer = setTimeout(() => {
+            overflowTimer = null;
+            drain(true);
+        }, overflowDelayMs);
+        (overflowTimer as { unref?(): void }).unref?.();
+    };
+    const pickImmediateSlot = (allowOverflowOpen: boolean): number => {
+        // Prefer an already-open idle slot (slot 0 first), then opening slot 0, then least-loaded open/allowed slot.
+        if (slots[0] === null) return 0;
+        if (slots[0].pending.size === 0) return 0;
+        for (let i = 1; i < size; i++) if (slots[i] && slots[i]!.pending.size === 0) return i;
+        if (allowOverflowOpen) {
+            let best = 0;
+            for (let i = 1; i < size; i++) if ((slots[i]?.pending.size ?? 0) < (slots[best]?.pending.size ?? 0)) best = i;
+            return best;
+        }
+        return -1;
+    };
+    const drain = (allowOverflowOpen: boolean) => {
+        while (queue.length > 0) {
+            const idx = pickImmediateSlot(allowOverflowOpen);
+            if (idx < 0) {
+                armOverflowTimer();
+                return;
+            }
+            const req = queue.shift()!;
+            const slot = slots[idx] ?? open(idx);
+            sendToSlot(idx, slot, req);
+            // Open at most one overflow worker per timer firing; re-arm if more closed slots remain.
+            allowOverflowOpen = overflowDelayMs === 0;
+        }
+        clearOverflowTimer();
     };
     const open = (i: number): Slot => {
         const slot: Slot = { w: make(), pending: new Map(), sentAreas: false, idleTimer: null };
@@ -106,6 +190,8 @@ export function workerPool(
             for (const p of slot.pending.values()) p.resolve({ error: reason });
             slot.pending.clear();
             void slot.w.terminate();
+            reclaimAfterTerminate();
+            if (queue.length > 0) drain(overflowDelayMs === 0);
         };
         slot.w.onmessage = (e: MessageEvent<WorkerReply>) => {
             const p = slot.pending.get(e.data.id);
@@ -114,28 +200,32 @@ export function workerPool(
             if (e.data.error) p.resolve({ error: e.data.error });
             else if ('result' in e.data) p.resolve({ result: e.data.result });
             else p.resolve({ plan: e.data.plan ?? null });
-            scheduleOverflowIdle(i, slot);
+            if (queue.length > 0) {
+                const nextReq = queue.shift()!;
+                if (queue.length === 0) clearOverflowTimer();
+                sendToSlot(i, slot, nextReq);
+                return;
+            }
+            if (slot.pending.size === 0 && recycleRssBytes > 0 && readRss() > recycleRssBytes) {
+                closeSlot(i, slot);
+                return;
+            }
+            scheduleIdle(i, slot);
         };
         slot.w.onerror = (e: ErrorEvent) => fail(`route worker failed: ${e.message}`);
         slot.w.onmessageerror = () => fail('route worker message unreadable');
         return slots[i] = slot;
     };
     const dispatch = (msg: object, attachAreas: boolean): Promise<{ plan?: unknown; result?: unknown; error?: string }> => {
-        let best = 0;
-        for (let i = 1; i < size; i++) if ((slots[i]?.pending.size ?? 0) < (slots[best]?.pending.size ?? 0)) best = i;
-        const slot = slots[best] ?? open(best), id = ++next;
-        clearIdle(slot);
-        const sharedAreas = attachAreas && !slot.sentAreas ? getSharedAreas?.() ?? undefined : undefined;
         return new Promise(resolve => {
-            slot.pending.set(id, { resolve });
-            try {
-                slot.w.postMessage(sharedAreas ? { ...msg, id, sharedAreas } : { ...msg, id });
-                if (sharedAreas) slot.sentAreas = true;
-            } catch (error) {
-                slot.pending.delete(id);
-                scheduleOverflowIdle(best, slot);
-                resolve({ error: String(error) });
+            const req: QueuedRequest = { msg, attachAreas, resolve };
+            const idx = pickImmediateSlot(overflowDelayMs === 0);
+            if (idx >= 0) {
+                sendToSlot(idx, slots[idx] ?? open(idx), req);
+                return;
             }
+            queue.push(req);
+            armOverflowTimer();
         });
     };
     return {
@@ -145,9 +235,13 @@ export function workerPool(
         query(req: ServiceQuery): Promise<{ result?: unknown; error?: string }> {
             return dispatch(req, false);
         },
-        inFlight: () => slots.reduce((n, s) => n + (s?.pending.size ?? 0), 0),
+        inFlight: () => slots.reduce((n, s) => n + (s?.pending.size ?? 0), 0) + queue.length,
         activeWorkers: () => slots.reduce((n, s) => n + (s ? 1 : 0), 0),
-        stop: () => { for (let i = 0; i < slots.length; i++) if (slots[i]) closeSlot(i, slots[i]!); },
+        stop: () => {
+            clearOverflowTimer();
+            while (queue.length > 0) queue.shift()!.resolve({ error: 'route service stopped' });
+            for (let i = 0; i < slots.length; i++) if (slots[i]) closeSlot(i, slots[i]!);
+        },
     };
 }
 
@@ -168,13 +262,19 @@ export function planResponse(plan: Promise<unknown>, heartbeatMs = HEARTBEAT_MS)
     }), { headers: { 'content-type': 'application/json' } });
 }
 
-export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowIdleMs?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
+export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowIdleMs?: number; overflowDelayMs?: number; primaryIdleMs?: number; recycleRssBytes?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
     const workers = opts.workers ?? DEFAULT_WORKERS, idleMs = opts.idleMs ?? DEFAULT_IDLE_MS, file = opts.file ?? SERVICE_FILE;
     const sharedAreas = opts.makeWorker ? undefined : () => {
         const labels = cachedMapAreas(repoRoot);
         return labels ? shareLabels(labels) : null;
     };
-    const pool = workerPool(workers, opts.makeWorker, { overflowIdleMs: opts.overflowIdleMs, sharedAreas });
+    const pool = workerPool(workers, opts.makeWorker, {
+        overflowIdleMs: opts.overflowIdleMs,
+        overflowDelayMs: opts.overflowDelayMs ?? (opts.makeWorker ? 0 : DEFAULT_OVERFLOW_DELAY_MS),
+        primaryIdleMs: opts.primaryIdleMs ?? (opts.makeWorker ? 0 : PRIMARY_WORKER_IDLE_MS),
+        recycleRssBytes: opts.recycleRssBytes ?? (opts.makeWorker ? 0 : DEFAULT_RECYCLE_RSS_BYTES),
+        sharedAreas,
+    });
     let last = Date.now(), served = 0;
     const server = Bun.serve({
         hostname: '127.0.0.1',
@@ -244,7 +344,16 @@ if (import.meta.main) {
         if (!answers && claimLaunch()) launchDetached();
         process.exit(0);
     }
-    const s = serveRoutes({ workers: arg('--workers'), idleMs: arg('--idle-ms'), overflowIdleMs: arg('--overflow-idle-ms'), onStop: () => process.exit(0) });
+    const recycleMb = arg('--recycle-rss-mb');
+    const s = serveRoutes({
+        workers: arg('--workers'),
+        idleMs: arg('--idle-ms'),
+        overflowIdleMs: arg('--overflow-idle-ms'),
+        overflowDelayMs: arg('--overflow-delay-ms'),
+        primaryIdleMs: arg('--primary-idle-ms'),
+        recycleRssBytes: recycleMb !== undefined ? recycleMb * 1024 * 1024 : undefined,
+        onStop: () => process.exit(0),
+    });
     const end = () => s.stop('signal');
     process.on('SIGINT', end);
     process.on('SIGTERM', end);
