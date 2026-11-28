@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795857648891-1",
+ "account": "ChaosInPants",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Small fishing net",
+ "requested": 1,
+ "claim": "cb46b7d8-6aa2-4fed-8656-9e38355158ae",
+ "count": 0,
+ "ok": false,
+ "at": 1795858204923,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795857263852-4",
+ "account": "BoneToPick",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 2,
+ "claim": "db69566e-3f40-4dfd-9691-1e86d3eab305",
+ "count": 0,
+ "ok": false,
+ "at": 1795858164265,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795858144633-0000014472-0000000001",
+  "at": 1795858164258,
+  "sha256": "9d54f1b8bf1495bd8bd10f0dcc0dcf88cc365312acac0b686c685d1d8f88123f"
+ },
+ "screen": false
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795857823379-3",
+ "account": "SporranBulge",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "a3526161-5187-470a-a2c5-6ad92f438f65",
+ "count": 0,
+ "ok": false,
+ "at": 1795858250552,
+ "detail": "trade claimed"
+}

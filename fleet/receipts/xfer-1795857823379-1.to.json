@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795857823379-1",
+ "account": "TrouserSnake",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "8a604e9b-e0a1-476f-992f-894eac48ffa9",
+ "count": 1,
+ "ok": true,
+ "at": 1795858197469,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795858196719
+ },
+ "logout": {
+  "attemptId": "1795858183994-0000024572-0000000001",
+  "at": 1795858197461,
+  "sha256": "4da8a5323bda70b0549f3e8a4a0e01bfee6d73811a60cd898bef38e8bce2f5a5"
+ },
+ "screen": true
+}

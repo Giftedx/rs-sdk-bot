@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795857263852-4",
+ "role": "from",
+ "account": "OreElse",
+ "partner": "BoneToPick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795858178876,
+ "detail": "Error: fleet trade: outside order window"
+}
