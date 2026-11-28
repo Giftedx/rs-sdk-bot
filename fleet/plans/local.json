@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795851888680,
+ "at": 1795851967381,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -284,22 +284,6 @@
    "role": "helper"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1748"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
    "account": "Quickhandjob",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -372,27 +356,11 @@
    "role": "auto"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=43 STALL_TICKS=160 -- crafting legacy-jewelry",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=74 PRODUCT_TARGET=74 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=74 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=74 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1601",
-   "role": "army"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=32 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -426,6 +394,22 @@
    ]
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=43 STALL_TICKS=160 -- crafting legacy-jewelry",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=74 PRODUCT_TARGET=74 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=74 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=74 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
    "account": "WellHung",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -442,6 +426,31 @@
    "resources": [
     "ardougne-imps"
    ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "7",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "helper"
   },
   {
    "account": "CoinCock",
