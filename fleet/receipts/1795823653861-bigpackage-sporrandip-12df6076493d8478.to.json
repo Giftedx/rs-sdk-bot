@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795823653861-bigpackage-sporrandip-12df6076493d8478",
  "account": "SporranDip",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Mithril platebody",
  "requested": 1,
  "claim": "e8a510e6-f643-4071-a549-9d43776d011c",
- "count": 0,
- "ok": false,
- "at": 1795834928431,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795835056073,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795835055338
+ },
+ "logout": {
+  "attemptId": "1795834928439-0000007976-0000000001",
+  "at": 1795835056063,
+  "sha256": "0ac465cdbb3b393c36bd47f0f1aa466933c1769fd43d9dab049ccb9e9280a6e4"
+ },
+ "screen": true
 }
