@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834657668,
+ "at": 1795834698197,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -309,6 +309,43 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts SPLASH_SITE=coop TRAIN_SKILL=Magic TARGET_LEVEL=21 TARGET_COUNT=50 CAP=1000 -- magic splash-coop 21 3000",
+    "scripts/aio-fighter.ts CAP=2500 TARGET_COUNT=250 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Abracadickra BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
    "role": "auto"
   }
  ],

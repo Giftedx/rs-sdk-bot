@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823653101-bigpackage-yewfirst-d2e4079dbba750db",
+ "account": "Bigpackage",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "3eef8d42-0b25-44ee-a5a8-f7863e737f9e",
+ "count": 0,
+ "ok": false,
+ "at": 1795834696002,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Earth rune",
+   "requested": 16,
+   "count": 0
+  }
+ ]
+}

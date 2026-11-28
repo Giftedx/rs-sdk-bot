@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795834378544-1",
  "account": "Abracadickra",
  "partner": "BoneToPick",
@@ -10,15 +10,37 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "51130748-27fc-4cbe-9e38-bd3d48c5f5fb",
- "count": 0,
- "ok": false,
- "at": 1795834537024,
- "detail": "trade claimed",
+ "count": 250,
+ "ok": true,
+ "at": 1795834678090,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Feather",
    "requested": 250,
-   "count": 0
+   "count": 250,
+   "inventory": {
+    "before": 250,
+    "after": 0
+   },
+   "bank": {
+    "count": 250,
+    "at": 1795834661014
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795834660206
+ },
+ "logout": {
+  "attemptId": "1795834537163-0000012516-0000000001",
+  "at": 1795834678082,
+  "sha256": "0ebb48e5758043e08dee7c8f1552b63a1b354604a1e82b6fe90ce72fbfb1395f"
+ },
+ "screen": true
 }
