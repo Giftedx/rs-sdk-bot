@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795843780234,
+ "at": 1795843792258,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -318,7 +318,7 @@
    "role": "helper"
   },
   {
-   "account": "Ballbag",
+   "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -331,13 +331,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
   },
   {
-   "account": "Fingerblastr",
+   "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -378,50 +378,22 @@
    "account": "Woodenstaff",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=960 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
+   "goal": "goal:supply_chain:257",
    "role": "auto"
   },
   {
@@ -448,6 +420,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:44",
    "role": "army"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Pullmybow",
@@ -560,19 +551,19 @@
    "role": "helper"
   },
   {
-   "account": "DropMyLoad",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:scorpion BATCH_UNITS=1 -- sweep scorpion"
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- ranged-gather"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:scorpion",
-   "role": "helper"
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   },
   {
    "account": "Quickhandjob",
@@ -645,6 +636,21 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=20 STALL_TICKS=200 -- crafting progressive",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
+   "role": "helper"
   }
  ],
  "army": [
