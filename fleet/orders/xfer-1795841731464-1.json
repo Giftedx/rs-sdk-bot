@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795841731464-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "TossTheCaber",
+  "item": "Herb",
+  "count": 3,
+  "itemId": 211,
+  "start": 1795841731464,
+  "end": 1795842631464,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
