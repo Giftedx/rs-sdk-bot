@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795868294111-1",
  "account": "hocuspokeus",
  "partner": "masterbaiter",
@@ -12,13 +12,23 @@
  "claim": "8ccd88b8-1da4-42fb-8155-b6a8794696b1",
  "count": 0,
  "ok": false,
- "at": 1795868487504,
- "detail": "trade claimed",
+ "at": 1795868508508,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Law rune",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795868492575
+   }
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795868487515-0000025124-0000000001",
+  "at": 1795868508499,
+  "sha256": "897bbb508f26e426568ce35b6c0688e7ccdd4ee92ff7a9b0db96027dc5cb28f9"
+ },
+ "screen": false
 }
