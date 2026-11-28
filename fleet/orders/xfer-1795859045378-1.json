@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795859045378-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "SporranBulge",
+  "item": "Tin ore",
+  "count": 4,
+  "itemId": 438,
+  "start": 1795859045378,
+  "end": 1795859945378,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

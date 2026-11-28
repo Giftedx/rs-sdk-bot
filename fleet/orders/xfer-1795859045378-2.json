@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795859045378-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Kiltlifter",
+  "item": "Copper ore",
+  "count": 3,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 3,
+      "itemId": 438
+    }
+  ],
+  "start": 1795859045378,
+  "end": 1795859945378,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

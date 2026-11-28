@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795858863942,
+ "at": 1795859520912,
  "jobs": [
   {
    "account": "Balls",
@@ -45,35 +45,9 @@
    "role": "pvp"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "475",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "21000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "475"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
    "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
     "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
@@ -89,8 +63,8 @@
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=211 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=211 MAX_MAKE=211 CAP=2088 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2210 TARGET_COUNT=221 PRODUCT_TARGET=221 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=221 MAX_MAKE=221 CAP=2168 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -101,53 +75,7 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Wandwaver BATCH_UNITS=250 -- chicken"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Wandwaver",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "zanaris"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=31 STALL_TICKS=200 -- crafting progressive",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Kiltlifter:zanaris BATCH_UNITS=1 -- sweep zanaris"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Kiltlifter:zanaris",
-   "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
+   "account": "BoneToPick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "chicken"
@@ -155,54 +83,51 @@
    "env": {
     "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto",
    "resources": [
     "chickens"
    ]
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=3460 TARGET_COUNT=346 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Pocketpython:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "mining",
+    "ore"
    ],
    "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:lochnessrod:item:1511",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:lochnessrod:item:1511",
+   "goal": "campaign:mineshafted:item:440",
    "role": "army",
    "resources": [
-    "draynor-normal-trees"
+    "varrock-se-mine"
    ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "helper"
   },
   {
    "account": "Quickhandjob",
@@ -316,24 +241,19 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-fighter.ts",
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
    "args": [
-    "chicken"
+    "scripts/aio-market.ts ORDER_KEY=brain-2357-11-o12-p3459 ITEM_ID=2357 QUANTITY=11 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3459 EXPECTED_OWNED=12 -- ge-buy",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=23 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=23 STALL_TICKS=280 -- crafting jewellery-trip"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "campaign:haggis:item:1639",
+   "role": "army"
   }
  ],
  "army": [
@@ -353,6 +273,7 @@
   "dipstick",
   "fingerblastr",
   "hocuspokeus",
+  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
