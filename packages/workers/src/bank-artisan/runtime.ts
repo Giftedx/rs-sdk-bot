@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Session } from '../../../core/src/inprocess';
 import { finish, logoutSession } from '../../../core/src/bot';
-import { waitTicks, waitUntil } from '../../../core/src/ticks';
+import { waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { depositObserved } from '../../../core/src/deposit';
 import {
@@ -344,7 +344,6 @@ export async function runArtisanBankProfile(
                 if (left) await depositObserved(s, left);
             }
             await s.bot.closeBank();
-            await waitTicks(s, 1);
             if (made === 0) break;
         }
     } catch (e) {

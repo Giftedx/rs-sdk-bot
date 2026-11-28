@@ -1068,7 +1068,7 @@ async function runOreGathererSession(
         if (cfg.deps?.leaveRuneStarter) {
             await cfg.deps.leaveRuneStarter(s, () => !!stopState() || !!damage);
         }
-        await waitTicks(s, 3);
+        await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Mining')?.level ?? 0) > 0, { timeoutTicks: 3 });
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
         const miningLevel = s.sdk.getSkill('Mining')?.level ?? 1;
@@ -1172,7 +1172,7 @@ async function runOreGathererSession(
             const b = await s.bot.openBank();
             if (!b.success) {
                 console.log(`WARN openBank failed: ${b.message}`);
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 return;
             }
             if (n > 0 || hasGem) {
@@ -1186,7 +1186,7 @@ async function runOreGathererSession(
                     const item = s.sdk.getInventory().find(i => i.id === id);
                     if (item) await s.bot.depositItem(item, -1);
                 }
-                await waitTicks(s, 1);
+                if (oreCount() > 0) await waitUntil(s, () => over() || oreCount() === 0, { timeoutTicks: 2 });
                 const after = oreCount();
                 banked += Math.max(0, n - after);
                 bankTrips++;
@@ -1201,7 +1201,6 @@ async function runOreGathererSession(
                 });
             }
             await s.bot.closeInterface();
-            await waitTicks(s, 1);
             console.log(`MILESTONE bank t=${used()} banked=${banked} totalMined=${mined}`);
         };
         const safetyExit = async (reason: string): Promise<GatherOutcome> => {
@@ -1376,8 +1375,21 @@ async function runOreGathererSession(
             }
             if (!rock) {
                 const a = s.tick();
-                await waitTicks(s, PROFILE === 'heroes-runite' ? 1 : 2);
-                oreWaitTicks += s.tick() - a;
+                await waitUntil(
+                    s,
+                    st =>
+                        over()
+                        || !!selectRock(
+                            st?.nearbyLocs ?? [],
+                            s.sdk.getSkill('Mining')?.level ?? 1,
+                            attempt,
+                            p.level,
+                            PROFILE,
+                            st?.nearbyPlayers ?? [],
+                        ),
+                    { timeoutTicks: PROFILE === 'heroes-runite' ? 1 : 2 },
+                );
+                oreWaitTicks += Math.max(1, s.tick() - a);
                 continue;
             }
             if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
@@ -1392,8 +1404,9 @@ async function runOreGathererSession(
                     await bank(true);
                 }
             } else {
-                if (PROFILE === 'heroes-runite' && r.reason === 'rock-gone') {
-                    lastDepletedRunite = { x: rock.x, z: rock.z };
+                if (r.reason === 'rock-gone') {
+                    if (PROFILE === 'heroes-runite') lastDepletedRunite = { x: rock.x, z: rock.z };
+                    oreWaitTicks += r.ticks;
                     continue;
                 }
                 const adjacent = peers.filter(peer => Math.max(Math.abs(peer.x - rock.x), Math.abs(peer.z - rock.z)) <= 1).length;
@@ -1585,16 +1598,23 @@ export async function mineEssenceBatch(
     let lastClick = s.tick();
     await o.click();
     while (!o.stop() && !o.full()) {
-        await waitTicks(s, 2);
+        await waitTicks(s, 1);
         const current = o.count();
         if (current > held) {
             o.gain(current - held);
             lastOutput = s.tick();
         }
         held = current;
-        if (o.stop()) break;
+        if (o.stop() || o.full()) break;
         if (s.tick() - lastOutput >= 60) throw Error('no essence progress: no observed output for60 ticks');
         if (o.busy()) continue;
+        const st = s.sdk?.getState?.();
+        if (st?.dialog?.isOpen || st?.modalOpen) {
+            await s.direct?.({ type: 'closeModal', reason: 'SDK' });
+            await o.click();
+            lastClick = s.tick();
+            continue;
+        }
         if (s.tick() - Math.max(lastOutput, lastClick) > 10) {
             await o.click();
             lastClick = s.tick();
@@ -1719,7 +1739,15 @@ export async function runEssenceGatherer(
         if (door) {
             const op = door.optionsWithIndex.find(o => /open/i.test(o.text))!;
             await s.sdk.sendInteractLoc(door.x, door.z, door.id, op.opIndex);
-            await waitTicks(s, 2);
+            await waitUntil(
+                s,
+                () =>
+                    over()
+                    || !(st()?.nearbyLocs ?? []).some(
+                        l => l.id === door.id && l.x === door.x && l.z === door.z && l.optionsWithIndex.some(o => /open/i.test(o.text)),
+                    ),
+                { timeoutTicks: 3 },
+            );
         }
     };
     const openBank = async () => {

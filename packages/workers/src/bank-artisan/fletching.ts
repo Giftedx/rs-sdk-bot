@@ -910,7 +910,7 @@ export async function runOakBows(s: Session, options: OakBowOptions) {
             await s.bot.depositItem(inv().find(i => i.id === id)!, -1);
             if (!await waitUntil(s, () => held(id) === 0, { timeoutTicks: 5 })) throw new Error(`oak-bows deposit failed ${id}`);
         }
-        await waitTicks(s, 1);
+        if (!s.bankObservation?.()) await waitTicks(s, 1);
         capture();
     };
     const totals = () => {
@@ -1534,18 +1534,16 @@ async function runLegacyFletchArrowsOrBows(
         const bank = async () => {
             const b = await s.bot.openBank();
             if (!b.success) {
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 return;
             }
             if (mode === 'arrows') {
                 await s.bot.depositItem(/arrow$/i, -1);
-                await waitTicks(s, 1);
                 const tipRe = new RegExp(`${tipType} arrowtip`, 'i');
                 await s.bot.withdrawItem(/headless arrow/i, 1000);
                 await s.bot.withdrawItem(tipRe, 1000);
             } else if (mode === 'bows') {
                 for (const item of inv().filter(i => BOWS.strung.includes(i.id))) await s.bot.depositItem(item, -1);
-                await waitTicks(s, 1);
                 for (const wanted of [[BOWS.string], BOWS.unstrung]) {
                     const item = s.sdk.getState()!.bank.items.find(i => wanted.includes(i.id));
                     if (item) await s.bot.withdrawItem(item, 14);
@@ -1553,7 +1551,6 @@ async function runLegacyFletchArrowsOrBows(
             }
             bankTrips++;
             await s.bot.closeInterface();
-            await waitTicks(s, 1);
         };
 
         // A bank visit that leaves the pack without both inputs ends the run at once: waiting cannot refill the bank,
@@ -1576,7 +1573,7 @@ async function runLegacyFletchArrowsOrBows(
                 const t = findItem(new RegExp(`${tipType} arrowtip`, 'i'))!;
                 const before = countRe(finishedRe);
                 await s.sdk.sendUseItemOnItem(h.slot, t.slot);
-                await waitTicks(s, 2);
+                await waitUntil(s, () => over() || countRe(finishedRe) > before, { timeoutTicks: 2 });
                 const gained = countRe(finishedRe) - before;
                 if (gained > 0) fletched += gained;
             } else if (mode === 'bows') {
@@ -1593,7 +1590,7 @@ async function runLegacyFletchArrowsOrBows(
                 const un = findId(BOWS.unstrung)!;
                 const before = countIds(BOWS.strung);
                 await s.sdk.sendUseItemOnItem(st.slot, un.slot);
-                await waitTicks(s, 2);
+                await waitUntil(s, () => over() || countIds(BOWS.strung) > before, { timeoutTicks: 2 });
                 const gained = countIds(BOWS.strung) - before;
                 if (gained > 0) fletched += gained;
             }

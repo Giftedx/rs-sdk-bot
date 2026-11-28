@@ -4,7 +4,7 @@ import { bankTravelTolerance, fittingBankBatch, planBankTripSchedule, validateBa
 import { accountOf, getWorld } from '../../../core/src/bot';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
-import { waitTicks, waitUntil } from '../../../core/src/ticks';
+import { waitUntil } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 
 export type BankBatchPreparation =
@@ -212,7 +212,7 @@ export async function runMarketBankProfile(
             const actual = await p.run(amount, j.cap - j.returnTicks - (s.tick() - start), stop);
             completed += actual ?? amount;
             trips++;
-            await waitTicks(s, 3);
+            await waitUntil(s, () => stop() || (s.sdk.getState()?.player?.animId ?? -1) === -1, { timeoutTicks: 3 });
             await travel(p.bank, true);
             await secure(true);
         }

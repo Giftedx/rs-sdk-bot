@@ -202,7 +202,16 @@ export async function runEdgevilleWoodcut(s: Session, stopped: () => boolean) {
                     const before = held(OAK_LOGS);
                     previous = tree.x + ',' + tree.z;
                     await s.bot.interactLoc(tree, action.text);
-                    await waitUntil(s, () => held(OAK_LOGS) > before || !safe(), { timeoutTicks: 28 });
+                    await waitUntil(
+                        s,
+                        st =>
+                            held(OAK_LOGS) > before
+                            || !safe()
+                            || !!st?.dialog?.isOpen
+                            || !!st?.modalOpen
+                            || !(st?.nearbyLocs ?? []).some((l: any) => l.id === tree!.id && l.x === tree!.x && l.z === tree!.z),
+                        { timeoutTicks: 28 },
+                    );
                     const gain = held(OAK_LOGS) - before;
                     if (gain > 0) {
                         gathered += gain;
@@ -213,7 +222,13 @@ export async function runEdgevilleWoodcut(s: Session, stopped: () => boolean) {
                         break;
                     }
                 } else {
-                    await waitTicks(s, 4);
+                    await waitUntil(
+                        s,
+                        st =>
+                            !safe()
+                            || (st?.nearbyLocs ?? []).some((loc: any) => loc.id === 1281 && loc.reachable !== false && EDGEVILLE_OAKS.has(`${loc.x},${loc.z}`)),
+                        { timeoutTicks: 4 },
+                    );
                 }
                 if (s.tick() - lastGain >= 180) {
                     stalled = true;
@@ -612,14 +627,38 @@ export async function runWoodSupply(
                 }
                 if (!tree) {
                     if (s.tick() - lastGain > 240) throw Error('supply no normal tree after respawn budget');
-                    await waitTicks(s, 4);
+                    await waitUntil(
+                        s,
+                        st =>
+                            halt()
+                            || (st?.nearbyLocs ?? []).some(
+                                (l: any) =>
+                                    l.x >= 3214
+                                    && l.x <= 3239
+                                    && l.z >= 3226
+                                    && l.z <= 3250
+                                    && l.reachable !== false
+                                    && TREE_RE.test(l.name)
+                                    && l.optionsWithIndex.some((o: any) => CHOP_OP_RE.test(o.text)),
+                            ),
+                        { timeoutTicks: 4 },
+                    );
                     continue;
                 }
                 const result = await s.bot.interactLoc(tree, tree.optionsWithIndex.find(o => CHOP_OP_RE.test(o.text))!.text);
                 if (!result.success) {
                     console.log('WOOD_SUPPLY_CHOP_REFUSED ' + JSON.stringify({ tree: { id: tree.id, x: tree.x, z: tree.z }, result }));
                 }
-                await waitUntil(s, () => held(1511) > old || stop(), { timeoutTicks: 12 });
+                await waitUntil(
+                    s,
+                    st =>
+                        held(1511) > old
+                        || stop()
+                        || !!st?.dialog?.isOpen
+                        || !!st?.modalOpen
+                        || !(st?.nearbyLocs ?? []).some((l: any) => l.id === tree!.id && l.x === tree!.x && l.z === tree!.z),
+                    { timeoutTicks: 12 },
+                );
                 const gain = held(1511) - old;
                 if (gain > 0) {
                     gathered += gain;
@@ -1235,11 +1274,14 @@ export async function runDraynorOak(
                 () =>
                     over() ||
                     (held(OAK_LOGS) > before && xp() > beforeXp) ||
+                    !!st()?.dialog?.isOpen ||
+                    !!st()?.modalOpen ||
                     !st()?.nearbyLocs.some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z),
                 { timeoutTicks: 8 },
             );
             if (held(OAK_LOGS) > before && xp() > beforeXp) lastProgress = s.tick();
-            else await waitTicks(s, 1);
+            else if (st()?.dialog?.isOpen || st()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
+            else if (st()?.nearbyLocs.some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z)) await waitTicks(s, 1);
         }
     } catch (e) {
         failure = `no wood progress: ${String(e)}`;
@@ -1460,7 +1502,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank failed: ${b.message}`);
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
             return;
         }
         if (s.sdk.getInventory().filter(i => WC_BANK_FOOD_RE.test(i.name)).length < 3) {
@@ -1555,10 +1597,12 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             await bank(true);
         }
 
+        let activeTree: { id: number; x: number; z: number } | undefined;
         while (!over() && bankTrips < maxTrips) {
             const curLevels = readSkillLevels(s.sdk);
             if (crossedTierBoundary(toolLevels, curLevels, ['attack', 'woodcutting'], 'woodcutting-axe')) {
                 toolLevels = curLevels;
+                activeTree = undefined;
                 await bank(true);
                 continue;
             }
@@ -1568,16 +1612,19 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             const stallTicks = woodStallTicks(treeKind);
             if (s.tick() - progressTick > stallTicks) throw new Error(`no wood progress for ${stallTicks} ticks`);
             if (heldLogs() >= bankAt || freeSpace() === 0) {
+                activeTree = undefined;
                 await bank();
                 continue;
             }
 
             const p = pos();
             if (!p) {
+                activeTree = undefined;
                 await waitTicks(s, 1);
                 continue;
             }
             if (hp() < 7) {
+                activeTree = undefined;
                 const food = s.sdk.getInventory().find(i => /^(shrimps|bread|trout|salmon|lobster|cooked chicken)$/i.test(i.name));
                 if (food) await s.bot.eatFood(food.name);
                 else if (hp() < 4) {
@@ -1588,6 +1635,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             }
 
             if (Math.max(Math.abs(p.worldX - spot.x), Math.abs(p.worldZ - spot.z)) > 12) {
+                activeTree = undefined;
                 if (local) {
                     for (const [x, z] of [
                         [3092, 3250],
@@ -1608,24 +1656,40 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             }
 
             const before = heldLogs();
+            const stNow = s.sdk.getState();
+            if (stNow?.dialog?.isOpen || stNow?.modalOpen) {
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+                activeTree = undefined;
+            }
             const nearbyLocs = s.sdk.getState()?.nearbyLocs ?? [];
-            const matching = nearbyLocs.filter(
-                l =>
-                    treeRe.test(l.name) &&
-                    (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
-                    (!draynor || grove!.contains(l.x, l.z)) &&
-                    (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick(),
-            );
+            const sameActive =
+                activeTree
+                && nearbyLocs.find(
+                    l =>
+                        l.id === activeTree!.id
+                        && l.x === activeTree!.x
+                        && l.z === activeTree!.z
+                        && l.optionsWithIndex.some(o => CHOP_DOWN_OP_RE.test(o.text)),
+                );
+            const matching = sameActive
+                ? [sameActive]
+                : nearbyLocs.filter(
+                      l =>
+                          treeRe.test(l.name) &&
+                          (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
+                          (!draynor || grove!.contains(l.x, l.z)) &&
+                          (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick(),
+                  );
             if (matching.length > 1) matching.sort((a, b) => a.distance - b.distance);
-            const tree = woodTreeOrder(matching, s.sdk.getState()?.nearbyPlayers ?? [])[0];
+            const tree = sameActive ?? woodTreeOrder(matching, s.sdk.getState()?.nearbyPlayers ?? [])[0];
             if (!tree) {
+                activeTree = undefined;
                 await waitTicks(s, 1);
                 continue;
             }
             if (draynor) {
                 const xp = s.sdk.getSkillXp('woodcutting') ?? 0;
                 const a = s.tick();
-                if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
                 const option = tree.optionsWithIndex.find(o => CHOP_DOWN_OP_RE.test(o.text));
                 if (!option) {
                     retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 20);
@@ -1636,23 +1700,29 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                 if (sent.success) {
                     await waitUntil(
                         s,
-                        () =>
+                        st =>
                             over() ||
                             (heldLogs() > before && (s.sdk.getSkillXp('woodcutting') ?? 0) > xp) ||
-                            !s.sdk.getState()?.nearbyLocs.some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z),
+                            !!st?.dialog?.isOpen ||
+                            !!st?.modalOpen ||
+                            !(st?.nearbyLocs ?? []).some((l: any) => l.id === tree.id && l.x === tree.x && l.z === tree.z),
                         { timeoutTicks: 20 },
                     );
                 }
                 if (heldLogs() > before && (s.sdk.getSkillXp('woodcutting') ?? 0) > xp) {
                     chops = banked + heldLogs();
                     progressTick = s.tick();
+                } else if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) {
+                    await s.direct({ type: 'closeModal', reason: 'SDK' });
+                } else if (!(s.sdk.getState()?.nearbyLocs ?? []).some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z)) {
+                    // Tree fell before yielding a log; re-target immediately without an extra idle tick.
                 } else {
                     retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 20);
                     console.log(`WARN wood tree=${tree.id}@${tree.x},${tree.z} ticks=${s.tick() - a} no log and XP gain`);
                     await waitTicks(s, 1);
                 }
-            } else {
-                if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
+            } else if (woodGroveArg === 'native-processing' || typeof s.sdk.sendInteractLoc !== 'function') {
+                activeTree = undefined;
                 const r = woodGroveArg === 'native-processing' ? await chopProcessingTree(s, tree, over) : await s.bot.chopTree(tree);
                 if (r.success) {
                     chops = banked + heldLogs();
@@ -1660,6 +1730,67 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                 } else {
                     retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 15);
                     await waitTicks(s, 1);
+                }
+            } else {
+                const option = tree.optionsWithIndex.find(o => CHOP_DOWN_OP_RE.test(o.text));
+                if (!option) {
+                    activeTree = undefined;
+                    retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 15);
+                    await waitTicks(s, 1);
+                    continue;
+                }
+                if (!sameActive) {
+                    const sent = await s.sdk.sendInteractLoc(tree.x, tree.z, tree.id, option.opIndex);
+                    if (!sent.success) {
+                        activeTree = undefined;
+                        retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 15);
+                        await waitTicks(s, 1);
+                        continue;
+                    }
+                    activeTree = { id: tree.id, x: tree.x, z: tree.z };
+                }
+                let idleStreak = 0;
+                let prevX = pos()?.worldX;
+                let prevZ = pos()?.worldZ;
+                const idleLimit = sameActive ? 4 : 6;
+                await waitUntil(
+                    s,
+                    st => {
+                        if (over() || heldLogs() > before || freeSpace() === 0 || !!st?.dialog?.isOpen || !!st?.modalOpen) return true;
+                        if (!(st?.nearbyLocs ?? []).some((l: any) => l.id === tree.id && l.x === tree.x && l.z === tree.z)) {
+                            activeTree = undefined;
+                            return true;
+                        }
+                        const cur = st?.player;
+                        const moved = cur && (cur.worldX !== prevX || cur.worldZ !== prevZ);
+                        prevX = cur?.worldX;
+                        prevZ = cur?.worldZ;
+                        if ((cur?.animId ?? -1) !== -1 || moved) {
+                            idleStreak = 0;
+                        } else if (++idleStreak >= idleLimit) {
+                            activeTree = undefined;
+                            return true;
+                        }
+                        return false;
+                    },
+                    { timeoutTicks: 45 },
+                );
+                if (heldLogs() > before) {
+                    chops = banked + heldLogs();
+                    progressTick = s.tick();
+                    if (!(s.sdk.getState()?.nearbyLocs ?? []).some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z)) {
+                        activeTree = undefined;
+                    }
+                } else if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) {
+                    await s.direct({ type: 'closeModal', reason: 'SDK' });
+                    activeTree = undefined;
+                } else if (!activeTree) {
+                    if ((s.sdk.getState()?.nearbyLocs ?? []).some(l => l.id === tree.id && l.x === tree.x && l.z === tree.z)) {
+                        retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 15);
+                        await waitTicks(s, 1);
+                    }
+                } else {
+                    activeTree = undefined;
                 }
             }
         }

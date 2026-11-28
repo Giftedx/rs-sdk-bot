@@ -311,10 +311,12 @@ export async function runSpinBowstrings(
                 const ladder = s.sdk.findNearbyLoc(/^ladder$/i);
                 if (ladder) {
                     await s.bot.interactLoc(ladder, opName);
-                    await waitTicks(s, 2);
-                    if (pos()?.level === targetLevel) return true;
+                    if (await waitUntil(s, () => over() || pos()?.level === targetLevel, { timeoutTicks: 3 })) {
+                        if (pos()?.level === targetLevel) return true;
+                    }
+                } else {
+                    await waitTicks(s, 1);
                 }
-                await waitTicks(s, 1);
             }
             return pos()?.level === targetLevel;
         };
@@ -332,7 +334,7 @@ export async function runSpinBowstrings(
                 const before = s.sdk.getState()?.bank?.items.filter(i => i.id === 1779).reduce((n, i) => n + i.count, 0) ?? 0;
                 const amount = note.count;
                 await s.bot.depositItem(note, -1);
-                await waitTicks(s, 1);
+                await waitUntil(s, () => over() || !s.sdk.getInventory().some(i => i.id === 1780), { timeoutTicks: 2 });
                 const after = s.sdk.getState()?.bank?.items.filter(i => i.id === 1779).reduce((n, i) => n + i.count, 0) ?? 0;
                 if (s.sdk.getInventory().some(i => i.id === 1780) || after !== before + amount) throw new Error('noted flax did not become raw bank stock');
                 console.log(`SPIN_NOTES deposited=${amount} rawBank=${after}`);
@@ -378,7 +380,7 @@ export async function runSpinBowstrings(
             const wheel = s.sdk.findNearbyLoc(/^spinning wheel$/i);
             if (!wheel) {
                 console.log('WARN spinning wheel not found nearby');
-                await waitTicks(s, 3);
+                await waitUntil(s, () => over() || !!s.sdk.findNearbyLoc(/^spinning wheel$/i), { timeoutTicks: 3 });
                 return;
             }
             if ((s.sdk.getSkill('Crafting')?.baseLevel ?? 1) < 10) throw new Error('flax requires Crafting 10');
@@ -395,7 +397,15 @@ export async function runSpinBowstrings(
                         await s.sdk.sendClickDialog(option.index);
                         lastPage = key;
                     }
-                    await waitTicks(s, 1);
+                    await waitUntil(
+                        s,
+                        () => {
+                            if (over()) return true;
+                            const cur = s.sdk.getDialog();
+                            return !cur?.isOpen || (cur.pageId ?? JSON.stringify(cur.options)) !== lastPage;
+                        },
+                        { timeoutTicks: 2 },
+                    );
                 }
                 throw new Error('level-up dialog did not clear');
             };

@@ -287,7 +287,7 @@ export function natureProfile(s: Session, j: NatureJob): BankProfile {
                     },
                 });
                 if (!entry.entered) throw Error('Nature entry ' + entry.failure);
-                await waitTicks(s, 2);
+                await waitUntil(s, () => over() || !!state()?.nearbyLocs.some(l => l.id === 2486 && l.x === 2399 && l.z === 4840), { timeoutTicks: 2 });
                 await approach(NATURE.altar, over);
                 if (over()) throw Error('Nature stopped before craft');
                 const loc = state()!.nearbyLocs.find(l => l.id === 2486 && l.x === 2399 && l.z === 4840)!;
