@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795844632282-1",
  "account": "mmtha0205",
  "partner": "Nockitoff",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 14,
  "claim": "3a30d810-77c1-415e-bf92-d835a66fe37c",
- "count": 0,
- "ok": false,
- "at": 1795844799181,
- "detail": "trade claimed",
+ "count": 14,
+ "ok": true,
+ "at": 1795844892445,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 14,
-   "count": 0
+   "count": 14,
+   "inventory": {
+    "before": 0,
+    "after": 14
+   },
+   "bank": {
+    "count": 14,
+    "at": 1795844891363
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 14
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795844890895
+ },
+ "logout": {
+  "attemptId": "1795844799191-0000006000-0000000001",
+  "at": 1795844892435,
+  "sha256": "e8f81c6065c0aa808826c98f9ba16dd847739e224059fe15a694a0178be447ec"
+ },
+ "screen": true
 }
