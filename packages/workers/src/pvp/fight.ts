@@ -500,9 +500,9 @@ export const carriedPoison = (client: unknown, now: number): boolean => { const 
 export const carriedSplat = (client: unknown): number => (typeof client === 'object' && client ? poisonCarry.get(client)?.splat ?? 0 : 0);
 export function noteFightPoison(client: unknown, poisoned: boolean, seenAt: number, splat = 0): void { if (typeof client === 'object' && client) poisonCarry.set(client, { poisoned, seenAt, splat }); }
 
-// The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, smite burst, a health bar under the weapon's threshold.
+// The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, prayer-drain burst, a health bar under the weapon's threshold.
 export const specReasons = (r: { fled: boolean; bursting: boolean; volleying: boolean; chainStun: boolean; smite?: boolean; low: boolean }) =>
-    ([['fled', r.fled], ['burst', r.bursting], ['volley', r.volleying], ['chain', r.chainStun], ['smite', !!r.smite], ['low', r.low]] as const).filter(([, on]) => on).map(([name]) => name).join('+') || 'none';
+    ([['fled', r.fled], ['burst', r.bursting], ['volley', r.volleying], ['chain', r.chainStun], ['drain', !!r.smite], ['low', r.low]] as const).filter(([, on]) => on).map(([name]) => name).join('+') || 'none';
 // The flee state ends when the flee hold (6 ticks after the last step away) has run out, no freeze holds the target and it stands within 2 tiles of us.
 export const fledEnds = (fled: boolean, gap: number, now: number, fleeingUntil: number, frozenUntil: number) => fled && gap <= 2 && now >= fleeingUntil && now >= frozenUntil;
 
