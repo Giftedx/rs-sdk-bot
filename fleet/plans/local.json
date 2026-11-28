@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855444988,
+ "at": 1795855516835,
  "jobs": [
   {
    "account": "Balls",
@@ -45,40 +45,68 @@
    "role": "pvp"
   },
   {
-   "account": "TrouserSnake",
+   "account": "PickpockDick",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "475",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "475"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "240",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "240"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
+  },
+  {
+   "account": "Mightyrod",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 TARGET_COUNT=42 CAP=1000 STALL_TICKS=200 -- herblore potions",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=34 PRODUCT_TARGET=34 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=34 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=34 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:2481",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_guam_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:91",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
+   "goal": "goal:supply_chain:263",
    "role": "army"
   },
   {
@@ -95,6 +123,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:267",
+   "role": "army"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=4 PRODUCT_TARGET=4 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
    "role": "army"
   },
   {
@@ -118,21 +161,6 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=3460 TARGET_COUNT=346 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:PickpockDick:zanaris BATCH_UNITS=1 -- sweep zanaris"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:PickpockDick:zanaris",
-   "role": "army"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -149,6 +177,22 @@
    "role": "army"
   },
   {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -157,7 +201,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "776"
+    "BATCH_UNITS": "1068"
    },
    "enabled": true,
    "repeat": false,
@@ -166,6 +210,23 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "Quickhandjob",
@@ -220,49 +281,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "fire-giant"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:1333",
-    "BATCH_UNITS": "400"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:1333",
-   "role": "army",
-   "resources": [
-    "fire-giants"
-   ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "240",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "240"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
   }
  ],
  "army": [
