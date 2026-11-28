@@ -8,7 +8,7 @@
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../../../core/src/inprocess';
 import { RETALIATE_OFF } from '../../../core/src/combat-end';
-import { createNeverSkullGuard, ENEMY_WEAPON_IDS, fightPlayer, getObjNames, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, PRAYER, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
+import { createNeverSkullGuard, ENEMY_WEAPON_IDS, fightPlayer, getObjNames, isDying, isMulti, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, PRAYER, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
 import { TRIBRID_KIT } from './hunt-kits';
 import { kitOptions, kitSwitches } from '../../../core/src/pk-kits/kits';
 import { sparOptions } from './pk-spar';
@@ -29,6 +29,18 @@ export const BAIT_3PLUS1_OPTIONS: Partial<FightOptions> = {
 /** Whether a team member should exit fightPlayer early on a 0-HP dying target (disabled when Side A must catch the kill message for looting). */
 export const shouldStopOnDying = (hasTeamFocus: boolean, liveCount: number, sideKey: 'a' | 'b', hasPickup: boolean): boolean =>
     hasTeamFocus && liveCount > 1 && !(sideKey === 'a' && hasPickup);
+
+/** Whether a Side A bot anchored on a single-way stack has drifted too far or crossed into multi-way ground. */
+export function driftedFromHome(
+    pos: { worldX: number; worldZ: number } | null | undefined,
+    home: { x: number; z: number; multi: boolean } | null,
+    maxLeash = 5,
+    multiFn: (x: number, z: number) => boolean = isMulti,
+): boolean {
+    if (!pos || !home) return false;
+    if (!home.multi && multiFn(pos.worldX, pos.worldZ)) return true;
+    return Math.max(Math.abs(pos.worldX - home.x), Math.abs(pos.worldZ - home.z)) > maxLeash;
+}
 
 /** Drinks an antipoison dose if carried after escaping to a safe zone so lingering poison cannot kill an escaped account. */
 export async function cureAfterEscape(s: Session): Promise<boolean> {
@@ -221,6 +233,8 @@ export async function team(a: readonly Session[], b: readonly Session[], options
         const allySet = new Set(allies);
         const skullGuard = options.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
         const sideDagger = key === 'a' ? dagger : undefined;
+        const startPos = s.sdk.getState()?.player;
+        const home = key === 'a' && sideDagger && startPos ? { x: startPos.worldX, z: startPos.worldZ, multi: isMulti(startPos.worldX, startPos.worldZ) } : null;
         if (key === 'a' && (skullGuard || sideDagger)) await disableTeamAutoRetaliate(s);
         // The game refuses an attack on an enemy while another one has hit us in the last 8 ticks (pvp_combat.rs2:104-112:
         // "I'm already under attack.", and "Someone else is already fighting your opponent." for an enemy that another one
@@ -325,7 +339,9 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 stopOnDying: shouldStopOnDying(teamFocus !== undefined, liveAll.length, key, pickup !== undefined),
                 allies,
                 cap: Math.max(1, cap - (s.tick() - start)),
-                stop: () => ended() || isOut(pick.f) || refusedAt > began || (!!sideDagger?.held(pick.f.name, s.tick()) && hasUnheldAlternative(pick.f)),
+                stop: () => ended() || isOut(pick.f) || refusedAt > began
+                    || (home !== null && driftedFromHome(s.sdk.getState()?.player, home))
+                    || (!!sideDagger?.held(pick.f.name, s.tick()) && hasUnheldAlternative(pick.f)),
                 log: l => log(`[${s.name}] ${l}`),
             });
             activeTarget = null;
@@ -350,12 +366,18 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 const lootIds = sideDagger && enemiesLeft ? ENEMY_WEAPON_IDS : pickup;
                 const got = await pickUp(s, lootIds, {
                     radius: pickupRadius,
-                    maxTicks: sideDagger && enemiesLeft ? 10 : 30,
+                    maxTicks: sideDagger && enemiesLeft ? 12 : 30,
                     wait: 6,
-                    stop: () => over || halt() || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 65),
+                    stop: () => over || halt() || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 55),
                 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
+            }
+            if (home && !ended() && !isOut(s)) {
+                const curPos = s.sdk.getState()?.player;
+                if (curPos && (curPos.worldX !== home.x || curPos.worldZ !== home.z) && typeof s.sdk.sendWalk === 'function') {
+                    void s.sdk.sendWalk(home.x, home.z);
+                }
             }
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'escaped') {
@@ -395,6 +417,7 @@ export async function runPkTeamCli(
     const size = Math.max(1, Number(env.SPAR_TEAM ?? 2)), sizeB = Math.max(1, Number(env.SPAR_TEAM_B ?? size)), group = size + sizeB;
     const capArg = argv.find(x => /^\d+$/.test(x)), bots = argv.filter(x => x !== capArg);
     if (!bots.length || bots.length % group) { console.log(`RESULT fail usage: bun scripts/pk-team.ts <${group} bots a group> [CAP ticks]`); return 2; }
+    if (env.STALL_TICKS !== undefined) process.env.STALL_TICKS = env.STALL_TICKS;
     const { openBot, finish } = await import('../../../core/src/bot');
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const [kitA, kitB] = (env.SPAR_KITS ?? '').split(':');

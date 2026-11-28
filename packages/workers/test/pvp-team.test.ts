@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
 import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
 import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
@@ -451,4 +451,13 @@ test('cureAfterEscape drinks carried antipoison after escaping to prevent post-e
     expect(await cureAfterEscape(s as never)).toBe(true);
     expect(used).toEqual([[2, 1]]);
     expect(await cureAfterEscape({ sdk: { getInventory: () => [] } } as never)).toBe(false);
+});
+
+test('driftedFromHome flags crossing from single-way anchor into multi-way or exceeding leash distance', () => {
+    const home = { x: 3137, z: 3602, multi: false };
+    const multiStub = (x: number, z: number) => x >= 3136 && z <= 3590;
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3598 }, home, 5, multiStub)).toBe(false);
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, home, 5, multiStub)).toBe(true);
+    expect(driftedFromHome({ worldX: 3135, worldZ: 3596 }, home, 5, multiStub)).toBe(true);
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, { x: 3150, z: 3560, multi: true }, 40, multiStub)).toBe(false);
 });
