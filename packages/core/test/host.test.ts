@@ -215,14 +215,16 @@ test('zero-ts rewriter handles regexes, templates, bracket access, property chai
         `export { arg };`,
         `export default class { run() { return openBot; } }`,
     ].join('\n');
-    const out = rewriteScript(src, 'edge1', 'F:/r/scripts', 'F:/r/packages/core/src/bot.ts');
+    const scriptsDir = resolve('/r/scripts');
+    const botFile = resolve('/r/packages/core/src/bot.ts').replace(/\\/g, '/');
+    const out = rewriteScript(src, 'edge1', scriptsDir, botFile);
     expect(out).toContain('/process\\.env|console\\.log/');
     expect(out).toContain('${__host.env.A} literal process.exit(9)');
     expect(out).toContain('obj.process.env.X');
     expect(out).toContain("obj?.console.log('keep')");
     expect(out).toContain('const arg = __host.argv[2];');
     expect(out).toContain('__host.console.warn(arg');
-    expect(out).toContain("import('F:/r/packages/core/src/bot.ts?hostbot=edge1')");
+    expect(out).toContain(`import('${botFile}?hostbot=edge1')`);
 
     const entry = hostedEntrySource(src, 'edge1', resolve(import.meta.dir, '..', '..', '..', 'scripts'));
     expect(() => new Bun.Transpiler({ loader: 'js', target: 'bun' }).transformSync(entry)).not.toThrow();
