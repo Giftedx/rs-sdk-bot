@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795856022192-1",
+ "account": "PickpockDick",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 12,
+ "claim": "81148001-39d1-487e-90b6-7f44df593b60",
+ "count": 0,
+ "ok": false,
+ "at": 1795856357710,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Emerald",
+   "requested": 15,
+   "count": 0
+  }
+ ]
+}

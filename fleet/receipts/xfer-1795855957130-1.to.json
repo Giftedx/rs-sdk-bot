@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795855957130-1",
+ "account": "Fingerblastr",
+ "partner": "Ballbag",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "8533557c-bd0d-44d7-ba0f-54b0cdcb01a9",
+ "count": 0,
+ "ok": false,
+ "at": 1795856402267,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Bronze bar",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}
