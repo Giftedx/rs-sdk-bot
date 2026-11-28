@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795842177823-1",
  "account": "Pocketpython",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Molten glass",
  "requested": 1,
  "claim": "4a42cd09-300d-447a-a5a9-0c70364a7524",
- "count": 0,
- "ok": false,
- "at": 1795842512743,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795842595346,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795842579401
+ },
+ "logout": {
+  "attemptId": "1795842512751-0000021088-0000000001",
+  "at": 1795842595336,
+  "sha256": "5e5f696f8053d20f4efa2484c7d0bed23744f28b84004d51ee3af4cbe803294b"
+ },
+ "screen": true
 }
