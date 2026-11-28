@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842044341,
+ "at": 1795842093240,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,96 +185,38 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-1-o1-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "1",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "magicshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "33",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "33"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
    "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "campaign:haggis:item:1470",
    "role": "auto"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
+   "account": "MineYourBiz",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "fishing",
+    "shark"
    ],
    "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=3000 TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "mission:mission:pk-squad:item:385",
+    "BATCH_UNITS": "400"
    },
    "enabled": true,
    "repeat": false,
    "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "catherby-sharks"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -289,6 +231,24 @@
    ],
    "env": {
     "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
    },
    "enabled": true,
    "repeat": false,
@@ -382,44 +342,108 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
+   "account": "Swordswallow",
+   "script": "scripts/magic-order.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "239",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "239"
+    "TARGET_LEVEL": "21",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "STALL_TICKS": "224"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "auto"
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
   },
   {
-   "account": "WellHung",
+   "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2032 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "arrows"
+   ],
+   "env": {
+    "MODE": "headless",
+    "SHAFT_RESERVE": "100",
+    "FEATHER_RESERVE": "100",
+    "DEMAND_ID": "campaign:haggis:item:53",
+    "BATCH_UNITS": "384",
+    "MAX_MAKE": "390",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "auto"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-2353-7-o0-p919",
+    "ITEM_ID": "2353",
+    "QUANTITY": "7",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "919",
+    "EXPECTED_OWNED": "0",
+    "DEMAND_ID": "campaign:haggis:item:2353",
+    "BATCH_UNITS": "7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "army"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1472",
    "role": "helper"
+  },
+  {
+   "account": "ChaosInPants",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "vampire"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "auto"
   }
  ],
  "army": [
@@ -435,7 +459,6 @@
   "UnderMyKilt",
   "bowbeforeme",
   "fingerblastr",
-  "kiltlifter",
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
