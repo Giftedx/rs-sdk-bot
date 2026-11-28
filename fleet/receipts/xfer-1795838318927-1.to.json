@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795838318927-1",
  "account": "Shaftsinker",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "a649aae8-b7d0-41cc-8a73-dcd224cf9176",
- "count": 0,
- "ok": false,
- "at": 1795838507282,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795838542371,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795838541187
+ },
+ "logout": {
+  "attemptId": "1795838507318-0000009828-0000000001",
+  "at": 1795838542357,
+  "sha256": "34f6e125476aeea7cad4b2f861645c7149492f2547be4c469ffa8a57018f10dc"
+ },
+ "screen": true
 }
