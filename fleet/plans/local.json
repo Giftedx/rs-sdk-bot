@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795849179029,
+ "at": 1795849311217,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -257,18 +257,18 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "scripts/aio-skiller.ts METHOD=karambwanji BANKED=1 CAP=3000 TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing staged",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
+   "goal": "goal:supply_chain:377",
    "role": "army"
   },
   {
@@ -285,6 +285,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
   },
   {
    "account": "Woodenstaff",
@@ -530,27 +545,19 @@
    "role": "helper"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "fishing",
-    "staged"
+    "shop-sell"
    ],
    "env": {
-    "METHOD": "karambwanji",
-    "BANKED": "1",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:3150",
-    "BATCH_UNITS": "480",
-    "AMOUNT": "480"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:3150",
-   "role": "army",
-   "resources": [
-    "karambwanji-lake"
-   ]
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   }
  ],
  "army": [
@@ -566,7 +573,6 @@
   "UnderMyKilt",
   "bigpackage",
   "kiltlifter",
-  "mmtha0205",
   "mmthv2350",
   "sausagefest",
   "woodpecker"

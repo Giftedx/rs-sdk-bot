@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795849119413-1",
+ "account": "Bigpackage",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 475,
+ "claim": "a98c1022-80da-4d4e-95d9-d61a58754320",
+ "count": 0,
+ "ok": false,
+ "at": 1795849253508,
+ "detail": "trade claimed"
+}
