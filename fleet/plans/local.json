@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795868429581,
+ "at": 1795868503358,
  "jobs": [
   {
    "account": "Balls",
@@ -45,7 +45,7 @@
    "role": "pvp"
   },
   {
-   "account": "fishandchips",
+   "account": "mmsmk1232",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -55,19 +55,19 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "188",
+    "MAX_ITEMS": "419",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "188"
+    "BATCH_UNITS": "419"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:43",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "moneyshot",
@@ -86,53 +86,34 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-market.ts",
+   "account": "fishandchips",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "scripts/aio-market.ts ITEM_ID=311 ITEMS=Harpoon MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop2 3000",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=388 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "47",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20800",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "47"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "auto"
   },
   {
    "account": "oreelse",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-95-o0-p97 ITEM_ID=440 QUANTITY=95 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 EXPECTED_OWNED=0 -- ge-buy",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=190 MAX_ORE=190 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=95 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=95 STALL_TICKS=280 -- smithing smelt 2300 steel"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "120",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "120"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
   },
   {
@@ -173,7 +154,7 @@
    "account": "mightyrod",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=10630 TARGET_COUNT=1063 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=10030 TARGET_COUNT=1003 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
    ],
    "env": {
