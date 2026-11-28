@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795853091152-3",
+ "role": "from",
+ "account": "Wandwaver",
+ "partner": "Fatstack",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795853452759,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
+}

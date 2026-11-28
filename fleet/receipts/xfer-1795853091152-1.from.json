@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795853091152-1",
+ "account": "mmsmk1232",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "3e682afb-3a7d-448b-9aa0-dc5157652d3a",
+ "count": 1,
+ "ok": true,
+ "at": 1795853452122,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795853405332
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795853404927
+ },
+ "logout": {
+  "attemptId": "1795853376900-0000022756-0000000001",
+  "at": 1795853452114,
+  "sha256": "4c4076d39d0f142c9507d6ec77da19b16217f41ed35375e4d2285ce31f7f516a"
+ },
+ "screen": true
+}

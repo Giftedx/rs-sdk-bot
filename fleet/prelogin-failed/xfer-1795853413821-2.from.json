@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795853413821-2",
+ "role": "from",
+ "account": "Billionaire",
+ "partner": "KnightRider",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795853675381,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
+}

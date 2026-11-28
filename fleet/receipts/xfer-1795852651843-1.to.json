@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795852651843-1",
+ "account": "YewGotWood",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 103,
+ "claim": "d09915c4-9c4d-446a-8d96-e828f91e8600",
+ "count": 103,
+ "ok": true,
+ "at": 1795853434512,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 103
+ },
+ "bank": {
+  "count": 103,
+  "at": 1795853433731
+ },
+ "logout": {
+  "attemptId": "1795853356624-0000018640-0000000001",
+  "at": 1795853434505,
+  "sha256": "f2f86b21d827785c68004426ec7037cbf0fa4f0173a96ec5b63caf55a54baa5a"
+ },
+ "screen": true
+}

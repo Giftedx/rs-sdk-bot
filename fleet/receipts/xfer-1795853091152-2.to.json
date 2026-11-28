@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795853091152-2",
+ "account": "Bigchopper",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon dagger(p)",
+ "requested": 1,
+ "claim": "c8fbd1d2-f77c-4072-829e-5708344fc68b",
+ "count": 1,
+ "ok": true,
+ "at": 1795853527710,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795853526515
+ },
+ "logout": {
+  "attemptId": "1795853473978-0000025236-0000000001",
+  "at": 1795853527701,
+  "sha256": "0be154ed494b1e95f3dce8218a305596094e1f3a922e16c44853f6d01bb4e388"
+ },
+ "screen": true
+}

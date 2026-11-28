@@ -1,0 +1,47 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795853413821-1",
+ "account": "Moneyshot",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 4,
+ "claim": "2705661b-f50b-48fa-9cff-8670506bdd63",
+ "count": 0,
+ "ok": false,
+ "at": 1795853719403,
+ "detail": "Error: partner failed: no trade",
+ "lines": [
+  {
+   "item": "Shark",
+   "requested": 1,
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795853686502
+   }
+  },
+  {
+   "item": "Rope",
+   "requested": 1,
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795853686916
+   }
+  }
+ ],
+ "bank": {
+  "count": 4,
+  "at": 1795853685729
+ },
+ "logout": {
+  "attemptId": "1795853645070-0000023860-0000000001",
+  "at": 1795853718055,
+  "sha256": "a9d54d07a96c963da343db08060b9dd2e27cfb9275591e47d773e574cae697e2"
+ },
+ "screen": false
+}

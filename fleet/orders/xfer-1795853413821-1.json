@@ -1,0 +1,36 @@
+{
+  "id": "xfer-1795853413821-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "Woodenstaff",
+  "item": "Herb",
+  "count": 4,
+  "itemId": 205,
+  "extra": [
+    {
+      "item": "Shark",
+      "count": 1,
+      "itemId": 385
+    },
+    {
+      "item": "Rope",
+      "count": 1,
+      "itemId": 954
+    }
+  ],
+  "start": 1795853413821,
+  "end": 1795854313821,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

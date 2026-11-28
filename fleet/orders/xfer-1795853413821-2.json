@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795853413821-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "KnightRider",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795853413821,
+  "end": 1795854313821,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
