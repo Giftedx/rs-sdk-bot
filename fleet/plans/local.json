@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795828327415,
+ "at": 1795828435052,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -136,21 +136,6 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
    "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -165,22 +150,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:556",
    "role": "helper"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "fluffs"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:fluffs",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:fluffs",
-   "role": "auto"
   },
   {
    "account": "MeatNTwoVeg",
