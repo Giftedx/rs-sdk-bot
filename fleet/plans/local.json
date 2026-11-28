@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869285644,
+ "at": 1795869377859,
  "jobs": [
   {
    "account": "Balls",
@@ -45,85 +45,43 @@
    "role": "pvp"
   },
   {
-   "account": "mineyourbiz",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "2",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
-   "account": "masterbaiter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "shark"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "389",
-    "MAX_COOKED": "100",
-    "SHARK_COUNT": "100"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army",
-   "resources": [
-    "catherby-sharks"
-   ]
-  },
-  {
-   "account": "abracadickra",
+   "account": "pullmybow",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-gather"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:abracadickra",
+    "DEMAND_ID": "goal:pk_army:pullmybow",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:abracadickra",
-   "role": "auto"
+   "goal": "goal:pk_army:pullmybow",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "quickhandjob",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
+    "thieving",
+    "knights"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
+    "DEMAND_ID": "campaign:hiltsdeep:item:995",
+    "BATCH_UNITS": "50"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
+   "goal": "campaign:hiltsdeep:item:995",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "meatntwoveg",
@@ -144,21 +102,22 @@
    "role": "auto"
   },
   {
-   "account": "pullmybow",
+   "account": "rearentry",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "ranged-gather"
+    "chicken"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:pullmybow",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "828"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:pullmybow",
-   "role": "auto"
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
@@ -183,6 +142,7 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
