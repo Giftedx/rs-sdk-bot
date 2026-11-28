@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857949997,
+ "at": 1795857970174,
  "jobs": [
   {
    "account": "Balls",
@@ -105,7 +105,7 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=91 PRODUCT_TARGET=92 MAX_ORE=91 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=90 PRODUCT_TARGET=92 MAX_ORE=90 -- mining ore",
     "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1840 TARGET_COUNT=184 PRODUCT_TARGET=184 MAX_ORE=184 -- mining ore",
     "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=92 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=92 STALL_TICKS=280 -- smithing smelt 2240 steel"
    ],
@@ -152,87 +152,7 @@
    "role": "army"
   },
   {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Knightstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -244,79 +164,80 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=21 PRODUCT_TARGET=21 MAX_ORE=21 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=21 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=21 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
+    "mining",
+    "essence"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
+    "DEMAND_ID": "campaign:haggis:item:1436",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper",
+   "resources": [
+    "essence-mine"
+   ]
   }
  ],
  "army": [
@@ -335,6 +256,8 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
+  "fingersmith",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
@@ -344,6 +267,7 @@
   "pickpockdick",
   "pocketpool",
   "pocketpython",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "yewfirst"
