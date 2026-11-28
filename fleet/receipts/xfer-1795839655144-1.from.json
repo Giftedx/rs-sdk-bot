@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795839655144-1",
+ "account": "Unsheathed",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "085f9e20-612e-43f9-80b7-5c504b2093de",
+ "count": 0,
+ "ok": false,
+ "at": 1795839895870,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795839885954-0000027096-0000000001",
+  "at": 1795839895861,
+  "sha256": "1c406224043415b5d71da03508a0c53a0d614bd860c8b0c853362e703ad740f0"
+ },
+ "screen": false
+}
