@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842380376,
+ "at": 1795842390798,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "135",
+    "MAX_ITEMS": "287",
     "COIN_RESERVE": "1000",
-    "FLOAT": "56000",
+    "FLOAT": "116800",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "135"
+    "BATCH_UNITS": "287"
    },
    "enabled": true,
    "repeat": false,
@@ -289,6 +289,205 @@
    "repeat": false,
    "goal": "goal:quest_board:vampire",
    "role": "auto"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts CAP=6850 TARGET_COUNT=685 PRODUCT_TARGET=685 STALL_TICKS=150 -- fletching shafts",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=585 MAX_MAKE=585 STALL_TICKS=150 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic STALL_TICKS=224 --",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=69 PRODUCT_TARGET=250 -- thieving nature-chest",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "helper"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1472",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=2500 TARGET_COUNT=250 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
   }
  ],
  "army": [
@@ -303,15 +502,10 @@
   "Deeppockets",
   "UnderMyKilt",
   "bowbeforeme",
-  "fingerblastr",
-  "fingersmith",
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
-  "quickhandjob",
-  "sausagefest",
-  "woodpecker"
+  "sausagefest"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
