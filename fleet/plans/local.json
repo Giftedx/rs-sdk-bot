@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795872084913,
+ "at": 1795872146371,
  "jobs": [
   {
    "account": "Balls",
@@ -45,7 +45,7 @@
    "role": "pvp"
   },
   {
-   "account": "yewfirst",
+   "account": "bigpackage",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -53,45 +53,45 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "247",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "51400",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "247"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
-  },
-  {
-   "account": "bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ardougnegemstall",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1607",
-    "ITEMS": "Sapphire",
-    "MAX_ITEMS": "2",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "15",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "15"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1607",
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "bigchopper",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "2handedshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1311",
+    "ITEMS": "Steel 2h sword",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1311",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -173,6 +173,81 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "helper"
+  },
+  {
+   "account": "billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "wool"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "bonetopick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "wool"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "auto"
+  },
+  {
+   "account": "meatntwoveg",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "yewfirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "247",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "51400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "247"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
   }
  ],
  "army": [
@@ -187,7 +262,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "ballspinner",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
