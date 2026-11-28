@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795856479699-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "TrouserSnake",
+  "item": "Copper ore",
+  "count": 2,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 2,
+      "itemId": 438
+    }
+  ],
+  "start": 1795856479699,
+  "end": 1795857379699,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

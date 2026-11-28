@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856478541,
+ "at": 1795856496164,
  "jobs": [
   {
    "account": "Balls",
@@ -46,17 +46,53 @@
   },
   {
    "account": "Mightyrod",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "cage",
+    "cage"
+   ],
+   "env": {
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:377",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army",
+   "resources": [
+    "catherby-lobsters"
+   ]
+  },
+  {
+   "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=91 PRODUCT_TARGET=91 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=91 CAP=1092 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=91 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "goal:supply_chain:377",
+   "role": "army"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=27 -- fishing cage cage"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
    "role": "army"
   },
   {
@@ -80,86 +116,58 @@
    ]
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "146"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "33",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "146"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "792"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "146"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "792"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "crafting",
+    "glass"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "146"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -217,23 +225,6 @@
    "role": "army"
   },
   {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fletching",
-    "worker"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Fletching",
-    "TARGET_LEVEL": "75",
-    "STALL_TICKS": "224"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "helper"
-  },
-  {
    "account": "Deeppockets",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -242,20 +233,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "120",
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "80",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "120"
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "80"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
@@ -319,36 +310,39 @@
    "role": "auto"
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Ballbag",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "auto"
+   "goal": "campaign:haggis:item:562",
+   "role": "helper"
   },
   {
-   "account": "Masterbaiter",
+   "account": "Knightstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "druid"
    ],
    "env": {
     "CAP": "1000",
-    "TARGET_COUNT": "13",
+    "TARGET_COUNT": "11",
     "PRODUCT_TARGET": "13",
     "BANK_PACK": "1"
    },
@@ -358,60 +352,7 @@
    "role": "army"
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=11 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:245",
-   "role": "army"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1623",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1623",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
    "account": "Hocuspokeus",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights-stable"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "792"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -424,6 +365,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   }
  ],
