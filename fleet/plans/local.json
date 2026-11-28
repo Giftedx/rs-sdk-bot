@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870035398,
+ "at": 1795870106419,
  "jobs": [
   {
    "account": "Balls",
@@ -45,106 +45,6 @@
    "role": "pvp"
   },
   {
-   "account": "shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
-   ],
-   "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:shaftsinker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "hocuspokeus",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "unicorn"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1513",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "edgeville-unicorns"
-   ]
-  },
-  {
-   "account": "sporrandip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
-   ],
-   "env": {
-    "ORB_TRIP": "1",
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "757",
-    "STALL_TICKS": "700"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "swordswallow",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "feathers"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "tossthecaber",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "cage",
-    "cage"
-   ],
-   "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "catherby-lobsters"
-   ]
-  },
-  {
    "account": "wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -179,6 +79,46 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "sporrandip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "301",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "122400",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "301"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "wellhung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "helper"
   }
  ],
  "army": [
@@ -200,6 +140,7 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
