@@ -6,7 +6,9 @@ import {
  assertCatalogItems,
  burstTradeHost,
  countItem,
+ createClaimGate,
  dropItemsFast,
+ type ClaimGate,
  fastTradeExternalReceive,
  goalXp,
  GLORY_IDS,
@@ -73,6 +75,7 @@ type SmithRunnerState = {
  task: SmithRunnerDelivery | null;
  claimed: boolean;
  ready: boolean;
+ gate: ClaimGate;
 };
 
 function selectProductForInventory(lvl: number, inv: readonly { id: number; count: number }[]): number | null {
@@ -133,7 +136,7 @@ async function runVarrockSmithRunner(
  const keep = new Set<number>();
  while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
-   await waitTicks(s, 1);
+   await runner.gate.wait();
    continue;
   }
   if (runner.task) {
@@ -150,7 +153,8 @@ async function runVarrockSmithRunner(
     }
     if (done() || signal.aborted) break;
     runner.ready = nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2) && anvilRoomOk(playerPos(s)) && held >= runner.task.count;
-    await waitTicks(s, 1);
+    if (runner.ready) await runner.gate.wait();
+    else await waitTicks(s, 1);
     continue;
    }
    runner.task = null;
@@ -185,6 +189,12 @@ async function smithHeldBars(
    const anvil = spec.sdk.findNearbyLoc(/^anvil$/i);
    const bar = spec.sdk.getInventory().find(i => i.id === r.bar);
    if (!anvil || !bar) throw Error(`smithing anvil or bar ${r.bar} missing`);
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    // CloseModal sets requestModalClose=true on the same tick; clear modals first so useItemOnLoc's interface stays open.
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    await waitTicks(spec, 1);
+    continue;
+   }
    const sentTick = spec.tick();
    const openActs: Promise<unknown>[] = [];
    if (keepSet) {
@@ -193,9 +203,6 @@ async function smithHeldBars(
       openActs.push(spec.direct({ type: 'dropItem', slot: extra.slot, reason: 'SDK' }));
      }
     }
-   }
-   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
-    openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
    }
    openActs.push(spec.direct({ type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id, reason: 'SDK' }));
    await Promise.all(openActs);
@@ -219,34 +226,36 @@ async function smithHeldBars(
    reason: 'SDK',
   });
   let delayUntil = spec.tick();
-  await waitUntil(
-   spec,
-   () => {
-    if (spec.tick() <= sentTick) return false;
-    if (skillLevel(spec, 'Smithing') >= target) return true;
-    const nowBars = countItem(spec.sdk.getInventory(), r.bar);
-    if (useMake10) {
-     if (nowBars === 0) { delayUntil = spec.tick() + 3; return true; }
-     return false;
-    }
-    if (useMake5) {
-     const done =
-      product === SMITH_PRODUCTS.iron_warhammer
-       ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
-       : nowBars < r.bars;
-     if (done) { delayUntil = spec.tick() + 3; return true; }
-     return false;
-    }
-    if (nowBars < beforeBars) { delayUntil = spec.tick() + 3; return true; }
-    return false;
-   },
-   { timeoutTicks: useMake10 ? 50 : useMake5 ? 30 : 8 },
-  );
+  const maxWait = useMake10 ? 50 : useMake5 ? 30 : 8;
+  while (spec.tick() < sentTick + maxWait && spec.tick() < deadline) {
+   await waitTicks(spec, 1);
+   if (skillLevel(spec, 'Smithing') >= target) break;
+   const nowBars = countItem(spec.sdk.getInventory(), r.bar);
+   if (useMake10) {
+    if (nowBars === 0) { delayUntil = spec.tick() + 3; break; }
+   } else if (useMake5) {
+    const done =
+     product === SMITH_PRODUCTS.iron_warhammer
+      ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
+      : nowBars < r.bars;
+    if (done) { delayUntil = spec.tick() + 3; break; }
+   } else if (nowBars < beforeBars) {
+    delayUntil = spec.tick() + 3;
+    break;
+   }
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    // Dismiss level-up modals while p_delay is ticking so none remain queued when the batch completes.
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+  }
   if (skillLevel(spec, 'Smithing') >= target) return delayUntil;
   if (selectProductForInventory(skillLevel(spec, 'Smithing'), spec.sdk.getInventory()) === null) {
    return delayUntil;
   }
   while (spec.tick() < delayUntil) {
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
    await waitTicks(spec, 1);
   }
  }
@@ -274,6 +283,7 @@ export async function runSmithingSpecialist(
   task: initialTaskFor(idx),
   claimed: false,
   ready: false,
+  gate: createClaimGate(),
  }));
 
  const committedXp = (exclude: SmithRunnerState): number => {
@@ -332,11 +342,11 @@ export async function runSmithingSpecialist(
   const vWalk = await walkPath(
    walkEdgeToVarrock,
    [
-    { x: 3080, z: 3467, tol: 4 },
-    { x: 3090, z: 3444, tol: 4 },
-    { x: 3100, z: 3421, tol: 3 },
-    { x: 3158, z: 3418, tol: 4 },
-    { x: 3181, z: 3426, tol: 2 },
+    { x: 3083, z: 3467, tol: 4 },
+    { x: 3094, z: 3439, tol: 4 },
+    { x: 3099, z: 3421, tol: 3 },
+    { x: 3157, z: 3417, tol: 4 },
+    { x: 3175, z: 3426, tol: 2 },
     { x: 3187, z: 3426, tol: 0 },
    ],
    { maxTicks: Math.max(10, Math.min(95, deadline - spec.tick())) },
@@ -351,6 +361,12 @@ export async function runSmithingSpecialist(
   let lastRunnerIdx = runners.length - 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
+   for (const r of runners) {
+    if (r.ready && !r.claimed && r.task && r.task.barId !== wantBar) {
+     r.ready = false;
+     r.gate.release();
+    }
+   }
    const pickRunner = () => {
     for (let offset = 1; offset <= runners.length; offset++) {
      const idx = (lastRunnerIdx + offset) % runners.length;
@@ -398,6 +414,7 @@ export async function runSmithingSpecialist(
     next.task = null;
    } finally {
     next.claimed = false;
+    next.gate.release();
    }
    delayUntil = await smithHeldBars(spec, target, deadline, keepSet);
   }
@@ -416,6 +433,7 @@ export async function runSmithingSpecialist(
  } finally {
   done = true;
   ac.abort();
+  for (const r of runners) r.gate.release();
   await Promise.allSettled([starterWaiter, ...runnerTasks]);
  }
 }

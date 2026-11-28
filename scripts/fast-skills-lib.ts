@@ -294,18 +294,24 @@ export async function clearBlockingModal(s: Session): Promise<void> {
 }
 
 // Drops up to 5 unwanted items per tick (drop.rs2 has no p_delay and USER_EVENT.limit is 5).
-export async function dropItemsFast(s: Session, keepIds: ReadonlySet<number>, deadlineTick: number): Promise<void> {
+export async function dropItemsFast(
+ s: Session,
+ keepIds: ReadonlySet<number>,
+ deadlineTick: number,
+ leaveCount = 0,
+): Promise<number[]> {
  while (s.tick() < deadlineTick) {
   const st = s.sdk.getState();
   const dropSlots = s.sdk.getInventory().filter(i => !keepIds.has(i.id)).map(i => i.slot);
-  if (!dropSlots.length) return;
+  if (dropSlots.length <= leaveCount) return dropSlots;
   const actions: Promise<unknown>[] = [];
   let budget = 5;
   if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
    actions.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
    budget = 4;
   }
-  for (const slot of dropSlots.slice(0, budget)) {
+  const toDrop = Math.min(budget, dropSlots.length - leaveCount);
+  for (const slot of dropSlots.slice(0, toDrop)) {
    actions.push(s.direct({ type: 'dropItem', slot, reason: 'SDK' }));
   }
   await Promise.all(actions);
@@ -350,7 +356,21 @@ export async function waitNearPlayer(
  throw Error(`helper ${mover.name} failed to reach ${target.name}`);
 }
 
- export interface BurstTradeSpec {
+export type ClaimGate = { wait(): Promise<void>; release(): void };
+
+export function createClaimGate(): ClaimGate {
+ let wake: (() => void) | null = null;
+ return {
+  wait: () => new Promise<void>(r => { wake = r; }),
+  release: () => {
+   const fn = wake;
+   wake = null;
+   fn?.();
+  },
+ };
+}
+
+export interface BurstTradeSpec {
   giveIds?: readonly number[];
   giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>;
   returnIds?: readonly number[];
@@ -365,11 +385,14 @@ export async function waitNearPlayer(
 // Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
 export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
  const begin = spec.tick();
- await burstTradeInner(spec, helper, opts);
- console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+ const trace: string[] = [];
+ await burstTradeInner(spec, helper, opts, trace);
+ const elapsed = spec.tick() - begin;
+ console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${elapsed}`);
+ if (elapsed > 4) console.log(`TRADE_SLOW helper=${helper.name} at=${begin} ticks=${elapsed} trace=${trace.join(' ; ')}`);
 }
 
-async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
+async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeSpec, trace: string[]): Promise<void> {
  await waitNearPlayer(helper, spec, opts.deadlineTick, opts.canStand);
  const helperName = helper.name.toLowerCase();
  const specName = spec.name.toLowerCase();
@@ -401,6 +424,10 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
  let sawConfirm = false;
  let didPreDrop = false;
  let lastOpenReqTick = -10;
+ let lastSpecObsId = startObsId;
+ let lastHelperObsId = startHObsId;
+ let pendingHelperReply = false;
+ let pendingSpecReply = false;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
@@ -411,11 +438,31 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    if (sawConfirm) {
     if (!tradeDeclined() && (!opts.giveIds?.length || transferredGive())) return;
     sawConfirm = false;
+    pendingHelperReply = false;
+    pendingSpecReply = false;
    }
+   let gotBusy = false;
+   for (const m of getMsgs()) {
+    const id = m.observationId ?? 0;
+    if (m.observationId !== undefined ? id <= lastSpecObsId : m.tick <= startTick) continue;
+    if (m.observationId !== undefined) lastSpecObsId = Math.max(lastSpecObsId, id);
+    if (/(?::tradereq:|wishes to trade with you)/i.test(m.text)) pendingSpecReply = true;
+    else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
+   }
+   for (const m of getHMsgs()) {
+    const id = m.observationId ?? 0;
+    if (m.observationId !== undefined ? id <= lastHelperObsId : m.tick <= startTick) continue;
+    if (m.observationId !== undefined) lastHelperObsId = Math.max(lastHelperObsId, id);
+    if (/(?::tradereq:|wishes to trade with you)/i.test(m.text)) pendingHelperReply = true;
+    else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
+   }
+   if (gotBusy) lastOpenReqTick = -10;
+
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
+   trace.push(`t${spec.tick()}:closed(sd=${+specDlg},hd=${+helpDlg},pr=${+pendingSpecReply}/${+pendingHelperReply},busy=${+gotBusy},st=${+!!sTarget},ht=${+!!hTarget})`);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
    if (!didPreDrop && opts.preDropSlots?.length) {
@@ -424,12 +471,31 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
      openActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
    }
+   const oneSidedReply = !specDlg && !helpDlg && ((pendingHelperReply && !pendingSpecReply && !!sTarget) || (pendingSpecReply && !pendingHelperReply && !!hTarget));
    const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
-   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   if (helpDlg) {
+    lastOpenReqTick = -10;
+    openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   }
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
-   if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
-   if (canRequest && sTarget && hTarget) {
+   if (specDlg && !oneSidedReply && !(canRequest && sTarget && hTarget)) {
+    lastOpenReqTick = -10;
+    openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   }
+   if (oneSidedReply) {
+    // Only the partner whose earlier OPPLAYER4 bounced needs to reply immediately without a 3-tick wait.
+    lastOpenReqTick = spec.tick();
+    if (pendingHelperReply && sTarget) {
+     pendingHelperReply = false;
+     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (pendingSpecReply && hTarget) {
+     pendingSpecReply = false;
+     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    }
+   } else if (canRequest && sTarget && hTarget) {
+    // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+    pendingHelperReply = false;
+    pendingSpecReply = false;
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -438,6 +504,8 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
+  pendingHelperReply = false;
+  pendingSpecReply = false;
 
   lastOpenReqTick = -10;
 
@@ -446,6 +514,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   }
 
   if (st.screen === 'confirm' || ht.screen === 'confirm') {
+   trace.push(`t${spec.tick()}:conf(s=${st.isOpen ? `${st.screen}:${+st.myAccepted}` : 'no'},h=${ht.isOpen ? `${ht.screen}:${+ht.myAccepted}` : 'no'})`);
    sawConfirm = true;
    const helperConfirmingNow = ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted;
    const specNeedsConfirm = st.isOpen && st.screen === 'confirm' && !st.myAccepted;
@@ -475,6 +544,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   const hOfferOps = offerOpsForIds(helper.sdk.getInventory(), hWantSet, hWantCounts, ht.myOffer);
   const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
   const sOfferOps = sReturnSet ? offerOpsForIds(spec.sdk.getInventory(), sReturnSet, null, st.myOffer) : [];
+  trace.push(`t${spec.tick()}:main(s=${st.isOpen ? `${st.screen}:${+st.myAccepted}:${st.myOffer.length}` : 'no'},h=${ht.isOpen ? `${ht.screen}:${+ht.myAccepted}:${ht.myOffer.length}` : 'no'},ho=${hOfferOps.length},so=${sOfferOps.length})`);
 
   const hMainActs: Promise<unknown>[] = [];
   const sMainActs: Promise<unknown>[] = [];
@@ -506,8 +576,9 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
-  if (hMainActs.length) await Promise.all(hMainActs);
-  if (sMainActs.length) await Promise.all(sMainActs);
+  if (hMainActs.length || sMainActs.length) {
+   await Promise.all([...hMainActs, ...sMainActs]);
+  }
 
   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }

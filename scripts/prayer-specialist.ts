@@ -4,7 +4,9 @@ import {
  assertCatalogItems,
  burstTradeHost,
  countItem,
+ createClaimGate,
  dropItemsFast,
+ type ClaimGate,
  fastTradeExternalReceive,
  goalXp,
  ITEM_IDS,
@@ -38,6 +40,7 @@ type RunnerState = {
  session: Session;
  claimed: boolean;
  ready: boolean;
+ gate: ClaimGate;
 };
 
 async function restockBonesAtDraynor(
@@ -50,13 +53,13 @@ async function restockBonesAtDraynor(
  const keep = new Set<number>();
  while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
-   await waitTicks(s, 1);
+   await runner.gate.wait();
    continue;
   }
   const held = countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones);
   if (held >= 28 && nearTile(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0)) {
    runner.ready = true;
-   await waitTicks(s, 1);
+   await runner.gate.wait();
    continue;
   }
   runner.ready = false;
@@ -76,7 +79,8 @@ async function restockBonesAtDraynor(
    runner.ready = nearTile(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0);
   }
   if (done() || signal.aborted) break;
-  await waitTicks(s, 1);
+  if (runner.ready || runner.claimed) await runner.gate.wait();
+  else await waitTicks(s, 1);
  }
 }
 
@@ -114,6 +118,7 @@ export async function runPrayerSpecialist(
   session,
   claimed: false,
   ready: countItem(session.sdk.getInventory(), ITEM_IDS.dragon_bones) >= 28 && nearTile(session, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 3),
+  gate: createClaimGate(),
  }));
  const tasks = runners.map(r => restockBonesAtDraynor(r, () => done, deadline, ac.signal));
 
@@ -136,10 +141,10 @@ export async function runPrayerSpecialist(
      await burstTradeHost(spec, next.session, {
       giveIds: [ITEM_IDS.dragon_bones],
       deadlineTick: deadline,
-      allowHelperOnSingleModal: true,
      });
     } finally {
      next.claimed = false;
+     next.gate.release();
     }
    }
    await buryAllBones(spec, target, deadline);
@@ -160,6 +165,7 @@ export async function runPrayerSpecialist(
  } finally {
   done = true;
   ac.abort();
+  for (const r of runners) r.gate.release();
   await Promise.allSettled(tasks);
  }
 }
