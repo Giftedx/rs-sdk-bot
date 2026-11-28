@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795867837196-1",
+ "account": "masterbaiter",
+ "partner": "hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "197ead45-8c19-48d1-9a95-0618cb9acf75",
+ "count": 0,
+ "ok": false,
+ "at": 1795868125922,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795867837196-1",
+ "account": "hocuspokeus",
+ "partner": "masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "c046aa8f-a918-4df0-833a-e712ea0720bc",
+ "count": 0,
+ "ok": false,
+ "at": 1795868123327,
+ "detail": "Error: stock short: Law rune 1 banked + 0 held < 2",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 0
+  }
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1795868122578
+ },
+ "logout": {
+  "attemptId": "1795868061230-0000020952-0000000001",
+  "at": 1795868123320,
+  "sha256": "6f8159f23f711141af1ddcd407f5417317288b17307c2aa498783fcf75de01d4"
+ },
+ "screen": false
+}

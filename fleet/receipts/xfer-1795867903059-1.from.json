@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795867903059-1",
+ "account": "fishandchips",
+ "partner": "mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 12,
+ "claim": "7ae006c2-fdbf-4969-bde1-fbd1557a636d",
+ "count": 0,
+ "ok": false,
+ "at": 1795868100210,
+ "detail": "trade claimed"
+}
