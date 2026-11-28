@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795862784597,
+ "at": 1795862794266,
  "jobs": [
   {
    "account": "Balls",
@@ -111,6 +111,25 @@
    "role": "army"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "helper",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
@@ -151,26 +170,6 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -188,24 +187,49 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Swordswallow",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27",
-    "MAX_ORE": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "Knightstick",
@@ -248,19 +272,59 @@
    ]
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "Pocketpython",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "RearEntry",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1600 TARGET_COUNT=160 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Pocketpython:zanaris BATCH_UNITS=1 -- sweep zanaris"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
-   "role": "army"
+   "goal": "campaign:haggis:item:1515",
+   "role": "helper"
   },
   {
    "account": "Shaftsinker",
@@ -279,11 +343,26 @@
    "role": "auto"
   },
   {
+   "account": "TackleBox",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=827 -- thieving knights-stable"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=32 PRODUCT_TARGET=32 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=32 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=32 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=34 PRODUCT_TARGET=34 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=34 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=34 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
    ],
    "env": {
     "ROUNDS": "1"
@@ -298,7 +377,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=97 -- woodcutting yews"
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=100 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
@@ -307,23 +386,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1513",
    "role": "auto"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-gather"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
   },
   {
    "account": "Fatstack",
@@ -344,64 +406,11 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fletching TARGET_LEVEL=75 STALL_TICKS=224 -- fletching worker",
-    "scripts/aio-skiller.ts MODE=native-arrows TIP_TYPE=rune MAX_MAKE=105 HEADLESS_RESERVE=200 TIP_RESERVE=5 DEMAND_ID=campaign:haggis:item:892 BATCH_UNITS=104 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=221 \"ITEMS=Eye of newt\" MAX_ITEMS=2 STOCK_TARGET=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magicshop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1200 MEMBERS=1 DEMAND_ID=goal:supply_chain:145 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:3dose2attack"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:145",
-   "role": "army"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "staged"
-   ],
-   "env": {
-    "METHOD": "karambwanji",
-    "BANKED": "1",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:3150",
-    "BATCH_UNITS": "238",
-    "AMOUNT": "238"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:3150",
-   "role": "helper",
-   "resources": [
-    "karambwanji-lake"
-   ]
-  },
-  {
    "account": "Ballbag",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "taverley",
+    "magicshop",
     "3000"
    ],
    "env": {
