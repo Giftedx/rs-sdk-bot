@@ -51,7 +51,9 @@ export async function installDoorPolicy(sdk: any, client?: unknown): Promise<voi
 
 // Default walk cost: rs-sdk findLongPath turn points, summed as Chebyshev steps. Null if the path stops short.
 // `opts.legs`: the store of measured walk lengths (default the shared file, leg-cache.ts); a test passes an empty one.
-export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<PathLength> {
+// `opts.lazyLabels`: build the map labels at the first query that reads them, not now. Built now, they are shared with
+// this process's route worker (route-plan.ts), which then builds none of its own.
+export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean } = {}): Promise<PathLength> {
     const pf = await loadPathfinding();
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     const owner = {};
@@ -70,8 +72,12 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     // (leg-key.ts), so accounts and quest steps with other doors or danger far from a leg share its length. A leg the
     // cheap checks refuse is not stored: refusing it again costs less than reading it back.
     const cache = opts.legs ?? legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
-    const areas = mapAreas(pf, grid, worldRepoRoot);
-    // The map labels (`areas`) join tiles with every door open and no danger ground closed. A scope (the doors an
+    // With lazyLabels, a process whose plans go to the route service (route-plan.ts) and that never asks this world
+    // for a length holds no map labels.
+    let mapLabels: Labels | null = null;
+    const areasOf = (): Labels => mapLabels ??= mapAreas(pf, grid, worldRepoRoot);
+    if (!opts.lazyLabels) areasOf();
+    // The map labels (`areasOf`) join tiles with every door open and no danger ground closed. A scope (the doors an
     // account keeps shut and the ground of monsters that would kill it) can split one map area in two: for a 10 HP
     // account White Wolf Mountain closes, and Burthorpe and Ardougne stay in one map area. Each leg between the two
     // parts then measures null only after a findLongPath flood of up to 524,288 tiles (5 to 8 ms): a cold search from
@@ -94,7 +100,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     const buildScopeLabels = (prefix: string, blocked: DoorBlock[]) => {
         scopeNulls.delete(prefix);
         const zones: [number, number, number][] = [];
-        for (const k of areas.zones.keys()) zones.push([k >>> 28, ((k >>> 14) & 0x3fff) << 3, (k & 0x3fff) << 3]);
+        for (const k of areasOf().zones.keys()) zones.push([k >>> 28, ((k >>> 14) & 0x3fff) << 3, (k & 0x3fff) << 3]);
         // eitherWay: a one-way door of the policy joins its two sides, so a walk out through it is never refused.
         const walkable = (l: number, x: number, z: number): boolean => (pf as any).isTileWalkable(l, x, z);
         const oneWay = new Set(directionalMasks(blocked).map(m => pack(m.level, m.x, m.z)));
@@ -196,7 +202,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         }
         return list;
     };
-    const separatedInteraction = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, q: InteractionTarget, labels: Labels = areas): boolean => {
+    const separatedInteraction = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, q: InteractionTarget, labels: Labels = areasOf()): boolean => {
         if (from.level !== to.level) return false;
         const lvl = from.level;
         const own = labels.area(lvl, from.x, from.z);
@@ -212,7 +218,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
             if (starts.length === 0) return false;
         }
         scopePrefix(blocked);
-        const key = `${labels === areas ? 'm' : 's'}:${to.x},${to.z},${lvl}:${tol}:${interactionKey(q)}`;
+        const key = `${labels === mapLabels ? 'm' : 's'}:${to.x},${to.z},${lvl}:${tol}:${interactionKey(q)}`;
         let targetAreas = interactionAreasCache.get(key);
         if (targetAreas === undefined) interactionAreasCache.set(key, targetAreas = reachAreas(to, tol, q, labels));
         if (!targetAreas || targetAreas.length === 0) return false;
@@ -405,7 +411,7 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         if (from.level !== to.level) return null;
         if (!interaction && tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) return null;
         // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
-        if (interaction ? separatedInteraction(from, to, blocked, tol, interaction) : separated(areas, from, to, tol)) return null;
+        if (interaction ? separatedInteraction(from, to, blocked, tol, interaction) : separated(areasOf(), from, to, tol)) return null;
         if (scopeSeparated(from, to, blocked, tol, interaction)) return null;
         return lookupOrMeasure(from, to, blocked, tol, interaction);
     };
@@ -421,13 +427,13 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     };
     measure.withPolicy = scoped;
     measure.walkable = t => { (pf as any).initPathfinding(); return (pf as any).isTileWalkable(t.level, t.x, t.z); };
-    measure.areaOf = t => areas.area(t.level, t.x, t.z);
+    measure.areaOf = t => areasOf().area(t.level, t.x, t.z);
     measure.addTargets = addTargets;
     measure.floodCount = () => floodsBuilt;
     // Labels that exist: the map labels of a plain scope, or the labels that SCOPE_LABEL_NULLS measured nulls built.
     // None are built here, so a search that can still finish does not pay a label flood inside its budget.
     measure.scopeAreas = blocked => {
-        const labels = plainScope(blocked) ? areas : scopeLabels.get(scopePrefix(blocked));
+        const labels = plainScope(blocked) ? areasOf() : scopeLabels.get(scopePrefix(blocked));
         if (!labels) return null;
         return {
             area: (l, x, z) => labels.area(l, x, z),
