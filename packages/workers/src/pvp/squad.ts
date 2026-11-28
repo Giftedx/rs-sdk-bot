@@ -37,8 +37,9 @@ import { RETALIATE_OFF } from '../../../core/src/combat-end';
 import { holdSessionPrayer } from '../../../core/src/prayer-guard';
 import { bindActionScope } from '../../../core/src/action-scope';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, emitKillReceipt, escapeCastable, extractKillVictim, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, noteGround, noteHeads, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillGround, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './fight';
+import { assessZeroRiskKit, attackable, bestFood, carriedPoison, createNeverSkullGuard, defaultSpec, defaultStunSpec, emitKillReceipt, ENEMY_WEAPON_IDS, escapeCastable, extractKillVictim, fightPlayer, getObjNames, isDying, isMulti, itemCostOf, ITEMS, localPlayerSlot, neverSkullOf, newVolley, nextTick, noteGround, noteHeads, observePlayer, observeProvocations, ownSkull, poisonSplat, postLootBankDue, PRAYER, recordKillGround, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, summarizeWeaponLoot, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './fight';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
+import { maxOverkillAttackers } from './pk-team';
 import { killFeed, settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './hunt-kits';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
@@ -1170,9 +1171,11 @@ export function shouldSwitchFocus(o: {
     return o.focusHp <= 0.50 && o.currentHp - o.focusHp >= 0.25;
 }
 
-/** Synchronizes target selection across all active squad members so full-HP targets are piled together. */
+/** Synchronizes target selection across all active squad members so full-HP targets are piled together while preventing overkill waste in large stacks. */
 export function createSquadFocus(ttlTicks = 12) {
     let current: SquadFocusEntry | null = null;
+    const memberTarget = new Map<string, string>();
+    const targetCounts = new Map<string, number>();
     const stale = (now: number) => !current || now - current.updatedAt > ttlTicks;
     const ranksHigher = (cand: SquadFocusEntry, cur: SquadFocusEntry) =>
         (cand.inMulti !== cur.inMulti ? cand.inMulti : (
@@ -1180,7 +1183,33 @@ export function createSquadFocus(ttlTicks = 12) {
             || (cand.priority === cur.priority && cand.stunned && !cur.stunned)
             || (cand.priority === cur.priority && cand.stunned === cur.stunned && cand.hp <= cur.hp - 0.08)
         ));
+    const unassign = (member: string): void => {
+        const mKey = member.toLowerCase();
+        const prev = memberTarget.get(mKey);
+        if (!prev) return;
+        memberTarget.delete(mKey);
+        const next = (targetCounts.get(prev) ?? 1) - 1;
+        if (next <= 0) targetCounts.delete(prev);
+        else targetCounts.set(prev, next);
+    };
+    const assign = (member: string, target: string): void => {
+        const mKey = member.toLowerCase();
+        const tKey = target.toLowerCase();
+        if (memberTarget.get(mKey) === tKey) return;
+        unassign(mKey);
+        memberTarget.set(mKey, tKey);
+        targetCounts.set(tKey, (targetCounts.get(tKey) ?? 0) + 1);
+    };
+    const assignedCount = (target: string, excludeMember?: string): number => {
+        const tKey = target.toLowerCase();
+        const total = targetCounts.get(tKey) ?? 0;
+        if (excludeMember && memberTarget.get(excludeMember.toLowerCase()) === tKey) return Math.max(0, total - 1);
+        return total;
+    };
     return {
+        assign,
+        unassign,
+        assignedCount,
         active(now: number): string | undefined {
             return stale(now) ? undefined : current!.target;
         },
@@ -1199,10 +1228,29 @@ export function createSquadFocus(ttlTicks = 12) {
             priority?: ReadonlySet<string>;
             scoutTarget?: string;
             selfIndex?: number;
+            memberName?: string;
             now: number;
         }): P | undefined {
             const activeFocus = stale(opts.now) ? undefined : current!.target;
-            const picked = pickSquadFocus({ ...opts, activeFocus });
+            let effectiveSkip = opts.skip;
+            if (opts.memberName && targetCounts.size > 0) {
+                const overkilled: string[] = [];
+                for (let i = 0; i < opts.view.length; i++) {
+                    const p = opts.view[i]!;
+                    const key = p.name.toLowerCase();
+                    if (!opts.targets.has(key) || opts.skip?.has(key)) continue;
+                    const hp = opts.health(p);
+                    const cap = maxOverkillAttackers(hp);
+                    if (assignedCount(key, opts.memberName) >= cap) overkilled.push(key);
+                }
+                if (overkilled.length > 0) {
+                    const nextSkip = new Set(opts.skip ?? []);
+                    for (const k of overkilled) nextSkip.add(k);
+                    const overflowPick = pickSquadFocus({ ...opts, skip: nextSkip, activeFocus });
+                    if (overflowPick) effectiveSkip = nextSkip;
+                }
+            }
+            const picked = pickSquadFocus({ ...opts, skip: effectiveSkip, activeFocus });
             if (!picked) return undefined;
             const targetMulti = picked.x !== undefined && picked.z !== undefined ? isMulti(picked.x, picked.z) : opts.inMulti !== false;
             if (opts.inMulti !== false || targetMulti) {
@@ -1512,6 +1560,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     threats?: ThreatWatch;
     // Dagger mode (SQUAD_DAGGER=1, squad-dagger.ts), shared by the squad. Unset: none of its rules.
     dagger?: DaggerWatch;
+    // Hard retaliatory-only skull guard (NEVER_SKULL=1, default-on in runPkSquadCli).
+    neverSkull?: boolean;
     locs?: BenchLocController }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
@@ -1627,6 +1677,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // (rekitAfterDeath), restocks its pack and walks back to the post. It returns false when it is over the limit or the re-kit stopped.
     const recover = async (): Promise<boolean> => {
         stats.deaths++;
+        skullGuard?.resetOnOwnDeath();
         try { o.onDeath?.(lastTile); } catch (error) { o.log(`[${s.name}] SQUAD death ledger write failed: ${String(error)}`); }
         if (o.run && ++o.run.deaths >= o.run.limit) { o.log(`[${s.name}] SQUAD death ${o.run.deaths} of the run reaches the run limit of ${o.run.limit}`); return false; }
         if (stats.deaths > (o.maxDeaths ?? 0)) { o.log(`[${s.name}] SQUAD death ${stats.deaths}: over the limit of ${o.maxDeaths ?? 0}`); return false; }
@@ -1693,6 +1744,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         o.focus?.clear(displayVictim);
         o.onClearTarget?.(displayVictim);
         o.dagger?.died(victimLower);
+        skullGuard?.recordDeath(victimLower);
         const pending = o.dagger && o.pickup && posNow ? { tick, center: victimPlayer ? { x: victimPlayer.x, z: victimPlayer.z } : { x: posNow.worldX, z: posNow.worldZ } } as (typeof lootDue)[number] : null;
         if (pending) lootDue.push(pending);
         if (posNow) {
@@ -1731,6 +1783,25 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // multi-way post until this tick).
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
     const alliesSet = new Set(o.allies.map(a => a.toLowerCase()));
+    const skullGuard = o.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
+    const ownCoreIds = new Set(assessZeroRiskKit([...startEq, ...startInv], { cost: itemCostOf, requireProtectItem: false }).kept3);
+    let postLootBankRequested = false;
+    const checkPostLootBank = (pickedNow: Record<string, number>) => {
+        if (!o.neverSkull || Object.keys(pickedNow).length === 0) return;
+        const eqNow = typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment ?? [];
+        const invNow = s.sdk.getInventory();
+        const decision = postLootBankDue([...eqNow, ...invNow], {
+            cost: itemCostOf,
+            nameOf: id => getObjNames().get(id),
+            protectItem: o.options.protectItem !== false,
+            ownCoreIds,
+        });
+        if (decision.bankNow) {
+            postLootBankRequested = true;
+            o.log(`[${s.name}] SQUAD post-loot bank guard: ${decision.reason}`);
+        }
+    };
+    let skullSeenEvent = 0;
     const recentHitters = new Map<number, number>();
     // Each loss of HP from one tick to the next in the last VOLLEY_TICKS ticks (volleyOf).
     const hpDrops: { tick: number; hp: number }[] = [];
@@ -1867,13 +1938,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const fighting = q.combatTargetType === 'player';
             if ((fighting && self >= 0 && q.combatTargetIndex === self) || (recentHitters.get(q.index) ?? -100) >= tickNow - 1) o.dagger!.attacked(key, tickNow);
             const h = decodeHeadicons(seen.headicons);
-            o.dagger!.read(key, tickNow, { skulled: h.skulled, overhead: h.protect.length > 0, inCombat: q.inCombat === true || fighting, hp: seen.totalHealth > 0 ? seen.health / seen.totalHealth : null });
+            o.dagger!.read(key, tickNow, { skulled: h.skulled, overhead: h.protect.length > 0, inCombat: q.inCombat === true || fighting, hp: seen.totalHealth > 0 ? seen.health / seen.totalHealth : null, wornIds: seen.worn });
         }
     };
-    // Dagger mode: the targets in `view` to leave out of the target choice (rule a and the hold), with the skip list.
+    // Dagger mode & Never-Skull: the targets in `view` to leave out of the target choice (rule a, hold, and unprovoked targets under NEVER_SKULL).
     const daggerSkip = (view: readonly { name: string }[], now: number): Set<string> => {
         const out = new Set(skip.keys());
         if (o.dagger) for (const n of o.dagger.skipped(view.filter(q => o.targets.has(q.name.toLowerCase())).map(q => q.name), now)) out.add(n);
+        if (skullGuard) for (const n of skullGuard.blockedNames(view.map(q => q.name), now)) out.add(n);
         return out;
     };
     // Dagger mode: the targets in `view` that show 0 prayer points come first, with the interlopers.
@@ -1902,6 +1974,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const first = live.find(d => d.file);
         if (first) recordKillLoot({ receipt: first.file }, got);
         for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
+        checkPostLootBank(got);
         o.log(`[${s.name}] SQUAD dagger pickup after its fight: ${live.length} kill${live.length === 1 ? '' : 's'}, ${reads} reads, ${JSON.stringify(got)}`);
     };
     const unwatch = s.onTick(() => {
@@ -1948,6 +2021,21 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         // In a fight, fightPlayer notes the heads after its own message read.
         if (!inFight && stTick) noteHeads(s.client, stTick.nearbyPlayers ?? [], tickNow, heads);
         if (o.dagger && stTick) noteDagger(stTick.nearbyPlayers ?? [], tickNow);
+        if (skullGuard && stTick) {
+            const clientPlayers = (s.client as { players?: ({ faceEntity?: number; primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
+            skullSeenEvent = observeProvocations({
+                guard: skullGuard,
+                now: tickNow,
+                selfSlot: localPlayerSlot(s.client),
+                allies: alliesSet,
+                nearbyPlayers: stTick.nearbyPlayers ?? [],
+                combatEvents: stTick.combatEvents,
+                seenEventId: skullSeenEvent,
+                minTick: holdStartTick,
+                clientPlayers,
+                isAttackAnim: anim => attackStyleOfAnim(anim) !== null,
+            });
+        }
         flushGround(tickNow, false);
     });
     try {
@@ -2078,7 +2166,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (threat && o.threats!.act) {
                 if (await swapper.step(s, threat.actions, now, tickOf, o.log)) continue;
             }
-            if (o.dagger && lootDue.length) { await runLootDue(); if (!await nextTick(s)) break; continue; }
+            if (o.dagger && lootDue.length) { const bLoot = s.tick(); await runLootDue(); if (s.tick() === bLoot && !await nextTick(s)) break; continue; }
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
             const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
@@ -2091,10 +2179,11 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const allTargets = interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets;
             const aim = o.aim ?? o.post;
             const aimInMulti = isMulti(aim.x, aim.z);
+            const livingView = view.filter(q => !isDying(observePlayer(s.client, q.index)));
             const filteredView = o.pull !== false && aimInMulti && now >= singleUntil
-                ? view.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(p, view, q, allTargets))
-                : view;
-            const focusArgs = { view: filteredView, targets: allTargets, priority: daggerPriority(filteredView, interlopers), health, skip: daggerSkip(view, now), me: self, inMulti: isMulti(p.worldX, p.worldZ), preferMulti: aimInMulti && now >= singleUntil, stunned, selfIndex: selfSlotIndex() };
+                ? livingView.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(p, livingView, q, allTargets))
+                : livingView;
+            const focusArgs = { view: filteredView, targets: allTargets, priority: daggerPriority(filteredView, interlopers), health, skip: daggerSkip(view, now), me: self, inMulti: isMulti(p.worldX, p.worldZ), preferMulti: aimInMulti && now >= singleUntil, stunned, selfIndex: selfSlotIndex(), memberName: s.name };
             const target = o.focus ? o.focus.pick({ ...focusArgs, now }) : pickSquadFocus(focusArgs);
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
@@ -2211,9 +2300,22 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const singleStyles = singleHold ? (['ranged', 'magic'] as const).filter(stName => (o.options.kit[stName]?.length ?? 0) > 0) : [];
             let lastFreezeCastTick = -100, freezePending = false;
             scanKillMessages(began);
+            o.focus?.assign(s.name, target.name);
             inFight = true;
+            const otherTargetsInView = filteredView.some(q => q.name.toLowerCase() !== targetKey && allTargets.has(q.name.toLowerCase()));
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
+                ...(o.neverSkull ? {
+                    neverSkull: true,
+                    provokedBy: (name: string) => skullGuard!.canAttackSafely(name, s.tick()),
+                    protectItem: o.options.protectItem === false ? true : o.options.protectItem,
+                    onUnexpectedSkull: info => o.log(`[${s.name}] SQUAD NEVER_SKULL VIOLATION at ${info.at.x},${info.at.z} target=${info.target} lostValue=${info.lostValue}`),
+                } : {}),
+                ...(o.dagger && o.targets.has(targetKey) ? {
+                    smiteBurst: () => o.dagger!.smiteReady(targetKey),
+                    holdSpecForDrain: () => o.dagger!.holdSpecForDrain(targetKey, s.tick()),
+                } : {}),
+                ...(otherTargetsInView ? { stopOnDying: true } : {}),
                 ...(singleStyles.length ? {
                     rotation: [...singleStyles],
                     chase: false,
@@ -2235,7 +2337,13 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     else if (/^PK freeze missed\b/.test(l)) { freezePending = false; }
                     o.log(`[${s.name}] ${l}`);
                 },
-            }).finally(() => { inFight = false; });
+            }).finally(() => { inFight = false; o.focus?.unassign(s.name); });
+            if (r.unexpectedSkull) {
+                const rescued = await runRescue();
+                if (!rescued) { retreatEnded(); break; }
+                escapes++;
+                continue;
+            }
             // fightPlayer returns in the tick of the kill message.
             const foughtAt = s.tick(), tileAtEnd = me();
             scanKillMessages(s.tick());
@@ -2247,7 +2355,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (refusedAt > began) skip.set(targetKey, s.tick() + (targetInSingle ? 20 : 8));
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === targetKey);
             if (r.outcome === 'kill' || gone) { o.focus?.clear(target.name); o.onClearTarget?.(target.name); targetFirstBegan.delete(targetKey); }
-            if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(targetKey)) stats.interlopers = (stats.interlopers ?? 0) + 1; o.dagger?.died(targetKey); }
+            if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(targetKey)) stats.interlopers = (stats.interlopers ?? 0) + 1; o.dagger?.died(targetKey); skullGuard?.recordDeath(targetKey); }
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
             const pickupSkip = !o.pickup ? 'off' : urgentEscape ? 'escape' : s.tick() < singleUntil ? 'single-way' : activeInterlopers > 0 ? `${activeInterlopers} interlopers` : null;
@@ -2260,15 +2368,23 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, onScan: g => { reads++; if (killDue) noteGround(g, killDue.stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
+                checkPostLootBank(got);
             }
-            // Dagger mode: over single-way ground or interlopers the pickup of a kill takes a dagger within 3 tiles, with the same
-            // escape and HP stops.
+            // Dagger/weapon-vacuum mode: over single-way ground or interlopers, immediately vacuum ALL enemy weapons within 3 tiles.
             const daggerOnly = !!o.dagger && r.outcome === 'kill' && daggerPickup(pickupSkip) === 'daggers';
             if (daggerOnly) {
-                const got = await pickUp(s, DAGGER_IDS, { radius: 3, maxTicks: 20, wait: 6, onScan: g => { reads++; if (killDue) noteGround(g, killDue.stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
+                const got = await pickUp(s, ENEMY_WEAPON_IDS, { radius: 3, maxTicks: 20, wait: 6, onScan: g => { reads++; if (killDue) noteGround(g, killDue.stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
-                o.log(`[${s.name}] SQUAD dagger pickup over ${pickupSkip}: ${JSON.stringify(got)}`);
+                checkPostLootBank(got);
+                o.log(`[${s.name}] SQUAD weapon pickup over ${pickupSkip}: ${JSON.stringify(got)}`);
+            }
+            if (postLootBankRequested) {
+                postLootBankRequested = false;
+                const banked = await runRescue();
+                if (!banked) { retreatEnded(); break; }
+                escapes++;
+                continue;
             }
             if (killDue) {
                 if (!pickupSkip) killDue.pickup = reads ? `ran: ${reads} reads` : 'ran: stopped before its first read';
@@ -2280,7 +2396,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const qAfter = me();
             if (qAfter && diedNow(qAfter)) { if (await recover()) continue; stats.died = true; break; }
             if (urgentEscape && (s.tick() > began || r.outcome !== 'timeout')) continue;
-            if (!await nextTick(s)) break;
+            // Zero-tick-waste target switch: only wait a tick if fightPlayer consumed 0 ticks.
+            if (s.tick() === began && !await nextTick(s)) break;
         }
         const endTile = me();
         if (!stats.died && endTile && wildernessLevel(endTile.worldZ) > 0 && !(o.exitStopped?.() ?? o.stopped())) {
@@ -2375,8 +2492,9 @@ export async function runPkSquadCli(
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); return 1; }
     const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); return 2; }
-    let fightOverrides: Partial<FightOptions>, threatConfig: ReturnType<typeof threatOptions> | undefined, daggerOptions: ReturnType<typeof daggerOptionsOf>;
+    let fightOverrides: Partial<FightOptions>, threatConfig: ReturnType<typeof threatOptions> | undefined, daggerOptions: ReturnType<typeof daggerOptionsOf>, neverSkull: boolean;
     try {
+        neverSkull = neverSkullOf(get, true);
         daggerOptions = daggerOptionsOf(get);
         fightOverrides = squadFightOverrides(get);
         threatConfig = get('SQUAD_THREAT', '0') === '1'
@@ -2729,15 +2847,20 @@ export async function runPkSquadCli(
         const stNow = s.sdk.getState();
         const kit = kitFrom(stNow?.equipment ?? [], stNow?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
+        if (neverSkull && stNow) {
+            const riskCheck = assessZeroRiskKit([...stNow.equipment, ...stNow.inventory], { cost: itemCostOf, nameOf: id => getObjNames().get(id), requireProtectItem: true });
+            log(`[${s.name}] SQUAD never-skull=1 ${riskCheck.summary}`);
+        }
         const memberOpts = {
             ...SQUAD_OPTS,
             ...squadEliteDefaults(stNow?.skills ?? [], stNow?.inventory ?? []),
+            ...(neverSkull ? { protectItem: true, zeroDrainFlick: true } : {}),
             ...explicitOpts,
             ...(specBelowOverride !== undefined ? { specBelow: specBelowOverride } : {}),
         };
         const baseOpts = sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), JSON.stringify(memberOpts), kit, 1200);
         return hold(s, {
-            targets, post, threats, ...(dagger ? { dagger } : {}), focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
+            targets, post, threats, ...(dagger ? { dagger } : {}), neverSkull, focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
             // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
             // ranged. A gang account prays against the weapon of the member it faces (live run 3), so the faced member's melee turns
             // draw Protect from Melee and the bow shots of the others meet no overhead.
@@ -2768,6 +2891,8 @@ export async function runPkSquadCli(
     console.log(`SQUAD_METRICS ${JSON.stringify(squadMetrics(results))}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;
+    const weaponLoot = summarizeWeaponLoot(picked, id => getObjNames().get(id));
+    if (weaponLoot.totalWeapons > 0) log(`SQUAD_WEAPONS_LOOTED total=${weaponLoot.totalWeapons} ${JSON.stringify(weaponLoot.weapons)}`);
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
     // RESCUE=1 (default): each dropped account logs in again, eats, and leaves the Wilderness by Camelot Teleport
     // (Wilderness 20 or less, runes held) or a walk to the Edgeville bank; one it cannot get out the RESULT names.

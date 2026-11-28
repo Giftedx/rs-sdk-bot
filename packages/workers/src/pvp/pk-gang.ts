@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import type { Session } from '../../../core/src/inprocess';
 import { lootCapacity } from '../../../core/src/loot-policy';
 import type { NearbyPlayer } from '../../../../vendor/rs-sdk/sdk/types';
-import { escapeCastable, fightPlayer, ITEMS, nextTick, observePlayer, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit } from './fight';
+import { assessZeroRiskKit, createNeverSkullGuard, ENEMY_WEAPON_LIST, escapeCastable, fightPlayer, FOOD_ORDER, getObjNames, HIGH_VALUE_ARMOUR_AND_GEAR_LIST, itemCostOf, ITEMS, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, postLootBankDue, recordKillLoot, SPELLS, summarizeWeaponLoot, wildernessLevel, type FightOptions, type FightResult, type Kit } from './fight';
 import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './hunt-kits';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { resolveBotEnvPath } from '../../../core/src/practice-paths';
@@ -290,17 +290,43 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const homes = new Map(others.map(o => { const p = o.sdk.getState()?.player; return [o, p ? { x: p.worldX, z: p.worldZ } : null] as const; }));
     let prayerOut = -1, over = false, taken = 0, lastHp = self()?.hp ?? 0, lastHitBy: number | null = null, lastHitAt = -100, seenEvent = 0, seenMessage = 0, refusals = 0, refusedAt = -100, seenAnim = false;
     const refusedBy = new Set<string>();
+    const skullGuard = optionsA.neverSkull ? createNeverSkullGuard({ selfName: a.name }) : null;
+    const startAState = a.sdk.getState();
+    const ownCoreIds = new Set(assessZeroRiskKit([...(startAState?.equipment ?? []), ...(startAState?.inventory ?? [])], { cost: itemCostOf, requireProtectItem: false }).kept3);
+    let skullSeenEvent = 0;
+    const reapWithSkull = () => {
+        for (const [g, firstLife] of lives) {
+            const key = g.name.toLowerCase();
+            if (alive.has(key) && (respawned(g) || (firstLife !== undefined && life(g) !== undefined && life(g) !== firstLife))) {
+                alive.delete(key);
+                skullGuard?.recordDeath(key);
+            }
+        }
+    };
     // The damage our account took is the sum of its HP drops (as in the spar). The account of the gang that fights it
     // is the last one that started an attack animation; where the client shows none, the source of the last splat.
     const unwatch = a.onTick(() => {
         const hp = self()?.hp;
         if (hp !== undefined) { if (hp < lastHp) taken += lastHp - hp; lastHp = hp; }
         if (prayerOut < 0 && a.sdk.getState()?.prayers.prayerPoints === 0) prayerOut = a.tick() - start;
-        const players = (a.client as { players?: ({ primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
-        for (const p of a.sdk.getState()?.nearbyPlayers ?? []) if (alive.has(p.name.toLowerCase()) && p.distance <= 2 && startsAttack(players?.[p.index])) { lastHitBy = p.index; lastHitAt = a.tick(); seenAnim = true; }
+        const players = (a.client as { players?: ({ primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number; faceEntity?: number } | null)[] } | undefined)?.players;
+        const stTick = a.sdk.getState();
+        for (const p of stTick?.nearbyPlayers ?? []) if (alive.has(p.name.toLowerCase()) && p.distance <= 2 && startsAttack(players?.[p.index])) { lastHitBy = p.index; lastHitAt = a.tick(); seenAnim = true; }
         // The source of a splat is the player that our account faces (StateCollector): a guess, used only where no animation shows.
-        for (const e of a.sdk.getState()?.combatEvents ?? []) { const id = e.observationId ?? e.tick; if (id > seenEvent) { seenEvent = id; if (hitByPlayer(e) && !seenAnim) { lastHitBy = e.sourceIndex; lastHitAt = a.tick(); } } }
-        for (const msg of a.sdk.getState()?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
+        for (const e of stTick?.combatEvents ?? []) { const id = e.observationId ?? e.tick; if (id > seenEvent) { seenEvent = id; if (hitByPlayer(e) && !seenAnim) { lastHitBy = e.sourceIndex; lastHitAt = a.tick(); } } }
+        if (skullGuard && stTick) {
+            skullSeenEvent = observeProvocations({
+                guard: skullGuard,
+                now: a.tick(),
+                selfSlot: localPlayerSlot(a.client),
+                nearbyPlayers: stTick.nearbyPlayers ?? [],
+                combatEvents: stTick.combatEvents,
+                seenEventId: skullSeenEvent,
+                minTick: start,
+                clientPlayers: players,
+            });
+        }
+        for (const msg of stTick?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
             if (msg.tick >= start && /already under attack/i.test(msg.text)) { refusals++; refusedAt = a.tick(); } }
     });
     // Each account of the gang attacks our account until one of the two is dead. One that lost sight of it while both
@@ -355,10 +381,19 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const picked: Record<string, number> = {};
     for (;;) {
     while (alive.size && a.tick() - start < cap && !halt()) {
-        reap();
+        reapWithSkull();
         if (!alive.size) break;
-        const target: NearbyPlayer | null = runner() ?? pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
+        const nearbyAll = a.sdk.getState()?.nearbyPlayers ?? [];
+        const nearbyEligible = skullGuard ? skullGuard.filterSafeTargets(nearbyAll, a.tick()) : nearbyAll;
+        const target: NearbyPlayer | null = (skullGuard && nearbyEligible.length === 0)
+            ? null
+            : (runner() ?? pickAttacker(nearbyEligible, alive, lastHitBy, refusedBy));
         if (!target) {
+            if (skullGuard && nearbyAll.some(p => alive.has(p.name.toLowerCase()))) {
+                unseen = 0;
+                if (!await nextTick(a)) break;
+                continue;
+            }
             // An attack click on an account that died can walk ours toward its respawn point. Away from its tile with
             // none of the gang in view, it walks back before the ticks count.
             const here = self();
@@ -385,7 +420,14 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             || lowerRunner(target);
         if (focus !== undefined && (health(target.index) ?? 1) <= focus) log(`[${a.name}] GANG focus ${target.name} at ${Math.round((health(target.index) ?? 0) * 100)}%`);
         // One escape for the meeting: once our account leaves a crowd it keeps leaving, whoever it faces next.
-        const r = await fightPlayer(a, target.name, { ...optionsA, escapeLatch: latch, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || (!latch.outnumbered && other()), log: l => log(`[${a.name}] ${l}`) });
+        const r = await fightPlayer(a, target.name, {
+            ...optionsA,
+            ...(skullGuard ? { provokedBy: (name: string) => skullGuard.canAttackSafely(name, a.tick()) } : {}),
+            escapeLatch: latch,
+            cap: Math.max(1, cap - (a.tick() - start)),
+            stop: () => halt() || (!latch.outnumbered && other()),
+            log: l => log(`[${a.name}] ${l}`),
+        });
         fights.push(r);
         // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
         // meeting tile from more than 6 tiles.
@@ -394,6 +436,21 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
             const got = await pickUp(a, more.pickup, { radius: 3, maxTicks: 16, wait: 6, stop: halt });
             recordKillLoot(r, got);
             for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
+            if (optionsA.neverSkull && trips && trip < trips.count && Object.keys(got).length > 0) {
+                const stNow = a.sdk.getState();
+                const decision = postLootBankDue([...(stNow?.equipment ?? []), ...(stNow?.inventory ?? [])], {
+                    cost: itemCostOf,
+                    nameOf: id => getObjNames().get(id),
+                    protectItem: optionsA.protectItem !== false,
+                    ownCoreIds,
+                });
+                if (decision.bankNow) {
+                    log(`[${a.name}] GANG post-loot bank guard: ${decision.reason}`);
+                    end = 'escaped';
+                    alive.delete(target.name.toLowerCase());
+                    break;
+                }
+            }
         }
         const here = self();
         if (here && spot && r.outcome === 'kill' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 6) void a.sdk.sendWalk(spot.x, spot.z);
@@ -427,10 +484,10 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
 }
 
 // The counts of several meetings that ran at once.
-// What an account of ours takes back after a meeting: a gang account's dagger (it drops when the account dies with
-// no Protect Item: death.rs2 pvp_death_lose_items keeps none on a skulled account) and sharks.
-// Dearest first: a pickup takes them in this order.
-export const PICKUP_ITEMS = [1215, 1231, ITEMS.shark as number];
+// What an account of ours takes back after a meeting: EVERY enemy weapon first (dragon dagger/longsword/mace/battleaxe/spear/halberd,
+// rune scimitar/2h/etc., magic shortbow/longbow, mystic/god staves), then high-value armour/glories/runes/potions, then sharks.
+// Dearest / highest-priority first: a pickup takes them in this order.
+export const PICKUP_ITEMS: readonly number[] = [...ENEMY_WEAPON_LIST, ...HIGH_VALUE_ARMOUR_AND_GEAR_LIST, ITEMS.shark as number];
 export type PickupGround = { id: number; count: number; x: number; z: number; distance: number; name: string };
 // The stacks of `ids` within `radius` tiles, in the order of `ids` (dearest first), nearest first within an id; 4
 // arrows in 5 land on the tile of the player they hit (pvp_ranged.rs2 ranged_dropammo_pvp, ^dropammo_chance 5).
@@ -438,33 +495,83 @@ export function plannedPickups<G extends { id: number; count: number; x: number;
     const rank = new Map([...ids].map((id, i) => [id, i]));
     return ground.filter(g => ids.has(g.id) && g.distance <= radius).sort((a, b) => rank.get(a.id)! - rank.get(b.id)! || a.distance - b.distance);
 }
+const EMPTY_VIAL_ID = 229;
+/** Picks the cheapest expendable inventory slot to free room for a higher-priority loot drop (empty vials first, then lowest-heal food). */
+export function cheapestExpendableSlot<I extends { id: number; slot: number; name: string; optionsWithIndex: { text: string; opIndex: number }[] }>(
+    inv: readonly I[],
+    targetRank: number,
+    rankOf: ReadonlyMap<number, number>,
+): { item: I; kind: 'vial' | 'food' } | undefined {
+    const vial = inv.find(i => i.id === EMPTY_VIAL_ID);
+    if (vial) return { item: vial, kind: 'vial' };
+    let worst: I | undefined;
+    let worstFoodRank = -1;
+    for (let i = 0; i < inv.length; i++) {
+        const item = inv[i]!;
+        if (!item.optionsWithIndex.some(op => /^eat$/i.test(op.text))) continue;
+        // Never drop/eat a food item to pick up an item of equal or lower loot priority.
+        const itemLootRank = rankOf.get(item.id);
+        if (itemLootRank !== undefined && itemLootRank <= targetRank) continue;
+        let fRank = FOOD_ORDER.length;
+        for (let r = 0; r < FOOD_ORDER.length; r++) {
+            if (FOOD_ORDER[r]!.test(item.name)) { fRank = r; break; }
+        }
+        if (fRank > worstFoodRank) {
+            worstFoodRank = fRank;
+            worst = item;
+        }
+    }
+    return worst ? { item: worst, kind: 'food' } : undefined;
+}
 // `wait`: ticks to wait for a first stack to show (a death drops its items 4 ticks after the kill message: death.rs2
 // player_death p_delay 1 and 3).
 // `onScan` gets the ground of each read, before the pickup chooses a stack.
 export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?: number; maxTicks?: number; wait?: number; stop?: () => boolean; onScan?: (ground: readonly PickupGround[]) => void } = {}): Promise<Record<string, number>> {
     const got: Record<string, number> = {}, start = a.tick(), tried = new Set<string>();
+    const rankOf = new Map([...ids].map((id, i) => [id, i]));
     if (process.env.PICKUP_TRACE === '1') { const g = a.sdk.getState()?.groundItems ?? [], me = a.sdk.getState()?.player; console.log(`PICKUP at ${me?.worldX},${me?.worldZ} ground ${g.length}: ${g.slice(0, 12).map(i => `${i.id}x${i.count}@${i.x},${i.z}d${i.distance}`).join(' ')}`); }
     while (a.tick() - start < (o.maxTicks ?? 200) && !o.stop?.()) {
         const inv = a.sdk.getInventory();
-        const edible = inv.find(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
-        const definition=(id:number)=>(a.client as {objType?:(id:number)=>{stackable:boolean}|undefined}|undefined)?.objType?.(id);
+        const definition = (id: number) => (a.client as { objType?: (id: number) => { stackable: boolean } | undefined } | undefined)?.objType?.(id);
         // The worker owns its combat-food choice. Native metadata decides if it needs room.
         const ground = (a.sdk.getState()?.groundItems ?? []) as PickupGround[];
         o.onScan?.(ground);
-        const next = plannedPickups(ground, ids, o.radius ?? 12)
-            .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && typeof definition(g.id)?.stackable==='boolean' && (lootCapacity({inventory:inv},g,definition(g.id)) || (!!edible && edible.id !== g.id && lootCapacity({inventory:inv.filter(i=>i.slot!==edible.slot)},g,definition(g.id)))));
+        const candidates = plannedPickups(ground, ids, o.radius ?? 12);
+        let next: PickupGround | undefined;
+        let expendable: { item: (typeof inv)[number]; kind: 'vial' | 'food' } | undefined;
+        for (const g of candidates) {
+            if (tried.has(`${g.id}@${g.x},${g.z}`)) continue;
+            const def = definition(g.id);
+            if (typeof def?.stackable !== 'boolean') continue;
+            if (lootCapacity({ inventory: inv }, g, def)) { next = g; expendable = undefined; break; }
+            const exp = cheapestExpendableSlot(inv, rankOf.get(g.id) ?? Infinity, rankOf);
+            if (exp && exp.item.id !== g.id && lootCapacity({ inventory: inv.filter(i => i.slot !== exp.item.slot) }, g, def)) {
+                next = g;
+                expendable = exp;
+                break;
+            }
+        }
         if (!next) { if (a.tick() - start < (o.wait ?? 0) && await nextTick(a)) continue; break; }
         tried.add(`${next.id}@${next.x},${next.z}`);
-        if (!lootCapacity({inventory:inv},next,definition(next.id)) && edible) {
-            const op = edible.optionsWithIndex.find(x => /^eat$/i.test(x.text)),before=inv.filter(i=>i.id===edible.id).reduce((n,i)=>n+i.count,0);
-            if(!op)continue;
-            await a.sdk.sendUseItem(edible.slot,op.opIndex);if(!await nextTick(a))break;
-            if(a.sdk.getInventory().filter(i=>i.id===edible.id).reduce((n,i)=>n+i.count,0)!==before-1)break;
+        if (expendable && !lootCapacity({ inventory: inv }, next, definition(next.id))) {
+            const beforeExp = inv.filter(i => i.id === expendable!.item.id).reduce((n, i) => n + i.count, 0);
+            const canDrop = typeof a.sdk.sendDropItem === 'function';
+            if (canDrop) {
+                // Dropping an empty vial or cheap food costs 0 combat delay and immediately opens a slot for enemy weapons.
+                await a.sdk.sendDropItem(expendable.item.slot);
+                if (!await nextTick(a)) break;
+            } else {
+                const op = expendable.item.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+                if (!op) continue;
+                await a.sdk.sendUseItem(expendable.item.slot, op.opIndex);
+                if (!await nextTick(a)) break;
+            }
+            if (a.sdk.getInventory().filter(i => i.id === expendable!.item.id).reduce((n, i) => n + i.count, 0) !== beforeExp - 1) break;
         }
-        if(!lootCapacity({inventory:a.sdk.getInventory()},next,definition(next.id)))continue;
-        const before=a.sdk.getInventory().filter(i=>i.id===next.id).reduce((n,i)=>n+i.count,0);
+        if (!lootCapacity({ inventory: a.sdk.getInventory() }, next, definition(next.id))) continue;
+        const before = a.sdk.getInventory().filter(i => i.id === next.id).reduce((n, i) => n + i.count, 0);
         const r = await a.bot.pickupItem(next as never);
-        if (r.success && a.sdk.getInventory().filter(i=>i.id===next.id).reduce((n,i)=>n+i.count,0)-before===next.count) got[next.id] = (got[next.id] ?? 0) + next.count;
+        if (r.success && a.sdk.getInventory().filter(i => i.id === next.id).reduce((n, i) => n + i.count, 0) - before === next.count) got[next.id] = (got[next.id] ?? 0) + next.count;
     }
     return got;
 }
@@ -486,10 +593,15 @@ export async function runPkGangCli(
     const [kitA, kitList] = (env.SPAR_KITS ?? '').split(',')[0]!.split(':');
     const gangKits = (kitList ?? '').split('+'), kitB = gangKits[0];
     const gangProfiles = (env.SPAR_B_PROFILES ?? '').split('+').filter(Boolean);
+    const neverSkullA = neverSkullOf((k, d) => env[k] ?? d, true);
     const options = (side: 0 | 1, group: number, member = 0): FightOptions => {
         const kit = side === 0 ? kitA : gangKits[member % gangKits.length] || undefined;
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + side };
-        return { ...sparOptions(side === 0 ? nameA : gangProfiles[member % Math.max(1, gangProfiles.length)] ?? nameB, side === 0 ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}), ...seed };
+        return {
+            ...sparOptions(side === 0 ? nameA : gangProfiles[member % Math.max(1, gangProfiles.length)] ?? nameB, side === 0 ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}),
+            ...(side === 0 && neverSkullA ? { neverSkull: true, protectItem: true } : {}),
+            ...seed,
+        };
     };
     let halted: string | undefined;
     const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
@@ -537,8 +649,11 @@ export async function runPkGangCli(
         for (const m of feedMeetings(text, names.obj, names.seq)) console.log(`FEED_MEETING ${JSON.stringify(m)}`);
         for (const m of feedMeetings(text, names.obj, names.seq, true)) console.log(`FEED_MEETING_ALL ${JSON.stringify(m)}`); } catch (e) { console.log(`FEED_MEETING none: ${e instanceof Error ? e.message : e}`); }
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
+    const allPicked: Record<string, number> = {};
+    for (const r of results) for (const [id, n] of Object.entries(r.picked ?? {})) allPicked[id] = (allPicked[id] ?? 0) + n;
+    const weaponSummary = summarizeWeaponLoot(allPicked, id => getObjNames().get(id));
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
-        + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
+        + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')}${weaponSummary.totalWeapons ? ` weapons=${weaponSummary.totalWeapons}` : ''} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
         + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} doses=${results.map(r => r.prayerDoses).join(',')} trips=${results.map(r => r.trips).join(',')} gangTrips=${results.map(r => r.gangTrips).join(',')} prayerOut=${results.map(r => r.prayerOut).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
     return ok ? 0 : 1;
 }

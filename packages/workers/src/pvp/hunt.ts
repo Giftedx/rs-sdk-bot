@@ -18,7 +18,7 @@ import type { Session } from '../../../core/src/inprocess';
 import { isLocalServer } from '../../../core/src/localserver';
 import { pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './fight';
+import { assessZeroRiskKit, attackable, bestFood, rewearStart, castableFreeze, createNeverSkullGuard, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, itemCostOf, ITEMS, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, packGain, postLootBankDue, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './fight';
 import { armourDefence } from './pk-read';
 import { accountServerBeforeLogin, assessWildernessThreat, connectRadar, hasVarrockTeleport, itemCost, planWildernessEscape, Radar, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './wild-rules';
 import { KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
@@ -252,13 +252,35 @@ export async function hunt(s: Session, o: HuntOptions) {
                 }
                 break;
             }
-            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
+            const neverSkull = neverSkullOf((k, d) => process.env[k] ?? d, false);
+            const huntSkullGuard = neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
+            let huntSkullSeen = seen;
+            const unwatchHuntSkull = huntSkullGuard ? s.onTick(() => {
+                const stNow = s.sdk.getState();
+                if (!stNow) return;
+                const cPlayers = (s.client as { players?: ({ faceEntity?: number; primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
+                huntSkullSeen = observeProvocations({
+                    guard: huntSkullGuard,
+                    now: s.tick(),
+                    selfSlot: localPlayerSlot(s.client),
+                    allies: ours,
+                    nearbyPlayers: stNow.nearbyPlayers ?? [],
+                    combatEvents: stNow.combatEvents,
+                    seenEventId: huntSkullSeen,
+                    clientPlayers: cPlayers,
+                });
+            }) : null;
+            if (attackerIndex === null && (neverSkull || o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) { unwatchHuntSkull?.(); continue; }
             const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex, process.env.HUNT_PICK !== 'near'
                 ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined, multi);
-            if (!target) continue;
+            if (!target) { unwatchHuntSkull?.(); continue; }
+            if (huntSkullGuard && attackerIndex === target.index) {
+                huntSkullGuard.recordIncomingAttack(target.name, target.index, s.tick(), 'hit');
+            }
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
             const r: FightResult = await fightPlayer(s, target.name, {
+                ...(huntSkullGuard ? { neverSkull: true, protectItem: true, provokedBy: (name: string) => huntSkullGuard.canAttackSafely(name, s.tick()) } : {}),
                 ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
@@ -279,15 +301,29 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(process.env.HUNT_PRESS ? { pressLow: Number(process.env.HUNT_PRESS) } : {}),
                 // HUNT_NOFOOD=<multiple>: the no-food exit at that many times the opponent's max hit (default 1.5).
                 ...(process.env.HUNT_NOFOOD ? { noFoodAt: Number(process.env.HUNT_NOFOOD) } : {}),
-            });
+            }).finally(() => { unwatchHuntSkull?.(); });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             // The armour that a freeze stripped goes back on (pk.ts rewearStart): not after a death or a dropped session.
             if (r.outcome !== 'died' && r.outcome !== 'session ended') await rewearStart(s, wornAtStart.map(w => w.id), log);
             if (r.outcome === 'kill') {
                 tally.kills++; const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
                 const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
-                recordKillLoot(r, packGain(pack, s.sdk.getInventory()));
+                const gained = packGain(pack, s.sdk.getInventory());
+                recordKillLoot(r, gained);
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
+                if (n > 0) {
+                    const bankCheck = postLootBankDue([...s.sdk.getEquipment(), ...s.sdk.getInventory()], {
+                        cost: itemCostOf,
+                        nameOf: id => objNames().get(id),
+                        protectItem: true,
+                        ownCoreIds: new Set(assessZeroRiskKit(wornAtStart, { cost: itemCostOf, requireProtectItem: false }).kept3),
+                    });
+                    if (bankCheck.bankNow) {
+                        log(`HUNT post-loot bank guard: ${bankCheck.reason}`);
+                        needsRestock = true;
+                        break;
+                    }
+                }
             }
             // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a
             // run, the fight loop's own) goes at once, or each hit starts a new fight that stops at the danger check

@@ -24,7 +24,7 @@ import { tradePartners } from '../../../core/src/tradeguard';
 import { readOpponent, readOpponents } from '../../../core/src/opponent';
 import { componentId } from '../../../core/src/logout';
 import { MARKET_FILE, marketQuotes } from '../../../core/src/market-cache';
-import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, packGain, recordKillLoot } from './fight';
+import { bestFood, BIS_SWITCH_GEAR, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, MAGIC_FREEZE_SWITCH_IDS, MELEE_ARMOUR_SWITCH_IDS, observePlayer, packGain, RANGED_ARMOUR_SWITCH_IDS, recordKillLoot } from './fight';
 export { castableFreeze, freezeSpell };
 import { armourDefence } from './pk-read';
 import { REPO_ROOT, type FightOptions, type Kit } from './types';
@@ -490,25 +490,54 @@ export function sweep(maxWild: number): { x: number; z: number }[] {
 type Item = { id: number; name: string; slot?: number };
 const MELEE_WEAPON = /dagger|scimitar|longsword|sword|mace|battleaxe|warhammer|spear|halberd/i;
 // Fight kit for scripts/pk.ts: melee wields the worn weapon and shield (or a carried melee weapon/shield if a bow or
-// staff is worn at start), ranged a carried bow (RANGED, default any bow), magic a carried staff. A style is
-// present only when the account carries its weapon: fightPlayer skips a style with an empty kit (pk.ts hasStyle).
+// staff is worn at start), ranged a carried bow (RANGED, default any bow), magic a carried staff, plus any carried
+// per-style BiS armour switches (d'hide body/chaps/vambs for ranged; god capes, wizard/zamorak/splitbark robes, magic
+// hats/amulets for magic; tank body/legs/Klank's gauntlets/Fremennik helms for melee when swapping from another style).
+// Weapons always come first in each list so same-tick 5-packet switch+attack never drops the weapon swap.
 export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /bow$/i): Kit {
     const kit: Kit = {};
+    const all = [...worn, ...carried];
     const wornWep = worn.find(i => i.slot === 3 && !ranged.test(i.name) && !/staff/i.test(i.name));
     const wornShield = worn.find(i => i.slot === 5);
     const wep = wornWep ?? carried.find(i => !ranged.test(i.name) && !/staff/i.test(i.name) && MELEE_WEAPON.test(i.name));
     const shield = wornShield ?? (wep ? carried.find(i => /shield$/i.test(i.name)) : undefined);
-    const melee = [wep?.id, shield?.id].filter((id): id is number => id !== undefined);
-    if (melee.length) kit.melee = melee;
-    const bow = [...worn, ...carried].find(i => ranged.test(i.name));
+    const bow = all.find(i => ranged.test(i.name));
     // PK_AXE=1: a rune throwing axe stack among the items is part of the ranged kit, so `defaultSpec` (scripts/pk.ts) gives
     // the account the axe special. Off by default: no live account changes its special.
-    const axe = process.env.PK_AXE === '1' ? [...worn, ...carried].find(i => /^rune thrownaxe$/i.test(i.name)) : undefined;
-    if (bow || axe) kit.ranged = [...(bow ? [bow.id] : []), ...(axe ? [axe.id] : [])];
-    const staff = [...worn, ...carried].find(i => /staff/i.test(i.name));
-    if (staff) kit.magic = [staff.id];
+    const axe = process.env.PK_AXE === '1' ? all.find(i => /^rune thrownaxe$/i.test(i.name)) : undefined;
+    const staff = all.find(i => /staff/i.test(i.name));
+
+    const carriedRangedArmour = carried.filter(i => RANGED_ARMOUR_SWITCH_IDS.has(i.id)).map(i => i.id);
+    const carriedMagicArmour = carried.filter(i => MAGIC_FREEZE_SWITCH_IDS.has(i.id)).map(i => i.id);
+    const hasAltArmourSwitch = carriedRangedArmour.length > 0 || carriedMagicArmour.length > 0;
+    const meleeArmourSwaps = hasAltArmourSwitch
+        ? all.filter(i => MELEE_ARMOUR_SWITCH_IDS.has(i.id) && i.id !== wep?.id && i.id !== shield?.id).map(i => i.id)
+        : [];
+    const rangedArmourSwaps = hasAltArmourSwitch
+        ? all.filter(i => RANGED_ARMOUR_SWITCH_IDS.has(i.id)).map(i => i.id)
+        : [];
+    const magicArmourSwaps = carriedMagicArmour.length > 0
+        ? all.filter(i => MAGIC_FREEZE_SWITCH_IDS.has(i.id)).map(i => i.id)
+        : [];
+
+    const dedup = (ids: readonly number[]) => [...new Set(ids)];
+    const melee = dedup([...[wep?.id, shield?.id].filter((id): id is number => id !== undefined), ...meleeArmourSwaps]);
+    if (melee.length) kit.melee = melee;
+    if (bow || axe) {
+        kit.ranged = dedup([...(bow ? [bow.id] : []), ...(axe ? [axe.id] : []), ...rangedArmourSwaps]);
+    }
+    if (staff) {
+        kit.magic = dedup([staff.id, ...magicArmourSwaps]);
+    }
     return kit;
 }
+
+/** Picks best owned item per style switch slot from rev-289 BiS priority lists (`BIS_SWITCH_GEAR`). */
+export function pickStyleSwitchIds(ownedIds: ReadonlySet<number>, list: readonly number[]): number | undefined {
+    for (let i = 0; i < list.length; i++) if (ownedIds.has(list[i]!)) return list[i]!;
+    return undefined;
+}
+export { BIS_SWITCH_GEAR };
 
 // Damage spell components (vendor/rs-sdk/sdk/spells.ts) by SPELL name.
 const SPELL_IDS: Record<string, number> = {

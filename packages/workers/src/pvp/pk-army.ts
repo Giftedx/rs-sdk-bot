@@ -14,7 +14,7 @@ import { openBot, settle } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { attackable, bestFood, defaultSpec, defaultStunSpec, fightPlayer, isMulti, newVolley, nextTick, observePlayer, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions, type VolleyState } from './fight';
+import { attackable, bestFood, defaultSpec, defaultStunSpec, fightPlayer, isMulti, neverSkullOf, newVolley, nextTick, observePlayer, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions, type VolleyState } from './fight';
 import { escapeStep, hasVarrockTeleport, kitFrom, pickScoutTargetForSquad, readScoutIntel, wearGlory, type Cfg, type ScoutIntel } from './wild-rules';
 import { huntOnce } from './roam';
 import { PROFILES, sparOptions } from './pk-spar';
@@ -306,11 +306,14 @@ export async function runPkArmyCli(all: readonly string[]): Promise<number> {
     };
     const armyProfile = arg(args, 'ARMY_PROFILE', lock ? 'army-alpha' : 'army');
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
+    const neverSkull = neverSkullOf((k, d) => arg(args, k, process.env[k] ?? d), false);
+    if (neverSkull) cfg.fight = { ...cfg.fight, neverSkull: true, protectItem: true };
     const options = (s: Session): FightOptions => {
         const kit = kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged);
         const stunSpec = defaultStunSpec(kit);
         return {
             ...sparOptions(armyProfile, armyOpts, kit, Math.round(cfg.maxMs / 600)),
+            ...(neverSkull ? { neverSkull: true, protectItem: true } : {}),
             ...(freezeShare ? { freezeShare } : {}),
             ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}),
             ...(volley ? { volley } : {}),

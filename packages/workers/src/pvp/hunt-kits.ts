@@ -18,7 +18,7 @@ import { loadOwners } from '../../../core/src/fleet';
 import { isLocalServer } from '../../../core/src/localserver';
 import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './fight';
+import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, isWeaponItem, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './fight';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, connectRadar, hasVarrockTeleport, itemCost, planWildernessEscape, Radar, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './wild-rules';
 import type { ItemCount, ItemRequirement, RequirementResolution } from '../../../core/src/item-requirements';
@@ -236,17 +236,38 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     if (invalid.length) return 'invalid trip requirements ' + JSON.stringify(invalid);
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
     const gloryIds = new Set<number>(ITEMS.glory);
+    const wornSlots = new Set(equip().map(e => e.slot));
+    const armourSlotOfName = (name: string): number | undefined => {
+        if (/(platebody|chainbody)/i.test(name)) return 4;
+        if (/(platelegs|plateskirt)/i.test(name)) return 7;
+        if (/(full helm|med helm|berserker helm)/i.test(name)) return 0;
+        if (/(kiteshield|sq shield)/i.test(name)) return 5;
+        return undefined;
+    };
     let gloryWorn = equip().some(e => gloryIds.has(e.id));
     let switched = false;
     for (const item of [...s.sdk.getInventory()]) {
         const wantGlory = gloryIds.has(item.id) && !gloryWorn;
-        const wantArmour = /(platebody|chainbody|platelegs|plateskirt|full helm|med helm|kiteshield|sq shield|berserker helm)/i.test(item.name);
-        if (!(kit.melee ?? []).includes(item.id) && !wantArmour && !wantGlory) continue;
+        const armSlot = armourSlotOfName(item.name);
+        // Only re-equip stripped kit armour into an EMPTY slot so looted enemy armour/weapons are banked cleanly instead of replacing zero-risk gear.
+        const wantArmour = armSlot !== undefined && !wornSlots.has(armSlot);
+        const wantMelee = (kit.melee ?? []).includes(item.id);
+        if (!wantMelee && !wantArmour && !wantGlory) continue;
         if (!wantGlory && equip().some(e => e.id === item.id)) continue;
         const op = item.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
-        if (op) { await s.sdk.sendUseItem(item.slot, op.opIndex); switched = true; if (wantGlory) gloryWorn = true; }
+        if (op) {
+            await s.sdk.sendUseItem(item.slot, op.opIndex);
+            switched = true;
+            if (wantGlory) gloryWorn = true;
+            if (armSlot !== undefined) wornSlots.add(armSlot);
+        }
     }
     if (switched && typeof s.onTick === 'function') await nextTick(s);
+    const kitAllIds = new Set([...(kit.melee ?? []), ...(kit.ranged ?? []), ...(kit.magic ?? [])]);
+    const lootedWeaponsToBank = s.sdk.getInventory().filter(i => !kitAllIds.has(i.id) && isWeaponItem(i.id, i.name));
+    if (lootedWeaponsToBank.length) {
+        console.log(`RESTOCK banking looted weapons (${s.name}): ${lootedWeaponsToBank.map(w => `${w.name}x${w.count}`).join(', ')}`);
+    }
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     // What the bank holds once the pack is deposited: the bank and the pack together. The trip is resolved against it
     // before the deposit, so a trip that cannot be filled leaves the pack in the pack (a deposit with no way back
