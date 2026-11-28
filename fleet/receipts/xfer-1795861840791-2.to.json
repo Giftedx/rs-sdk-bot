@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861840791-2",
  "account": "Wandwaver",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "84299eba-8fdc-407b-9475-e4c2cadcd5ed",
- "count": 0,
- "ok": false,
- "at": 1795862459911,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795862492348,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795862491624
+ },
+ "logout": {
+  "attemptId": "1795862459919-0000025376-0000000001",
+  "at": 1795862492338,
+  "sha256": "c2373fe4475002c14504f84130381ad771e15073dbd8858b8206f6f302b71e5c"
+ },
+ "screen": true
 }
