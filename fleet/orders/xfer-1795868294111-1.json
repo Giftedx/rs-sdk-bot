@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795868294111-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "hocuspokeus",
+  "to": "masterbaiter",
+  "item": "Rune platelegs",
+  "count": 1,
+  "itemId": 1079,
+  "extra": [
+    {
+      "item": "Law rune",
+      "count": 1,
+      "itemId": 563
+    }
+  ],
+  "start": 1795868294111,
+  "end": 1795869194111,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

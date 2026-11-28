@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795867903059-1",
  "account": "mightyrod",
  "partner": "fishandchips",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 12,
  "claim": "67d56dae-c73f-4941-b50d-0d939d01ab7d",
- "count": 0,
- "ok": false,
- "at": 1795868229046,
- "detail": "trade claimed"
+ "count": 12,
+ "ok": true,
+ "at": 1795868302912,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795868302168
+ },
+ "logout": {
+  "attemptId": "1795868229115-0000007364-0000000001",
+  "at": 1795868302903,
+  "sha256": "df644fba55a45d4736ca90e8c081dc68c5b65f6763e23651c7b8799f653b181e"
+ },
+ "screen": true
 }
