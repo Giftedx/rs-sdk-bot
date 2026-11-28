@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795861840791-1",
  "account": "Dipstick",
  "partner": "Masterbaiter",
@@ -12,13 +12,27 @@
  "claim": "c4756d56-f608-43c2-9d8e-872a7ef8d427",
  "count": 0,
  "ok": false,
- "at": 1795862349996,
- "detail": "trade claimed",
+ "at": 1795862413557,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Rune scimitar",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795862412810
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1795862412408
+ },
+ "logout": {
+  "attemptId": "1795862350009-0000026884-0000000001",
+  "at": 1795862413549,
+  "sha256": "8b41ba6ef0204934b9f1f642a542b81b596a9947db101bd2b3f1ec531dbe7c6f"
+ },
+ "screen": false
 }
