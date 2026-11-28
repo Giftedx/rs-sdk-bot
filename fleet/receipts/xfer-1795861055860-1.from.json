@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861055860-1",
  "account": "Nockitoff",
  "partner": "Billionaire",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 6,
  "claim": "a9865177-d83e-4ef6-b0fc-2e34c52ac185",
- "count": 0,
- "ok": false,
- "at": 1795861417494,
- "detail": "trade claimed",
+ "count": 6,
+ "ok": true,
+ "at": 1795861566410,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 8,
-   "count": 0
+   "count": 8,
+   "inventory": {
+    "before": 8,
+    "after": 0
+   },
+   "bank": {
+    "count": 8,
+    "at": 1795861492035
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795861491319
+ },
+ "logout": {
+  "attemptId": "1795861417624-0000027496-0000000001",
+  "at": 1795861566401,
+  "sha256": "9e67fcbfaf6a5987ee8f304724b10ab5bc6d31cfcc6fcca77b705e75b62a78ba"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795861441153-1",
+ "account": "PickpockDick",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 10,
+ "claim": "e231c75e-6661-4f5d-97e9-9670dc96e2e0",
+ "count": 0,
+ "ok": false,
+ "at": 1795861623089,
+ "detail": "trade claimed"
+}

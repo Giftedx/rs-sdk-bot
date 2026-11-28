@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795861545508-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Masterbaiter",
+  "to": "SporranDip",
+  "item": "Raw lobster",
+  "count": 28,
+  "itemId": 377,
+  "start": 1795861545508,
+  "end": 1795862445508,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
