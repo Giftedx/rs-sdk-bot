@@ -112,7 +112,9 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
         // > 0 | $leaving = true)`: the holder of the key passes, and the side named after `|` passes with no key, so the
         // refused side is the other one. The walker passes doors with Open, so only Open's own item test names the key.
         const free = !guard && alias ? body.match(new RegExp('if\\s*\\(\\s*inv_total\\(inv,\\s*(\\w+)\\)\\s*>\\s*0\\s*\\|\\s*\\$' + alias[1] + '\\s*=\\s*(true|false)\\s*\\)\\s*\\{')) : null;
-        const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default') ?? free?.[1];
+        const directUse = useTrig.body.match(/last_useitem\s*=\s*(\w+)/)?.[1];
+        const openKey = directUse && new RegExp(`inv_total\\(inv,\\s*${directUse}\\b`).test(body) ? directUse : undefined;
+        const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default') ?? free?.[1] ?? openKey;
         const whenAxis = guard ? guard[1] === 'true' : free ? free[2] !== 'true' : undefined;
         const need: DoorNeed = { ...(item ? { item } : {}), ...(whenAxis !== undefined ? { whenAxis } : {}) };
         return { kind: 'key', need: Object.keys(need).length ? need : undefined, trigger: src };
@@ -135,9 +137,9 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     }
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);
     if (side && REFUSAL.test(body)) return { kind: 'one_way', need: { side: `refuses when player ${side[1]} ${side[2]} door ${side[1]}` }, trigger: src };
-    if (!useTrig && !/%|\bstat\(/.test(body) && OPEN_PROC.test(body) && REFUSAL.test(body)) {
-        const axisDirect = body.match(/if\s*\(\s*~check_axis_locactive\s*\(\s*coord\s*\)\s*=\s*(true|false)\s*\)\s*\{[^}]*\breturn\s*;/);
-        if (axisDirect) return { kind: 'one_way', need: { side: `refuses when check_axis_locactive is ${axisDirect[1]}`, whenAxis: axisDirect[1] === 'true' }, trigger: src };
+    if (!useTrig && !/%|\bstat\(/.test(body) && (OPEN_PROC.test(body) || /\bp_teleport\s*\(/.test(body)) && REFUSAL.test(body)) {
+        const axisDirect = body.match(/if\s*\(\s*~check_axis(_locactive)?\s*\([^)]*\)\s*=\s*(true|false)\s*\)\s*\{[^}]*\breturn\s*;/);
+        if (axisDirect) return { kind: 'one_way', need: { side: `refuses when check_axis${axisDirect[1] ?? ''} is ${axisDirect[2]}`, whenAxis: axisDirect[2] === 'true' }, trigger: src };
     }
     // Open and refusal branches are not an unconditional Open operation. The thieving-door
     // handler takes an axis-derived entering flag, aliases it to locked, and may invert it via DB.

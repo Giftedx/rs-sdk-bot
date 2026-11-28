@@ -38,7 +38,7 @@ const legsOf = (t: TripPlan) => [...t.legs, ...(t.bank?.then ?? [])];
 // `replan` plans the trip for an account (goTo's plan: off thread, with the bank stock). The safe route is the plan for
 // the account with avoidHarm set (danger/guard.ts guardRoute closes the harm ground).
 export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, r: TripPlan, replan: (a: Account) => Promise<TripPlan | null>): Promise<RouteHarm> {
-    const { dangerSummary, huntersNear, npcReach, routeDanger, routeExposure, stateWalkProfile } = await import('../danger');
+    const { dangerSummary, huntersNear, npcReach, planAroundHarm, routeDanger, routeExposure, stateWalkProfile } = await import('../danger');
     const p = stateWalkProfile(acct, s.sdk.getState()?.player);
     // No hunter of this account near any walk leg: nothing to price, and no path search.
     let at = from, near = false;
@@ -48,7 +48,7 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
     }
     if (!near) return { action: 'clear', plan: r };
     const { queryRouteService, serviceWanted } = await import('../route-query');
-    let localEnv: { pf: any; reach: ReturnType<typeof npcReach> } | null = null;
+    let localEnv: { pf: any; grid: any; reach: ReturnType<typeof npcReach> } | null = null;
     const measureExposure = async (legs: ReturnType<typeof legsOf>) => {
         if (serviceWanted()) {
             const remote = await queryRouteService<import('../danger').WalkExposure>({ kind: 'route-exposure', from, legs, profile: p });
@@ -60,9 +60,12 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
                 import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
             ]);
             pf.initPathfinding();
-            localEnv = { pf, reach: npcReach(grid as any, pf.getDoorAt) };
+            localEnv = { pf, grid, reach: npcReach(grid as any, pf.getDoorAt) };
         }
-        const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) => localEnv!.pf.findLongPath(level, a.x, a.z, b.x, b.z, 500);
+        // Price the detoured walk path that walkRoute actually takes (session.ts planAroundHarm), not the bare straight
+        // line through a hunter that a 32-tile detour avoids cleanly.
+        const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) =>
+            planAroundHarm(localEnv!.grid, p, level, a, b, 32, () => localEnv!.pf.findLongPath(level, a.x, a.z, b.x, b.z, 500), { reach: localEnv!.reach });
         return routeExposure(p, from, legs, path, { reach: localEnv.reach });
     };
     const open = { cost: r.cost, exposure: await measureExposure(legsOf(r)) };

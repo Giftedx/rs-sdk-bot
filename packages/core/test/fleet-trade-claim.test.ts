@@ -256,6 +256,67 @@ test('a dead claim with no pending marker stays held even if the session receipt
     });
 }, 30_000);
 
+test('an orphaned pre-network swarm claim on this checkout with a prior confirmed logout clears safely, while live, unsettled, or foreign claims stay held', async () => {
+    await withRepos(async (a, b) => {
+        const liveLifecycle = join(a, '.practice', 'live', 'session-lifecycle');
+        const first = acquireFleetSwarmClaim(a, swarmInput);
+        const priorAttempt = beginSessionAttempt(swarmInput, {
+            root: liveLifecycle,
+            owner: { ...lifecycleOwner(), sharedClaimNonce: first.nonce },
+        });
+        first.armNetwork();
+        expect(priorAttempt.record('ended', 'logged-out')).toBe(true);
+        first.releaseAfterLogout(priorAttempt.attemptId);
+
+        // A later worker acquires a swarm claim, loses its pending marker before beginSessionAttempt, and dies.
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const child = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${modulePath}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(swarmInput)}).armNetwork()`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child.exited).toBe(0);
+
+        const orphaned = readFleetAccountClaim(a, swarmInput)!;
+        expect(orphaned).toMatchObject({ kind: 'swarm', phase: 'held' });
+        const deadOwner = (pid: number, at: number) => pid !== orphaned.pid && savedProcessAlive(pid, at);
+
+        // Live owner, another checkout, or an unsettled logout proof still refuses.
+        expect(claimApi.fleetTradeClaimRefusal(a, orphaned, swarmInput, () => true)).toBe('fleet account claim held by swarm');
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { ownerAlive: () => true })).toThrow('held');
+        expect(claimApi.fleetTradeClaimRefusal(b, orphaned, swarmInput, deadOwner)).toBe('fleet account claim held by swarm');
+        expect(() => acquireFleetSwarmClaim(b, swarmInput, { ownerAlive: deadOwner })).toThrow('held');
+
+        // On the owning checkout with dead owner, confirmed prior logout, zero matching attempt, and missing marker:
+        // trade preflight clears, swarm self-checkout replaces the orphan, and trade login succeeds.
+        expect(claimApi.fleetTradeClaimRefusal(a, orphaned, swarmInput, deadOwner)).toBeUndefined();
+        const taken = acquireFleetSwarmClaim(a, swarmInput, { ownerAlive: deadOwner });
+        expect(taken.nonce).not.toBe(orphaned.nonce);
+        expect(claimLog(a)[0]).toContain(`replacing the orphaned local claim ${orphaned.nonce}`);
+        taken.abortBeforeNetwork();
+
+        // A second dead pre-network orphan can also be taken directly by a trade login on the owning checkout.
+        const child2 = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${modulePath}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(swarmInput)}).armNetwork()`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child2.exited).toBe(0);
+        const trade = acquireFleetTradeClaim(a, input);
+        expect(readFleetTradeClaim(b, input)?.nonce).toBe(trade.nonce);
+        trade.release();
+
+        // Unsettled latest attempt (`proof.state === 'held'`) never clears even when the orphan has zero matching attempt.
+        const child3 = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${modulePath}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(swarmInput)}).armNetwork()`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child3.exited).toBe(0);
+        beginSessionAttempt(swarmInput, {
+            root: liveLifecycle,
+            owner: { ...lifecycleOwner(), sharedClaimNonce: '00000000-0000-4000-8000-000000000001' },
+        });
+        const heldOrphan = readFleetAccountClaim(a, swarmInput)!;
+        expect(claimApi.fleetTradeClaimRefusal(a, heldOrphan, swarmInput, () => false)).toBe('fleet account claim held by swarm');
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { ownerAlive: () => false })).toThrow('held');
+    });
+}, 30_000);
+
 test('a dead pre-login trade claim can be replaced only on its owning checkout', async () => {
     await withRepos(async (a, b) => {
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));

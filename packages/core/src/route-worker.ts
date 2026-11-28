@@ -173,7 +173,8 @@ function runQuery(env: PfEnv, req: RouteQuery): unknown {
             return out;
         }
         case 'route-exposure': {
-            const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) => pf.findLongPath(level, a.x, a.z, b.x, b.z, 500);
+            const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) =>
+                planAroundHarm(grid, req.profile, level, a, b, 32, () => pf.findLongPath(level, a.x, a.z, b.x, b.z, 500), { reach });
             const exposure: WalkExposure = routeExposure(req.profile, req.from, req.legs, path, { reach });
             return exposure;
         }

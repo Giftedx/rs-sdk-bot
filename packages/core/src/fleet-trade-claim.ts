@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
@@ -202,6 +202,25 @@ function matchedWorkerProof(root: string, claim: FleetSwarmClaim, target: ClaimI
     if (producer?.sharedClaimNonce === claim.nonce && producer.pid === claim.pid) return proof;
 }
 
+// A held swarm claim of this checkout with a dead owner, no pending marker, no matching attempt receipt, and a
+// confirmed logout proof from a prior session never reached session intent (connect.ts writes the attempt receipt
+// before armNetwork removes the pending marker). Unsettled logouts, live owners, other checkouts, trade claims,
+// and unreadable receipts never qualify.
+function orphanedConfirmedPreNetworkClaim(
+    root: string,
+    claim: FleetAccountClaim,
+    target: ClaimIdentity,
+    ownerAlive: (pid: number, savedAt: number) => boolean = savedProcessAlive,
+): boolean {
+    if (!isSwarmClaim(claim) || claim.phase !== 'held' || !owningCheckout(root, claim, target.side)) return false;
+    if (!claim.pid || ownerAlive(claim.pid, claim.at)) return false;
+    if (existsSync(pendingPath(root, claim.nonce))) return false;
+    const options = lifecycleOptions(root);
+    if (readLogoutProof(target.account, target.server, options).state !== 'confirmed') return false;
+    const attempts = listAttempts(target.account, target.server, options);
+    return attempts.length > 0 && !attempts.some(row => !row.receipt || row.receipt.owner.sharedClaimNonce === claim.nonce);
+}
+
 function abandonedBeforeNetwork(root: string, claim: FleetAccountClaim, target: ClaimIdentity) {
     if (!claim.pid || savedProcessAlive(claim.pid, claim.at) || !owningCheckout(root, claim, target.side)) return;
     let pending: {claim: string; inherited?: FleetSwarmClaim; inheritedHead?:string};
@@ -276,17 +295,30 @@ export function releaseFleetTradeClaims(root: string, targets: readonly (Identit
     return pending.length;
 }
 
-function claimRefusal(root: string, claim: FleetAccountClaim | null, input: ClaimIdentity, pending: ReturnType<typeof abandonedPending>): string | undefined {
+function claimRefusal(
+    root: string,
+    claim: FleetAccountClaim | null,
+    input: ClaimIdentity,
+    pending: ReturnType<typeof abandonedPending>,
+    ownerAlive: (pid: number, savedAt: number) => boolean = savedProcessAlive,
+): string | undefined {
     if (claim?.phase !== 'held' || (pending && !pending.inherited)) return;
     if (!isSwarmClaim(claim)) return 'fleet trade claim held for order ' + claim.orderId;
-    if (matchedWorkerProof(root, claim, input)?.state !== 'confirmed') return 'fleet account claim held by swarm';
+    if (matchedWorkerProof(root, claim, input)?.state === 'confirmed') return;
+    if (orphanedConfirmedPreNetworkClaim(root, claim, input, ownerAlive)) return;
+    return 'fleet account claim held by swarm';
 }
 
 // The refusal that a trade login (acquireFleetTradeClaim) gives for this claim of `input.account`, or undefined when
 // the login can take it. A controller checks it before it starts a trade, so it does not log in an account to be refused.
-export function fleetTradeClaimRefusal(root: string, claim: FleetAccountClaim | null, input: ClaimIdentity): string | undefined {
+export function fleetTradeClaimRefusal(
+    root: string,
+    claim: FleetAccountClaim | null,
+    input: ClaimIdentity,
+    ownerAlive: (pid: number, savedAt: number) => boolean = savedProcessAlive,
+): string | undefined {
     const { account, server } = identity(input), target = { ...input, account, server };
-    return claimRefusal(root, claim, target, claim?.phase === 'held' ? abandonedPending(root, claim, target) : undefined);
+    return claimRefusal(root, claim, target, claim?.phase === 'held' ? abandonedPending(root, claim, target) : undefined, ownerAlive);
 }
 
 export const isFleetSwarmClaim = (claim: FleetAccountClaim): boolean => isSwarmClaim(claim);
@@ -421,6 +453,7 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
             if(!prior&&recover&&authorized){prior=qualifiedHostProof(root,claim,input,authorized,git,now());continuedHost=!!prior;}
             if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
             if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
+            else if (!prior && orphanedConfirmedPreNetworkClaim(root, claim, input, ownerAlive)) orphan = claim;
             // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
             // process with the same id (savedProcessAlive).
             else if (!prior || (prior.state !== 'confirmed' && !(recover && (continuedHost||!ownerAlive(claim.pid, claim.at))))) {

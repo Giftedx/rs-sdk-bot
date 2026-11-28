@@ -149,6 +149,18 @@ test('a key door whose Open admits the key holder or the leaving side names the 
     expect(classifyDoor('witchhousedoor', undefined, t)).toMatchObject({ kind: 'key', need: { item: 'witches_doorkey', whenAxis: false } });
 });
 
+test('Keep Le Faye doors refuse entry from outside and stay open one way from inside', () => {
+    const t = realTriggers(['scripts/quests/quest_arthur/scripts/quest_arthur.rs2', 'scripts/doors/scripts/door_procs.rs2']);
+    for (const loc of ['lefayeunopenabledoorl', 'lefayeunopenabledoorr']) {
+        expect(classifyDoor(loc, 'keep_lefaye_door', t)).toMatchObject({ kind: 'one_way', need: { whenAxis: true } });
+    }
+});
+
+test('key doors whose oplocu uses direct last_useitem and whose oploc1 checks inv_total name their key item', () => {
+    const t = realTriggers(['scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2', 'scripts/doors/scripts/door_procs.rs2']);
+    expect(classifyDoor('ikov_shinykeydoor', undefined, t)).toMatchObject({ kind: 'key', need: { item: 'ikov_shinykey' } });
+});
+
 test('a key test that refuses the holder is not a key', () => {
     // golrie_gate_waterfall_quest: Open with Glarial's pebble says "Golrie has locked himself in."
     const t = realTriggers(['scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2', 'scripts/doors/scripts/door_procs.rs2']);

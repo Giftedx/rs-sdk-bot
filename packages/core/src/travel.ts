@@ -66,6 +66,23 @@ export const RIVER_LOG_TRAVEL: readonly Travel[] = [
     riverLog(ground(2906, 3049), ground(2907, 3049), ground(2910, 3049), ground(2909, 3059)),
 ];
 
+// Unconditional push-wall passages (`secretdoor2`, id 1586, quests/quest_ikov/scripts/ikov_dungeon.rs2:1:
+// `[oploc1,secretdoor2] ~open_and_close_door2(inactivesecretdoor2, ~check_axis_locactive(coord), coffin_open)`).
+// Named "Wall" with op1 "Push", so the door mask leaves them as solid walls; the Temple of Ikov placement at
+// 2643,9892,0 (maps/m41_154.jm2:5710, angle 1) is the exit from the Armadyl Guardian room (2645,9893,0) to the
+// dungeon exit ladder at 2659,9892,0, and 2575,9631,0 (maps/m40_150.jm2:7407, angle 2) uses the same handler.
+const secretDoor = (from: Tile, at: Tile, to: Tile): Travel => ({
+    id: `loc:secretdoor2@${at.x},${at.z},${at.level}>${to.x},${to.z}`, kind: 'passage', name: 'secretdoor2 op1',
+    from, to, coins: 0, needs: [], runes: [],
+    run: { how: 'loc', loc: 'secretdoor2', op: 1, option: null, id: 1586, at }, cost: 4,
+});
+export const SECRET_DOOR_TRAVEL: readonly Travel[] = [
+    secretDoor(ground(2643, 9893), ground(2643, 9892), ground(2643, 9892)),
+    secretDoor(ground(2643, 9892), ground(2643, 9892), ground(2643, 9893)),
+    secretDoor(ground(2576, 9631), ground(2575, 9631), ground(2575, 9631)),
+    secretDoor(ground(2575, 9631), ground(2575, 9631), ground(2576, 9631)),
+];
+
 const TELEPORT_COST = 5, NPC_COST = 15, BOAT_COST = 40;
 
 // The ground tile the gangplank's disembark puts the player on (general_use/scripts/gangplank.rs2): two tiles
@@ -293,7 +310,7 @@ export const fareCrossingAt = (level: number, at: { x: number; z: number }, list
     list.find(c => c.level === level && c.x === at.x && c.z === at.z);
 
 // The stamps cover the data files only: change this name when a builder above changes its output.
-const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v5.json');
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v6.json');
 type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
 const fileStamp = (file: string): string => {
     try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }
@@ -335,7 +352,7 @@ export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
     const cuts = JSON.parse(readFileSync(cutsFile, 'utf8')) as { edges: ShortcutRecord[] };
     const doors = JSON.parse(readFileSync(doorsFile, 'utf8')) as { x: number; z: number; level: number; kind: string }[];
     const shutDoors = new Set(doors.filter(d => d.kind !== 'open').map(d => `${d.x},${d.z},${d.level}`));
-    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports, shutDoors), ...pocketExitTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
+    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports, shutDoors), ...pocketExitTravel(tele.teleports), ...shortcutTravel(cuts.edges), ...SECRET_DOOR_TRAVEL];
     if (cacheFile) {
         const stamps: [string, string][] = [['npc', npcStamp], ['tele', teleStamp], ['cuts', cutsStamp], ['doors', doorsStamp]];
         const seenMap = new Set<string>();
