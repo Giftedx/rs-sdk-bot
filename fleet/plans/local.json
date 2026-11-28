@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795859900029,
+ "at": 1795859973292,
  "jobs": [
   {
    "account": "Balls",
@@ -45,9 +45,10 @@
    "role": "pvp"
   },
   {
-   "account": "Abracadickra",
+   "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy generalshop2 3000",
     "scripts/aio-market.ts ORDER_KEY=brain-1621-4-o0-p3020 ITEM_ID=1621 QUANTITY=4 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=3020 EXPECTED_OWNED=0 -- ge-buy",
     "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 DEMAND_ID=goal:supply_chain:1605 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-emerald"
    ],
@@ -57,31 +58,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:1605",
-   "role": "auto"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "179",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "179"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
    "role": "army"
   },
   {
@@ -101,6 +77,31 @@
    "role": "army"
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "240",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "240"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -117,83 +118,119 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "wydinstore",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1933",
-    "ITEMS": "Pot of flour",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1933",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1933",
-   "role": "helper"
-  },
-  {
-   "account": "Woodenstaff",
+   "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- chicken"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=95 PRODUCT_TARGET=95 MAX_ORE=95 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=190 MAX_ORE=190 -- mining ore",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=95 ORE_RESERVE=0 MAX_MAKE=95 STALL_TICKS=350 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
+   "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
-    "scripts/aio-skiller.ts CAP=3760 TARGET_COUNT=376 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Wandwaver:zanaris BATCH_UNITS=1 -- sweep zanaris"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pvp_unlock:Wandwaver:zanaris",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
-   "account": "SporranBulge",
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "thieving",
@@ -201,30 +238,15 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "936"
+    "BATCH_UNITS": "865"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -242,6 +264,36 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
+  },
+  {
+   "account": "TackleBox",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=865 -- thieving knights-stable"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- chicken"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   },
   {
    "account": "Quickhandjob",
@@ -298,6 +350,24 @@
    "role": "army"
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0",
+    "--or=2619,3332,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -314,46 +384,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "3",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "3",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
   }
  ],
  "army": [
@@ -368,7 +398,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fingerblastr",
