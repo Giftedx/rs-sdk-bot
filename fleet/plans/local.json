@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834823792,
+ "at": 1795834845673,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,18 +186,22 @@
   },
   {
    "account": "Abracadickra",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "BoneToPick",
@@ -272,6 +276,21 @@
    "role": "auto"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=8060 TARGET_COUNT=806 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:blackknight",
+   "role": "auto"
+  },
+  {
    "account": "Fingersmith",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -311,38 +330,18 @@
    "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "decant:super_attack"
+    "herblore",
+    "potions"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "mission:mission:pk-squad:item:2436",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67",
+    "STALL_TICKS": "200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2436",
+   "goal": "goal:supply_chain:2481",
    "role": "army"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=7720 TARGET_COUNT=772 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:blackknight",
-   "role": "auto"
   }
  ],
  "army": [
