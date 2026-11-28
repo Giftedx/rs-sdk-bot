@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795848441677-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballbag",
+  "to": "Nockitoff",
+  "item": "Water rune",
+  "count": 1,
+  "itemId": 555,
+  "start": 1795848441677,
+  "end": 1795849341677,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
