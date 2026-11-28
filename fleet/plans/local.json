@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832340583,
+ "at": 1795832425832,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,23 @@
    "role": "pvp"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -249,23 +266,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   }
  ],
  "army": [
