@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855516835,
+ "at": 1795855589587,
  "jobs": [
   {
    "account": "Balls",
@@ -45,31 +45,6 @@
    "role": "pvp"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "43",
-    "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "475",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "21000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "475"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:43",
-   "role": "army"
-  },
-  {
    "account": "Abracadickra",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -80,14 +55,14 @@
    "env": {
     "ITEM_ID": "42",
     "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "240",
+    "MAX_ITEMS": "237",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "240"
+    "BATCH_UNITS": "237"
    },
    "enabled": true,
    "repeat": false,
@@ -95,18 +70,28 @@
    "role": "auto"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
+   "account": "PickpockDick",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=34 PRODUCT_TARGET=34 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=34 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=34 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "437",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "437"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "campaign:haggis:item:43",
    "role": "army"
   },
   {
@@ -161,6 +146,22 @@
    ]
   },
   {
+   "account": "Bigchopper",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=11 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=13 -- runecraft supply",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:245",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -193,7 +194,7 @@
    "role": "helper"
   },
   {
-   "account": "KnightRider",
+   "account": "Fatstack",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "thieving",
@@ -201,7 +202,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1068"
+    "BATCH_UNITS": "1074"
    },
    "enabled": true,
    "repeat": false,
@@ -212,21 +213,23 @@
    ]
   },
   {
-   "account": "Fatstack",
+   "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "glass"
+    "thieving",
+    "knights-stable"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
+    "BATCH_UNITS": "1074"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -280,6 +283,66 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "prayer",
+    "bury"
+   ],
+   "env": {
+    "BONE_ID": "536",
+    "TRAIN_SKILL": "Prayer",
+    "TARGET_LEVEL": "70",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "42",
+    "STALL_TICKS": "150"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "helper"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=10030 TARGET_COUNT=1003 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:desertrescue BATCH_UNITS=1 -- sweep desertrescue"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:desertrescue",
    "role": "army"
   }
  ],
