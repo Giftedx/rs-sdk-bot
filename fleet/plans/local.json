@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842331129,
+ "at": 1795842342059,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,14 +195,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "271",
+    "MAX_ITEMS": "160",
     "COIN_RESERVE": "1000",
-    "FLOAT": "110400",
+    "FLOAT": "66000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "271"
+    "BATCH_UNITS": "160"
    },
    "enabled": true,
    "repeat": false,
@@ -225,21 +225,6 @@
    "role": "auto"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 PRODUCT_TARGET=28 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/chain.ts",
    "args": [
@@ -257,17 +242,27 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+    "shop-buy",
+    "gemshop2",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "1623",
+    "ITEMS": "Uncut sapphire",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1623",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
+   "goal": "campaign:haggis:item:1623",
    "role": "army"
   },
   {
@@ -395,21 +390,6 @@
    "role": "helper"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1117 MAX_MAKE=3 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 TARGET_COUNT=3 CAP=1000 STALL_TICKS=280 -- smithing anvil 1000",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 STALL_TICKS=280 -- smithing anvil 1500"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
@@ -456,6 +436,21 @@
    "role": "helper"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1472",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
@@ -469,6 +464,21 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
   }
  ],
  "army": [
