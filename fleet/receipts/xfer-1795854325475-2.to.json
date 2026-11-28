@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795854325475-2",
+ "account": "Moneyshot",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 11,
+ "claim": "31da5218-9c5c-4408-b9a0-71cf215f5ac5",
+ "count": 0,
+ "ok": false,
+ "at": 1795854590141,
+ "detail": "trade claimed"
+}
