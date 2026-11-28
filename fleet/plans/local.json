@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795844154037,
+ "at": 1795844231128,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,27 @@
    "role": "pvp"
   },
   {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "cage",
+    "cage"
+   ],
+   "env": {
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:377",
+    "BATCH_UNITS": "73"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army",
+   "resources": [
+    "catherby-lobsters"
+   ]
+  },
+  {
    "account": "TossTheCaber",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -195,7 +216,28 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "83"
+    "BATCH_UNITS": "73"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:377",
+   "role": "army",
+   "resources": [
+    "catherby-lobsters"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "cage",
+    "cage"
+   ],
+   "env": {
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:377",
+    "BATCH_UNITS": "73"
    },
    "enabled": true,
    "repeat": false,
@@ -210,7 +252,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts METHOD=fly MODE=COOK_AND_DROP TARGET=100 BATCH=24 CAP=3000 RETURN_TICKS=100 RESERVE=0 TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing village",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=73 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -219,28 +261,13 @@
    "repeat": false,
    "goal": "goal:supply_chain:377",
    "role": "army"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 --",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper"
   },
   {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 --",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=73 -- fishing cage cage"
    ],
    "env": {
     "ROUNDS": "1"
@@ -249,126 +276,97 @@
    "repeat": false,
    "goal": "goal:supply_chain:377",
    "role": "army"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts METHOD=fly MODE=COOK_AND_DROP TARGET=100 BATCH=24 CAP=3000 RETURN_TICKS=100 RESERVE=0 TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing village",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 --",
-    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=83 -- fishing cage cage"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "helper"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "44",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "44"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:562",
-   "role": "auto"
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 --",
+    "scripts/aio-skiller.ts CAP=3000 DEMAND_ID=goal:supply_chain:377 BATCH_UNITS=73 -- fishing cage cage"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
+   "goal": "goal:supply_chain:377",
    "role": "auto"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=960 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
+   "account": "DropMyLoad",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "woodcutting",
-    "yews"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army",
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
    "resources": [
-    "edgeville-yews"
+    "varrock-se-mine"
    ]
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "account": "RearEntry",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "YewGotWood",
@@ -389,37 +387,6 @@
    "resources": [
     "chickens"
    ]
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "auto"
-  },
-  {
-   "account": "ChaosInPants",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "vampire"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "auto"
   },
   {
    "account": "Spitroaster",
@@ -443,21 +410,91 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
    "args": [
-    "ranged-gather"
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=1000 TARGET_COUNT=21 PRODUCT_TARGET=21 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts MAX_MAKE=21 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:72 BATCH_UNITS=21 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-bow:unstrung_magic_shortbow"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "goal:supply_chain:72",
    "role": "army"
+  },
+  {
+   "account": "ChaosInPants",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "vampire"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 --",
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=27 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "auto"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "gemshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1607",
+    "ITEMS": "Sapphire",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:supply_chain:1607",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
+   "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:235 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:235",
+   "role": "helper"
   },
   {
    "account": "WellHung",
@@ -562,44 +599,29 @@
    "role": "army"
   },
   {
-   "account": "MineYourBiz",
+   "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ardougnegemstall",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1605",
-    "ITEMS": "Emerald",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "2",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "goal:supply_chain:1605",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1605",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 TARGET_COUNT=2 PRODUCT_TARGET=2 STALL_TICKS=150 -- crafting inventory identify:harralander",
-    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:97 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=169 -- crafting inventory brew:unf_harralander_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:97",
-   "role": "auto"
   }
  ],
  "army": [
@@ -615,8 +637,7 @@
   "UnderMyKilt",
   "mmthv2350",
   "pocketrocket",
-  "sausagefest",
-  "woodpecker"
+  "sausagefest"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
