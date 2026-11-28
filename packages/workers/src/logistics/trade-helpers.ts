@@ -28,7 +28,7 @@ import { fleetStateFile } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { pidAlive } from '../../../core/src/session-takeover';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
-import { ARDY_BANK, DRAYNOR_BANK, type CourierTile } from './location';
+import { ARDY_BANK, DRAYNOR_BANK, type CourierTile } from './courier-banks';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import type { Tile } from '../../../core/src/world';
 import { withExecutionDeadline } from '../../../../vendor/rs-sdk/sdk/execution-context';

@@ -10,7 +10,7 @@ import {
     resolveLogisticsStep,
     type LogisticsRoleSpec,
 } from '../packages/workers/src/logistics/types';
-import { ARDY_BANK, DRAYNOR_BANK } from '../packages/workers/src/logistics/location';
+import { ARDY_BANK, DRAYNOR_BANK } from '../packages/workers/src/logistics/courier-banks';
 import {
     importAioLoadout,
     runLogisticsRole,

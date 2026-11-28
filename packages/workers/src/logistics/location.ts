@@ -27,10 +27,6 @@ export interface LocationClassification {
     summary: string;
 }
 
-export type CourierTile = { x: number; z: number };
-export const ARDY_BANK: CourierTile = { x: 2654, z: 3283 };
-export const DRAYNOR_BANK: CourierTile = { x: 3092, z: 3243 };
-
 export const HUB_BANKS = {
     ardougneNorth: { x: 2619, z: 3332, level: 0 },
     faladorEast: { x: 3013, z: 3355, level: 0 },
