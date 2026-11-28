@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795842573625-2",
+ "account": "Shaftmaker",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 76,
+ "claim": "dd8aa6e8-a87f-4b2d-948f-611291a7fa09",
+ "count": 0,
+ "ok": false,
+ "at": 1795842861585,
+ "detail": "trade claimed"
+}

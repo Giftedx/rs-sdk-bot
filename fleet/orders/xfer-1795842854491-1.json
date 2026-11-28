@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795842854491-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Fingerblastr",
+  "item": "Iron ore",
+  "count": 2,
+  "itemId": 440,
+  "start": 1795842854491,
+  "end": 1795843754491,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842855303,
+ "at": 1795842864981,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,31 @@
    "role": "pvp"
   },
   {
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "magicshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "88",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "88"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "auto"
+  },
+  {
    "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -210,6 +235,31 @@
    "role": "army"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "18",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "18"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -223,21 +273,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
    "role": "auto"
   },
   {
@@ -382,28 +417,25 @@
    "role": "army"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/aio-market.ts",
+   "account": "MineYourBiz",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "18",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "18"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "1311",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1311",
+    "BATCH_UNITS": "1",
+    "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:1311",
    "role": "army"
   },
   {
@@ -420,61 +452,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1470",
    "role": "helper"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "shark"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "400"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army",
-   "resources": [
-    "catherby-sharks"
-   ]
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=59 CAP=1000 STALL_TICKS=224 -- magic bones",
-    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 STALL_TICKS=700 -- magic orbs water 27 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftsinker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
   }
  ],
  "army": [
