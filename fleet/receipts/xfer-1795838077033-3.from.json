@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795838077033-3",
  "account": "Pocketpython",
  "partner": "TackleBox",
@@ -12,13 +12,23 @@
  "claim": "992a7e5e-502b-4f8e-9af9-917d285f696d",
  "count": 0,
  "ok": false,
- "at": 1795838215631,
- "detail": "trade claimed",
+ "at": 1795838369543,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Coins",
    "requested": 156,
    "count": 0
   }
- ]
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1795838338392
+ },
+ "logout": {
+  "attemptId": "1795838215639-0000026148-0000000001",
+  "at": 1795838369525,
+  "sha256": "74c72a31cc68f5fcde46526f6f6f619d779214ef1e39c2421707da831f29156f"
+ },
+ "screen": false
 }

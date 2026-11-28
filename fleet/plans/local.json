@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795838362621,
+ "at": 1795838379655,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -275,15 +275,15 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-53-o4-p1681",
+    "ORDER_KEY": "brain-1513-45-o4-p1681",
     "ITEM_ID": "1513",
-    "QUANTITY": "53",
+    "QUANTITY": "45",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "1681",
     "EXPECTED_OWNED": "4",
     "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "53"
+    "BATCH_UNITS": "45"
    },
    "enabled": true,
    "repeat": false,
@@ -354,20 +354,45 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "252",
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "67",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "252"
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "67"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:562",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "goal:gear_collection:892",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:gear_collection:892",
    "role": "army"
   },
   {
@@ -430,6 +455,23 @@
    "repeat": false,
    "goal": "goal:pk_army:Nockitoff",
    "role": "auto"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   }
  ],
  "army": [
@@ -445,9 +487,7 @@
   "UnderMyKilt",
   "bowbeforeme",
   "fingerblastr",
-  "mmtha0205",
   "mmthv2350",
-  "pocketpython",
   "pocketrocket",
   "sausagefest"
  ],
