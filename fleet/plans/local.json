@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861509255,
+ "at": 1795861540754,
  "jobs": [
   {
    "account": "Balls",
@@ -81,7 +81,7 @@
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "archeryshop2",
     "3000"
    ],
    "env": {
