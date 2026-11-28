@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795868997762-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "coincock",
+  "to": "knightstick",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 205,
+  "start": 1795868997762,
+  "end": 1795869897762,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795868995079,
+ "at": 1795869066780,
  "jobs": [
   {
    "account": "Balls",
@@ -45,7 +45,7 @@
    "role": "pvp"
   },
   {
-   "account": "oreelse",
+   "account": "pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -55,14 +55,14 @@
    "env": {
     "ITEM_ID": "43",
     "ITEMS": "Adamant arrowtips",
-    "MAX_ITEMS": "419",
+    "MAX_ITEMS": "193",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:43",
-    "BATCH_UNITS": "419"
+    "BATCH_UNITS": "193"
    },
    "enabled": true,
    "repeat": false,
@@ -70,54 +70,32 @@
    "role": "army"
   },
   {
-   "account": "pocketpython",
+   "account": "oreelse",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "2handedshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1313",
-    "ITEMS": "Black 2h sword",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "3",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1313",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1313",
-   "role": "army"
-  },
-  {
-   "account": "abracadickra",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-436-3-o4-p23",
-    "ITEM_ID": "436",
-    "QUANTITY": "3",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "23",
-    "EXPECTED_OWNED": "4",
-    "DEMAND_ID": "campaign:haggis:item:436",
+    "DEMAND_ID": "campaign:haggis:item:892",
     "BATCH_UNITS": "3"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:436",
-   "role": "auto"
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
   },
   {
-   "account": "coincock",
+   "account": "abracadickra",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "ranged-gather"
@@ -125,13 +103,32 @@
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:coincock",
+    "DEMAND_ID": "goal:pk_army:abracadickra",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:coincock",
+   "goal": "goal:pk_army:abracadickra",
    "role": "auto"
+  },
+  {
+   "account": "knightrider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "773"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "meatntwoveg",
@@ -152,42 +149,20 @@
    "role": "auto"
   },
   {
-   "account": "knightrider",
-   "script": "scripts/aio-skiller.ts",
+   "account": "mineyourbiz",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "knights-stable"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=80 STALL_TICKS=255 -- cooking batch",
+    "scripts/aio-market.ts ITEM_ID=311 ITEMS=Harpoon MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop2 3000",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=389 MAX_COOKED=100 SHARK_COUNT=100 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "473"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "knightstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights-stable"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "473"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
   }
  ],
  "army": [
@@ -211,7 +186,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
