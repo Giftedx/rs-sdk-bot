@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795841910865-1",
  "account": "Ballbag",
  "partner": "Nockitoff",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "994727fd-b85b-4b61-9b75-886dbbb6ea8c",
- "count": 0,
- "ok": false,
- "at": 1795842280888,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795842395365,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795842292602
+ },
+ "logout": {
+  "attemptId": "1795842280897-0000005616-0000000001",
+  "at": 1795842395356,
+  "sha256": "5bf4127a5ac20cd262ed136ec8436cb17cae26c2f5543e1e6480a9c57060ab1d"
+ },
+ "screen": true
 }
