@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795853091152-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Bigchopper",
+  "item": "Dragon dagger(p)",
+  "count": 1,
+  "itemId": 1231,
+  "start": 1795853091152,
+  "end": 1795853991152,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
