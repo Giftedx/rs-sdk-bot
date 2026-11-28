@@ -22,11 +22,14 @@ export interface PathDeps {
     // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format). `avoid` tiles are closed
     // for this query; `from` and `to` stay open.
     plan(level: number, from: PathTile, to: PathTile, avoid?: readonly PathTile[]): PathTile[];
+    // Async path planner (sessionWalker -> route-service.ts): used by walkPath when present so bots avoid local WASM.
+    planAsync?(level: number, from: PathTile, to: PathTile, avoid?: readonly PathTile[]): Promise<PathTile[]>;
     // Visible monsters that hunt this account, each with the square the walk keeps out of (danger.ts liveHunters).
     hunters?(): readonly { x: number; z: number; r: number }[];
     // The harm verdict of a planned path (danger/exposure.ts walkVerdict) and whether its first tile is already in a
     // hunter's reach. walkPath does not start a `refuse` walk from outside a hunter's reach.
     danger?(level: number, tiles: readonly PathTile[]): { verdict: 'clear' | 'eat' | 'refuse'; start: boolean; summary: { zone: string; damage: number; need: number; needHeal: number; eatFirst?: number; floorLine?: number } };
+    dangerAsync?(level: number, tiles: readonly PathTile[]): Promise<{ verdict: 'clear' | 'eat' | 'refuse'; start: boolean; summary: { zone: string; damage: number; need: number; needHeal: number; eatFirst?: number; floorLine?: number } }>;
     // Eats one piece of pack food (sessionWalker: bot.eatFood), for a walk that must eat before its first step.
     eat?(): Promise<unknown>;
     // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
@@ -125,6 +128,30 @@ function buildSegmentedPath(
         // A door coordinate anchors a wall edge, not a blocked floor tile.
         // Trust a nonempty edge-aware plan; only an unverified straight
         // fallback must reject a known blocked anchor.
+        if (!corners.length && t.some(blockedDoor)) return { tiles: [], seg: [], planned: false };
+        for (const x of t) { tiles.push(x); seg.push(k); }
+        if (t.length) cur = t[t.length - 1]!;
+    }
+    return { tiles, seg, planned };
+}
+
+async function buildSegmentedPathAsync(
+    deps: PathDeps,
+    level: number,
+    from: PathTile,
+    points: readonly PathPoint[],
+    firstPoint: number,
+    blockedDoor: (loc: PathTile) => boolean,
+    avoid: readonly PathTile[] = [],
+): Promise<{ tiles: PathTile[]; seg: number[]; planned: boolean }> {
+    const tiles: PathTile[] = [], seg: number[] = [];
+    let cur = from, planned = true;
+    for (let k = firstPoint; k < points.length; k++) {
+        const corners = deps.planAsync
+            ? (avoid.length ? await deps.planAsync(level, cur, points[k]!, avoid) : await deps.planAsync(level, cur, points[k]!))
+            : (avoid.length ? deps.plan(level, cur, points[k]!, avoid) : deps.plan(level, cur, points[k]!));
+        if (!corners.length && d8(cur, points[k]!) > 0) planned = false;
+        const t = expandPath(cur, corners.length ? corners : [points[k]!]);
         if (!corners.length && t.some(blockedDoor)) return { tiles: [], seg: [], planned: false };
         for (const x of t) { tiles.push(x); seg.push(k); }
         if (t.length) cur = t[t.length - 1]!;
@@ -329,286 +356,346 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
         const plain = buildSegmentedPath(deps, level, from, points, firstPoint, blockedDoor);
         tiles = plain.tiles; seg = plain.seg;
     };
-    seen(start);
-    buildAround(start, 0);
-    if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
-    // A walk whose hunters would take the Hitpoints under the retreat line with the pack food is not started (the
-    // caller stages food). A walk that starts in a hunter's reach goes on: standing still there costs more.
-    // An `eat` walk that must eat before its first step (eatFirst) eats its pack food first (deps.eat), then plans
-    // again. Without deps.eat, or when the eats do not lift it, it is refused; that text names no food short (the pack
-    // holds it), so the brain records no food need for it. The head of the text is walk/harm.ts routeDangerText.
-    const harm = deps.danger?.(level, tiles);
-    const eatFirst = harm && harm.verdict === 'eat' && !harm.start ? harm.summary.eatFirst ?? 0 : 0;
-    if (eatFirst > 0 && deps.eat && !opts.eatenFirst) {
-        return (async () => {
-            for (let i = 0; i < 28; i++) {
-                const now = deps.danger!(level, tiles);
-                if (now.verdict !== 'eat' || (now.summary.eatFirst ?? 0) <= 0) break;
-                const r = await deps.eat!() as { success?: boolean } | undefined;
-                if (r && r.success === false) break;
-                await waitDepsTicks(deps, 3);
-            }
-            return walkPathFrom(deps, points, { ...opts, eatenFirst: true });
-        })();
-    }
-    if (harm && (harm.verdict === 'refuse' || eatFirst > 0) && !harm.start) {
-        console.log(`WALK_DANGER ${JSON.stringify({ action: 'refuse', from: { ...start }, to: { x: goal.x, z: goal.z, level }, ...harm.summary })}`);
-        const head = `walk danger from ${start.x},${start.z},${level}: route danger to ${goal.x},${goal.z},${level}`;
-        return Promise.resolve({ ...res, detail: eatFirst > 0
-            ? `${head}: ${harm.summary.zone} must eat above ${harm.summary.floorLine ?? '?'} Hitpoints before the walk (expected damage ${harm.summary.damage})`
-            : `${head}: ${harm.summary.zone} needs ${harm.summary.needHeal} heal of food (expected damage ${harm.summary.damage})` });
-    }
-    const maxTicks = opts.maxTicks ?? tiles.length + 60;
-
-    let idx = -1;          // path tile nearest the bot
-    let target = -1;       // path index of the last walk click
-    // `acked`: the client has answered the Open dispatch. A client that takes no input (seen for 42 ticks after a
-    // practice login in the Clock Tower) leaves the door shut, which is not evidence that the door stays closed.
-    // A paid crossing (`fare`) also keeps the dialogue it showed (`talk`), the tile the bot stood on when the dialogue
-    // opened (`pre`) and the path index of the door tile (`i`): a bot moved off `pre` to `i` or past it has crossed.
-    type DoorTry = { loc: PathLoc; sentAt: number; messages: Set<string>; acked: boolean; i: number;
-        fare?: NonNullable<ReturnType<NonNullable<PathDeps['fare']>>>; talk: string[]; pre?: PathTile };
-    let door: DoorTry | null = null;
-    const doorAttempts = new Map<string, number>();
-    let last = { x: start.x, z: start.z };
-    let still = 0;
-    let ticks = 0;
-    let ranOn = false;
-    let sentThisTick = false;
-    let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
-    let rejectionReplan = false, rejectionReplanned = false;
-    let dodged = '', dodges = 0;
-    let bestGoalDist = d8(start, points[0] ?? goal), maxSeg = 0, progressTick = 0, progressDoors = 0;
-    let boxMinX = start.x, boxMaxX = start.x, boxMinZ = start.z, boxMaxZ = start.z, boxRepaths = 0;
-    const boxVisited = new Set<number>([tileKey(start.x, start.z)]);
-    let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
-
-    const shutDoorAt = (from: number, to: number) => findShutDoorAt(deps, level, tiles, from, to, blockedDoor);
-    const shutDoorAhead = (from: number, to: number): PathLoc | null => shutDoorAt(from, to)?.l ?? null;
-    const nearest = (p: PathTile) => findNearestPathIndex(deps, level, tiles, idx, look, p, blockedDoor);
-    const send = (what: string, f: () => unknown, reply?: (value: unknown) => void): boolean => {
-        if (sentThisTick) return false;
-        sentThisTick = true;
-        try {
-            const r = f() as { then?: unknown } | undefined;
-            if (r && typeof r.then === 'function') Promise.resolve(r).then(value => reply?.(value), error => reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }));
-            else reply?.(r);
-        } catch (error) { reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }); }
-        log(what);
-        return true;
-    };
-    const clickAhead = (span: number) => {
-        const i = selectClickIndex(deps, level, tiles, idx, span, squares, inside, held, look);
-        if (sentThisTick) return;
-        const from = deps.pos();
-        if (!from) return;
-        if (i < 0) {
-            // Hold: a bot still running toward its last click is stopped on its own tile, short of the square.
-            held++;
-            if (still === 0 && send(`hold ${from.x},${from.z}`, () => deps.walk(from.x, from.z))) target = -1;
-            return;
-        }
-        const t = tiles[i]!;
-        const epoch = movementEpoch;
-        res.clicks++; // Dispatch attempts, including an explicit client refusal.
-        if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z), reply => walkReply(reply, from, t, epoch))) target = i;
-    };
-    const replan = (p: PathTile, why: string): boolean => {
-        buildAround(p, seg[Math.max(0, idx)] ?? 0);
-        idx = -1; target = -1; res.repaths++; boxRepaths++;
-        log(`re-plan: ${why}`);
-        if (tiles.length === 0) return false;
-        idx = nearest(p).i;
-        return true;
-    };
-
-    return new Promise<PathResult>(resolve => {
-        let done = false;
-        const abortSubscriptions: (() => void)[] = [];
-        const finish = (ok: boolean, detail?: string) => {
-            if (done) return;
-            done = true;
-            off();
-            for (const unsubscribe of abortSubscriptions) unsubscribe();
-            resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
-        };
-        const failedDoor = (loc: PathLoc, why: string, p: PathTile) => {
-            const attempts = doorAttempts.get(doorKey(loc)) ?? 0;
-            const detail = `no progress: door ${loc.id}@${loc.x},${loc.z},${level} stayed closed after ${attempts} Open attempts at=${p.x},${p.z} goal=${goal.x},${goal.z}: ${why}`;
-            // A paid crossing that fails is never a silent detour: the line names the fare, the coins and the dialogue,
-            // and WALK_DETOUR gives the path tiles left through the crossing and round it.
-            const fare = deps.fare?.(level, loc) ?? null, talk = door?.loc === loc ? door.talk : [];
-            const through = tiles.length - Math.max(0, idx);
-            if (fare) console.log(`WALK_FARE_FAIL ${JSON.stringify({ crossing: fare.label, loc: { x: loc.x, z: loc.z, level }, fare: fare.coins, coins: deps.coins?.() ?? null, at: { x: p.x, z: p.z }, goal: { x: goal.x, z: goal.z }, attempts, why, dialog: talk.slice(-4) })}`);
-            failedDoors.add(doorKey(loc));
-            const registered = deps.blockDoor?.(level, loc) === true;
-            door = null;
-            log(detail);
-            if (!registered || !replan(p, detail)) return finish(false, detail);
-            if (fare) console.log(`WALK_DETOUR ${JSON.stringify({ crossing: fare.label, at: { x: p.x, z: p.z, level }, goal: { x: goal.x, z: goal.z }, throughTiles: through, roundTiles: tiles.length - Math.max(0, idx) })}`);
-            clickAhead(look);
-        };
-        walkReply = (value, from, to, epoch) => {
-            const p = deps.pos();
-            if (done || epoch !== movementEpoch || !p || p.level !== from.level || d8(p, from) !== 0) return;
-            const reply = value as { success?: boolean; phase?: unknown; reason?: unknown; message?: unknown } | null | undefined;
-            if (reply?.success !== false) return; // Undefined fakes and accepted dispatches remain movement-checked.
-            // A slow reply may arrive after the normal still-path replan. That already spent this attempt.
-            if (res.repaths > movementRepaths) { rejectionReplanned = true; rejectionReplan = false; }
-            rejectedWalks++;
-            const detail = `no progress: walk rejected ${rejectedWalks} times start=${start.x},${start.z},${level} at=${p.x},${p.z},${p.level} target=${to.x},${to.z} reply=${JSON.stringify({ phase: reply.phase, reason: reply.reason, message: reply.message })}`;
-            log(detail);
-            if (rejectedWalks >= 3) { finish(false, detail); return; }
-            if (!rejectionReplanned) rejectionReplan = true;
-        };
-        const decide = () => {
-            sentThisTick = false;
-            const p = deps.pos();
-            if (!p) return finish(false, 'no position');
-            if (p.level !== level) return finish(false, `left level ${level}`);
-            // Near the goal is arrival, unless the goal is out of reach and a closed door lies on the path: then
-            // the door is opened first (a bot two tiles from an NPC, behind its house wall, cannot talk to it).
-            if (d8(p, goal) <= goalTol && !(deps.reach?.({ x: goal.x, z: goal.z, level }, { adjacentOk: true }) === false && shutDoorAt(Math.max(0, idx), tiles.length - 1))) return finish(true);
-            if (opts.stop?.()) return finish(false, 'stopped');
-            if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
-            const moved = p.x !== last.x || p.z !== last.z;
-            if (moved) { movementEpoch++; rejectedWalks = 0; movementRepaths = res.repaths; rejectionReplan = false; rejectionReplanned = false; }
-            last = { x: p.x, z: p.z };
-            still = moved ? 0 : still + 1;
-            if (ticks > 0 && !moved) res.still++;
-
-            // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
-            if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
-
-            if (rejectionReplan) {
-                rejectionReplan = false; rejectionReplanned = true;
-                if (!replan(p, 'client walk rejection')) return finish(false, `no path from ${p.x},${p.z}`);
-            }
-            const n = nearest(p);
-            if (n.d > 3) {
-                // Off the planned path (the client routed round something): plan again from here.
-                if (!replan(p, `off path by ${n.d}`)) return finish(false, `no path from ${p.x},${p.z}`);
-            } else idx = n.i;
-
-            const curSeg = seg[Math.max(0, idx)] ?? 0;
-            const advancedSeg = curSeg > maxSeg;
-            if (advancedSeg) maxSeg = curSeg;
-            const activeTarget = points[Math.min(points.length - 1, maxSeg)] ?? goal;
-            const gd = d8(p, activeTarget);
-            if (advancedSeg || gd <= bestGoalDist - 2 || res.doors !== progressDoors) {
-                bestGoalDist = advancedSeg ? gd : Math.min(bestGoalDist, gd);
-                progressTick = ticks;
-                progressDoors = res.doors;
-                boxMinX = boxMaxX = p.x;
-                boxMinZ = boxMaxZ = p.z;
-                boxRepaths = 0;
-                boxVisited.clear();
-                boxVisited.add(tileKey(p.x, p.z));
-            } else {
-                boxMinX = Math.min(boxMinX, p.x); boxMaxX = Math.max(boxMaxX, p.x);
-                boxMinZ = Math.min(boxMinZ, p.z); boxMaxZ = Math.max(boxMaxZ, p.z);
-                if (boxVisited.size < 32) boxVisited.add(tileKey(p.x, p.z));
-                // Require at least two visited tiles so a pure stationary stall still hits its tick budget.
-                if (ticks - progressTick >= 120 && boxVisited.size >= 2 && Math.max(boxMaxX - boxMinX, boxMaxZ - boxMinZ) <= 28 && boxRepaths >= 8) {
-                    return finish(false, `no progress: walk oscillating near ${p.x},${p.z} target=${goal.x},${goal.z}`);
+    const buildAroundAsync = async (from: PathTile, firstPoint: number) => {
+        if (squares.length) {
+            const round = await buildSegmentedPathAsync(deps, level, from, points, firstPoint, blockedDoor, expandClosedSquares(squares));
+            if (round.planned) {
+                const roundEnd = endDist(round.tiles);
+                const plain = await buildSegmentedPathAsync(deps, level, from, points, firstPoint, blockedDoor);
+                const plainEnd = endDist(plain.tiles);
+                if (roundEnd > Math.max(3, goalTol + 2) && plain.planned && plainEnd + 3 < roundEnd) {
+                    tiles = plain.tiles; seg = plain.seg; return;
                 }
+                if (opts.immediateHunterDetours || held >= HOLD || !plain.tiles.length || round.tiles.length <= plain.tiles.length + DETOUR) {
+                    tiles = round.tiles; seg = round.seg; return;
+                }
+                tiles = plain.tiles; seg = plain.seg; return;
             }
+        }
+        const plain = await buildSegmentedPathAsync(deps, level, from, points, firstPoint, blockedDoor);
+        tiles = plain.tiles; seg = plain.seg;
+    };
+    const startLoop = (harm: ReturnType<NonNullable<PathDeps['danger']>> | undefined): Promise<PathResult> => {
+        if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
+        const eatFirst = harm && harm.verdict === 'eat' && !harm.start ? harm.summary.eatFirst ?? 0 : 0;
+        if (eatFirst > 0 && deps.eat && !opts.eatenFirst) {
+            return (async () => {
+                for (let i = 0; i < 28; i++) {
+                    const now = deps.dangerAsync ? await deps.dangerAsync(level, tiles) : deps.danger!(level, tiles);
+                    if (now.verdict !== 'eat' || (now.summary.eatFirst ?? 0) <= 0) break;
+                    const r = await deps.eat!() as { success?: boolean } | undefined;
+                    if (r && r.success === false) break;
+                    await waitDepsTicks(deps, 3);
+                }
+                return walkPathFrom(deps, points, { ...opts, eatenFirst: true });
+            })();
+        }
+        if (harm && (harm.verdict === 'refuse' || eatFirst > 0) && !harm.start) {
+            console.log(`WALK_DANGER ${JSON.stringify({ action: 'refuse', from: { ...start }, to: { x: goal.x, z: goal.z, level }, ...harm.summary })}`);
+            const head = `walk danger from ${start.x},${start.z},${level}: route danger to ${goal.x},${goal.z},${level}`;
+            return Promise.resolve({ ...res, detail: eatFirst > 0
+                ? `${head}: ${harm.summary.zone} must eat above ${harm.summary.floorLine ?? '?'} Hitpoints before the walk (expected damage ${harm.summary.damage})`
+                : `${head}: ${harm.summary.zone} needs ${harm.summary.needHeal} heal of food (expected damage ${harm.summary.damage})` });
+        }
+        const maxTicks = opts.maxTicks ?? tiles.length + 60;
 
-            // A live hunter's square reaches the next lookahead of path: plan round it, once for each set of squares.
-            if (deps.hunters) {
-                seen(p);
-                if (squares.length) {
-                    const lo = Math.max(0, idx), hi = Math.min(tiles.length - 1, lo + look);
-                    const hit: HunterSquare[] = [];
-                    for (let s = 0; s < squares.length; s++) {
-                        const h = squares[s]!;
-                        for (let i = lo; i <= hi; i++) if (d8(tiles[i]!, h) <= h.r) { hit.push(h); break; }
+        let idx = -1;          // path tile nearest the bot
+        let target = -1;       // path index of the last walk click
+        // `acked`: the client has answered the Open dispatch. A client that takes no input (seen for 42 ticks after a
+        // practice login in the Clock Tower) leaves the door shut, which is not evidence that the door stays closed.
+        // A paid crossing (`fare`) also keeps the dialogue it showed (`talk`), the tile the bot stood on when the dialogue
+        // opened (`pre`) and the path index of the door tile (`i`): a bot moved off `pre` to `i` or past it has crossed.
+        type DoorTry = { loc: PathLoc; sentAt: number; messages: Set<string>; acked: boolean; i: number;
+            fare?: NonNullable<ReturnType<NonNullable<PathDeps['fare']>>>; talk: string[]; pre?: PathTile };
+        let door: DoorTry | null = null;
+        const doorAttempts = new Map<string, number>();
+        let last = { x: start.x, z: start.z };
+        let still = 0;
+        let ticks = 0;
+        let ranOn = false;
+        let sentThisTick = false;
+        let replanning = false;
+        let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
+        let rejectionReplan = false, rejectionReplanned = false;
+        let dodged = '', dodges = 0;
+        let bestGoalDist = d8(start, points[0] ?? goal), maxSeg = 0, progressTick = 0, progressDoors = 0;
+        let boxMinX = start.x, boxMaxX = start.x, boxMinZ = start.z, boxMaxZ = start.z, boxRepaths = 0;
+        const boxVisited = new Set<number>([tileKey(start.x, start.z)]);
+        let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
+
+        const shutDoorAt = (from: number, to: number) => findShutDoorAt(deps, level, tiles, from, to, blockedDoor);
+        const nearest = (p: PathTile) => findNearestPathIndex(deps, level, tiles, idx, look, p, blockedDoor);
+        const send = (what: string, f: () => unknown, reply?: (value: unknown) => void): boolean => {
+            if (sentThisTick) return false;
+            sentThisTick = true;
+            try {
+                const r = f() as { then?: unknown } | undefined;
+                if (r && typeof r.then === 'function') Promise.resolve(r).then(value => reply?.(value), error => reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }));
+                else reply?.(r);
+            } catch (error) { reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }); }
+            log(what);
+            return true;
+        };
+        const clickAhead = (span: number) => {
+            const i = selectClickIndex(deps, level, tiles, idx, span, squares, inside, held, look);
+            if (sentThisTick) return;
+            const from = deps.pos();
+            if (!from) return;
+            if (i < 0) {
+                // Hold: a bot still running toward its last click is stopped on its own tile, short of the square.
+                held++;
+                if (still === 0 && send(`hold ${from.x},${from.z}`, () => deps.walk(from.x, from.z))) target = -1;
+                return;
+            }
+            const t = tiles[i]!;
+            const epoch = movementEpoch;
+            res.clicks++; // Dispatch attempts, including an explicit client refusal.
+            if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z), reply => walkReply(reply, from, t, epoch))) target = i;
+        };
+        const replan = (p: PathTile, why: string): boolean => {
+            buildAround(p, seg[Math.max(0, idx)] ?? 0);
+            idx = -1; target = -1; res.repaths++; boxRepaths++;
+            log(`re-plan: ${why}`);
+            if (tiles.length === 0) return false;
+            idx = nearest(p).i;
+            return true;
+        };
+
+        return new Promise<PathResult>(resolve => {
+            let done = false;
+            const abortSubscriptions: (() => void)[] = [];
+            const finish = (ok: boolean, detail?: string) => {
+                if (done) return;
+                done = true;
+                off();
+                for (const unsubscribe of abortSubscriptions) unsubscribe();
+                resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
+            };
+            const replanThen = (p: PathTile, why: string, failDetail: string, after: () => void): boolean => {
+                if (!deps.planAsync) {
+                    if (!replan(p, why)) { finish(false, failDetail); return false; }
+                    after();
+                    return true;
+                }
+                if (replanning) return false;
+                replanning = true;
+                const firstPoint = seg[Math.max(0, idx)] ?? 0;
+                void buildAroundAsync(p, firstPoint).then(() => {
+                    replanning = false;
+                    if (done) return;
+                    idx = -1; target = -1; res.repaths++; boxRepaths++;
+                    log(`re-plan: ${why}`);
+                    if (tiles.length === 0) { finish(false, failDetail); return; }
+                    idx = nearest(p).i;
+                    after();
+                }, error => {
+                    replanning = false;
+                    if (done) return;
+                    if (signals.some(s => s.aborted)) { finish(false, 'stopped'); return; }
+                    finish(false, String(error));
+                });
+                return false;
+            };
+            const failedDoor = (loc: PathLoc, why: string, p: PathTile) => {
+                const attempts = doorAttempts.get(doorKey(loc)) ?? 0;
+                const detail = `no progress: door ${loc.id}@${loc.x},${loc.z},${level} stayed closed after ${attempts} Open attempts at=${p.x},${p.z} goal=${goal.x},${goal.z}: ${why}`;
+                // A paid crossing that fails is never a silent detour: the line names the fare, the coins and the dialogue,
+                // and WALK_DETOUR gives the path tiles left through the crossing and round it.
+                const fare = deps.fare?.(level, loc) ?? null, talk = door?.loc === loc ? door.talk : [];
+                const through = tiles.length - Math.max(0, idx);
+                if (fare) console.log(`WALK_FARE_FAIL ${JSON.stringify({ crossing: fare.label, loc: { x: loc.x, z: loc.z, level }, fare: fare.coins, coins: deps.coins?.() ?? null, at: { x: p.x, z: p.z }, goal: { x: goal.x, z: goal.z }, attempts, why, dialog: talk.slice(-4) })}`);
+                failedDoors.add(doorKey(loc));
+                const registered = deps.blockDoor?.(level, loc) === true;
+                door = null;
+                log(detail);
+                if (!registered) return finish(false, detail);
+                replanThen(p, detail, detail, () => {
+                    if (fare) console.log(`WALK_DETOUR ${JSON.stringify({ crossing: fare.label, at: { x: p.x, z: p.z, level }, goal: { x: goal.x, z: goal.z }, throughTiles: through, roundTiles: tiles.length - Math.max(0, idx) })}`);
+                    clickAhead(look);
+                });
+            };
+            walkReply = (value, from, to, epoch) => {
+                const p = deps.pos();
+                if (done || epoch !== movementEpoch || !p || p.level !== from.level || d8(p, from) !== 0) return;
+                const reply = value as { success?: boolean; phase?: unknown; reason?: unknown; message?: unknown } | null | undefined;
+                if (reply?.success !== false) return; // Undefined fakes and accepted dispatches remain movement-checked.
+                // A slow reply may arrive after the normal still-path replan. That already spent this attempt.
+                if (res.repaths > movementRepaths) { rejectionReplanned = true; rejectionReplan = false; }
+                rejectedWalks++;
+                const detail = `no progress: walk rejected ${rejectedWalks} times start=${start.x},${start.z},${level} at=${p.x},${p.z},${p.level} target=${to.x},${to.z} reply=${JSON.stringify({ phase: reply.phase, reason: reply.reason, message: reply.message })}`;
+                log(detail);
+                if (rejectedWalks >= 3) { finish(false, detail); return; }
+                if (!rejectionReplanned) rejectionReplan = true;
+            };
+            const decide = () => {
+                if (replanning) return;
+                sentThisTick = false;
+                const p = deps.pos();
+                if (!p) return finish(false, 'no position');
+                if (p.level !== level) return finish(false, `left level ${level}`);
+                // Near the goal is arrival, unless the goal is out of reach and a closed door lies on the path: then
+                // the door is opened first (a bot two tiles from an NPC, behind its house wall, cannot talk to it).
+                if (d8(p, goal) <= goalTol && !(deps.reach?.({ x: goal.x, z: goal.z, level }, { adjacentOk: true }) === false && shutDoorAt(Math.max(0, idx), tiles.length - 1))) return finish(true);
+                if (opts.stop?.()) return finish(false, 'stopped');
+                if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
+                const moved = p.x !== last.x || p.z !== last.z;
+                if (moved) { movementEpoch++; rejectedWalks = 0; movementRepaths = res.repaths; rejectionReplan = false; rejectionReplanned = false; }
+                last = { x: p.x, z: p.z };
+                still = moved ? 0 : still + 1;
+                if (ticks > 0 && !moved) res.still++;
+
+                // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
+                if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
+
+                if (rejectionReplan) {
+                    rejectionReplan = false; rejectionReplanned = true;
+                    if (!replanThen(p, 'client walk rejection', `no path from ${p.x},${p.z}`, () => {
+                        if (deps.planAsync) clickAhead(look);
+                    })) return;
+                }
+                const n = nearest(p);
+                if (n.d > 3) {
+                    // Off the planned path (the client routed round something): plan again from here.
+                    if (!replanThen(p, `off path by ${n.d}`, `no path from ${p.x},${p.z}`, () => {
+                        if (deps.planAsync) clickAhead(look);
+                    })) return;
+                } else idx = n.i;
+
+                const curSeg = seg[Math.max(0, idx)] ?? 0;
+                const advancedSeg = curSeg > maxSeg;
+                if (advancedSeg) maxSeg = curSeg;
+                const activeTarget = points[Math.min(points.length - 1, maxSeg)] ?? goal;
+                const gd = d8(p, activeTarget);
+                if (advancedSeg || gd <= bestGoalDist - 2 || res.doors !== progressDoors) {
+                    bestGoalDist = advancedSeg ? gd : Math.min(bestGoalDist, gd);
+                    progressTick = ticks;
+                    progressDoors = res.doors;
+                    boxMinX = boxMaxX = p.x;
+                    boxMinZ = boxMaxZ = p.z;
+                    boxRepaths = 0;
+                    boxVisited.clear();
+                    boxVisited.add(tileKey(p.x, p.z));
+                } else {
+                    boxMinX = Math.min(boxMinX, p.x); boxMaxX = Math.max(boxMaxX, p.x);
+                    boxMinZ = Math.min(boxMinZ, p.z); boxMaxZ = Math.max(boxMaxZ, p.z);
+                    if (boxVisited.size < 32) boxVisited.add(tileKey(p.x, p.z));
+                    // Require at least two visited tiles so a pure stationary stall still hits its tick budget.
+                    if (ticks - progressTick >= 120 && boxVisited.size >= 2 && Math.max(boxMaxX - boxMinX, boxMaxZ - boxMinZ) <= 28 && boxRepaths >= 8) {
+                        return finish(false, `no progress: walk oscillating near ${p.x},${p.z} target=${goal.x},${goal.z}`);
                     }
-                    if (hit.length) {
-                        const key = hit.map(h => `${h.x},${h.z},${h.r}`).join(' ');
-                        if (key !== dodged && dodges < 60 && !door) {
-                            dodged = key; dodges++;
-                            if (!replan(p, `hunter at ${key}`)) return finish(false, `no path from ${p.x},${p.z}`);
-                            clickAhead(look);
-                            return;
+                }
+
+                // A live hunter's square reaches the next lookahead of path: plan round it, once for each set of squares.
+                if (deps.hunters) {
+                    seen(p);
+                    if (squares.length) {
+                        const lo = Math.max(0, idx), hi = Math.min(tiles.length - 1, lo + look);
+                        const hit: HunterSquare[] = [];
+                        for (let s = 0; s < squares.length; s++) {
+                            const h = squares[s]!;
+                            for (let i = lo; i <= hi; i++) if (d8(tiles[i]!, h) <= h.r) { hit.push(h); break; }
+                        }
+                        if (hit.length) {
+                            const key = hit.map(h => `${h.x},${h.z},${h.r}`).join(' ');
+                            if (key !== dodged && dodges < 60 && !door) {
+                                dodged = key; dodges++;
+                                replanThen(p, `hunter at ${key}`, `no path from ${p.x},${p.z}`, () => clickAhead(look));
+                                return;
+                            }
                         }
                     }
                 }
-            }
 
-            // A door the bot asked to open: click past it on the tick it opens.
-            if (door) {
-                const d = door;
-                const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
-                if (!shutNow) { door = null; doorAttempts.delete(doorKey(d.loc)); log('door open'); clickAhead(look); return; }
-                if (d.fare) {
-                    const talk = deps.dialog?.();
-                    if (talk?.isOpen) {
-                        d.sentAt = ticks; d.pre ??= { x: p.x, z: p.z };
-                        const text = (talk.text || talk.options.map(o => o.text).join(' | ')).slice(0, 160);
-                        if (text && d.talk[d.talk.length - 1] !== text) d.talk.push(text);
-                        if (talk.isWaiting) return;
-                        const pick = talk.options.find(o => d.fare!.choices.some(c => normText(c) === normText(o.text)));
-                        const index = pick?.index ?? (talk.options.length === 0 ? 0
-                            : talk.options.length === 1 && /continue/i.test(talk.options[0]!.text) ? talk.options[0]!.index : undefined);
-                        if (index === undefined) return failedDoor(d.loc, `unmapped fare dialogue: ${text}`, p);
-                        send(`answer ${index}`, () => deps.answer?.(index));
+                // A door the bot asked to open: click past it on the tick it opens.
+                if (door) {
+                    const d = door;
+                    const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
+                    if (!shutNow) { door = null; doorAttempts.delete(doorKey(d.loc)); log('door open'); clickAhead(look); return; }
+                    if (d.fare) {
+                        const talk = deps.dialog?.();
+                        if (talk?.isOpen) {
+                            d.sentAt = ticks; d.pre ??= { x: p.x, z: p.z };
+                            const text = (talk.text || talk.options.map(o => o.text).join(' | ')).slice(0, 160);
+                            if (text && d.talk[d.talk.length - 1] !== text) d.talk.push(text);
+                            if (talk.isWaiting) return;
+                            const pick = talk.options.find(o => d.fare!.choices.some(c => normText(c) === normText(o.text)));
+                            const index = pick?.index ?? (talk.options.length === 0 ? 0
+                                : talk.options.length === 1 && /continue/i.test(talk.options[0]!.text) ? talk.options[0]!.index : undefined);
+                            if (index === undefined) return failedDoor(d.loc, `unmapped fare dialogue: ${text}`, p);
+                            send(`answer ${index}`, () => deps.answer?.(index));
+                            return;
+                        }
+                        // The gate shuts again on the tick after it moves the bot through (border_gate.rs2 p_teleport).
+                        if (d.pre && (p.x !== d.pre.x || p.z !== d.pre.z) && idx >= d.i) {
+                            door = null; doorAttempts.delete(doorKey(d.loc)); log(`fare paid: ${d.fare.label}`); clickAhead(look); return;
+                        }
+                    }
+                    const refusal = deps.messages?.().find(m => !d.messages.has(messageKey(m)) && /\b(?:door|gate).{0,32}\blocked\b|\b(?:cannot|can't) open\b/i.test(m.text));
+                    if (refusal) return failedDoor(d.loc, refusal.text, p);
+                    // Open may first walk to the door, then wait for a delayed server
+                    // action. Count unchanged ticks, not distance or accepted dispatches.
+                    // A paid crossing tries twice, once when the pack is short (a quest that waives the fare is the only
+                    // way through then): its dialogue said why it did not open.
+                    if (d.acked && still >= 6 && ticks - d.sentAt >= 6) {
+                        const limit = d.fare ? ((deps.coins?.() ?? Infinity) < d.fare.coins ? 1 : 2) : 3;
+                        if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= limit) return failedDoor(d.loc, d.fare ? 'fare crossing did not move the bot' : 'no open effect observed', p);
+                        door = null;
+                    } else return;
+                }
+                const ahead = shutDoorAt(idx, idx + look), shut = ahead?.l ?? null;
+                if (shut) {
+                    const op = openOp(shut)!.opIndex;
+                    const fare = deps.fare?.(level, shut) ?? undefined, held = fare ? deps.coins?.() ?? null : null;
+                    // Short of the fare, the guard only says so (border_gate.rs2 "I don't actually seem to have enough money").
+                    if (fare && held !== null && held < fare.coins && !fare.waived) return failedDoor(shut, `fare ${fare.coins} coins, the pack holds ${held}`, p);
+                    const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
+                    const entry: DoorTry = { loc: shut, sentAt: ticks, messages: baseline, acked: false, i: ahead!.i, ...(fare ? { fare } : {}), talk: [] };
+                    if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
+                        door = entry;
+                        doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
+                        res.doors++; target = -1;
+                    }
+                    return;
+                }
+                // No tile gained for 2 ticks: plan again from where the bot stands.
+                if (still >= 2) {
+                    const span = still >= 3 ? Math.ceil(look / 2) : look;
+                    if (rejectedWalks === 0) {
+                        replanThen(p, `still ${still}`, `no path from ${p.x},${p.z}`, () => clickAhead(span));
                         return;
                     }
-                    // The gate shuts again on the tick after it moves the bot through (border_gate.rs2 p_teleport).
-                    if (d.pre && (p.x !== d.pre.x || p.z !== d.pre.z) && idx >= d.i) {
-                        door = null; doorAttempts.delete(doorKey(d.loc)); log(`fare paid: ${d.fare.label}`); clickAhead(look); return;
-                    }
+                    // Only doors on the planned leg are attempted. A nearby unrelated
+                    // Open option is not evidence that it blocks this route.
+                    clickAhead(span);
+                    return;
                 }
-                const refusal = deps.messages?.().find(m => !d.messages.has(messageKey(m)) && /\b(?:door|gate).{0,32}\blocked\b|\b(?:cannot|can't) open\b/i.test(m.text));
-                if (refusal) return failedDoor(d.loc, refusal.text, p);
-                // Open may first walk to the door, then wait for a delayed server
-                // action. Count unchanged ticks, not distance or accepted dispatches.
-                // A paid crossing tries twice, once when the pack is short (a quest that waives the fare is the only
-                // way through then): its dialogue said why it did not open.
-                if (d.acked && still >= 6 && ticks - d.sentAt >= 6) {
-                    const limit = d.fare ? ((deps.coins?.() ?? Infinity) < d.fare.coins ? 1 : 2) : 3;
-                    if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= limit) return failedDoor(d.loc, d.fare ? 'fare crossing did not move the bot' : 'no open effect observed', p);
-                    door = null;
-                } else return;
-            }
-            const ahead = shutDoorAt(idx, idx + look), shut = ahead?.l ?? null;
-            if (shut) {
-                const op = openOp(shut)!.opIndex;
-                const fare = deps.fare?.(level, shut) ?? undefined, held = fare ? deps.coins?.() ?? null : null;
-                // Short of the fare, the guard only says so (border_gate.rs2 "I don't actually seem to have enough money").
-                if (fare && held !== null && held < fare.coins && !fare.waived) return failedDoor(shut, `fare ${fare.coins} coins, the pack holds ${held}`, p);
-                const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
-                const entry: DoorTry = { loc: shut, sentAt: ticks, messages: baseline, acked: false, i: ahead!.i, ...(fare ? { fare } : {}), talk: [] };
-                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op), () => { if (!entry.acked) { entry.acked = true; entry.sentAt = ticks; } })) {
-                    door = entry;
-                    doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
-                    res.doors++; target = -1;
+                if (still >= 1 || target < 0 || target - idx <= reclickAt) {
+                    // The last click already ends at the goal, and the bot is still moving toward it.
+                    if (target === tiles.length - 1 && still === 0) return;
+                    clickAhead(look);
                 }
-                return;
+            };
+            const off = watchTickStream(deps, () => { ticks++; decide(); }, error => finish(false, error.message), opts.idleMs);
+            const onAbort = () => finish(false, 'stopped');
+            for (const signal of signals) {
+                if (signal.aborted) { onAbort(); break; }
+                signal.addEventListener('abort', onAbort, { once: true });
+                abortSubscriptions.push(() => signal.removeEventListener('abort', onAbort));
             }
-            // No tile gained for 2 ticks: plan again from where the bot stands.
-            if (still >= 2) {
-                if (rejectedWalks === 0 && !replan(p, `still ${still}`)) return finish(false, `no path from ${p.x},${p.z}`);
-                // Only doors on the planned leg are attempted. A nearby unrelated
-                // Open option is not evidence that it blocks this route.
-                clickAhead(still >= 3 ? Math.ceil(look / 2) : look);
-                return;
-            }
-            if (still >= 1 || target < 0 || target - idx <= reclickAt) {
-                // The last click already ends at the goal, and the bot is still moving toward it.
-                if (target === tiles.length - 1 && still === 0) return;
-                clickAhead(look);
-            }
-        };
-        const off = watchTickStream(deps, () => { ticks++; decide(); }, error => finish(false, error.message), opts.idleMs);
-        const onAbort = () => finish(false, 'stopped');
-        for (const signal of signals) {
-            if (signal.aborted) { onAbort(); break; }
-            signal.addEventListener('abort', onAbort, { once: true });
-            abortSubscriptions.push(() => signal.removeEventListener('abort', onAbort));
-        }
-        void deps.ended?.then(() => finish(false, 'session ended'));
-        if (!done) decide();
-    });
+            void deps.ended?.then(() => finish(false, 'session ended'));
+            if (!done) decide();
+        });
+    };
+    seen(start);
+    if (!deps.planAsync && !deps.dangerAsync) {
+        buildAround(start, 0);
+        return startLoop(deps.danger?.(level, tiles));
+    }
+    return (async () => {
+        await buildAroundAsync(start, 0);
+        if (signals.some(signal => signal.aborted)) return { ...res, detail: 'stopped' };
+        const harm = deps.dangerAsync ? await deps.dangerAsync(level, tiles) : deps.danger?.(level, tiles);
+        if (signals.some(signal => signal.aborted)) return { ...res, detail: 'stopped' };
+        return startLoop(harm);
+    })();
 }

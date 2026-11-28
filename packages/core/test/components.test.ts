@@ -208,3 +208,26 @@ test('writeLabels cleans up temporary files if rename fails', async () => {
     expect(() => writeLabels(file, 'src1', g)).toThrow();
     expect(fs.readdirSync(directory).filter(n => n.startsWith('blocked.bin.') && n.endsWith('.tmp'))).toEqual([]);
 });
+
+test('mapAreas and cachedMapAreas read route-areas.bin without calling pf.initPathfinding()', async () => {
+    const { cachedMapAreas, getBuiltAreas, mapAreas, mapLabelSource, restoreBuiltAreas } = await import('../src/components');
+    const root = mkdtempSync(join(tmpdir(), 'areas-cache-'));
+    const prior = getBuiltAreas();
+    try {
+        const g = grid(false);
+        writeLabels(join(root, '.practice', 'cache', 'route-areas.bin'), mapLabelSource(), g);
+        restoreBuiltAreas(undefined);
+        let initCalls = 0;
+        const fakePf = { initPathfinding: () => { initCalls++; } };
+        const loaded = mapAreas(fakePf, {}, root);
+        expect(initCalls).toBe(0);
+        expect(loaded.areas).toBe(g.areas);
+        expect(loaded.tiles).toBe(g.tiles);
+        restoreBuiltAreas(undefined);
+        const cached = cachedMapAreas(root);
+        expect(cached?.areas).toBe(g.areas);
+    } finally {
+        restoreBuiltAreas(prior);
+        rmSync(root, { recursive: true, force: true });
+    }
+});

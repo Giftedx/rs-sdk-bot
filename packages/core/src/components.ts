@@ -333,13 +333,19 @@ export const MAP_LABELS_VERSION = 2;
 export function mapLabelSource(): string {
     return JSON.stringify({ ...JSON.parse(pathfindingDataKey()) as object, labels: MAP_LABELS_VERSION });
 }
+// Cached labels for the SDK map without initializing pathfinding; null when the cache file is absent or stale.
+export function cachedMapAreas(repoRoot: string): Labels | null {
+    if (built) return built;
+    const cached = readLabels(join(repoRoot, '.practice', 'cache', 'route-areas.bin'), mapLabelSource());
+    return cached ? publishBuiltAreas(cached) : null;
+}
 // Labels for the SDK map, built on first use; pf and grid must be the modules the route search uses.
 export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     if (built) return built;
-    pf.initPathfinding();
     const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = mapLabelSource();
     const cached = readLabels(file, source);
     if (cached) return publishBuiltAreas(cached);
+    pf.initPathfinding();
     // A cold process builds the labels before pathcache.ts loadPathfinding opens the diagonal doors (that load runs
     // in a microtask after the first initPathfinding), so the labels sealed every building behind a shape-9 door: the
     // Wizards' Tower ladder room (3105,3162) and the essence mine exit to Sedridor had "no route" out.

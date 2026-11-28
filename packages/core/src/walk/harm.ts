@@ -47,18 +47,29 @@ export async function routeHarm(s: Walker, from: Tile, to: Tile, acct: Account, 
         at = leg.to;
     }
     if (!near) return { action: 'clear', plan: r };
-    const [pf, grid] = await Promise.all([
-        import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
-        import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
-    ]);
-    pf.initPathfinding();
-    const reach = npcReach(grid as any, pf.getDoorAt);
-    const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) => pf.findLongPath(level, a.x, a.z, b.x, b.z, 500);
-    const open = { cost: r.cost, exposure: routeExposure(p, from, legsOf(r), path, { reach }) };
+    const { queryRouteService, serviceWanted } = await import('../route-plan');
+    let localEnv: { pf: any; reach: ReturnType<typeof npcReach> } | null = null;
+    const measureExposure = async (legs: ReturnType<typeof legsOf>) => {
+        if (serviceWanted()) {
+            const remote = await queryRouteService<import('../danger').WalkExposure>({ kind: 'route-exposure', from, legs, profile: p });
+            if (remote !== undefined) return remote;
+        }
+        if (!localEnv) {
+            const [pf, grid] = await Promise.all([
+                import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
+                import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
+            ]);
+            pf.initPathfinding();
+            localEnv = { pf, reach: npcReach(grid as any, pf.getDoorAt) };
+        }
+        const path = (level: number, a: { x: number; z: number }, b: { x: number; z: number }) => localEnv!.pf.findLongPath(level, a.x, a.z, b.x, b.z, 500);
+        return routeExposure(p, from, legs, path, { reach: localEnv.reach });
+    };
+    const open = { cost: r.cost, exposure: await measureExposure(legsOf(r)) };
     let d = routeDanger(p, open);
     if (d.action === 'clear') return { action: 'clear', plan: r };
     const safePlan = await replan({ ...acct, avoidHarm: true });
-    const safe = safePlan ? { cost: safePlan.cost, exposure: routeExposure(p, from, legsOf(safePlan), path, { reach }) } : null;
+    const safe = safePlan ? { cost: safePlan.cost, exposure: await measureExposure(legsOf(safePlan)) } : null;
     d = routeDanger(p, open, safe);
     const summary = dangerSummary(d.exposure, d.verdict);
     console.log(`WALK_DANGER ${JSON.stringify({ action: d.action, from, to, cost: r.cost, safeCost: safePlan?.cost ?? null, safeDamage: safe ? Math.round(safe.exposure.damage * 10) / 10 : null, hp: p.hp, foodHeal: p.foodHeal, runTiles: p.runTiles, ...summary })}`);

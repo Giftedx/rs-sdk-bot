@@ -599,3 +599,22 @@ test('walkPath aborts early when oscillating in a tight box without progress', a
     expect(res.detail).toMatch(/walk oscillating/);
     expect(res.ticks).toBeLessThan(200);
 });
+
+test('walkPath uses planAsync and dangerAsync for initial plans and off-path replans without invoking sync plan', async () => {
+    const w = road({ stallAt: 3020 });
+    let syncPlans = 0, asyncPlans = 0, asyncDangers = 0;
+    w.deps.plan = () => { syncPlans++; return []; };
+    w.deps.planAsync = async (_l, _f, to) => { asyncPlans++; await Bun.sleep(1); return [{ x: to.x, z: to.z }]; };
+    w.deps.dangerAsync = async () => { asyncDangers++; return { verdict: 'clear', start: false, summary: { zone: '-', damage: 0, need: 0, needHeal: 0 } }; };
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const p = walkPath(w.deps, [{ x: 3060, z: 3200, tol: 1 }]).then(r => { result = r; return r; });
+    for (let i = 0; i < 120 && !result; i++) {
+        await Bun.sleep(2);
+        w.step();
+    }
+    const r = await p;
+    expect(r.ok).toBe(true);
+    expect(syncPlans).toBe(0);
+    expect(asyncPlans).toBeGreaterThanOrEqual(1);
+    expect(asyncDangers).toBe(1);
+});

@@ -1,28 +1,34 @@
-// One route planner for every bot process of this checkout. Each bot process otherwise starts its own route worker
-// (route-plan.ts) for each walk plan: about 470 MB of private memory while it lives, and about 1 s to restore the grid
-// each time it starts again after 30 s idle (scripts/measure/solo-route-memory.ts). This process holds a small pool of
-// the same route workers (route-worker.ts) and answers the same plan requests over HTTP on 127.0.0.1. A bot process
-// finds it by SERVICE_FILE; with no live service of the same commit and route data it plans with its own worker.
+// One route and pathfinding service for every bot process of this checkout. Each bot process otherwise loads its own
+// rsmod WASM collision grid (250-350 MB private) and starts its own route worker (470 MB private). This process holds
+// one warm worker (plus overflow workers on demand, reaped when idle) and answers trip plans (/plan) and lightweight
+// single-plane walk/SDK/harm/approach queries (/query) over HTTP on 127.0.0.1. A bot process finds it by SERVICE_FILE;
+// with no live service of the same commit and route data it falls back locally.
 // Usage: bun packages/core/src/route-service.ts [--workers N] [--idle-ms N]   (run in the foreground)
 //        bun packages/core/src/route-service.ts --launch                       (start one detached service, then exit)
 import { spawn, spawnSync } from 'node:child_process';
 import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { renameRetry } from './atomic-file';
+import { cachedMapAreas, shareLabels, type SharedLabels } from './components';
+import { leanBunEnv } from './lean-bun-env';
 import { pathfindingDataKey } from './pathcache';
-import type { PlanRequest } from './route-worker';
+import type { PlanRequest, RouteQuery } from './route-worker';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export const SERVICE_FILE = join(repoRoot, '.practice', 'cache', 'route-service.json');
 export const SERVICE_LOG = join(repoRoot, '.practice', 'route-service', 'service.log');
-// Two workers: one cold search (up to about a minute) does not hold every other bot's plan.
+// Two workers: one cold search (up to about a minute) does not hold every other bot's plan or walk query.
+// Overflow workers (slot >= 1) open only on concurrency spikes and close after OVERFLOW_WORKER_IDLE_MS idle.
 export const DEFAULT_WORKERS = 2;
+export const OVERFLOW_WORKER_IDLE_MS = 60_000;
 // The service stops this long after its last request, so a host with no walking bots holds no route workers.
 export const DEFAULT_IDLE_MS = 15 * 60_000;
 const REV_POLL_MS = 30_000;
+const QUERY_KINDS = new Set(['sdk-find-path', 'walk-plan', 'walk-danger', 'route-exposure', 'approach']);
 
 export type ServiceInfo = { pid: number; port: number; rev: string; dataKey: string; workers: number; started: number };
 export type ServicePlan = Omit<PlanRequest, 'id' | 'sharedAreas'>;
+export type ServiceQuery = RouteQuery;
 
 // The commit of this checkout. A service of another commit plans with other code, so a bot does not use it.
 let revMemo: string | null = null;
@@ -48,10 +54,17 @@ export function usableService(info: ServiceInfo | null, rev: string, dataKey: st
     return info && rev && info.rev === rev && info.dataKey === dataKey && alive(info.pid) ? info : null;
 }
 
+// Route service runs lean GC/WASM thread settings while keeping DFG JIT enabled and avoiding a low bot RAM cap.
+export function routeServiceEnv(env: Record<string, string | undefined> = process.env): Record<string, string | undefined> {
+    const out = leanBunEnv({ ...env, BUN_JSC_useDFGJIT: '1' });
+    delete out.BUN_JSC_forceRAMSize;
+    return out;
+}
+
 // Starts one detached service through a launcher that exits at once. The service's parent is then a dead process, so
 // a tree kill of the bot that asked for it (taskkill /T) does not stop the service that other bots use.
 export function launchService(root = repoRoot): void {
-    spawn(process.execPath, [join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], { cwd: root, detached: true, windowsHide: true, stdio: 'ignore', env: process.env }).unref();
+    spawn(process.execPath, [join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], { cwd: root, detached: true, windowsHide: true, stdio: 'ignore', env: routeServiceEnv(process.env) }).unref();
 }
 // One launch at a time for each checkout: the launcher creates the lock with the exclusive flag, and the service it
 // starts removes it once its record is written. A lock older than LAUNCH_LOCK_MS (a service that died while it
@@ -78,49 +91,98 @@ export function claimLaunch(lock = `${SERVICE_FILE}.lock`, now = Date.now()): bo
 function launchDetached(): void {
     mkdirSync(dirname(SERVICE_LOG), { recursive: true });
     const out = openSync(SERVICE_LOG, 'a');
-    try { spawn(process.execPath, [import.meta.path], { cwd: repoRoot, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: process.env }).unref(); }
+    try { spawn(process.execPath, [import.meta.path], { cwd: repoRoot, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: routeServiceEnv(process.env) }).unref(); }
     finally { closeSync(out); }
 }
 
-type Slot = { w: Worker; pending: Map<number, { resolve(m: { plan?: unknown; error?: string }): void }> };
+type WorkerReply = { id: number; plan?: unknown; result?: unknown; error?: string };
+type Slot = {
+    w: Worker;
+    pending: Map<number, { resolve(m: { plan?: unknown; result?: unknown; error?: string }): void }>;
+    sentAreas: boolean;
+    idleTimer: ReturnType<typeof setTimeout> | null;
+};
 
-// The pool: each request goes to the worker with the fewest requests in flight. A failed worker fails its requests
-// and is replaced at the next request.
-export function workerPool(size: number, make: () => Worker = () => new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions)) {
+// The pool: each request goes to the worker with the fewest requests in flight (preferring slot 0 so steady-state
+// load keeps one worker warm). Overflow workers (slot >= 1) terminate after `overflowIdleMs` idle so momentary bursts
+// do not pin a second WASM + world-graph worker forever. A failed worker fails its requests and is replaced on demand.
+export function workerPool(
+    size: number,
+    make: () => Worker = () => new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions),
+    opts: { overflowIdleMs?: number; sharedAreas?: () => SharedLabels | null } = {},
+) {
+    const overflowIdleMs = opts.overflowIdleMs ?? OVERFLOW_WORKER_IDLE_MS;
+    const getSharedAreas = opts.sharedAreas;
     const slots: (Slot | null)[] = Array.from({ length: size }, () => null);
     let next = 0;
+    const clearIdle = (slot: Slot) => {
+        if (slot.idleTimer) { clearTimeout(slot.idleTimer); slot.idleTimer = null; }
+    };
+    const closeSlot = (i: number, slot: Slot) => {
+        if (slots[i] !== slot) return;
+        clearIdle(slot);
+        slots[i] = null;
+        void slot.w.terminate();
+    };
+    const scheduleOverflowIdle = (i: number, slot: Slot) => {
+        if (i === 0 || overflowIdleMs <= 0 || slot.pending.size > 0) return;
+        clearIdle(slot);
+        slot.idleTimer = setTimeout(() => {
+            if (slots[i] === slot && slot.pending.size === 0) closeSlot(i, slot);
+        }, overflowIdleMs);
+        (slot.idleTimer as { unref?(): void }).unref?.();
+    };
     const open = (i: number): Slot => {
-        const slot: Slot = { w: make(), pending: new Map() };
+        const slot: Slot = { w: make(), pending: new Map(), sentAreas: false, idleTimer: null };
         const fail = (reason: string) => {
             if (slots[i] !== slot) return;
+            clearIdle(slot);
             slots[i] = null;
             for (const p of slot.pending.values()) p.resolve({ error: reason });
             slot.pending.clear();
             void slot.w.terminate();
         };
-        slot.w.onmessage = (e: MessageEvent<{ id: number; plan?: unknown; error?: string }>) => {
+        slot.w.onmessage = (e: MessageEvent<WorkerReply>) => {
             const p = slot.pending.get(e.data.id);
             if (!p) return;
             slot.pending.delete(e.data.id);
-            p.resolve(e.data.error ? { error: e.data.error } : { plan: e.data.plan ?? null });
+            if (e.data.error) p.resolve({ error: e.data.error });
+            else if ('result' in e.data) p.resolve({ result: e.data.result });
+            else p.resolve({ plan: e.data.plan ?? null });
+            scheduleOverflowIdle(i, slot);
         };
         slot.w.onerror = (e: ErrorEvent) => fail(`route worker failed: ${e.message}`);
         slot.w.onmessageerror = () => fail('route worker message unreadable');
         return slots[i] = slot;
     };
+    const dispatch = (msg: object, attachAreas: boolean): Promise<{ plan?: unknown; result?: unknown; error?: string }> => {
+        let best = 0;
+        for (let i = 1; i < size; i++) if ((slots[i]?.pending.size ?? 0) < (slots[best]?.pending.size ?? 0)) best = i;
+        const slot = slots[best] ?? open(best), id = ++next;
+        clearIdle(slot);
+        const sharedAreas = attachAreas && !slot.sentAreas ? getSharedAreas?.() ?? undefined : undefined;
+        return new Promise(resolve => {
+            slot.pending.set(id, { resolve });
+            try {
+                slot.w.postMessage(sharedAreas ? { ...msg, id, sharedAreas } : { ...msg, id });
+                if (sharedAreas) slot.sentAreas = true;
+            } catch (error) {
+                slot.pending.delete(id);
+                scheduleOverflowIdle(best, slot);
+                resolve({ error: String(error) });
+            }
+        });
+    };
     return {
         plan(req: ServicePlan): Promise<{ plan?: unknown; error?: string }> {
-            let best = 0;
-            for (let i = 1; i < size; i++) if ((slots[i]?.pending.size ?? 0) < (slots[best]?.pending.size ?? 0)) best = i;
-            const slot = slots[best] ?? open(best), id = ++next;
-            return new Promise(resolve => {
-                slot.pending.set(id, { resolve });
-                try { slot.w.postMessage({ ...req, id }); }
-                catch (error) { slot.pending.delete(id); resolve({ error: String(error) }); }
-            });
+            return dispatch(req, true);
+        },
+        query(req: ServiceQuery): Promise<{ result?: unknown; error?: string }> {
+            return dispatch(req, false);
         },
         inFlight: () => slots.reduce((n, s) => n + (s?.pending.size ?? 0), 0),
-        stop: () => { for (const s of slots) void s?.w.terminate(); },
+        activeWorkers: () => slots.reduce((n, s) => n + (s ? 1 : 0), 0),
+        stop: () => { for (let i = 0; i < slots.length; i++) if (slots[i]) closeSlot(i, slots[i]!); },
     };
 }
 
@@ -141,9 +203,13 @@ export function planResponse(plan: Promise<unknown>, heartbeatMs = HEARTBEAT_MS)
     }), { headers: { 'content-type': 'application/json' } });
 }
 
-export function serveRoutes(opts: { workers?: number; idleMs?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
+export function serveRoutes(opts: { workers?: number; idleMs?: number; overflowIdleMs?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
     const workers = opts.workers ?? DEFAULT_WORKERS, idleMs = opts.idleMs ?? DEFAULT_IDLE_MS, file = opts.file ?? SERVICE_FILE;
-    const pool = workerPool(workers, opts.makeWorker);
+    const sharedAreas = opts.makeWorker ? undefined : () => {
+        const labels = cachedMapAreas(repoRoot);
+        return labels ? shareLabels(labels) : null;
+    };
+    const pool = workerPool(workers, opts.makeWorker, { overflowIdleMs: opts.overflowIdleMs, sharedAreas });
     let last = Date.now(), served = 0;
     const server = Bun.serve({
         hostname: '127.0.0.1',
@@ -151,13 +217,27 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; file?: st
         idleTimeout: 0,
         async fetch(req) {
             const url = new URL(req.url);
-            if (req.method === 'GET' && url.pathname === '/health') return Response.json({ ...info, inFlight: pool.inFlight(), served });
-            if (req.method !== 'POST' || url.pathname !== '/plan') return new Response('not found', { status: 404 });
-            let body: ServicePlan;
-            try { body = await req.json() as ServicePlan; } catch { return new Response('bad request', { status: 400 }); }
-            if (!body?.from || !body?.to || !body?.acct) return new Response('bad request', { status: 400 });
-            last = Date.now();
-            return planResponse(pool.plan(body).then(out => { last = Date.now(); served++; return out; }));
+            if (req.method === 'GET' && url.pathname === '/health') {
+                return Response.json({ ...info, inFlight: pool.inFlight(), activeWorkers: pool.activeWorkers(), served });
+            }
+            if (req.method === 'POST' && url.pathname === '/plan') {
+                let body: ServicePlan;
+                try { body = await req.json() as ServicePlan; } catch { return new Response('bad request', { status: 400 }); }
+                if (!body?.from || !body?.to || !body?.acct) return new Response('bad request', { status: 400 });
+                last = Date.now();
+                return planResponse(pool.plan(body).then(out => { last = Date.now(); served++; return out; }));
+            }
+            if (req.method === 'POST' && url.pathname === '/query') {
+                let body: ServiceQuery;
+                try { body = await req.json() as ServiceQuery; } catch { return new Response('bad request', { status: 400 }); }
+                if (!body?.kind || !QUERY_KINDS.has(body.kind)) return new Response('bad request', { status: 400 });
+                last = Date.now();
+                const out = await pool.query(body);
+                last = Date.now();
+                served++;
+                return Response.json(out);
+            }
+            return new Response('not found', { status: 404 });
         },
     });
     const info: ServiceInfo = { pid: process.pid, port: server.port!, rev: checkoutRev(), dataKey: pathfindingDataKey(), workers, started: Date.now() };
@@ -199,7 +279,7 @@ if (import.meta.main) {
         if (!answers && claimLaunch()) launchDetached();
         process.exit(0);
     }
-    const s = serveRoutes({ workers: arg('--workers'), idleMs: arg('--idle-ms'), onStop: () => process.exit(0) });
+    const s = serveRoutes({ workers: arg('--workers'), idleMs: arg('--idle-ms'), overflowIdleMs: arg('--overflow-idle-ms'), onStop: () => process.exit(0) });
     const end = () => s.stop('signal');
     process.on('SIGINT', end);
     process.on('SIGTERM', end);

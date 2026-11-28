@@ -3,6 +3,7 @@
 import type { BankStock, TripPlan } from './trip';
 import type { Account, Tile } from './world-types';
 import type { SharedLabels } from './components';
+import type { ServiceQuery } from './route-service';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 // Bun workers have ref/unref: an idle worker does not keep the process alive.
@@ -102,6 +103,45 @@ async function planByService(info: ServiceInfo, body: object, signal: AbortSigna
     }
     if (out.error) throw Error(`route worker: ${out.error}`);
     return out.plan ?? null;
+}
+
+const QUERY_TIMEOUT_MS = 15_000;
+// Answers a single-plane path/harm/approach query through the host route service, or returns undefined when the
+// service is disabled or unavailable so the caller falls back locally.
+export async function queryRouteService<T>(body: ServiceQuery, opts: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<T | undefined> {
+    if (!serviceWanted()) return undefined;
+    const callerSignal = opts.signal ?? executionContext.getStore()?.signal;
+    if (callerSignal?.aborted) throw callerSignal.reason;
+    const id = ++next;
+    remote.set(id, performance.now());
+    try {
+        const info = await routeService();
+        if (callerSignal?.aborted) throw callerSignal.reason;
+        if (!info) return undefined;
+        const timeout = AbortSignal.timeout(opts.timeoutMs ?? QUERY_TIMEOUT_MS);
+        const signal = callerSignal ? AbortSignal.any([callerSignal, timeout]) : timeout;
+        let out: { result?: T; error?: string };
+        try {
+            const res = await fetch(`http://127.0.0.1:${info.port}/query`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(body),
+                signal,
+            });
+            if (!res.ok) throw Error(`HTTP ${res.status}`);
+            out = await res.json() as typeof out;
+        } catch (error) {
+            if (callerSignal?.aborted) throw callerSignal.reason;
+            console.log(`ROUTE_SERVICE_SKIP ${JSON.stringify({ port: info.port, kind: body.kind, error: String((error as Error)?.message ?? error) })}`);
+            serviceDownUntil = performance.now() + SERVICE_RETRY_MS;
+            failedService = serviceId(info);
+            return undefined;
+        }
+        if (out.error) throw Error(`route worker: ${out.error}`);
+        return out.result;
+    } finally {
+        remote.delete(id);
+    }
 }
 
 export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: BankStock, budgetMs?: number): Promise<TripPlan | null> {
