@@ -1,6 +1,8 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
+import { queryRouteService, serviceWanted } from '../route-query';
+import type { WalkDangerResult } from '../route-worker';
 import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
 import { topUpFareFloat } from './fare-float';
 import type { PathDeps, PathTile } from './path';
@@ -31,12 +33,13 @@ export async function sessionWalker(s: {
     ended?: Promise<unknown>;
     bot?: { eatFood?(target?: unknown): Promise<unknown> };
 }, walkOpts: { noFareFloat?: boolean } = {}): Promise<PathDeps> {
-    const [pf, grid, { dangerSummary, guardWalk, liveHunters, npcReach, planAroundHarm, protectedFromMelee, stateWalkProfile, walkExposure, walkVerdict, withDanger }, { clientReach }] = await Promise.all([
+    const [pf, grid, { dangerSummary, guardWalk, huntersNear, liveHunters, npcReach, planAroundHarm, protectedFromMelee, stateWalkProfile, walkExposure, walkVerdict, withDanger }, { clientReach }] = await Promise.all([
         import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
         import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
         import('../danger'),
         import('../reach'),
     ]);
+    const noExposure = { tiles: 0, damage: 0, maxHit: 0, burst: 0, zones: [] };
     await installDoorPolicy(s.sdk, s.client);
     const pos = () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const reach = clientReach(s.client, pos);
@@ -45,6 +48,19 @@ export async function sessionWalker(s: {
     // Harm ground (danger/exposure.ts) is priced with the Hitpoints, food and run energy of each plan's moment.
     const harmReach = npcReach(grid as any, pf.getDoorAt);
     const profile = () => stateWalkProfile(accountForSdk(s.sdk), s.sdk.getState()?.player);
+    const planLocal: PathDeps['plan'] = (level, from, to, avoid) => {
+        pf.initPathfinding();
+        const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
+        const find = () => withDoorPolicy(grid, blocks, () => pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
+        // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes. Harm
+        // ground is the outer scope: the plan goes round it inside its bound (planAroundHarm).
+        const guarded = () => guardWalk(grid, accountForSdk(s.sdk), { ...from, level }, { ...to, level }, 32, () => avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find());
+        return planAroundHarm(grid, profile(), level, from, to, 32, guarded, { reach: harmReach });
+    };
+    const dangerLocal: NonNullable<PathDeps['danger']> = (level, tiles) => {
+        const p = profile(), exposure = walkExposure(p, level, tiles, { reach: harmReach }), verdict = walkVerdict(p, exposure);
+        return { verdict: verdict.verdict, start: walkExposure(p, level, tiles.slice(0, 1), { reach: harmReach }).tiles > 0, summary: dangerSummary(exposure, verdict) };
+    };
     return {
         tick: () => s.sdk.getState()?.tick,
         pos,
@@ -65,19 +81,42 @@ export async function sessionWalker(s: {
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
         doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
-        plan: (level, from, to, avoid) => {
-            pf.initPathfinding();
-            const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
-            const find = () => withDoorPolicy(grid, blocks, () => pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
-            // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes. Harm
-            // ground is the outer scope: the plan goes round it inside its bound (planAroundHarm).
-            const guarded = () => guardWalk(grid, accountForSdk(s.sdk), { ...from, level }, { ...to, level }, 32, () => avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find());
-            return planAroundHarm(grid, profile(), level, from, to, 32, guarded, { reach: harmReach });
+        plan: planLocal,
+        planAsync: async (level, from, to, avoid) => {
+            if (serviceWanted()) {
+                const acct = accountForSdk(s.sdk);
+                const blocks = applyKnownDoorBlocks(s.sdk, level, from, to);
+                const tempDoors = s.sdk.temporaryDoorBlocks?.active?.() ?? [];
+                const remote = await queryRouteService<PathTile[]>({
+                    kind: 'walk-plan',
+                    level,
+                    from,
+                    to,
+                    ...(avoid?.length ? { avoid: [...avoid] } : {}),
+                    blocks,
+                    tempDoors,
+                    acct: JSON.parse(JSON.stringify(acct)),
+                    profile: stateWalkProfile(acct, s.sdk.getState()?.player),
+                });
+                if (remote !== undefined) return remote;
+            }
+            return planLocal(level, from, to, avoid);
         },
         ...(typeof s.bot?.eatFood === 'function' ? { eat: () => s.bot!.eatFood!() } : {}),
-        danger: (level, tiles) => {
-            const p = profile(), exposure = walkExposure(p, level, tiles, { reach: harmReach }), verdict = walkVerdict(p, exposure);
-            return { verdict: verdict.verdict, start: walkExposure(p, level, tiles.slice(0, 1), { reach: harmReach }).tiles > 0, summary: dangerSummary(exposure, verdict) };
+        danger: dangerLocal,
+        dangerAsync: async (level, tiles) => {
+            const p = profile();
+            if (!tiles.length) return { verdict: 'clear', start: false, summary: dangerSummary(noExposure, walkVerdict(p, noExposure)) };
+            let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+            for (const t of tiles) { if (t.x < minX) minX = t.x; if (t.x > maxX) maxX = t.x; if (t.z < minZ) minZ = t.z; if (t.z > maxZ) maxZ = t.z; }
+            if (!huntersNear(p.combat, level, { minX, maxX, minZ, maxZ })) {
+                return { verdict: 'clear', start: false, summary: dangerSummary(noExposure, walkVerdict(p, noExposure)) };
+            }
+            if (serviceWanted()) {
+                const remote = await queryRouteService<WalkDangerResult>({ kind: 'walk-danger', level, tiles: [...tiles], profile: p });
+                if (remote !== undefined) return remote;
+            }
+            return dangerLocal(level, tiles);
         },
         // Protect from Melee is read from the live state at each call: only then a melee-only hunter has no square.
         hunters: () => { const st = s.sdk.getState(); return st?.player ? liveHunters(st.nearbyNpcs ?? [], hunterActor ??= accountForSdk(s.sdk), 2, undefined, undefined, protectedFromMelee(st)) : []; },

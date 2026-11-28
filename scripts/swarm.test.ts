@@ -37,13 +37,13 @@ test('supervisor commands forward participants and arguments with bounded orches
  for(const job of [order,{...order,maxRestarts:3},{account:'Donor',script:'scripts/worker.ts',enabled:true,args:['target','2']},{account:'Donor',script:'scripts/worker.ts',enabled:true,maxRestarts:0}]){
   const p=parseJob(job);if('error' in p)throw Error(p.error);
   const command=supervisorCommand(p,p.accounts);
-  expect(command).toEqual(['bun','packages/practice/src/supervise.ts','Donor',job.script,String(job.maxRestarts??(job.orchestrate?0:20)),...(job.orchestrate?['Receiver']:[]),...(job.args??[])]);
+  expect(command).toEqual(['bun','--smol','packages/practice/src/supervise.ts','Donor',job.script,String(job.maxRestarts??(job.orchestrate?0:20)),...(job.orchestrate?['Receiver']:[]),...(job.args??[])]);
  }
  expect(missionSignature({...order,args:['batch','3']})).not.toBe(missionSignature(order));
  expect(missionSignature({...order,orchestrate:false})).not.toBe(missionSignature(order));
  expect(missionSignature({account:'Donor',script:'worker.ts',enabled:true,args:[],orchestrate:false})).toBe(JSON.stringify(['worker.ts',false,['donor'],[]]));
  const host=parseJob({accounts:['Donor','Receiver'],host:true,script:'worker.ts',enabled:true});if('error' in host)throw Error(host.error);
- expect(supervisorCommand(host,host.accounts)).toEqual(['bun','packages/practice/src/supervise-host.ts','worker.ts','20','Donor','Receiver']);
+ expect(supervisorCommand(host,host.accounts)).toEqual(['bun','--smol','packages/practice/src/supervise-host.ts','worker.ts','20','Donor','Receiver']);
 });
 
 test('no demand cannot hide a retained failure, stop marker or release hold',()=>{
@@ -654,7 +654,7 @@ test('a host job gives each account its own env, for the accounts it starts', as
     const { supervisorCommand, parseJob, missionSignature } = await import('./swarm');
     const job: Job = { accounts: ['A', 'B', 'C'], host: true, script: 'scripts/chain.ts', args: ['scripts/generated/thieving60.ts TARGET=55 CAP=3000', 'scripts/goldfarm.ts'], env: { ROUNDS: '1' }, envByAccount: { A: { KNIGHT_SPOT: '2670,3306' }, C: { KNIGHT_SPOT: '2653,3302', TICKS: '9000' } }, enabled: true };
     const p = parseJob(job); if ('error' in p) throw Error(p.error);
-    expect(supervisorCommand(p, ['A', 'C'])).toEqual(['bun', 'packages/practice/src/supervise-host.ts', 'scripts/chain.ts', '20', 'A', 'C',
+    expect(supervisorCommand(p, ['A', 'C'])).toEqual(['bun', '--smol', 'packages/practice/src/supervise-host.ts', 'scripts/chain.ts', '20', 'A', 'C',
         '--arg', 'scripts/generated/thieving60.ts TARGET=55 CAP=3000', '--arg', 'scripts/goldfarm.ts', '--env', 'A', 'KNIGHT_SPOT=2670,3306', '--env', 'C', 'KNIGHT_SPOT=2653,3302', '--env', 'C', 'TICKS=9000']);
     expect(parseJob({ ...job, envByAccount: { Z: { K: '1' } } })).toEqual({ error: 'envByAccount names Z, which is not in "accounts"' });
     expect(parseJob({ ...job, envByAccount: { A: { K: 1 } } as any })).toEqual({ error: 'envByAccount for A must map KEY to a string' });
@@ -991,7 +991,7 @@ test('the swarm declares to each job process how many bots it holds', () => {
 test('a squad job that ends in a death holds every member and a repeating job does not start it again', () => {
     const accounts = ['Squad1', 'Squad2', 'Squad3', 'Squad4'];
     const command = supervisorCommand({ key: 'Squad1', accounts, host: false, job: { script: 'scripts/aio-pvp.ts', args: ['squad'], orchestrate: true, repeat: true } } as any, accounts);
-    expect(command.slice(0, 3)).toEqual(['bun', 'packages/practice/src/supervise.ts', 'Squad1']);
+    expect(command.slice(0, 4)).toEqual(['bun', '--smol', 'packages/practice/src/supervise.ts', 'Squad1']);
     expect(command).toEqual(expect.arrayContaining(['Squad2', 'Squad3', 'Squad4']));
     // The supervisor prints one end line for the run, and the swarm gives that reason to each account of the run.
     const end = supervisorEndLine('SUPERVISE end died after 1 runs');
@@ -1231,4 +1231,79 @@ test('a drain stop clears once its run has ended, and no other stop text is touc
         expect(clearDrainStops([dir, join(dir, 'missing')], new Set(['running']))).toEqual(['Ended']);
         expect(['Ended', 'Running', 'Owner', 'Removed'].map(a => existsSync(join(dir, `stop-${a}`)))).toEqual([false, true, true, true]);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('host pool eligibility, selection, release pinning, and reduced attach admission reserve', async () => {
+    const { canUseHostPool, selectHostPool, poolCommand, POOL_ATTACH_BUDGET_GB, START_BUDGET_GB, POOL_MAX_BOTS } = await import('./swarm');
+    const parseOk = (j: Job) => { const p = parseJob(j); if ('error' in p) throw Error(p.error); return p; };
+    const brainSkiller = parseOk({ account: 'Nockitoff', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining'], enabled: true, repeat: true });
+    const brainChain = parseOk({ account: 'BoneToPick', script: 'scripts/chain.ts', args: ['scripts/aio-market.ts ge-buy'], enabled: true, repeat: true });
+    const standing = parseOk({ account: 'Nockitoff', script: 'scripts/goldfarm.ts', standing: true, enabled: true });
+    const staticHost = parseOk({ accounts: ['A', 'B'], host: true, script: 'scripts/goldfarm.ts', enabled: true });
+    const orchestrate = parseOk({ accounts: ['A', 'B'], orchestrate: true, script: 'scripts/handoff-inputs.ts', enabled: true });
+    const pvp = parseOk({ account: 'Nockitoff', script: 'scripts/aio-pvp.ts', args: ['roam'], enabled: true });
+    const protectedAcct = parseOk({ account: 'haggis', script: 'scripts/aio-skiller.ts', enabled: true });
+    const specialistAcct = parseOk({ account: 'TipMyShaft', script: 'scripts/aio-skiller.ts', enabled: true });
+
+    expect(canUseHostPool(brainSkiller, {})).toBe(true);
+    expect(canUseHostPool(brainChain, {})).toBe(true);
+    expect(canUseHostPool(brainSkiller, { SWARM_HOST_POOL: '0' })).toBe(false);
+    expect(canUseHostPool(standing, {})).toBe(false);
+    expect(canUseHostPool(staticHost, {})).toBe(false);
+    expect(canUseHostPool(orchestrate, {})).toBe(false);
+    expect(canUseHostPool(pvp, {})).toBe(false);
+    expect(canUseHostPool(protectedAcct, {})).toBe(false);
+    expect(canUseHostPool(specialistAcct, {})).toBe(false);
+
+    // Pool selection packs fullest matching-source live pool, ignoring draining, full, dead, or stale-source pools.
+    const slots = [
+        { id: 'stale-src', pid: 1, started: 1, source: 'old-rev', launches: 1, draining: false },
+        { id: 'draining', pid: 2, started: 1, source: 'rev-2', launches: 1, draining: true },
+        { id: 'full', pid: 3, started: 1, source: 'rev-2', launches: 8, draining: false },
+        { id: 'sparse', pid: 4, started: 1, source: 'rev-2', launches: 2, draining: false },
+        { id: 'dense', pid: 5, started: 1, source: 'rev-2', launches: 5, draining: false },
+        { id: 'maxed-launches', pid: 6, started: 1, source: 'rev-2', launches: 64, draining: false },
+    ];
+    const activeByPool: Record<string, number> = { 'stale-src': 3, draining: 2, full: POOL_MAX_BOTS, sparse: 1, dense: 5, 'maxed-launches': 6 };
+    const picked = selectHostPool(slots, id => activeByPool[id] ?? 0, () => true, 'rev-2');
+    expect(picked?.id).toBe('dense');
+    expect(selectHostPool(slots, id => activeByPool[id] ?? 0, () => true, 'rev-3')).toBeNull();
+
+    // poolCommand uses --smol and supervise-host.ts --pool
+    expect(poolCommand('pool-x', 'rev-2').slice(0, 5)).toEqual(['bun', '--smol', 'packages/practice/src/supervise-host.ts', '--pool', 'pool-x']);
+
+    // Attaching to an existing host pool reserves POOL_ATTACH_BUDGET_GB instead of a full START_BUDGET_GB process heap.
+    const now = 100_000;
+    const attachUnits = POOL_ATTACH_BUDGET_GB / START_BUDGET_GB;
+    expect(startReserve(brainSkiller, 1, true)).toBeCloseTo(attachUnits, 6);
+    expect(startReserve(brainSkiller, 1, false)).toBe(1);
+    expect(pendingStartupCount([
+        { started: now - 1000, accounts: ['A'], poolAttached: false },
+        { started: now - 500, accounts: ['B'], poolAttached: true },
+        { started: now - 200, accounts: ['C'], poolAttached: true },
+    ], now)).toBeCloseTo(1 + 2 * attachUnits, 6);
+    const attached = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, true), pending: 0, freeGB: FREE_FLOOR_GB + 0.3, minFreeGB: 0, maxBots: 25 });
+    expect(attached.allowed).toBe(true);
+    expect(attached.reserveGB).toBeCloseTo(POOL_ATTACH_BUDGET_GB, 6);
+    const standalone = admissionDecision({ running: 10, external: 0, starting: 1, startingReserve: startReserve(brainSkiller, 1, false), pending: 0, freeGB: FREE_FLOOR_GB + 0.3, minFreeGB: 0, maxBots: 25 });
+    expect(standalone.allowed).toBe(false);
+    expect(standalone.reason).toBe('memory');
+
+    // Empty pools enter drain halfway through POOL_IDLE_EXIT_MS so attaches cannot race pool idle shutdown.
+    const { poolIdleExpired, POOL_IDLE_DRAIN_MS } = await import('./swarm');
+    const idleSlot = { id: 'idle-1', pid: 9, started: 1000, source: 'rev-2', launches: 1, draining: false } as {
+        id: string; pid: number; started: number; source: string; launches: number; draining: boolean; idleSince?: number;
+    };
+    expect(poolIdleExpired(idleSlot, 1, 10_000)).toBe(false);
+    expect(idleSlot.idleSince).toBeUndefined();
+    expect(poolIdleExpired(idleSlot, 0, 10_000)).toBe(false);
+    expect(idleSlot.idleSince).toBe(10_000);
+    // Still selectable while well inside the drain margin.
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS - 1)?.id).toBe('idle-1');
+    // Refused once idle reaches POOL_IDLE_DRAIN_MS, and poolIdleExpired triggers drainPool.
+    expect(selectHostPool([idleSlot], () => 0, () => true, 'rev-2', POOL_MAX_BOTS, 64, 10_000 + POOL_IDLE_DRAIN_MS)).toBeNull();
+    expect(poolIdleExpired(idleSlot, 0, 10_000 + POOL_IDLE_DRAIN_MS)).toBe(true);
+    // Becoming active clears idleSince.
+    expect(poolIdleExpired(idleSlot, 1, 10_000 + POOL_IDLE_DRAIN_MS + 100)).toBe(false);
+    expect(idleSlot.idleSince).toBeUndefined();
 });

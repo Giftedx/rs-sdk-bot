@@ -232,6 +232,9 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             lockstep.restoreTickClock();
             queue.length = 0;
             indexes.clear();
+            listeners.clear();
+            listenerSnapshot = [];
+            listenersDirty = false;
             recorder?.end(tick, reason);
             recorder = null;
             waitDone?.();

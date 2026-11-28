@@ -15,12 +15,21 @@ import {
     type WorkerKind,
     type WorkerTile,
 } from '../../workers/src/contracts';
-import { DEFAULT_FOOD_TYPE, foodRule } from '../../workers/src/bank-artisan/cooking';
-import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
-import { inventoryRecipeExp, inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
-import { BONES_PER_CAST, BONES_TO_BANANAS_RUNES, itemMagicRecipe, nativeTeleport } from '../../workers/src/bank-artisan/magic';
+import {
+    BONES_PER_CAST,
+    BONES_TO_BANANAS_RUNES,
+    DEFAULT_FOOD_TYPE,
+    foodRule,
+    inventoryRecipeExp,
+    inventoryRecipes,
+    itemMagicRecipe,
+    jewelleryRecipes,
+    nativeTeleport,
+    smeltRecipe,
+    smithRecipe,
+    type InventoryRecipe,
+} from '../../workers/src/bank-artisan/recipes';
 import { nativeNpcSpell } from '../../core/src/magic-data';
-import { smeltRecipe, smithRecipe } from '../../workers/src/bank-artisan/smithing';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
 import { fileStatStamp, readJsonStatCached } from './json-cache';
 import { GUARD_FOOD_IDS, type CombatSurvivabilityFloor, type StartArea } from './preflight';
@@ -809,11 +818,15 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             return hit.catalog;
         }
     }
+    // Read one-shot build inputs without pinning raw JSON tables in json-cache (defaultActivityCatalog already stat-caches the built catalog).
+    const readFreshJson = <T>(p: string, fallback: T): T => {
+        try { return JSON.parse(readFileSync(p, 'utf8')) as T; } catch { return fallback; }
+    };
     const items = safeReadJson<KnowledgeItem[]>(join(root, 'knowledge', 'items.json'), []);
-    const skills = safeReadJson<KnowledgeSkillRow[]>(join(root, 'knowledge', 'skills.json'), []);
-    const rates = safeReadJson<KnowledgeRateRow[]>(join(root, 'knowledge', 'rates.json'), []);
+    const skills = readFreshJson<KnowledgeSkillRow[]>(join(root, 'knowledge', 'skills.json'), []);
+    const rates = readFreshJson<KnowledgeRateRow[]>(join(root, 'knowledge', 'rates.json'), []);
     const questsJson = safeReadJson<KnowledgeQuestRow[]>(join(root, 'knowledge', 'quests.json'), []);
-    const travelData = safeReadJson<TravelCacheData>(join(root, 'packages', 'planner', 'src', 'haggis-travel.json'), {});
+    const travelData = readFreshJson<TravelCacheData>(join(root, 'packages', 'planner', 'src', 'haggis-travel.json'), {});
     const travelBanks = Object.values(travelData.banks ?? HUB_TILES);
 
     const itemByDebug = new Map<string, KnowledgeItem>();

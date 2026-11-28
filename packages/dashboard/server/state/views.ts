@@ -1,8 +1,10 @@
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { productionReview } from '../../collection';
 import { fleetSidesView } from '../../fleet-view';
+import { tradeSettlement, validOrder } from '../../../core/src/fleet-trade-settlement';
 import { isLocalServer } from '../../../core/src/localserver';
-import { BANKER, FILES, fleetList, MAIN, placeOf, shortPhase, snapshotFiles, type Status } from '../config';
+import { BANKER, every, FILES, MAIN, placeOf, shortPhase, snapshotFiles, type Status } from '../config';
 import { world } from '../world';
 import { type SwarmJob } from './plans';
 import { died, results } from './results';
@@ -86,8 +88,117 @@ function foodChain(st: Map<string, Status>, now: number) {
     };
 }
 
+type SettledOrderStamp = { mtimeMs: number; size: number; receiptSig: string };
+const settledOrdersCache = new Map<string, SettledOrderStamp>();
+const openOrderJsonCache = new Map<string, { mtimeMs: number; size: number; value: any }>();
+const openReceiptJsonCache = new Map<string, { mtimeMs: number; size: number; value: any }>();
+
+function readJsonCached(cache: Map<string, { mtimeMs: number; size: number; value: any }>, file: string, nowWall: number): any {
+    try {
+        const st = statSync(file);
+        const hit = cache.get(file);
+        if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.value;
+        const value = JSON.parse(readFileSync(file, 'utf8'));
+        cache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
+        return value;
+    } catch {
+        cache.delete(file);
+        return null;
+    }
+}
+
+function isSettledOrder(order: any, receipts: any[], now: number): boolean {
+    if (!order || typeof order.id !== 'string') return false;
+    if (receipts.some(r => r?.version !== undefined)) {
+        return validOrder(order) && tradeSettlement(order, receipts, now).state === 'settled';
+    }
+    if (receipts.some(r => r?.ok === false)) return false;
+    const ok = new Set(receipts.filter(r => r?.ok === true).map(r => r.role));
+    return ok.has('from') && ok.has('to');
+}
+
+// Keep only unresolved orders and their receipts in memory; settled orders retain only a stat stamp so thousands of historical trade files do not sit parsed in RAM.
+function readOpenFleetOrdersAndReceipts(now: number): { orders: any[]; receipts: any[] } {
+    return every(10_000, `open-fleet-orders:${FILES.fleet}`, () => {
+        const ordersDir = join(FILES.fleet, 'orders'), receiptsDir = join(FILES.fleet, 'receipts');
+        if (!existsSync(ordersDir)) {
+            settledOrdersCache.clear();
+            openOrderJsonCache.clear();
+            openReceiptJsonCache.clear();
+            return { orders: [], receipts: [] };
+        }
+        const nowWall = Date.now();
+        const receiptsByPrefix = new Map<string, string[]>();
+        if (existsSync(receiptsDir)) {
+            for (const f of readdirSync(receiptsDir)) {
+                if (!f.endsWith('.json')) continue;
+                const dot = f.lastIndexOf('.', f.length - 6);
+                if (dot <= 0) continue;
+                const orderId = f.slice(0, dot);
+                let list = receiptsByPrefix.get(orderId);
+                if (!list) { list = []; receiptsByPrefix.set(orderId, list); }
+                list.push(f);
+            }
+        }
+        const orderFiles = new Set<string>();
+        const activeOrderFiles = new Set<string>();
+        const activeReceiptFiles = new Set<string>();
+        const orders: any[] = [];
+        const receipts: any[] = [];
+        for (const f of readdirSync(ordersDir)) {
+            if (!f.endsWith('.json')) continue;
+            orderFiles.add(f);
+            const full = join(ordersDir, f);
+            let st;
+            try { st = statSync(full); } catch { continue; }
+            const orderId = f.slice(0, -5);
+            const rFiles = receiptsByPrefix.get(orderId) ?? [];
+            let receiptSig = '';
+            if (rFiles.length) {
+                const parts: string[] = [];
+                for (const rf of rFiles) {
+                    try {
+                        const rst = statSync(join(receiptsDir, rf));
+                        parts.push(`${rf}:${rst.size}:${rst.mtimeMs}`);
+                    } catch { /* disappeared */ }
+                }
+                parts.sort();
+                receiptSig = parts.join('|');
+            }
+            const settled = settledOrdersCache.get(f);
+            if (settled && settled.mtimeMs === st.mtimeMs && settled.size === st.size && settled.receiptSig === receiptSig) {
+                continue;
+            }
+            const order = readJsonCached(openOrderJsonCache, full, nowWall);
+            if (!order) continue;
+            const orderReceipts: any[] = [];
+            for (const rf of rFiles) {
+                const rFull = join(receiptsDir, rf);
+                const rec = readJsonCached(openReceiptJsonCache, rFull, nowWall);
+                if (rec) orderReceipts.push(rec);
+            }
+            if (isSettledOrder(order, orderReceipts, now)) {
+                settledOrdersCache.set(f, { mtimeMs: st.mtimeMs, size: st.size, receiptSig });
+                openOrderJsonCache.delete(full);
+                for (const rf of rFiles) openReceiptJsonCache.delete(join(receiptsDir, rf));
+                continue;
+            }
+            settledOrdersCache.delete(f);
+            activeOrderFiles.add(full);
+            orders.push(order);
+            for (const rf of rFiles) activeReceiptFiles.add(join(receiptsDir, rf));
+            receipts.push(...orderReceipts);
+        }
+        for (const key of settledOrdersCache.keys()) if (!orderFiles.has(key)) settledOrdersCache.delete(key);
+        for (const key of openOrderJsonCache.keys()) if (!activeOrderFiles.has(key)) openOrderJsonCache.delete(key);
+        for (const key of openReceiptJsonCache.keys()) if (!activeReceiptFiles.has(key)) openReceiptJsonCache.delete(key);
+        return { orders, receipts };
+    });
+}
+
 function fleetSides(now: number, snapshots = snapshotFiles()) {
-    return fleetSidesView(snapshots, fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
+    const { orders, receipts } = readOpenFleetOrdersAndReceipts(now);
+    return fleetSidesView(snapshots, orders, now, receipts);
 }
 
 export {

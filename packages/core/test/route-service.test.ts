@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { claimLaunch, LAUNCH_LOCK_MS, planResponse, readServiceInfo, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
+import { claimLaunch, LAUNCH_LOCK_MS, planResponse, readServiceInfo, routeServiceEnv, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
 import { serviceWanted } from '../src/route-plan';
 
 test('a slow plan answer sends spaces until the plan, and still reads as JSON', async () => {
@@ -112,7 +112,7 @@ test('planTripOffThread plans by the service and falls back to its own worker wh
   globalThis.Worker=class { constructor(){workers.push(this);this.requests=[];} ref(){} unref(){} postMessage(r){this.requests.push(r);queueMicrotask(()=>this.onmessage({data:{id:r.id,plan:{cost:1,legs:[],by:'worker'}}}));} terminate(){} };
   let port=0;
   const server=Bun.serve({hostname:'127.0.0.1',port:0,fetch:async req=>Response.json({plan:{cost:2,legs:[],by:'service',to:(await req.json()).to}})});
-  mock.module(resolve('packages/core/src/route-service.ts'),()=>({
+  mock.module(resolve('packages/core/src/route-service-client.ts'),()=>({
    checkoutRev:()=>'rev',readServiceInfo:()=>({pid:process.pid,port,rev:'rev',dataKey:'k',workers:1,started:0}),
    usableService:(i)=>i,pidAlive:()=>true,launchService:()=>{throw Error('no launch in a test');},
   }));
@@ -141,3 +141,150 @@ test('planTripOffThread plans by the service and falls back to its own worker wh
         expect(code).toBe(0);
     } finally { clearTimeout(deadline); }
 });
+
+test('overflow workers terminate after overflowIdleMs while slot 0 stays warm, and sharedAreas transfer once per worker', async () => {
+    FakeWorker.made = [];
+    const fakeShared = { areas: 1, tiles: 64, bits: 4, isUint16: true } as any;
+    const pool = workerPool(2, make, { overflowIdleMs: 30, sharedAreas: () => fakeShared });
+    try {
+        const a = pool.plan(req), b = pool.plan(req);
+        expect(pool.activeWorkers()).toBe(2);
+        const [w0, w1] = FakeWorker.made as [FakeWorker, FakeWorker];
+        expect(w0.requests[0].sharedAreas).toBe(fakeShared);
+        expect(w1.requests[0].sharedAreas).toBe(fakeShared);
+        w0.reply(w0.requests[0].id, { plan: { cost: 1, legs: [] } });
+        w1.reply(w1.requests[0].id, { plan: { cost: 2, legs: [] } });
+        await Promise.all([a, b]);
+        await Bun.sleep(60);
+        expect(w0.terminated).toBe(false);
+        expect(w1.terminated).toBe(true);
+        expect(pool.activeWorkers()).toBe(1);
+        const c = pool.plan(req);
+        expect(w0.requests[1].sharedAreas).toBeUndefined();
+        w0.reply(w0.requests[1].id, { plan: null });
+        await c;
+    } finally { pool.stop(); }
+});
+
+test('routeServiceEnv keeps DFG JIT enabled and clears low bot RAM cap inherited from caller env', () => {
+    const env = routeServiceEnv({ BUN_JSC_useDFGJIT: '0', BUN_JSC_forceRAMSize: '268435456', PATH: 'x' });
+    expect(env.BUN_JSC_useDFGJIT).toBe('1');
+    expect(env.BUN_JSC_forceRAMSize).toBeUndefined();
+    expect(env.BUN_JSC_numberOfWasmCompilerThreads).toBe('1');
+    expect(env.BUN_JSC_numberOfGCMarkers).toBe('1');
+});
+
+test('serveRoutes answers POST /query for single-plane path queries and rejects unknown kinds', async () => {
+    FakeWorker.made = [];
+    const dir = mkdtempSync(join(tmpdir(), 'route-service-q-')), file = join(dir, 'route-service.json');
+    const s = serveRoutes({ workers: 1, file, makeWorker: make });
+    try {
+        const base = `http://127.0.0.1:${s.info.port}`;
+        expect((await fetch(`${base}/query`, { method: 'POST', body: JSON.stringify({ kind: 'bogus' }) })).status).toBe(400);
+        const q = { kind: 'sdk-find-path' as const, from: { x: 3222, z: 3218, level: 0 }, to: { x: 3240, z: 3225 } };
+        const pending = fetch(`${base}/query`, { method: 'POST', body: JSON.stringify(q) }).then(r => r.json());
+        while (!FakeWorker.made[0]?.requests.length) await Bun.sleep(5);
+        const w = FakeWorker.made[0]!;
+        expect(w.requests[0]).toMatchObject(q);
+        w.reply(w.requests[0].id, { result: { success: true, waypoints: [{ x: 3240, z: 3225, level: 0 }], reachedDestination: true } });
+        expect(await pending).toEqual({ result: { success: true, waypoints: [{ x: 3240, z: 3225, level: 0 }], reachedDestination: true } });
+    } finally {
+        s.stop('test');
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('remote sendFindPath, sessionWalker, interactionApproach and routeHarm use route-service without initializing local WASM', async () => {
+    const probe = `
+        import assert from 'node:assert/strict';
+        import { mock } from 'bun:test';
+        import { resolve } from 'node:path';
+        const seen = [];
+        const server = Bun.serve({
+            hostname: '127.0.0.1',
+            port: 0,
+            fetch: async req => {
+                const body = await req.json();
+                seen.push(body.kind);
+                if (body.kind === 'sdk-find-path') return Response.json({ result: { success: true, waypoints: [{ x: body.to.x, z: body.to.z, level: 0 }], reachedDestination: true } });
+                if (body.kind === 'walk-plan') return Response.json({ result: [{ x: body.to.x, z: body.to.z }] });
+                if (body.kind === 'walk-danger') return Response.json({ result: { verdict: 'clear', start: false, summary: { zone: '-', damage: 0, need: 0, needHeal: 0, eatFirst: 0, floorLine: 0, tiles: 0, zones: [] } } });
+                if (body.kind === 'approach') return Response.json({ result: { x: 3062, z: 3376, level: 0 } });
+                if (body.kind === 'route-exposure') return Response.json({ result: { tiles: 0, damage: 0, maxHit: 0, burst: 0, zones: [] } });
+                return new Response('bad', { status: 400 });
+            },
+        });
+        mock.module(resolve('packages/core/src/route-service-client.ts'), () => ({
+            checkoutRev: () => 'rev',
+            readServiceInfo: () => ({ pid: process.pid, port: server.port, rev: 'rev', dataKey: 'k', workers: 1, started: 0 }),
+            usableService: i => i,
+            pidAlive: () => true,
+            launchService: () => { throw Error('no launch in test'); },
+        }));
+        mock.module(resolve('packages/core/src/pathcache.ts'), () => ({
+            pathfindingDataKey: () => 'k',
+            openDiagonalDoors: () => 0,
+        }));
+        process.env.ROUTE_SERVICE = '1';
+        const rsmod = await import('./vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+        const { installRemoteSendFindPath, interactionApproach } = await import('./packages/core/src/world/pathfinding');
+        const { sessionWalker, routeHarm } = await import('./packages/core/src/walk');
+        const state = {
+            player: { worldX: 3222, worldZ: 3218, level: 0, runEnergy: 100, runWeight: 0, hp: 10, maxHp: 10 },
+            skills: [{ name: 'Hitpoints', level: 10 }],
+            inventory: [],
+            equipment: [],
+            nearbyLocs: [{ id: 1733, x: 3059, z: 3376, level: 0 }],
+            nearbyNpcs: [],
+        };
+        let localCalls = 0;
+        const sdk = {
+            getState: () => state,
+            findPath: () => { localCalls++; return { success: true, waypoints: [{ x: 3224, z: 3218, level: 0 }], reachedDestination: true }; },
+            async sendFindPath(x, z, m) { return this.findPath(x, z, m); },
+            temporaryDoorBlocks: { active: () => [] },
+        };
+        installRemoteSendFindPath(sdk);
+        const path = await sdk.sendFindPath(3240, 3225, 500);
+        assert.equal(path.success, true);
+        assert.equal(path.waypoints[0].x, 3240);
+        assert.equal(localCalls, 0);
+
+        const deps = await sessionWalker({ sdk, onTick: () => () => {}, direct: async () => ({}) }, { noFareFloat: true });
+        const corners = await deps.planAsync(0, { x: 3222, z: 3218 }, { x: 3235, z: 3220 });
+        assert.deepEqual(corners, [{ x: 3235, z: 3220 }]);
+        const danger = await deps.dangerAsync(0, [{ x: 2840, z: 3497 }]);
+        assert.equal(danger.verdict, 'clear');
+
+        const approach = await interactionApproach(sdk, { x: 3059, z: 3376, level: 0 }, { id: 1733, shape: 10, angle: 1, width: 2, height: 3, blockAccessFlags: 14 });
+        assert.deepEqual(approach, { x: 3062, z: 3376, level: 0 });
+
+        const harm = await routeHarm({ sdk, tick: () => 0, onTick: () => () => {}, bot: { walkTo: async () => ({}), interactLoc: async () => ({}) } },
+            { x: 2809, z: 3436, level: 0 }, { x: 2895, z: 3445, level: 0 },
+            { skills: { hitpoints: 10 }, varps: {}, items: [] },
+            { cost: 50, legs: [{ kind: 'walk', to: { x: 2895, z: 3445, level: 0 } }] },
+            async () => null);
+        assert.equal(harm.action, 'clear');
+        assert.deepEqual(seen, ['sdk-find-path', 'walk-plan', 'walk-danger', 'approach', 'route-exposure']);
+        assert.equal(rsmod.__wasm, undefined, 'remote queries must never initialize local rsmod WASM');
+
+        // Fallback when service goes down:
+        server.stop(true);
+        const fallback = await sdk.sendFindPath(3224, 3218, 500);
+        assert.equal(localCalls, 1);
+        assert.equal(fallback.waypoints[0].x, 3224);
+        process.exit(0);
+    `;
+    const child = Bun.spawn([process.execPath, '-e', probe], {
+        cwd: resolve(import.meta.dir, '../../..'),
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    const deadline = setTimeout(() => child.kill(), 30_000);
+    try {
+        const [code, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+        expect(stderr).toBe('');
+        expect(code).toBe(0);
+    } finally { clearTimeout(deadline); }
+}, 35_000);

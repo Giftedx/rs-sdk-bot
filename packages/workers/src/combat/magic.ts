@@ -1,9 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { isStopFilePresent } from '../stop';
-import { initPathfinding } from '../../../../vendor/rs-sdk/sdk/pathfinding';
 import type { NearbyNpc } from '../../../../vendor/rs-sdk/sdk/types';
-import * as rsmod from '../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
+
+const require = createRequire(import.meta.url);
+let cachedPathfinding: typeof import('../../../../vendor/rs-sdk/sdk/pathfinding') | undefined;
+let cachedRsmod: typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | undefined;
+const loadPathfinding = () => (cachedPathfinding ??= require('../../../../vendor/rs-sdk/sdk/pathfinding') as typeof import('../../../../vendor/rs-sdk/sdk/pathfinding'));
+const loadRsmod = () => (cachedRsmod ??= require('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') as typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'));
 import { accountOf, finish, getWorld, openBot, randomEventsOf } from '../../../core/src/bot';
 import { awaitLogoutQuiet, LOGOUT_QUIET_TICKS, logoutQuiet } from '../../../core/src/combat-end';
 import { equipmentObserved } from '../../../core/src/container-observation';
@@ -619,8 +624,8 @@ export async function prepareSplashStaffAtBank(
 }
 
 export function castReaches(from: { x: number; z: number }, sw: { x: number; z: number }, range: number = CAST_RANGE, size: number = COW_SIZE): boolean {
-    initPathfinding();
-    return Math.max(Math.abs(sw.x - from.x), Math.abs(sw.z - from.z)) <= range && rsmod.hasLineOfSight(0, from.x, from.z, sw.x, sw.z, 1, 1, size, size, 0);
+    loadPathfinding().initPathfinding();
+    return Math.max(Math.abs(sw.x - from.x), Math.abs(sw.z - from.z)) <= range && loadRsmod().hasLineOfSight(0, from.x, from.z, sw.x, sw.z, 1, 1, size, size, 0);
 }
 
 export const QUIET_TICKS = 300;

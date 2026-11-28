@@ -8,11 +8,21 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isHpFloorStop, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
-import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
-import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
-import {hasStopFile} from '../../core/src/practice-paths';
-import {workerDrain} from '../../core/src/live-update-pending';
+import {
+    CLAIM_AUTHORITY_PAUSE_MS, drainPause, isDeathLine, isHpFloorLine, isHpFloorStop, isUncaughtErrorLine,
+    gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal,
+    isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, lineKeeper, madeProgress,
+    newestStatusWrite, participantsDrainStopped, participantsHaveStopFile, repeatableFailure, STALL_MS, supervise,
+} from './supervise';
+import { assertWorkerRelease, isWorkerReleaseHold } from '../../core/src/worker-release';
+import { fleetLeaseAllowsWorker } from '../../core/src/fleet-lease';
+import { hasStopFile } from '../../core/src/practice-paths';
+import { workerDrain } from '../../core/src/live-update-pending';
+import { baseProcessEnv, isChainScript, runHostedBot, type HostedBot, type RunHostedBotOpts } from '../../core/src/host';
+import { parseStep } from '../../core/src/chain-step';
+import { writeAtomicFile } from '../../core/src/atomic-file';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused';
 
@@ -155,15 +165,340 @@ export function hostStopped(account: string, root = process.cwd()): boolean {
     return !fleetLeaseAllowsWorker(root) || hasStopFile(account, root);
 }
 
+// Dynamic multi-bot host pool: runs up to maxBots heterogeneous supervised bots in ONE detached Bun process,
+// eliminating both per-bot supervise.ts processes and duplicate Bun/WebClient/LocIndex/SDK runtimes.
+export const DEFAULT_POOL_MAX_BOTS = 8;
+export const DEFAULT_POOL_MAX_LAUNCHES = 64;
+export const DEFAULT_POOL_IDLE_EXIT_MS = 30_000;
+export const DEFAULT_POOL_POLL_MS = 500;
+
+export type PoolCommand =
+    | {
+          op: 'start';
+          id: string;
+          bot: string;
+          script: string;
+          args?: string[];
+          maxRestarts?: number;
+          env?: Record<string, string>;
+          logPath: string;
+          header?: string;
+      }
+    | { op: 'cancel'; id: string; bot: string; reason?: string }
+    | { op: 'drain'; id: string };
+
+export interface PoolMeta {
+    poolId: string;
+    pid: number;
+    startedAt: number;
+    source: string;
+    maxBots: number;
+    maxLaunches: number;
+}
+
+export interface PoolArgs {
+    poolId: string;
+    maxBots: number;
+    maxLaunches: number;
+    idleExitMs: number;
+    source: string;
+}
+
+export function poolDir(root: string, poolId: string): string {
+    return join(root, '.practice', 'host-pools', poolId);
+}
+
+export function poolInboxDir(root: string, poolId: string): string {
+    return join(poolDir(root, poolId), 'inbox');
+}
+
+export function poolMetaPath(root: string, poolId: string): string {
+    return join(poolDir(root, poolId), 'meta.json');
+}
+
+export function writePoolCommand(root: string, poolId: string, cmd: PoolCommand): string {
+    const inbox = poolInboxDir(root, poolId);
+    mkdirSync(inbox, { recursive: true });
+    const safeId = cmd.id.replace(/[^A-Za-z0-9_.-]/g, '_');
+    const file = join(inbox, `${String(Date.now()).padStart(13, '0')}-${safeId}.json`);
+    writeAtomicFile(file, JSON.stringify(cmd));
+    return file;
+}
+
+export function parsePoolArgs(argv: readonly string[]): PoolArgs | null {
+    if (!argv.includes('--pool')) return null;
+    let poolId = '';
+    let maxBots = DEFAULT_POOL_MAX_BOTS;
+    let maxLaunches = DEFAULT_POOL_MAX_LAUNCHES;
+    let idleExitMs = DEFAULT_POOL_IDLE_EXIT_MS;
+    let source = '';
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i]!;
+        if (a === '--pool') { poolId = argv[++i] ?? ''; continue; }
+        if (a === '--max-bots') { maxBots = Number(argv[++i]); continue; }
+        if (a === '--max-launches') { maxLaunches = Number(argv[++i]); continue; }
+        if (a === '--idle-exit-ms') { idleExitMs = Number(argv[++i]); continue; }
+        if (a === '--source') { source = argv[++i] ?? ''; continue; }
+        throw Error(`unknown pool option ${a}`);
+    }
+    if (!poolId || !/^[A-Za-z0-9_.-]{1,64}$/.test(poolId)) throw Error('invalid --pool id');
+    if (!Number.isSafeInteger(maxBots) || maxBots < 1) throw Error(`invalid --max-bots: ${maxBots}`);
+    if (!Number.isSafeInteger(maxLaunches) || maxLaunches < 1) throw Error(`invalid --max-launches: ${maxLaunches}`);
+    if (!Number.isSafeInteger(idleExitMs) || idleExitMs < 0) throw Error(`invalid --idle-exit-ms: ${idleExitMs}`);
+    return { poolId, maxBots, maxLaunches, idleExitMs, source };
+}
+
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (!signal) return Bun.sleep(ms);
+    if (signal.aborted) return Promise.resolve();
+    return new Promise<void>(resolve => {
+        const done = () => { clearTimeout(timer); signal.removeEventListener('abort', done); resolve(); };
+        const timer = setTimeout(done, ms);
+        signal.addEventListener('abort', done, { once: true });
+    });
+}
+
+export interface HostPoolDeps {
+    root?: string;
+    pollMs?: number;
+    stallMs?: number;
+    stallCheckMs?: number;
+    runBot?: (bot: HostedBot, opts: RunHostedBotOpts) => Promise<{ name: string; ok: boolean; code: number; result: string; stalled: boolean }>;
+    assertRelease?: (env: Record<string, string | undefined>, root: string) => void;
+    leaseAllows?: (root: string) => boolean;
+    stopped?: (bot: string, root: string) => boolean;
+    drainStopped?: (bot: string, root: string) => boolean;
+    drained?: (root: string) => readonly string[];
+    swarmStopped?: (root: string) => boolean;
+    newestStatus?: (accounts: readonly string[], root?: string) => number;
+    pause?: (ms: number, signal: AbortSignal) => Promise<void>;
+    log?: (line: string) => void;
+    registerSignals?: boolean;
+}
+
+export async function runHostPool(args: PoolArgs, deps: HostPoolDeps = {}): Promise<{ launches: number; ends: Record<string, string> }> {
+    const root = deps.root ?? process.cwd();
+    const pollMs = deps.pollMs ?? DEFAULT_POOL_POLL_MS;
+    const stallMs = deps.stallMs ?? STALL_MS;
+    const runBot = deps.runBot ?? runHostedBot;
+    const assertRelease = deps.assertRelease ?? ((env, r) => { assertWorkerRelease(env, r); });
+    const leaseAllows = deps.leaseAllows ?? fleetLeaseAllowsWorker;
+    const stoppedCheck = deps.stopped ?? ((bot, r) => participantsHaveStopFile([bot], r));
+    const drainStoppedCheck = deps.drainStopped ?? ((bot, r) => participantsDrainStopped([bot], r));
+    const drainedCheck = deps.drained ?? workerDrain;
+    const swarmStoppedCheck = deps.swarmStopped ?? (r => hasStopFile('swarm', r));
+    const newestStatus = deps.newestStatus ?? newestStatusWrite;
+    const pauseFn = deps.pause ?? abortableSleep;
+    const log = deps.log ?? (l => console.log(l));
+
+    const dir = poolDir(root, args.poolId);
+    const inbox = poolInboxDir(root, args.poolId);
+    const metaFile = poolMetaPath(root, args.poolId);
+    mkdirSync(inbox, { recursive: true });
+    const meta: PoolMeta = {
+        poolId: args.poolId,
+        pid: process.pid,
+        startedAt: Date.now(),
+        source: args.source || baseProcessEnv().WORKER_RELEASE || '',
+        maxBots: args.maxBots,
+        maxLaunches: args.maxLaunches,
+    };
+    writeAtomicFile(metaFile, JSON.stringify(meta));
+    log(`HOST-POOL start id=${args.poolId} pid=${process.pid} maxBots=${args.maxBots} maxLaunches=${args.maxLaunches}`);
+
+    const active = new Map<string, { bot: string; cancel: AbortController; task: Promise<void> }>();
+    const ends: Record<string, string> = Object.create(null);
+    let totalLaunches = 0;
+    let draining = false;
+    let lastActiveAt = Date.now();
+
+    const startBot = (cmd: Extract<PoolCommand, { op: 'start' }>) => {
+        const key = cmd.bot.toLowerCase();
+        if (active.has(key)) return;
+        totalLaunches++;
+        lastActiveAt = Date.now();
+        const cancel = new AbortController();
+        const logPath = cmd.logPath;
+        mkdirSync(dirname(logPath), { recursive: true });
+        const writeLog = (line: string) => {
+            try { appendFileSync(logPath, line.endsWith('\n') ? line : line + '\n'); } catch { /* log file is optional */ }
+        };
+        if (cmd.header) writeLog(cmd.header);
+        const botEnv: Record<string, string | undefined> = { ...baseProcessEnv(), ...(cmd.env ?? {}) };
+        const maxRestarts = cmd.maxRestarts ?? 20;
+        const scriptArgs = cmd.args ?? [];
+
+        const task = (async () => {
+            try {
+                const r = await supervise({
+                    run: async () => {
+                        if (botEnv.DEMO_OK === '1' && botEnv.STANDING !== '1') {
+                            try { assertRelease(botEnv, root); }
+                            catch (e) {
+                                const line = `RESULT fail ${String(e)}`;
+                                writeLog(line);
+                                return { stdout: line, exitCode: 1 };
+                            }
+                        }
+                        const keepOut = lineKeeper(l =>
+                            l.startsWith('RESULT') ? 'RESULT'
+                                : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER'
+                                : isDeathLine(l) ? 'DEATH'
+                                : isHpFloorLine(l) ? 'HP_FLOOR'
+                                : null,
+                        );
+                        const keepErr = lineKeeper(l => isUncaughtErrorLine(l) ? 'ERROR' : null);
+                        let steps: ReturnType<typeof parseStep>[] | undefined;
+                        if (isChainScript(cmd.script)) {
+                            if (!scriptArgs.length) {
+                                const msg = 'RESULT fail usage: chain.ts <account> "<script> [args] [KEY=value]" ...';
+                                keepOut.push(msg + '\n');
+                                writeLog(msg);
+                                return { stdout: keepOut.text(), stderr: '', exitCode: 2 };
+                            }
+                            try { steps = scriptArgs.map(parseStep); }
+                            catch (e) {
+                                const err = `error: ${(e as Error).message}`;
+                                keepErr.push(err + '\n');
+                                writeLog(err);
+                                return { stdout: '', stderr: keepErr.text(), exitCode: 1 };
+                            }
+                        }
+                        const hosted: HostedBot = {
+                            name: cmd.bot,
+                            script: cmd.script,
+                            args: scriptArgs,
+                            env: cmd.env,
+                            ...(steps ? { steps } : {}),
+                        };
+                        const res = await runBot(hosted, {
+                            out: line => {
+                                keepOut.push(line + '\n');
+                                if (isUncaughtErrorLine(line)) keepErr.push(line + '\n');
+                                writeLog(line);
+                            },
+                            logFile: null,
+                            prefix: false,
+                            root,
+                            stallMs,
+                            checkMs: deps.stallCheckMs,
+                            newestStatus,
+                            drained: () => drainedCheck(root),
+                            cancel: cancel.signal,
+                        });
+                        return { stdout: keepOut.text(), stderr: keepErr.text(), exitCode: res.code };
+                    },
+                    stopped: () => cancel.signal.aborted || !leaseAllows(root) || stoppedCheck(cmd.bot, root),
+                    pause: ms => pauseFn(ms, cancel.signal),
+                    maxRestarts,
+                    log: l => writeLog(l),
+                    drained: () => drainedCheck(root),
+                    drainStopped: () => drainStoppedCheck(cmd.bot, root),
+                });
+                const endLine = `SUPERVISE end ${r.reason} after ${r.runs} runs`;
+                writeLog(endLine);
+                ends[cmd.bot] = `${r.reason} after ${r.runs} runs`;
+                log(`HOST-POOL account ${cmd.bot} ${r.reason} after ${r.runs} runs`);
+            } catch (e) {
+                const endLine = `SUPERVISE end gave-up after 0 runs`;
+                writeLog(`ERROR host-pool supervise threw: ${String(e)}`);
+                writeLog(endLine);
+                ends[cmd.bot] = 'gave-up after 0 runs';
+                log(`HOST-POOL account ${cmd.bot} error: ${String(e)}`);
+            } finally {
+                active.delete(key);
+                lastActiveAt = Date.now();
+                try { Bun.gc(false); } catch { /* optional GC hint */ }
+            }
+        })();
+        active.set(key, { bot: cmd.bot, cancel, task });
+    };
+
+    const drainInbox = () => {
+        let files: string[];
+        try { files = readdirSync(inbox).filter(f => f.endsWith('.json') && !f.includes('.tmp-')).sort(); }
+        catch { return; }
+        for (const f of files) {
+            const full = join(inbox, f);
+            let cmd: PoolCommand;
+            try {
+                cmd = JSON.parse(readFileSync(full, 'utf8')) as PoolCommand;
+                rmSync(full, { force: true });
+            } catch {
+                try { rmSync(full, { force: true }); } catch { /* ignore */ }
+                continue;
+            }
+            if (cmd.op === 'start') {
+                startBot(cmd);
+            } else if (cmd.op === 'cancel') {
+                const entry = active.get(cmd.bot.toLowerCase());
+                if (entry) entry.cancel.abort(cmd.reason ?? 'stop file');
+            } else if (cmd.op === 'drain') {
+                draining = true;
+            }
+        }
+    };
+
+    const onSignal = () => {
+        draining = true;
+        for (const entry of active.values()) entry.cancel.abort('stop file');
+    };
+    if (deps.registerSignals) {
+        process.on('SIGINT', onSignal);
+        process.on('SIGTERM', onSignal);
+    }
+
+    try {
+        for (;;) {
+            drainInbox();
+            if (active.size > 0) {
+                lastActiveAt = Date.now();
+            } else {
+                const shouldExit = draining
+                    || totalLaunches >= args.maxLaunches
+                    || swarmStoppedCheck(root)
+                    || !leaseAllows(root)
+                    || (Date.now() - lastActiveAt >= args.idleExitMs);
+                if (shouldExit) break;
+            }
+            await Bun.sleep(pollMs);
+        }
+        if (active.size > 0) await Promise.allSettled([...active.values()].map(a => a.task));
+    } finally {
+        if (deps.registerSignals) {
+            process.off('SIGINT', onSignal);
+            process.off('SIGTERM', onSignal);
+        }
+        try {
+            if (existsSync(metaFile)) {
+                const cur = JSON.parse(readFileSync(metaFile, 'utf8')) as PoolMeta;
+                if (cur?.pid === process.pid) rmSync(metaFile, { force: true });
+            }
+        } catch { /* ignore */ }
+        try {
+            if (existsSync(inbox) && readdirSync(inbox).length === 0) rmSync(dir, { recursive: true, force: true });
+        } catch { /* ignore */ }
+    }
+    log(`HOST-POOL end id=${args.poolId} launches=${totalLaunches}`);
+    return { launches: totalLaunches, ends };
+}
+
 if (import.meta.main) {
+    const argv = process.argv.slice(2);
+    let pool: PoolArgs | null = null;
+    try { pool = parsePoolArgs(argv); } catch (e) { console.log(String(e)); process.exit(2); }
+    if (pool) {
+        await runHostPool(pool, { registerSignals: true });
+        process.exit(0);
+    }
     let parsed: SuperviseHostArgs;
-    try { parsed = parseSuperviseHostArgs(process.argv.slice(2)); } catch (e) { console.log(String(e)); process.exit(2); }
+    try { parsed = parseSuperviseHostArgs(argv); } catch (e) { console.log(String(e)); process.exit(2); }
     const { script, accounts } = parsed;
     const r = await superviseHost(accounts, {
         run: async active => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
-            const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostOptions(parsed, active)], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
+            const p = Bun.spawn(['bun', '--smol', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostOptions(parsed, active)], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
             const stdout = await keepOutput(p.stdout, keptHostLine);
             return { stdout, exitCode: await p.exited };
         },

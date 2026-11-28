@@ -5,7 +5,8 @@ import type { Bonus, Gear, Skill } from './gear';
 import { BONUSES } from './gear';
 
 const root = resolve(import.meta.dir, '..', '..', '..');
-export const loadGear = (): Gear[] => JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8'));
+let cachedGear: Gear[] | undefined;
+export const loadGear = (): Gear[] => (cachedGear ??= JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')));
 export const MAXED: Record<Skill, number> = { attack: 99, strength: 99, defence: 99, ranged: 99, magic: 99 };
 
 export function canWear(g: Gear, levels: Partial<Record<Skill, number>>, quests: ReadonlySet<string> | null): boolean {

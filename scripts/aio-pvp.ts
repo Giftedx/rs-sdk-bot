@@ -1,18 +1,17 @@
 // AIO PvP ("PK Fighter"): unified Wilderness PvP, tribrid switching, hunting, roaming, kit staging, and escort suite.
 // Usage:
 //   bun scripts/aio-pvp.ts <account> <mode> [arg ...] [KEY=value ...]
-import {
-    escortInterceptDecision,
-    retreatOrTeleportPlan,
-    selectInboundRecovery,
-} from '../packages/workers/src/gather/mining';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+type MiningMod = typeof import('../packages/workers/src/gather/mining');
+let miningMod: MiningMod | undefined;
+const getMining = () => (miningMod ??= require('../packages/workers/src/gather/mining') as MiningMod);
 
 export * from '../packages/workers/src/pvp/modes';
-export {
-    escortInterceptDecision,
-    retreatOrTeleportPlan,
-    selectInboundRecovery,
-};
+export const escortInterceptDecision: MiningMod['escortInterceptDecision'] = (...a) => getMining().escortInterceptDecision(...a);
+export const retreatOrTeleportPlan: MiningMod['retreatOrTeleportPlan'] = (...a) => getMining().retreatOrTeleportPlan(...a);
+export const selectInboundRecovery: MiningMod['selectInboundRecovery'] = (...a) => getMining().selectInboundRecovery(...a);
 
 if (import.meta.main) {
     const [account, mode, ...rest] = process.argv.slice(2);

@@ -4,6 +4,7 @@ import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } f
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
 import { activeDanger, closedOf, combatLevel, escapeTiles, routeHarmKeep, guardRoute, guardWalk, withOpened, npcReach, pack, planAroundHarm, setDangerDoorAt, stateWalkProfile, type DangerScope, type NpcReach } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
+import { queryRouteService, serviceWanted, type SdkFindPathResult } from '../route-query';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { npcBlockTiles, withNpcBlocks } from './npc-blocks';
 import { NO_CHANGES, WAYPOINT_LIMIT, changeBuilder, hintLengths, legKey, tileTable, windowKey, withHint, type ChangeTable } from './leg-key';
@@ -14,18 +15,55 @@ let rsPath: { findLongPath: Function; getDoorAt: Function } | null = null;
 let activePathPolicy: { owner: object; blocked: DoorBlock[] } | null = null;
 // Scope labels (rsPathLength labelScope): measured nulls in one scope before it is labelled, scopes kept labelled, and
 // scopes whose nulls are counted.
-const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 3, SCOPE_NULL_KEYS = 256;
+const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 2, SCOPE_NULL_KEYS = 256;
 const policySdks = new WeakSet<object>();
+const remoteSendSdks = new WeakSet<object>();
 
 async function loadPathfinding() {
     if (!rsPath) { rsPath = await import(join(worldRepoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts')); setDangerDoorAt(rsPath!.getDoorAt as Parameters<typeof setDangerDoorAt>[0]); }
     return rsPath!;
 }
 
-/** Installs per-account door policy and danger guards on an SDK instance's findPath method. */
+/** Routes async sdk.sendFindPath (used by BotActions.walkTo) through route-service.ts when enabled, avoiding local WASM init. */
+export function installRemoteSendFindPath(sdk: any): void {
+    const raw = unwrapGuarded(sdk);
+    if (typeof raw?.sendFindPath !== 'function' || remoteSendSdks.has(raw)) return;
+    const originalSend = raw.sendFindPath;
+    raw.sendFindPath = async function(destX: number, destZ: number, maxWaypoints: number = 500) {
+        if (!serviceWanted()) return originalSend.call(raw, destX, destZ, maxWaypoints);
+        const state = raw.getState?.(), p = state?.player;
+        if (!p) return { success: false, waypoints: [], error: 'No player state available' };
+        const from: Tile = { x: p.worldX, z: p.worldZ, level: p.level };
+        const tempDoors = raw.temporaryDoorBlocks?.active?.() ?? [];
+        let policy: { acct: ReturnType<typeof accountForSdk>; profile: ReturnType<typeof stateWalkProfile>; blocks: DoorBlock[]; npcTiles: Tile[] } | undefined;
+        if (policySdks.has(raw)) {
+            const acct = accountForSdk(raw);
+            policy = {
+                acct: JSON.parse(JSON.stringify(acct)),
+                profile: stateWalkProfile(acct, p),
+                blocks: blockedDoorsNear(from, { x: destX, z: destZ, level: p.level }, acct),
+                npcTiles: npcBlockTiles(Array.isArray(state.nearbyNpcs) ? state.nearbyNpcs : [], from, { x: destX, z: destZ, level: p.level }),
+            };
+        }
+        const remote = await queryRouteService<SdkFindPathResult>({
+            kind: 'sdk-find-path',
+            from,
+            to: { x: destX, z: destZ },
+            maxWaypoints,
+            tempDoors,
+            ...(policy ? { policy } : {}),
+        });
+        if (remote !== undefined) return remote;
+        return originalSend.call(raw, destX, destZ, maxWaypoints);
+    };
+    remoteSendSdks.add(raw);
+}
+
+/** Installs per-account door policy and danger guards on an SDK instance's findPath and sendFindPath methods. */
 export async function installDoorPolicy(sdk: any, client?: unknown): Promise<void> {
     const raw = unwrapGuarded(sdk);
     registerRouteActor(raw, client);
+    installRemoteSendFindPath(raw);
     if (typeof raw?.findPath !== 'function' || policySdks.has(raw)) return;
     const pf = await loadPathfinding();
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
@@ -71,7 +109,10 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     // Searched legs are kept on disk (leg-cache.ts) under the changes of the scope that the leg's search could read
     // (leg-key.ts), so accounts and quest steps with other doors or danger far from a leg share its length. A leg the
     // cheap checks refuse is not stored: refusing it again costs less than reading it back.
-    const cache = opts.legs ?? legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
+    // When lazyLabels is set (route-service mode), defer opening SQLite until a local query actually runs.
+    let cache: LegCache | undefined = opts.legs ?? (opts.lazyLabels ? undefined : legCache());
+    const getCache = (): LegCache => cache ??= legCache();
+    const policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
     // With lazyLabels, a process whose plans go to the route service (route-plan.ts) and that never asks this world
     // for a length holds no map labels.
     let mapLabels: Labels | null = null;
@@ -119,7 +160,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
         if (blocked !== lastBlocked) {
             lastBlocked = blocked;
             let shut = policyKeys.get(blocked);
-            if (shut === undefined) { shut = cache.hash(blocked); policyKeys.set(blocked, shut); }
+            if (shut === undefined) { shut = getCache().hash(blocked); policyKeys.set(blocked, shut); }
             if (shut !== lastShut) { lastShut = shut; changed = true; }
         }
         if (d !== lastDanger) {
@@ -128,7 +169,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
             if (d) {
                 const cached = dangerKeys.get(d);
                 if (cached !== undefined) dk = cached;
-                else { dk = routeDangerHash(d, cache); dangerKeys.set(d, dk); }
+                else { dk = routeDangerHash(d, getCache()); dangerKeys.set(d, dk); }
             }
             if (dk !== lastDk) { lastDk = dk; changed = true; }
         }
@@ -188,7 +229,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     };
     const interactionKey = (q: InteractionTarget): string => {
         let cachedIk = interactionKeys.get(q);
-        if (cachedIk === undefined) { cachedIk = cache.hash(q); interactionKeys.set(q, cachedIk); }
+        if (cachedIk === undefined) { cachedIk = getCache().hash(q); interactionKeys.set(q, cachedIk); }
         return cachedIk;
     };
     // The areas of the tiles that reach loc `q` at `to` (within max(tol, 1)); null when one is outside the loaded map.
@@ -235,7 +276,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     // 113,368 tiles in 25 ms, where one findLongPath leg of 150 to 300 tiles costs 3.75 ms; its distances equalled the
     // findLongPath lengths on 4,773 of 4,773 walks of a search. It keeps only the distances to the route graph's tiles
     // (addTargets), so a few hundred floods stay in memory. A start gets its flood on its second measured walk.
-    const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 512, FLOOD_AFTER = 2;
+    const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 192, FLOOD_AFTER = 2;
     type Flood = { dist: Map<number, number>; complete: boolean; targets: number };
     const floods = new Map<string, Flood>(), floodMisses = new Map<string, number>();
     let floodsBuilt = 0;
@@ -254,20 +295,23 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
             if (list) list.push(k); else targetBuckets.set(b, [k]);
         }
     };
-    const seen = new Uint16Array(FLOOD_SIDE * FLOOD_SIDE), qx = new Int32Array(FLOOD_SIDE * FLOOD_SIDE), qz = new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
+    let seen: Uint16Array | null = null, qx: Int32Array | null = null, qz: Int32Array | null = null;
     const floodFrom = (from: Tile): Flood => {
+        const sBuf = seen ??= new Uint16Array(FLOOD_SIDE * FLOOD_SIDE);
+        const xBuf = qx ??= new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
+        const zBuf = qz ??= new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
         const x0 = from.x - FLOOD_R, z0 = from.z - FLOOD_R, lvl = from.level;
         let head = 0, tail = 0, complete = true;
-        qx[tail] = from.x; qz[tail++] = from.z; seen[FLOOD_R * FLOOD_SIDE + FLOOD_R] = 1;
+        xBuf[tail] = from.x; zBuf[tail++] = from.z; sBuf[FLOOD_R * FLOOD_SIDE + FLOOD_R] = 1;
         while (head < tail) {
-            const x = qx[head]!, z = qz[head++]!, d = seen[(x - x0) * FLOOD_SIDE + (z - z0)]! + 1;
+            const x = xBuf[head]!, z = zBuf[head++]!, d = sBuf[(x - x0) * FLOOD_SIDE + (z - z0)]! + 1;
             for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
                 if (!dx && !dz) continue;
                 const nx = x + dx, nz = z + dz;
                 if (nx < x0 || nz < z0 || nx >= x0 + FLOOD_SIDE || nz >= z0 + FLOOD_SIDE) { if (complete && grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) complete = false; continue; }
                 const i = (nx - x0) * FLOOD_SIDE + (nz - z0);
-                if (seen[i] || !grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) continue;
-                seen[i] = d; qx[tail] = nx; qz[tail++] = nz;
+                if (sBuf[i] || !grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) continue;
+                sBuf[i] = d; xBuf[tail] = nx; zBuf[tail++] = nz;
             }
         }
         const dist = new Map<number, number>();
@@ -275,11 +319,11 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
             for (const k of targetBuckets.get(bucketOf(lvl, bx << 6, bz << 6)) ?? []) {
                 const x = (k >>> 14) & 0x3fff, z = k & 0x3fff;
                 if (x < x0 || z < z0 || x >= x0 + FLOOD_SIDE || z >= z0 + FLOOD_SIDE) continue;
-                const d = seen[(x - x0) * FLOOD_SIDE + (z - z0)]!;
+                const d = sBuf[(x - x0) * FLOOD_SIDE + (z - z0)]!;
                 if (d) dist.set(k, d - 1);
             }
         }
-        for (let i = 0; i < tail; i++) seen[(qx[i]! - x0) * FLOOD_SIDE + (qz[i]! - z0)] = 0;
+        for (let i = 0; i < tail; i++) sBuf[(xBuf[i]! - x0) * FLOOD_SIDE + (zBuf[i]! - z0)] = 0;
         return { dist, complete, targets: targetSet.size };
     };
     // The length of a walk read from the flood of its start, null when the walk has no path, or undefined when the
@@ -379,24 +423,25 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
         const ik = interaction ? `:${interactionKey(interaction)}` : '';
         const leg = `${from.x},${from.z},${from.level}>${to.x},${to.z},${to.level}:${tol}${ik}`;
         const changes = scopeTables(blocked), span = interaction ? Math.max(interaction.width, interaction.height) : 1;
-        const hint = cache.get(`${leg}|h`);
+        const store = getCache();
+        const hint = store.get(`${leg}|h`);
         if (typeof hint === 'number') for (const len of hintLengths(hint)) {
-            const v = cache.get(`${leg}|${len}|${legKey(changes, from, to, len, span)}`);
+            const v = store.get(`${leg}|${len}|${legKey(changes, from, to, len, span)}`);
             if (v !== undefined) return v;
         }
         const gridKey = `${leg}|w|${windowKey(changes, from)}`;
-        const flooded = cache.get(gridKey);
+        const flooded = store.get(gridKey);
         if (flooded !== undefined) return flooded;
-        let v = cache.prior?.(`${prefix}${leg}`), exact: boolean;
+        let v = store.prior?.(`${prefix}${leg}`), exact: boolean;
         // A prior length that ends on its goal: a non-null length of a leg with no tolerance or of a loc approach
         // under the waypoint limit (measureNow).
         if (v !== undefined) exact = v !== null && (tol === 0 && !interaction || !!interaction && v < WAYPOINT_LIMIT);
         else { v = measureNow(from, to, blocked, tol, interaction); exact = reachedGoal; }
         if (exact && v !== null) {
-            cache.set(`${leg}|${v}|${legKey(changes, from, to, v, span)}`, v);
+            store.set(`${leg}|${v}|${legKey(changes, from, to, v, span)}`, v);
             const next = withHint(hint, v);
-            if (next !== hint) cache.set(`${leg}|h`, next);
-        } else cache.set(gridKey, v);
+            if (next !== hint) store.set(`${leg}|h`, next);
+        } else store.set(gridKey, v);
         if (v === null) labelScope(prefix, blocked);
         return v;
     };
@@ -475,7 +520,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     };
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
-    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache.save(); } };
+    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache?.save(); } };
     // A route landing inside the account's closed ground: the closed tiles of the squares that hold it (escapeTiles),
     // which a walk from that landing may cross as a walk from the route start does.
     // An account that avoids harm (guard.ts guardRoute) also has the harm squares holding the landing closed (exposure.ts routeHarmKeep).
@@ -488,14 +533,19 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
 // reach semantics and current account policy as its route cost. No grid mask
 // stays active while the caller awaits movement.
 export async function interactionApproach(sdk: any, at: Tile, q: InteractionTarget): Promise<Tile | null> {
-    const pf = await loadPathfinding(), grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     const state = sdk.getState(), p = state?.player;
     if (!p || p.level !== at.level || !state.nearbyLocs?.some((l: any) => l.id === q.id && l.x === at.x && l.z === at.z && l.level === at.level)) return null;
+    const from: Tile = { x: p.worldX, z: p.worldZ, level: p.level };
+    const acct = accountForSdk(sdk);
+    if (serviceWanted()) {
+        const remote = await queryRouteService<Tile | null>({ kind: 'approach', from, at, q, acct: JSON.parse(JSON.stringify(acct)) });
+        if (remote !== undefined) return remote;
+    }
+    const pf = await loadPathfinding(), grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     (pf as any).initPathfinding();
-    const acct = accountForSdk(sdk), facts = getKnownDoorFacts();
+    const facts = getKnownDoorFacts();
     const blocked = facts.filter(d => doorBlocks(d, acct)).map(doorBlock).map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
     return withDoorPolicy(grid, blocked, () => {
-        const from = { x: p.worldX, z: p.worldZ, level: p.level };
         const reached = (t: Tile) => grid.reached(t.level, t.x, t.z, at.x, at.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags);
         if (reached(from)) return from;
         const path = grid.findLongPath(from.level, from.x, from.z, at.x, at.z, 1, q.width, q.height, q.angle, q.shape, false, q.blockAccessFlags, 500, grid.CollisionType.NORMAL);

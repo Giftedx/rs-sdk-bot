@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { gateView, requestEvidence } from '../../evidence';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, scheduleOverall, TRICKS } from '../../../planner/src/haggis';
 import { append, cached, FILES, NL, practice, root, tailJsonl } from '../config';
+import { leanBunEnv } from '../../../core/src/lean-bun-env';
 import { ALL_BOARDS } from '../world';
 
 // ---------- swarm controller (scripts/swarm.ts) ----------
@@ -215,7 +216,7 @@ function race() {
 // Readiness report only: no --authorize here. A dashboard refresh must never authorize login.
 async function runGate() {
     if (process.env.DASH_READ_ONLY === '1') return;
-    try { await Bun.spawn(['bun', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root, windowsHide: true }).exited; } catch { /* next round */ }
+    try { await Bun.spawn([process.execPath, '--smol', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root, env: leanBunEnv(process.env), windowsHide: true }).exited; } catch { /* next round */ }
 }
 // Gate details name files by absolute path; the page shows only the file name.
 const gateReport = (file:string) => gateView(cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(file, t => {

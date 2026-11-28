@@ -260,7 +260,7 @@ export function restorePathfindingOnFirstUse(file = DEFAULT_CACHE): boolean {
     let restored = false;
     try {
         const rsmod = require(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
-        restored = restorePathfindingSnapshotFile(file, pathfindingSourceKey(), rsmod.__wasm.memory);
+        restored = restorePathfindingSnapshotFile(file, pathfindingSourceKey(), (rsmod.__wasm ?? rsmod.__ensureWasm?.()).memory);
     } catch { /* an optional cache */ }
     if (restored) (globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
     else queueMicrotask(() => { void loadPathfinding({ cacheFile: file }).catch(() => {}); });
@@ -354,7 +354,7 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     const t0 = Date.now();
     // Same specifier as sdk/pathfinding.ts imports, so this is the same module instance and the same wasm memory.
     const rsmod: any = await import(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
-    const memory: WebAssembly.Memory = rsmod.__wasm.memory;
+    const memory: WebAssembly.Memory = (rsmod.__wasm ?? rsmod.__ensureWasm?.()).memory;
     const k = pathfindingSourceKey();
     // The first-use hook may have restored the snapshot already.
     let restored=(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored===true||restorePathfindingSnapshotFile(file,k,memory),build:SnapshotBuild|null=null;

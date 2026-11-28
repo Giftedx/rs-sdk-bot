@@ -12,8 +12,13 @@ test('a value the environment sets is kept', () => {
     expect(env.BUN_JSC_numberOfWasmCompilerThreads).toBe('1');
 });
 
-test('bun accepts the options without a warning', () => {
-    const r = Bun.spawnSync([process.execPath, '-e', 'console.log("ok")'], { env: leanBunEnv({ ...process.env }), stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+test('bun accepts the options without a warning and keeps bun:ffi usable', () => {
+    const code = 'import { ptr } from "bun:ffi"; console.log(typeof ptr === "function" ? "ok" : "bad")';
+    const r = Bun.spawnSync([process.execPath, '-e', code], { env: leanBunEnv({ ...process.env }), stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    expect(r.exitCode).toBe(0);
     expect(r.stdout.toString().trim()).toBe('ok');
     expect(r.stderr.toString()).toBe('');
+    expect(LEAN_BUN_ENV.BUN_JSC_useJIT).toBeUndefined();
+    expect(LEAN_BUN_ENV.BUN_JSC_useOMGJIT).toBeUndefined();
+    expect(LEAN_BUN_ENV.BUN_JSC_useBBQJIT).toBeUndefined();
 });

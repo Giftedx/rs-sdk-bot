@@ -40,7 +40,11 @@ function baseId(id: number): number {
             }
             pos = end + 1;
         }
-        for (const [rowId, name] of rows) baseIds.set(rowId, name.startsWith('cert_') ? names.get(name.slice(5)) ?? rowId : rowId);
+        for (const [rowId, name] of rows) {
+            if (!name.startsWith('cert_')) continue;
+            const resolved = names.get(name.slice(5));
+            if (resolved !== undefined && resolved !== rowId) baseIds.set(rowId, resolved);
+        }
     }
     return baseIds.get(id) ?? id;
 }

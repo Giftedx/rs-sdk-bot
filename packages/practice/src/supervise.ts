@@ -92,7 +92,7 @@ export async function runChainHere(account: string, texts: readonly string[], op
         log: line => emit(`${line}\n`),
         drained: () => workerDrain(opts.root),
         run: async st => {
-            const r = await runWorker(['bun', st.script, account, ...st.args], {
+            const r = await runWorker(['bun', '--smol', st.script, account, ...st.args], {
                 ...opts, env: { ...env, ...st.env },
                 match: { stdout: l => l.startsWith('RESULT ') ? 'RESULT' : null, stderr: l => /^error: \S/.test(l) ? 'ERROR' : null },
                 write: { stdout: indentWriter(emit), stderr: emitErr },
@@ -107,7 +107,7 @@ export async function runChainHere(account: string, texts: readonly string[], op
 }
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
-    return ['bun',script,bot,...scriptArgs];
+    return ['bun','--smol',script,bot,...scriptArgs];
 }
 
 export function supervisorParticipants(bot:string,raw:string|undefined):string[]{

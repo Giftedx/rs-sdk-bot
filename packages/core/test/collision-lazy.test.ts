@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { lazyCollisionSource } from '../src/collision-lazy';
 
@@ -53,4 +53,37 @@ test('the lazy collision module serves the same zones, tiles and doors, and none
         if (previousEnsure === undefined) delete runtime.__rsPathEnsure;
         else runtime.__rsPathEnsure = previousEnsure;
     }
+});
+
+test('importing rsmod and calling getDoorAt/findDoorsAlongPath do not instantiate WASM until a path query runs', async () => {
+    const probe = `
+        import assert from 'node:assert/strict';
+        const rsmod = await import('./vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+        assert.equal(rsmod.CollisionType.NORMAL, 0);
+        assert.ok(rsmod.CollisionFlag.WALK_BLOCKED > 0);
+        assert.equal(rsmod.__wasm, undefined, 'importing rsmod must not eagerly instantiate WASM');
+        const pf = await import('./vendor/rs-sdk/sdk/pathfinding');
+        assert.equal(rsmod.__wasm, undefined, 'importing sdk/pathfinding must not eagerly instantiate WASM');
+        // Lumbridge castle gate/door tiles exist in collision-data.json doors tail.
+        const door = pf.getDoorAt(0, 3217, 3218) ?? pf.getDoorAt(0, 3234, 3203) ?? pf.getDoorAt(0, 3207, 3210);
+        assert.ok(door, 'getDoorAt must resolve real doors without WASM');
+        const along = pf.findDoorsAlongPath([{ x: door.x, z: door.z, level: door.level }]);
+        assert.ok(along.some(d => d.x === door.x && d.z === door.z), 'findDoorsAlongPath must find door without WASM');
+        assert.equal(rsmod.__wasm, undefined, 'door-only lookups must not instantiate WASM');
+        // Calling a WASM-backed function lazily instantiates WASM on demand.
+        assert.equal(typeof rsmod.isZoneAllocated(3222, 3218, 0), 'boolean');
+        assert.ok(rsmod.__wasm?.memory instanceof WebAssembly.Memory, 'first WASM call must instantiate WASM');
+    `;
+    const child = Bun.spawn([process.execPath, '-e', probe], {
+        cwd: resolve(import.meta.dir, '../../..'),
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    const timer = setTimeout(() => child.kill(), 15_000);
+    try {
+        const [code, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+        expect(stderr).toBe('');
+        expect(code).toBe(0);
+    } finally { clearTimeout(timer); }
 });

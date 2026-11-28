@@ -53,7 +53,7 @@ test('route worker can retry after native initialization fails',async()=>{
   import {resolve} from 'node:path';
   let loads=0;
   mock.module(resolve('packages/core/src/pathcache.ts'),()=>({loadPathfinding:async()=>{if(++loads===1)throw Error('native initialization failed');}}));
-  mock.module(resolve('packages/core/src/world.ts'),()=>({rsPathLength:async()=>()=>1,createWorld:()=>({})}));
+  mock.module(resolve('packages/core/src/world.ts'),()=>({rsPathLength:async()=>()=>1,createWorld:()=>({}),doorBlock:()=>{},doorBlocks:()=>{},getKnownDoorFacts:()=>[],withNpcBlocks:()=>{}}));
   mock.module(resolve('packages/core/src/trip.ts'),()=>({planTrip:()=>({cost:7,legs:[]})}));
   const messages=[];
   globalThis.self={onmessage:null,postMessage:message=>messages.push(message)};

@@ -38,6 +38,15 @@ import { finish } from './settle';
 import { currentHostedScope } from './host-scope';
 
 const NO_GUARD_SCRIPT_RE = /quest|microbot/i;
+const LIVE_GC_INTERVAL_MS = 10 * 60 * 1000;
+let liveGcTimer: ReturnType<typeof setInterval> | null = null;
+
+function ensureLiveGcTimer(): void {
+    if (liveGcTimer || process.env.SIM_LOCKSTEP === '1') return;
+    const timer = setInterval(() => { Bun.gc(false); }, LIVE_GC_INTERVAL_MS);
+    (timer as { unref?: () => void }).unref?.();
+    liveGcTimer = timer;
+}
 
 function samePackSnapshot(prev: readonly { id: number; count: number }[], raw: readonly any[] | undefined): boolean {
     if (!raw?.length) return prev.length === 0;
@@ -349,5 +358,9 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     watchUnexpectedEnd(s, () => settling.has(s), () => stopping, detail =>
         opts.onSessionEnd ? opts.onSessionEnd(s, sessionDied(born, lastLife) ? 'died' : detail)
             : finish([s], false, sessionDied(born, lastLife) ? 'died' : detail));
+    if (process.env.SIM_LOCKSTEP !== '1') {
+        Bun.gc(true);
+        ensureLiveGcTimer();
+    }
     return s;
 }

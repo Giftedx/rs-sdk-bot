@@ -4,6 +4,7 @@
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { leanBunEnv } from './lean-bun-env';
 
 export type LiveUpdateMark = { at: number; from: string; to: string; files: number; reload: string[]; reloadAt?: Record<string, number> };
 export const liveUpdateFile = (root: string) => join(root, '.practice', 'live-update.json');
@@ -37,12 +38,15 @@ export function writeLiveUpdate(root: string, mark: LiveUpdateMark): LiveUpdateM
     return next;
 }
 
+export const daemonSpawnArgs = (args: readonly string[]): string[] =>
+    args.includes('--smol') ? [...args] : ['--smol', ...args];
+
 // Starts a detached copy of this daemon that appends to `log`. The caller releases its own lock first and exits after.
 export function respawnDaemon(root: string, args: readonly string[], log: string): number | undefined {
     mkdirSync(dirname(log), { recursive: true });
     const out = openSync(log, 'a');
     try {
-        const child = spawn(process.execPath, [...args], { cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: process.env });
+        const child = spawn(process.execPath, daemonSpawnArgs(args), { cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: leanBunEnv(process.env) });
         child.unref();
         return child.pid;
     } finally { closeSync(out); }

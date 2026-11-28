@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { isStopFilePresent } from '../stop';
-import { initPathfinding } from '../../../../vendor/rs-sdk/sdk/pathfinding';
 import type { BotWorldState, NearbyNpc } from '../../../../vendor/rs-sdk/sdk/types';
 import { finish, openBot, sessionDied } from '../../../core/src/bot';
 import { depositObserved } from '../../../core/src/deposit';
@@ -11,6 +10,7 @@ import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import type { CombatSession, CombatTile } from './types';
 
+let cachedPathfinding: typeof import('../../../../vendor/rs-sdk/sdk/pathfinding') | undefined;
 let cachedRsmod: typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | undefined;
 let cachedGearMod: typeof import('./gear') | undefined;
 let cachedMeleeMod: typeof import('./melee-gather') | undefined;
@@ -18,6 +18,8 @@ let cachedRangedMod: typeof import('./ranged') | undefined;
 let cachedSurvMod: typeof import('./survivability') | undefined;
 let cachedTripKitMod: typeof import('./trip-kit') | undefined;
 
+const loadPathfinding = (): typeof import('../../../../vendor/rs-sdk/sdk/pathfinding') =>
+    (cachedPathfinding ??= require('../../../../vendor/rs-sdk/sdk/pathfinding'));
 const loadRsmod = (): typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') =>
     (cachedRsmod ??= require('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'));
 const loadGearMod = (): typeof import('./gear') => (cachedGearMod ??= require('./gear'));
@@ -66,7 +68,7 @@ export function footprintDistance(sw: CampTile, tile: CampTile, size: number = B
 }
 
 export function canShoot(tile: CampTile, sw: CampTile, range: number = BLACK_DRAGON.range): boolean {
-    initPathfinding();
+    loadPathfinding().initPathfinding();
     const rsmod = loadRsmod();
     return (
         Math.max(Math.abs(sw.x - tile.x), Math.abs(sw.z - tile.z)) <= range

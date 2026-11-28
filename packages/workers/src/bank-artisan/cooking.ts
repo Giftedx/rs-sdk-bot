@@ -11,86 +11,11 @@ import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
 import { CONTENT_DIR, itemById, packMap } from './catalog';
+import { cookingRecipes, DEFAULT_FOOD_TYPE, foodRecipe, foodRule, type CookRecipe, type Heat } from './recipes';
 import { actionSessionOwner, finishActionSession, productionStopRequested } from './runtime';
 import { geFiremakingOptions, lineTiles, LOGS, runGeFiremaking, type LogKind } from './firemaking';
 
-const itemIdOf = (name: string) => {
-    const n = packMap('obj').get(name);
-    if (n === undefined) throw Error('unknown native cook item ' + name);
-    return n;
-};
-
-export type Heat = 'range' | 'fire';
-export interface CookRecipe {
-    name: string;
-    raw: number;
-    products: number[];
-    burnt?: number;
-    additional?: number;
-    noAdditionalSuccess: boolean;
-    level: number;
-    xp: number;
-    range: boolean;
-    fire: boolean;
-    karambwanChoice?: 1 | 2;
-    source: string;
-}
-
-let cachedCookingRecipes: { recipes: CookRecipe[]; blocked: { name: string; reason: string }[] } | undefined;
-
-export function cookingRecipes() {
-    if (cachedCookingRecipes) return cachedCookingRecipes;
-    const file = 'scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow';
-    const text = readFileSync(resolve(CONTENT_DIR, file), 'utf8');
-    const recipes: CookRecipe[] = [];
-    const blocked: { name: string; reason: string }[] = [];
-    for (const m of text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)) {
-        const name = m[1]!;
-        const body = m[2]!;
-        const field = (k: string) => body.match(new RegExp('^data=' + k + ',(.+)$', 'm'))?.[1]?.trim();
-        const raw = field('uncooked');
-        const product = field('cooked');
-        if (!raw || !product || product === 'null') {
-            blocked.push({ name, reason: 'Native table forbids this raw item on both heat sources; raw oomlie requires wrapping.' });
-            continue;
-        }
-        if (raw === product) {
-            blocked.push({ name, reason: 'Native no-op reheats bones without XP or changed item; not a useful production conversion.' });
-            continue;
-        }
-        let products = [itemIdOf(product)];
-        const dynamic: Record<string, [string, string]> = {
-            half_baked_batta: ['gnome_battas.rs2', 'gnome_batta'],
-            half_baked_bowl: ['gnome_bowls.rs2', 'gnome_bowl'],
-            half_baked_crunchy: ['gnome_crunchies.rs2', 'gnome_crunchies'],
-        };
-        if (dynamic[raw]) {
-            const [dfile, proc] = dynamic[raw]!;
-            const source = readFileSync(resolve(CONTENT_DIR, 'scripts/skill_cooking/scripts/gnome_cooking', dfile), 'utf8')
-                .split(`[proc,${proc}]`)[1]
-                ?.split('[proc,')[0] ?? '';
-            products = [...new Set([...source.matchAll(/return\(([^)]+)\)/g)].map(x => itemIdOf(x[1]!.trim())))];
-            if (!products.length) throw Error('native dynamic gnome products missing');
-        }
-        const optional = (v: string | undefined) => (v && v !== 'null' ? itemIdOf(v) : undefined);
-        recipes.push({
-            name,
-            raw: itemIdOf(raw),
-            products,
-            burnt: field('successchance') === '1,1' ? undefined : optional(field('burnt')),
-            additional: optional(field('additional')),
-            noAdditionalSuccess: ['half_baked_batta', 'half_baked_bowl', 'half_baked_crunchy'].includes(product),
-            level: Number(field('levelrequired') ?? 0),
-            xp: Number(field('experience') ?? 0),
-            range: !field('cantcookmessage_range'),
-            fire: !field('cantcookmessage_fire'),
-            ...(raw === 'tbwt_raw_karambwan' ? { karambwanChoice: product === 'tbwt_cooked_karambwan' ? (2 as const) : (1 as const) } : {}),
-            source: 'vendor/rs-sdk/server/content/' + file,
-        });
-    }
-    cachedCookingRecipes = { recipes, blocked };
-    return cachedCookingRecipes;
-}
+export { cookingRecipes, DEFAULT_FOOD_TYPE, foodRecipe, foodRule, type CookRecipe, type Heat };
 
 let heatSources: Map<number, Heat> | undefined;
 
@@ -301,26 +226,6 @@ export async function cookSharks(s: Session, stop: () => boolean) {
         }
     }
     return before.raw ? sharkCookDelta(before, counts()) : { raw: 0, cooked: 0, burnt: 0 };
-}
-
-// The food cooker cooks this food when the step names none.
-export const DEFAULT_FOOD_TYPE = 'lobster';
-
-// The raw item, the cooked item and the Cooking level of a food come from its server cook row
-// cooking_generic_<food> (data=levelrequired in the table that cookingRecipes reads).
-export function foodRecipe(foodType: string): CookRecipe | undefined {
-    const key = foodType.trim().toLowerCase();
-    const { recipes } = cookingRecipes();
-    const exact = recipes.find(r => r.name === `cooking_generic_${key.replaceAll(' ', '_')}`);
-    if (exact) return exact;
-    const rawId = packMap('obj').get(`raw_${key.replaceAll(' ', '_')}`);
-    return recipes.find(r => r.name.endsWith(`_${key}`) || rawId === r.raw);
-}
-
-export function foodRule(foodType: string): { rawId: number; cookedId?: number; level: number } {
-    const recipe = foodRecipe(foodType);
-    if (recipe) return { rawId: recipe.raw, cookedId: recipe.products[0], level: recipe.level };
-    return { rawId: foodRecipe(DEFAULT_FOOD_TYPE)!.raw, level: 1 };
 }
 
 // The fail words match isNoProgressFailure (packages/practice/src/supervise.ts): a new login does not raise the level.

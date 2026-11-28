@@ -2,10 +2,12 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import { join, resolve } from 'node:path';
 import { loadContentTable } from '../appearance';
 import { folderScan } from '../folder-scan';
-import { tailJsonlFile } from '../jsonl-tail';
+import { scanJsonlTail, tailJsonlFile } from '../jsonl-tail';
 import { type PriceIdentity } from '../item-prices';
 import { canonicalSnapshots, ownerOfIn } from '../../core/src/fleet-snapshots';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { resolveFleetDataDir, simStatusDir, statusReadDirs } from '../../core/src/practice-paths';
+import { buildMapBytesFromCollision, readCachedMapBytes, writeMapCacheFile } from './build-map';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
 export const dashboardDir = resolve(import.meta.dir, '..');
@@ -63,6 +65,7 @@ export type Row = { board: string; rank: number; level: number; time: string };
 export const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
 
 export function tailJsonl<T>(file: string, n: number): T[] { return tailJsonlFile<T>(file, n); }
+export function scanJsonl<T>(file: string, n: number, visit: (row: T) => void): void { scanJsonlTail<T>(file, n, visit); }
 export function append(file: string, doc: unknown) {
     if (process.env.DASH_READ_ONLY === '1') return;
     try { appendFileSync(file, JSON.stringify(doc) + NL); } catch { /* locked or full: memory still has it */ }
@@ -99,29 +102,35 @@ export const MAP = { x0: 2368, z0: 2880, w: 560, h: 416, scale: 2 };
 let mapBytes: Uint8Array | null = null;
 export function getMapBytes(): Uint8Array | null { return mapBytes; }
 function buildMap() {
+    const t0 = Date.now();
+    const collisionFile = join(root, 'vendor', 'rs-sdk', 'sdk', 'collision-data.json');
+    const cacheFile = join(practice, 'dashboard-map.bin');
+    const cachedBytes = readCachedMapBytes(cacheFile, collisionFile, MAP);
+    if (cachedBytes) {
+        mapBytes = cachedBytes;
+        console.log(`map loaded from cache in ${Date.now() - t0} ms`);
+        return;
+    }
+    if (process.env.DASH_READ_ONLY !== '1') {
+        try {
+            const p = Bun.spawnSync(
+                [process.execPath, '--smol', join(import.meta.dir, 'build-map.ts'), collisionFile, cacheFile, String(MAP.x0), String(MAP.z0), String(MAP.w), String(MAP.h), String(MAP.scale)],
+                { cwd: root, env: leanBunEnv(process.env), stdout: 'ignore', stderr: 'pipe', timeout: 30_000, windowsHide: true },
+            );
+            if (p.exitCode === 0) {
+                const built = readCachedMapBytes(cacheFile, collisionFile, MAP);
+                if (built) {
+                    mapBytes = built;
+                    console.log(`map built via child in ${Date.now() - t0} ms`);
+                    return;
+                }
+            }
+        } catch { /* fall back to in-process build */ }
+    }
     try {
-        const t0 = Date.now();
-        const data = JSON.parse(readFileSync(join(root, 'vendor', 'rs-sdk', 'sdk', 'collision-data.json'), 'utf8'));
-        const counts = new Uint16Array(MAP.w * MAP.h * 4);
-        const zoneLand = new Uint8Array(MAP.w * MAP.h);
-        const cell = (x: number, z: number) => {
-            const px = Math.floor((x - MAP.x0) / MAP.scale), pz = Math.floor((z - MAP.z0) / MAP.scale);
-            return px < 0 || pz < 0 || px >= MAP.w || pz >= MAP.h ? -1 : pz * MAP.w + px;
-        };
-        for (const [level, zx, zz] of data.zones) {
-            if (level !== 0) continue;
-            for (let dx = 0; dx < 8; dx += MAP.scale) for (let dz = 0; dz < 8; dz += MAP.scale) { const c = cell(zx + dx, zz + dz); if (c >= 0) zoneLand[c] = 1; }
-        }
-        for (const [level, x, z, flags] of data.tiles) {
-            if (level !== 0) continue;
-            const c = cell(x, z); if (c < 0) continue;
-            counts[c * 4 + ((flags & 2097152) ? 2 : 3)]++;
-        }
-        mapBytes = new Uint8Array(MAP.w * MAP.h);
-        for (let i = 0; i < mapBytes.length; i++) {
-            const water = counts[i * 4 + 2]!, obj = counts[i * 4 + 3]!;
-            mapBytes[i] = water >= 2 ? 2 : obj >= 2 ? 3 : zoneLand[i] ? 1 : water ? 2 : 0;
-        }
+        mapBytes = process.env.DASH_READ_ONLY === '1'
+            ? buildMapBytesFromCollision(collisionFile, MAP)
+            : writeMapCacheFile(collisionFile, cacheFile, MAP);
         console.log(`map built in ${Date.now() - t0} ms`);
     } catch (e) { console.log(`map build failed: ${String(e)}`); }
     // The 27 MB collision JSON parses into a large heap; give it back now, not at some later GC.

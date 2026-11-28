@@ -35,7 +35,9 @@ export async function runArtisan(
     stop: () => boolean = () => false,
 ): Promise<ArtisanSessionOutcome> {
     const cfg = normalizeArtisanConfig(rawCfg);
-    await ensureRegisteredCrossRunners(cfg.deps);
+    if (cfg.skill === 'crafting' || cfg.skill === 'cooking') {
+        await ensureRegisteredCrossRunners(cfg.deps);
+    }
     if (!VALID_ARTISAN_SKILLS.includes(cfg.skill)) {
         return { ok: false, summary: `unknown artisan skill: ${String(rawCfg.skill)}`, ticks: 0, produced: 0, failure: 'invalid_config' };
     }
@@ -509,7 +511,9 @@ export async function runArtisan(
 
 export async function runArtisanCli(account: string, rawCfg: ArtisanConfig): Promise<number> {
     const cfg = normalizeArtisanConfig(rawCfg);
-    await ensureRegisteredCrossRunners(cfg.deps);
+    if (cfg.skill === 'crafting' || cfg.skill === 'cooking') {
+        await ensureRegisteredCrossRunners(cfg.deps);
+    }
     if (!VALID_ARTISAN_SKILLS.includes(cfg.skill)) {
         throw Error(`unknown artisan skill: ${String(rawCfg.skill)}`);
     }

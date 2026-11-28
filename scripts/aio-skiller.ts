@@ -3,93 +3,191 @@
 //   bun scripts/aio-skiller.ts <account> <skill> [method] [arg ...] [KEY=value ...]
 //   bun scripts/aio-skiller.ts <account> bank-job <job.json> [job.json ...]   (several jobs: one login, in order)
 import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import {resolve} from 'node:path';
 import type {Step} from '../packages/core/src/chain-step';
 import {isStopFilePresent} from '../packages/workers/src/stop';
 import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-step';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
-import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
-import {
- gatherWorker,
- VALID_GATHER_SKILLS,
- type GatherSkill,
- type GatherExternalDeps,
- FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod,
- sharkSpot,catchSharks,SHARK_HARPOON_ANIM,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS,
- supplySharks,sharkOrderConfig,SHARK_BANK,WEST_BANK,
- cookStarterChicken,starterCookingStock,
- miningProfiles,runAtSiteMining,incidentalMiningGems,
- stallRecipes,stealStall,
- supplyPlan as woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
- incomingCookedFood,courierFoodReady,receiveFoodAtBank,
-} from '../packages/workers/src/gather';
-import {
- bankArtisanWorker,
- VALID_ARTISAN_SKILLS,
- type ArtisanSkill,
- type ArtisanExternalDeps,
- cookSharks,cookingRecipes,runCookingBatch,nativeHeatSources,
- jewelleryRecipes,runJewellery,
- runSoftenClay,
- runShafts,
- inventoryRecipes,runInventoryBank,
- tanningRecipes,tanInventory,type TanKind,
- furnaceGlassRecipe,runFurnaceGlass,
- itemMagicRecipe,itemSpellCosts,runItemMagic,
- runMixedWine,runBonesBank,
- smeltRecipe,planSmeltLoad,smeltEffect,validateSmeltOrder,validateSmeltRoute,nativeSmeltFurnace,nativeSmeltStands,runSmeltBatch,type SmeltOrder,type SmeltRecipe,
- smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTERFACE,type SmithRecipe,
- planHeadless,runHeadless,type HeadlessOptions,
- validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob,
- LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions,
- BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions,
- boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller,
- kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta,
-} from '../packages/workers/src/bank-artisan';
-import {agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from '../packages/workers/src/agility';
-import {runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,runRuneSupply,runeSupplyTarget,type RunecraftMode,type RunecraftExternalDeps} from '../packages/workers/src/runecraft';
+import {VALID_GATHER_SKILLS,type GatherExternalDeps,type GatherSkill} from '../packages/workers/src/gather/types';
+import {VALID_ARTISAN_SKILLS,type ArtisanExternalDeps,type ArtisanSkill} from '../packages/workers/src/bank-artisan/types';
+import type {BankJob} from './microbot-bank-jobs';
+import type {FishMethod} from '../packages/workers/src/gather/fishing';
+import type {TanKind} from '../packages/workers/src/bank-artisan/crafting-production';
+import type {SmeltOrder,SmeltRecipe,SmithRecipe} from '../packages/workers/src/bank-artisan/smithing';
+import type {HeadlessOptions,WoodProcessingJob} from '../packages/workers/src/bank-artisan/fletching';
+import type {FiremakingOptions,LogKind} from '../packages/workers/src/bank-artisan/firemaking';
+import type {PrayerOptions} from '../packages/workers/src/bank-artisan/prayer';
+import type {AgilityOptions,Course} from '../packages/workers/src/agility';
+import type {NatureJob,RunecraftExternalDeps,RunecraftMode} from '../packages/workers/src/runecraft';
+
+const require = createRequire(import.meta.url);
+type BankJobsMod = typeof import('./microbot-bank-jobs');
+type GatherMod = typeof import('../packages/workers/src/gather');
+type ArtisanMod = typeof import('../packages/workers/src/bank-artisan');
+type AgilityMod = typeof import('../packages/workers/src/agility');
+type RunecraftMod = typeof import('../packages/workers/src/runecraft');
+let _bankJobsMod: BankJobsMod | undefined;
+let _gatherMod: GatherMod | undefined;
+let _artisanMod: ArtisanMod | undefined;
+let _agilityMod: AgilityMod | undefined;
+let _runecraftMod: RunecraftMod | undefined;
+const getBankJobs = () => (_bankJobsMod ??= require('./microbot-bank-jobs') as BankJobsMod);
+const getGather = () => (_gatherMod ??= require('../packages/workers/src/gather') as GatherMod);
+const getArtisan = () => (_artisanMod ??= require('../packages/workers/src/bank-artisan') as ArtisanMod);
+const getAgility = () => (_agilityMod ??= require('../packages/workers/src/agility') as AgilityMod);
+const getRunecraft = () => (_runecraftMod ??= require('../packages/workers/src/runecraft') as RunecraftMod);
+const lazyObj = <T extends object>(load: () => T): T => new Proxy({} as T, {
+ get: (_t, p) => Reflect.get(load(), p),
+ has: (_t, p) => Reflect.has(load(), p),
+ ownKeys: () => Reflect.ownKeys(load()),
+ getOwnPropertyDescriptor: (_t, p) => Reflect.getOwnPropertyDescriptor(load(), p),
+});
+const lazyArr = <T>(load: () => readonly T[]): readonly T[] => new Proxy([] as T[], {
+ get: (_t, p) => {
+  const target = load();
+  const v = Reflect.get(target, p);
+  return typeof v === 'function' ? v.bind(target) : v;
+ },
+ has: (_t, p) => Reflect.has(load(), p),
+ ownKeys: () => Reflect.ownKeys(load()),
+ getOwnPropertyDescriptor: (_t, p) => Reflect.getOwnPropertyDescriptor(load(), p),
+});
+
+export const gatherWorker: GatherMod['gatherWorker'] = lazyObj(() => getGather().gatherWorker);
+export const bankArtisanWorker: ArtisanMod['bankArtisanWorker'] = lazyObj(() => getArtisan().bankArtisanWorker);
+export const runBankJob: BankJobsMod['runBankJob'] = (...a) => getBankJobs().runBankJob(...a);
+export const runBankProfile: BankJobsMod['runBankProfile'] = (...a) => getBankJobs().runBankProfile(...a);
+export const validateBankJob: BankJobsMod['validateBankJob'] = (...a) => getBankJobs().validateBankJob(...a);
+export const FISH_PROFILES: GatherMod['FISH_PROFILES'] = lazyObj(() => getGather().FISH_PROFILES);
+export const runStagedFishing: GatherMod['runStagedFishing'] = (...a) => getGather().runStagedFishing(...a);
+export const pickFishSpot: GatherMod['pickFishSpot'] = (...a) => getGather().pickFishSpot(...a);
+export const fishSpotIds: GatherMod['fishSpotIds'] = (...a) => getGather().fishSpotIds(...a);
+export const searchNativeCatherbyFishing: GatherMod['searchNativeCatherbyFishing'] = (...a) => getGather().searchNativeCatherbyFishing(...a);
+export const sharkSpot: GatherMod['sharkSpot'] = (...a) => getGather().sharkSpot(...a);
+export const catchSharks: GatherMod['catchSharks'] = (...a) => getGather().catchSharks(...a);
+export const SHARK_HARPOON_ANIM = 618;
+export const SHARK_IDLE_TICKS = 4;
+export const SHARK_PROGRESS_TICKS = 10;
+export const supplySharks: GatherMod['supplySharks'] = (...a) => getGather().supplySharks(...a);
+export const sharkOrderConfig: GatherMod['sharkOrderConfig'] = (...a) => getGather().sharkOrderConfig(...a);
+export const SHARK_BANK: GatherMod['SHARK_BANK'] = lazyObj(() => getGather().SHARK_BANK);
+export const WEST_BANK: GatherMod['WEST_BANK'] = lazyObj(() => getGather().WEST_BANK);
+export const cookStarterChicken: GatherMod['cookStarterChicken'] = (...a) => getGather().cookStarterChicken(...a);
+export const starterCookingStock: GatherMod['starterCookingStock'] = (...a) => getGather().starterCookingStock(...a);
+export const cookingRecipes: ArtisanMod['cookingRecipes'] = (...a) => getArtisan().cookingRecipes(...a);
+export const runCookingBatch: ArtisanMod['runCookingBatch'] = (...a) => getArtisan().runCookingBatch(...a);
+export const nativeHeatSources: ArtisanMod['nativeHeatSources'] = (...a) => getArtisan().nativeHeatSources(...a);
+export const jewelleryRecipes: ArtisanMod['jewelleryRecipes'] = (...a) => getArtisan().jewelleryRecipes(...a);
+export const runJewellery: ArtisanMod['runJewellery'] = (...a) => getArtisan().runJewellery(...a);
+export const miningProfiles: GatherMod['miningProfiles'] = (...a) => getGather().miningProfiles(...a);
+export const runAtSiteMining: GatherMod['runAtSiteMining'] = (...a) => getGather().runAtSiteMining(...a);
+export const incidentalMiningGems: GatherMod['incidentalMiningGems'] = lazyArr(() => getGather().incidentalMiningGems) as GatherMod['incidentalMiningGems'];
+export const stallRecipes: GatherMod['stallRecipes'] = (...a) => getGather().stallRecipes(...a);
+export const stealStall: GatherMod['stealStall'] = (...a) => getGather().stealStall(...a);
+export const inventoryRecipes: ArtisanMod['inventoryRecipes'] = (...a) => getArtisan().inventoryRecipes(...a);
+export const runInventoryBank: ArtisanMod['runInventoryBank'] = (...a) => getArtisan().runInventoryBank(...a);
+export const tanningRecipes: ArtisanMod['tanningRecipes'] = lazyObj(() => getArtisan().tanningRecipes);
+export const tanInventory: ArtisanMod['tanInventory'] = (...a) => getArtisan().tanInventory(...a);
+export const furnaceGlassRecipe: ArtisanMod['furnaceGlassRecipe'] = lazyObj(() => getArtisan().furnaceGlassRecipe);
+export const runFurnaceGlass: ArtisanMod['runFurnaceGlass'] = (...a) => getArtisan().runFurnaceGlass(...a);
+export const itemMagicRecipe: ArtisanMod['itemMagicRecipe'] = (...a) => getArtisan().itemMagicRecipe(...a);
+export const itemSpellCosts: ArtisanMod['itemSpellCosts'] = (...a) => getArtisan().itemSpellCosts(...a);
+export const runItemMagic: ArtisanMod['runItemMagic'] = (...a) => getArtisan().runItemMagic(...a);
+export const runMixedWine: ArtisanMod['runMixedWine'] = (...a) => getArtisan().runMixedWine(...a);
+export const runBonesBank: ArtisanMod['runBonesBank'] = (...a) => getArtisan().runBonesBank(...a);
+export const smeltRecipe: ArtisanMod['smeltRecipe'] = (...a) => getArtisan().smeltRecipe(...a);
+export const planSmeltLoad: ArtisanMod['planSmeltLoad'] = (...a) => getArtisan().planSmeltLoad(...a);
+export const smeltEffect: ArtisanMod['smeltEffect'] = (...a) => getArtisan().smeltEffect(...a);
+export const validateSmeltOrder: ArtisanMod['validateSmeltOrder'] = (...a) => getArtisan().validateSmeltOrder(...a);
+export const validateSmeltRoute: ArtisanMod['validateSmeltRoute'] = (...a) => getArtisan().validateSmeltRoute(...a);
+export const nativeSmeltFurnace: ArtisanMod['nativeSmeltFurnace'] = (...a) => getArtisan().nativeSmeltFurnace(...a);
+export const nativeSmeltStands: ArtisanMod['nativeSmeltStands'] = (...a) => getArtisan().nativeSmeltStands(...a);
+export const runSmeltBatch: ArtisanMod['runSmeltBatch'] = (...a) => getArtisan().runSmeltBatch(...a);
+export const smithRecipe: ArtisanMod['smithRecipe'] = (...a) => getArtisan().smithRecipe(...a);
+export const planSmithLoad: ArtisanMod['planSmithLoad'] = (...a) => getArtisan().planSmithLoad(...a);
+export const smithEffect: ArtisanMod['smithEffect'] = (...a) => getArtisan().smithEffect(...a);
+export const runSmithBatch: ArtisanMod['runSmithBatch'] = (...a) => getArtisan().runSmithBatch(...a);
+export const HAMMER = 2347;
+export const SMITHING_INTERFACE = 994;
+export const planHeadless: ArtisanMod['planHeadless'] = (...a) => getArtisan().planHeadless(...a);
+export const runHeadless: ArtisanMod['runHeadless'] = (...a) => getArtisan().runHeadless(...a);
+export const validateWoodProcessingJob: ArtisanMod['validateWoodProcessingJob'] = (...a) => getArtisan().validateWoodProcessingJob(...a);
+export const runWoodProcessingCycle: ArtisanMod['runWoodProcessingCycle'] = (...a) => getArtisan().runWoodProcessingCycle(...a);
+export const runWoodProductDrop: ArtisanMod['runWoodProductDrop'] = (...a) => getArtisan().runWoodProductDrop(...a);
+export const runFletchingCycle: ArtisanMod['runFletchingCycle'] = (...a) => getArtisan().runFletchingCycle(...a);
+export const woodSupplyPlan: GatherMod['supplyPlan'] = (...a) => getGather().supplyPlan(...a);
+export const takeOwnedSupplyKnife: GatherMod['takeOwnedSupplyKnife'] = (...a) => getGather().takeOwnedSupplyKnife(...a);
+export const runWoodSupply: GatherMod['runWoodSupply'] = (...a) => getGather().runWoodSupply(...a);
+export const LOGS: ArtisanMod['LOGS'] = lazyObj(() => getArtisan().LOGS);
+export const BURN_ROWS: ArtisanMod['BURN_ROWS'] = lazyArr(() => getArtisan().BURN_ROWS) as ArtisanMod['BURN_ROWS'];
+export const DRAYNOR_SITE: ArtisanMod['DRAYNOR_SITE'] = lazyObj(() => getArtisan().DRAYNOR_SITE);
+export const CATHERBY_SITE: ArtisanMod['CATHERBY_SITE'] = lazyObj(() => getArtisan().CATHERBY_SITE);
+export const firemakingSite: ArtisanMod['firemakingSite'] = (...a) => getArtisan().firemakingSite(...a);
+export const progressiveFiremakingLog: ArtisanMod['progressiveFiremakingLog'] = (...a) => getArtisan().progressiveFiremakingLog(...a);
+export const firemakingOptions: ArtisanMod['firemakingOptions'] = (...a) => getArtisan().firemakingOptions(...a);
+export const firemakingPreflight: ArtisanMod['firemakingPreflight'] = (...a) => getArtisan().firemakingPreflight(...a);
+export const lineTiles: ArtisanMod['lineTiles'] = (...a) => getArtisan().lineTiles(...a);
+export const nextFreeTile: ArtisanMod['nextFreeTile'] = (...a) => getArtisan().nextFreeTile(...a);
+export const packWant: ArtisanMod['packWant'] = (...a) => getArtisan().packWant(...a);
+export const agilityWorker: AgilityMod['agilityWorker'] = lazyObj(() => getAgility().agilityWorker);
+export const runAgilityCli: AgilityMod['runAgilityCli'] = (...a) => getAgility().runAgilityCli(...a);
+export const COURSES: AgilityMod['COURSES'] = lazyObj(() => getAgility().COURSES);
+export const agilityOptions: AgilityMod['agilityOptions'] = (...a) => getAgility().agilityOptions(...a);
+export const agilityPreflight: AgilityMod['agilityPreflight'] = (...a) => getAgility().agilityPreflight(...a);
+export const onCourse: AgilityMod['onCourse'] = (...a) => getAgility().onCourse(...a);
+export const resumeStep: AgilityMod['resumeStep'] = (...a) => getAgility().resumeStep(...a);
+export const runecraftWorker: RunecraftMod['runecraftWorker'] = lazyObj(() => getRunecraft().runecraftWorker);
+export const runRunecraftCli: RunecraftMod['runRunecraftCli'] = (...a) => getRunecraft().runRunecraftCli(...a);
+export const RUNE_ALTARS: RunecraftMod['RUNE_ALTARS'] = lazyObj(() => getRunecraft().RUNE_ALTARS);
+export const chooseRuneAltar: RunecraftMod['chooseRuneAltar'] = (...a) => getRunecraft().chooseRuneAltar(...a);
+export const ruinTarget: RunecraftMod['ruinTarget'] = (...a) => getRunecraft().ruinTarget(...a);
+export const dispatchRuneEntry: RunecraftMod['dispatchRuneEntry'] = (...a) => getRunecraft().dispatchRuneEntry(...a);
+export const settleRuneEntryModal: RunecraftMod['settleRuneEntryModal'] = (...a) => getRunecraft().settleRuneEntryModal(...a);
+export const NATURE: RunecraftMod['NATURE'] = lazyObj(() => getRunecraft().NATURE);
+export const natureProfile: RunecraftMod['natureProfile'] = (...a) => getRunecraft().natureProfile(...a);
+export const runNatureTrips: RunecraftMod['runNatureTrips'] = (...a) => getRunecraft().runNatureTrips(...a);
+export const createShiloTransit: RunecraftMod['createShiloTransit'] = (...a) => getRunecraft().createShiloTransit(...a);
+export const runRuneSupply: RunecraftMod['runRuneSupply'] = (...a) => getRunecraft().runRuneSupply(...a);
+export const runeSupplyTarget: RunecraftMod['runeSupplyTarget'] = (...a) => getRunecraft().runeSupplyTarget(...a);
+export const BONE_XP: ArtisanMod['BONE_XP'] = lazyObj(() => getArtisan().BONE_XP);
+export const prayerOptions: ArtisanMod['prayerOptions'] = (...a) => getArtisan().prayerOptions(...a);
+export const planPrayer: ArtisanMod['planPrayer'] = (...a) => getArtisan().planPrayer(...a);
+export const prayerBank: ArtisanMod['prayerBank'] = (...a) => getArtisan().prayerBank(...a);
+export const runPrayer: ArtisanMod['runPrayer'] = (...a) => getArtisan().runPrayer(...a);
+export const boundedHerbloreMove: ArtisanMod['boundedHerbloreMove'] = (...a) => getArtisan().boundedHerbloreMove(...a);
+export const tracedWalker: ArtisanMod['tracedWalker'] = (...a) => getArtisan().tracedWalker(...a);
+export const observeHerbloreStep: ArtisanMod['observeHerbloreStep'] = (...a) => getArtisan().observeHerbloreStep(...a);
+export const reachSeller: ArtisanMod['reachSeller'] = (...a) => getArtisan().reachSeller(...a);
+export const incomingCookedFood: GatherMod['incomingCookedFood'] = (...a) => getGather().incomingCookedFood(...a);
+export const courierFoodReady: GatherMod['courierFoodReady'] = (...a) => getGather().courierFoodReady(...a);
+export const receiveFoodAtBank: GatherMod['receiveFoodAtBank'] = (...a) => getGather().receiveFoodAtBank(...a);
+export const kittenCare: ArtisanMod['kittenCare'] = (...a) => getArtisan().kittenCare(...a);
+export const weedMiscellania: ArtisanMod['weedMiscellania'] = (...a) => getArtisan().weedMiscellania(...a);
+export const fillDruidPouch: ArtisanMod['fillDruidPouch'] = (...a) => getArtisan().fillDruidPouch(...a);
+export const druidPouchFillDelta: ArtisanMod['druidPouchFillDelta'] = (...a) => getArtisan().druidPouchFillDelta(...a);
 
 async function runMagicOrderCli(account: string, env: Record<string, string | undefined> = process.env) {
  return (await import('./magic-order')).runMagicOrderCli(account, env);
 }
 
 export {
- gatherWorker,
- bankArtisanWorker,
- // Bank-profile engine & recipes
- runBankJob,runBankProfile,validateBankJob,type BankJob,
- FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod,
- sharkSpot,catchSharks,SHARK_HARPOON_ANIM,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS,
- supplySharks,sharkOrderConfig,SHARK_BANK,WEST_BANK,
- cookStarterChicken,starterCookingStock,
- cookingRecipes,runCookingBatch,nativeHeatSources,
- jewelleryRecipes,runJewellery,
- miningProfiles,runAtSiteMining,incidentalMiningGems,
- stallRecipes,stealStall,
- inventoryRecipes,runInventoryBank,
- tanningRecipes,tanInventory,type TanKind,
- furnaceGlassRecipe,runFurnaceGlass,
- itemMagicRecipe,itemSpellCosts,runItemMagic,
- runMixedWine,runBonesBank,
- // Smithing & Smelting
- smeltRecipe,planSmeltLoad,smeltEffect,validateSmeltOrder,validateSmeltRoute,nativeSmeltFurnace,nativeSmeltStands,runSmeltBatch,type SmeltOrder,type SmeltRecipe,
- smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTERFACE,type SmithRecipe,
- // Fletching, Woodcutting & Firemaking
- planHeadless,runHeadless,type HeadlessOptions,
- validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob,
- woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
- LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions,
- // Agility, Runecraft, Prayer, Herblore, Thieving & Care
- agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions,
- runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,
- NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,
- runRuneSupply,runeSupplyTarget,
- BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions,
- boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller,
- incomingCookedFood,courierFoodReady,receiveFoodAtBank,
- kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta,
  runMagicOrderCli,
+ type BankJob,
+ type FishMethod,
+ type TanKind,
+ type SmeltOrder,
+ type SmeltRecipe,
+ type SmithRecipe,
+ type HeadlessOptions,
+ type WoodProcessingJob,
+ type LogKind,
+ type FiremakingOptions,
+ type Course,
+ type AgilityOptions,
+ type NatureJob,
+ type PrayerOptions,
 };
 
 export interface SkillerRouteSpec {
@@ -592,51 +690,57 @@ function parseGatherTokens(tokens: readonly string[]): { args: string[]; env: Re
  return { args, env };
 }
 
+// Lazy external dependency hooks: each sibling worker family loads only if the active gather/artisan/runecraft skill invokes it.
 async function buildGatherDeps(): Promise<GatherExternalDeps> {
- const [
-  {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding},
-  {leaveRuneStarter},
-  {walkFar,nearestBanks},
-  {attackable,defaultSpec,fightPlayer},
-  {escapeStep,hasVarrockTeleport,kitFrom},
- ] = await Promise.all([
-  import('../packages/workers/src/logistics'),
-  import('./rune-starter'),
-  import('../packages/workers/src/quest/sweep'),
-  import('./pk'),
-  import('../packages/workers/src/pvp/wild-rules'),
- ]);
+ let logWalkMod: typeof import('../packages/workers/src/logistics/walk') | undefined;
+ let logHandoffMod: typeof import('../packages/workers/src/logistics/handoff') | undefined;
+ let logTradeHelpersMod: typeof import('../packages/workers/src/logistics/trade-helpers') | undefined;
+ let sweepMod: typeof import('../packages/workers/src/quest/sweep') | undefined;
+ let pkMod: typeof import('./pk') | undefined;
+ let wildMod: typeof import('../packages/workers/src/pvp/wild-rules') | undefined;
+ let cookMod: typeof import('../packages/workers/src/bank-artisan/cooking') | undefined;
+ let craftProdMod: typeof import('../packages/workers/src/bank-artisan/crafting-production') | undefined;
+ let fletchMod: typeof import('../packages/workers/src/bank-artisan/fletching') | undefined;
+ const getLogWalk = () => (logWalkMod ??= require('../packages/workers/src/logistics/walk') as typeof import('../packages/workers/src/logistics/walk'));
+ const getLogHandoff = () => (logHandoffMod ??= require('../packages/workers/src/logistics/handoff') as typeof import('../packages/workers/src/logistics/handoff'));
+ const getLogTradeHelpers = () => (logTradeHelpersMod ??= require('../packages/workers/src/logistics/trade-helpers') as typeof import('../packages/workers/src/logistics/trade-helpers'));
+ const getSweep = () => (sweepMod ??= require('../packages/workers/src/quest/sweep') as typeof import('../packages/workers/src/quest/sweep'));
+ const getPk = () => (pkMod ??= require('./pk') as typeof import('./pk'));
+ const getWild = () => (wildMod ??= require('../packages/workers/src/pvp/wild-rules') as typeof import('../packages/workers/src/pvp/wild-rules'));
+ const getCook = () => (cookMod ??= require('../packages/workers/src/bank-artisan/cooking') as typeof import('../packages/workers/src/bank-artisan/cooking'));
+ const getCraftProd = () => (craftProdMod ??= require('../packages/workers/src/bank-artisan/crafting-production') as typeof import('../packages/workers/src/bank-artisan/crafting-production'));
+ const getFletch = () => (fletchMod ??= require('../packages/workers/src/bank-artisan/fletching') as typeof import('../packages/workers/src/bank-artisan/fletching'));
  return {
   workScript: 'scripts/aio-skiller.ts',
-  approach,
-  awayFrom,
-  walkTargetPersist,
-  leaveTutorial,
-  leaveRuneStarter,
+  approach: (...a) => getLogWalk().approach(...a),
+  awayFrom: (...a) => getLogWalk().awayFrom(...a),
+  walkTargetPersist: (...a) => getLogWalk().walkTargetPersist(...a),
+  leaveTutorial: (...a) => getLogWalk().leaveTutorial(...a),
+  leaveRuneStarter: async (...a) => (await import('./rune-starter')).leaveRuneStarter(...a),
   walkFar: async (s, world, to, legTimeoutTicks, opts) =>
-   (await walkFar(s, world as Parameters<typeof walkFar>[1], to, legTimeoutTicks, opts)) as Awaited<
+   (await getSweep().walkFar(s, world as Parameters<typeof getSweep extends () => infer M ? M extends { walkFar: infer F } ? F : never : never>[1], to, legTimeoutTicks, opts)) as Awaited<
     ReturnType<NonNullable<GatherExternalDeps['walkFar']>>
    >,
-  nearestBanks: from => nearestBanks({ x: from.x, z: from.z, level: from.level ?? 0 }),
-  sendHandoff,
-  receiveHandoff,
-  pendingCourierFunding,
-  serviceCourierFunding,
-  cookSharks,
-  cookingRecipes,
-  nativeHeatSources,
-  runCookingBatch: (d, r, o) => runCookingBatch(d as Parameters<typeof runCookingBatch>[0], r, o),
-  runSoftenClay,
-  runShafts: (s, opts) => runShafts(s, { ...opts, reserve: opts.reserve ?? 0 }),
-  runHeadless: (s, opts) => runHeadless(s, { ...opts, shaftReserve: opts.shaftReserve ?? 0, featherReserve: opts.featherReserve ?? 0 }),
-  runBankProfile,
-  runBankJob: (s, job, stop) => runBankJob(s, job as BankJob, stop),
-  attackable,
-  defaultSpec,
-  fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as Parameters<typeof fightPlayer>[2]),
-  escapeStep,
-  hasVarrockTeleport,
-  kitFrom,
+  nearestBanks: from => getSweep().nearestBanks({ x: from.x, z: from.z, level: from.level ?? 0 }),
+  sendHandoff: (...a) => getLogHandoff().sendHandoff(...a),
+  receiveHandoff: (...a) => getLogHandoff().receiveHandoff(...a),
+  pendingCourierFunding: (...a) => getLogTradeHelpers().pendingCourierFunding(...a),
+  serviceCourierFunding: (...a) => getLogTradeHelpers().serviceCourierFunding(...a),
+  cookSharks: (...a) => getCook().cookSharks(...a),
+  cookingRecipes: (...a) => getCook().cookingRecipes(...a),
+  nativeHeatSources: (...a) => getCook().nativeHeatSources(...a),
+  runCookingBatch: (d, r, o) => getCook().runCookingBatch(d as Parameters<ReturnType<typeof getCook>['runCookingBatch']>[0], r, o),
+  runSoftenClay: (...a) => getCraftProd().runSoftenClay(...a),
+  runShafts: (s, opts) => getFletch().runShafts(s, { ...opts, reserve: opts.reserve ?? 0 }),
+  runHeadless: (s, opts) => getFletch().runHeadless(s, { ...opts, shaftReserve: opts.shaftReserve ?? 0, featherReserve: opts.featherReserve ?? 0 }),
+  runBankProfile: (...a) => getBankJobs().runBankProfile(...a),
+  runBankJob: (s, job, stop) => getBankJobs().runBankJob(s, job as BankJob, stop),
+  attackable: (...a) => getPk().attackable(...a),
+  defaultSpec: (...a) => getPk().defaultSpec(...a),
+  fightPlayer: (s, targetName, opts) => getPk().fightPlayer(s, targetName, (opts ?? {}) as Parameters<ReturnType<typeof getPk>['fightPlayer']>[2]),
+  escapeStep: (...a) => getWild().escapeStep(...a),
+  hasVarrockTeleport: (...a) => getWild().hasVarrockTeleport(...a),
+  kitFrom: (...a) => getWild().kitFrom(...a),
  };
 }
 
@@ -670,14 +774,10 @@ const RUNECRAFT_DIRECT_METHODS: Readonly<Record<string, RunecraftMode>> = {
 };
 
 async function buildRunecraftDeps(): Promise<RunecraftExternalDeps> {
- const [{runRuneMysteries},{trainChickens}] = await Promise.all([
-  import('./generated/quest-runemysteries'),
-  import('../packages/workers/src/combat/chickens'),
- ]);
  return {
-  runBankProfile,
-  runRuneMysteries,
-  trainChickens,
+  runBankProfile: (...a) => getBankJobs().runBankProfile(...a),
+  runRuneMysteries: async (...a) => (await import('./generated/quest-runemysteries')).runRuneMysteries(...a),
+  trainChickens: async (...a) => (await import('../packages/workers/src/combat/chickens')).trainChickens(...a),
  };
 }
 
@@ -703,37 +803,34 @@ const LEGACY_ARTISAN_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<str
 };
 
 async function buildArtisanDeps(): Promise<ArtisanExternalDeps> {
- const [
-  {nativeNpcSpell,runNpcMagic},
-  {combatTeleportAllowed},
-  {withdrawFireOwned},
-  {reconcileLoadout},
-  {installOrbFloorBridge},
-  {monitorWildernessLevel},
-  {walkTargetPersist},
- ] = await Promise.all([
-  import('../packages/workers/src/combat/magic'),
-  import('../packages/workers/src/combat/survivability'),
-  import('../packages/workers/src/combat/trip-kit'),
-  import('./gear-reconcile'),
-  import('./microbot-edgeville-travel'),
-  import('../packages/workers/src/pvp/monitor'),
-  import('../packages/workers/src/logistics'),
- ]);
+ let magicMod: typeof import('../packages/workers/src/combat/magic') | undefined;
+ let survMod: typeof import('../packages/workers/src/combat/survivability') | undefined;
+ let tripKitMod: typeof import('../packages/workers/src/combat/trip-kit') | undefined;
+ let gearRecMod: typeof import('./gear-reconcile') | undefined;
+ let edgeTravelMod: typeof import('./microbot-edgeville-travel') | undefined;
+ let pvpMonMod: typeof import('../packages/workers/src/pvp/monitor') | undefined;
+ let logWalkMod: typeof import('../packages/workers/src/logistics/walk') | undefined;
+ const getMagic = () => (magicMod ??= require('../packages/workers/src/combat/magic') as typeof import('../packages/workers/src/combat/magic'));
+ const getSurv = () => (survMod ??= require('../packages/workers/src/combat/survivability') as typeof import('../packages/workers/src/combat/survivability'));
+ const getTripKit = () => (tripKitMod ??= require('../packages/workers/src/combat/trip-kit') as typeof import('../packages/workers/src/combat/trip-kit'));
+ const getGearRec = () => (gearRecMod ??= require('./gear-reconcile') as typeof import('./gear-reconcile'));
+ const getEdgeTravel = () => (edgeTravelMod ??= require('./microbot-edgeville-travel') as typeof import('./microbot-edgeville-travel'));
+ const getPvpMon = () => (pvpMonMod ??= require('../packages/workers/src/pvp/monitor') as typeof import('../packages/workers/src/pvp/monitor'));
+ const getLogWalk = () => (logWalkMod ??= require('../packages/workers/src/logistics/walk') as typeof import('../packages/workers/src/logistics/walk'));
  return {
   workScript: 'scripts/aio-skiller.ts',
-  runBankJob: (s, job, stop) => runBankJob(s as Parameters<typeof runBankJob>[0], job as BankJob, stop),
-  validateBankJob: j => validateBankJob(j as BankJob),
-  runBankProfile: (s, j, p, stop) => runBankProfile(s as Parameters<typeof runBankProfile>[0], j as Parameters<typeof runBankProfile>[1], p as Parameters<typeof runBankProfile>[2], stop),
-  nativeNpcSpell,
-  runNpcMagic: (s, spell, opts) => runNpcMagic(s as Parameters<typeof runNpcMagic>[0], spell as Parameters<typeof runNpcMagic>[1], opts as unknown as Parameters<typeof runNpcMagic>[2]),
-  combatTeleportAllowed,
-  reconcileLoadout: (s, opts) => reconcileLoadout(s as Parameters<typeof reconcileLoadout>[0], opts as unknown as Parameters<typeof reconcileLoadout>[1]),
-  withdrawFireOwned: (s, id, amount) => withdrawFireOwned(s as Parameters<typeof withdrawFireOwned>[0], id, amount),
-  installOrbFloorBridge,
-  monitorWildernessLevel,
+  runBankJob: (s, job, stop) => getBankJobs().runBankJob(s as Parameters<BankJobsMod['runBankJob']>[0], job as BankJob, stop),
+  validateBankJob: j => getBankJobs().validateBankJob(j as BankJob),
+  runBankProfile: (s, j, p, stop) => getBankJobs().runBankProfile(s as Parameters<BankJobsMod['runBankProfile']>[0], j as Parameters<BankJobsMod['runBankProfile']>[1], p as Parameters<BankJobsMod['runBankProfile']>[2], stop),
+  nativeNpcSpell: (...a) => getMagic().nativeNpcSpell(...a),
+  runNpcMagic: (s, spell, opts) => getMagic().runNpcMagic(s as Parameters<ReturnType<typeof getMagic>['runNpcMagic']>[0], spell as Parameters<ReturnType<typeof getMagic>['runNpcMagic']>[1], opts as unknown as Parameters<ReturnType<typeof getMagic>['runNpcMagic']>[2]),
+  combatTeleportAllowed: (...a) => getSurv().combatTeleportAllowed(...a),
+  reconcileLoadout: (s, opts) => getGearRec().reconcileLoadout(s as Parameters<ReturnType<typeof getGearRec>['reconcileLoadout']>[0], opts as unknown as Parameters<ReturnType<typeof getGearRec>['reconcileLoadout']>[1]),
+  withdrawFireOwned: (s, id, amount) => getTripKit().withdrawFireOwned(s as Parameters<ReturnType<typeof getTripKit>['withdrawFireOwned']>[0], id, amount),
+  installOrbFloorBridge: (...a) => getEdgeTravel().installOrbFloorBridge(...a),
+  monitorWildernessLevel: (...a) => getPvpMon().monitorWildernessLevel(...a),
   openQuest: async opts => (await import('./generated/quest-lib')).openQuest(opts),
-  walkTargetPersist,
+  walkTargetPersist: (...a) => getLogWalk().walkTargetPersist(...a),
  };
 }
 
@@ -843,9 +940,10 @@ export function mergeSkillerEnv(
    const prevExitCode = process.exitCode;
    process.exitCode = 0;
    try {
-    const [{ runCombatModeCli }, { leaveRuneStarter }] = await Promise.all([
+    const [{ runCombatModeCli }, { leaveRuneStarter }, { itemMagicRecipe, runItemMagic }] = await Promise.all([
      import('../packages/workers/src/combat/module'),
      import('./rune-starter'),
+     import('../packages/workers/src/bank-artisan/magic'),
     ]);
     await runCombatModeCli(account, second, rest, env, {
      leaveStarter: leaveRuneStarter,

@@ -40,9 +40,29 @@ import {
     runArtisanBankProfile,
     watchProductionLife,
 } from './runtime';
+import {
+    BONES_PER_CAST,
+    BONES_TO_BANANAS_RUNES,
+    itemMagicRecipe,
+    nativeTeleport,
+    type ItemMagicRecipe,
+    type NativeTeleport,
+    type Recipe,
+} from './recipes';
 import type { ArtisanExternalDeps, Session } from './types';
 
-export { alchCasts, CAST_XP, HIGH_LEVEL };
+export {
+    alchCasts,
+    BONES_PER_CAST,
+    BONES_TO_BANANAS_RUNES,
+    CAST_XP,
+    HIGH_LEVEL,
+    itemMagicRecipe,
+    nativeTeleport,
+    type ItemMagicRecipe,
+    type NativeTeleport,
+    type Recipe,
+};
 
 const textsCache = new Map<string, string>();
 const parsedBlocksCache = new Map<string, { name: string; body: string }[]>();
@@ -66,20 +86,6 @@ const blocksOf = (file: string) => {
 
 // ---- Item Magic (microbot-magic-items.ts) ----
 
-let itemCostsMapCache: Map<string, number> | undefined;
-function itemCostsByDebug(): Map<string, number> {
-    if (!itemCostsMapCache) {
-        const rows = JSON.parse(readCached(join(KNOWLEDGE_DIR, 'items.json'))) as { debugname: string; cost?: number }[];
-        itemCostsMapCache = new Map();
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i]!;
-            if (!itemCostsMapCache.has(row.debugname) && row.cost !== undefined) {
-                itemCostsMapCache.set(row.debugname, row.cost);
-            }
-        }
-    }
-    return itemCostsMapCache;
-}
 const SPELL_SCRIPTS: Record<string, [string, string]> = {
     'low-alch': ['alchemy.rs2', 'magic_spell_low_alch'],
     'high-alch': ['alchemy.rs2', 'magic_spell_high_alch'],
@@ -98,85 +104,6 @@ export function spellDelay(mode: string): number {
         if (m) return Number(m[1]);
     }
     throw Error('missing native spell delay ' + label);
-}
-
-export interface ItemMagicRecipe {
-    name: string;
-    spell: string;
-    level: number;
-    smithing: number;
-    target: number;
-    product: number;
-    inputs: Record<number, number>;
-    output: number;
-    members: boolean;
-}
-export type Recipe = ItemMagicRecipe;
-
-const itemMagicRecipeCache = new Map<string, ItemMagicRecipe>();
-
-export function itemMagicRecipe(mode: string, targetName?: string): ItemMagicRecipe {
-    const cacheKey = `${mode}\0${targetName ?? ''}`;
-    const hit = itemMagicRecipeCache.get(cacheKey);
-    if (hit) return { ...hit, inputs: { ...hit.inputs } };
-    const spells = blocksOf(join(CONTENT_DIR, 'scripts/skill_magic/configs/magic_spells.dbrow'));
-    const field = (body: string, key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-    let row = spells.find(r => r.name === `magic_spell_${mode === 'low-alch' ? 'low_alch' : mode === 'high-alch' ? 'high_alch' : 'superheat'}`);
-    let input = '';
-    let product = 'coins';
-    let smithing = 0;
-    let secondary: string | undefined;
-    let secondaryCount = 0;
-    if (mode.startsWith('enchant:')) {
-        input = mode.slice(8);
-        if (!/^\w+$/.test(input)) throw Error('invalid native item name');
-        row = spells.find(r => r.body.includes('data=convertobj,' + input + ','));
-        product = row?.body.match(new RegExp('^data=convertobj,' + input + ',([^,]+)', 'm'))?.[1] ?? '';
-    } else if (mode.startsWith('superheat:')) {
-        const metal = mode.slice(10);
-        if (!/^(bronze|iron|silver|steel|gold|mithril|adamantite|runite)$/.test(metal)) throw Error('unsupported metal');
-        product = metal + '_bar';
-        const b = blocksOf(join(CONTENT_DIR, 'scripts/skill_smithing/configs/smelting/smelting.struct')).find(r => r.name === 'smelting_' + product)?.body;
-        if (!b) throw Error('missing native smelting recipe');
-        const p = (key: string) => b.match(new RegExp('^param=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-        input = p('ingredient')!;
-        smithing = Number(p('levelrequired'));
-        secondary = p('ingredient_secondary');
-        secondaryCount = Number(p('ingredient_secondary_count') ?? 0);
-    } else if (mode === 'low-alch' || mode === 'high-alch') {
-        if (!targetName || !/^\w+$/.test(targetName) || ['coins', 'naturerune', 'firerune'].includes(targetName)) {
-            throw Error('explicit non-rune alchemy target required');
-        }
-        input = targetName;
-    } else {
-        throw Error('unsupported item magic mode');
-    }
-    if (!row || !input || !product) throw Error('no native item conversion');
-    const inputs: Record<number, number> = { [objId(input)]: 1 };
-    const runes = field(row.body, 'runesrequired')!.split(',');
-    for (let n = 0; n < runes.length; n += 2) {
-        if (runes[n] !== 'null') inputs[objId(runes[n]!)] = (inputs[objId(runes[n]!)] ?? 0) + Number(runes[n + 1]);
-    }
-    if (secondary) inputs[objId(secondary)] = secondaryCount;
-    let output = 1;
-    if (product === 'coins') {
-        const cost = itemCostsByDebug().get(input);
-        if (cost === undefined) throw Error('unknown native alchemy value');
-        output = Math.max(1, Math.floor((cost * (mode === 'high-alch' ? 6 : 4)) / 10));
-    }
-    const built: ItemMagicRecipe = {
-        name: mode,
-        spell: 'magic:' + field(row.body, 'spell')!.replace('^', ''),
-        level: Number(field(row.body, 'levelrequired')),
-        smithing,
-        target: objId(input),
-        product: objId(product),
-        inputs,
-        output,
-        members: field(row.body, 'members') === 'true',
-    };
-    itemMagicRecipeCache.set(cacheKey, built);
-    return { ...built, inputs: { ...built.inputs } };
 }
 
 let staffRunesCache: Map<number, { runes: Set<number>; members: boolean }> | undefined;
@@ -517,35 +444,6 @@ export async function stageTeleportRunes(s: Session, t: NativeTeleport, casts: n
 }
 
 // ---- Standard Teleports (microbot-magic-teleport.ts) ----
-
-export interface NativeTeleport {
-    name: string;
-    component: string;
-    level: number;
-    members: boolean;
-    runes: Record<number, number>;
-    to: { x: number; z: number; level: number };
-}
-
-const nativeTeleportCache = new Map<string, NativeTeleport>();
-
-export function nativeTeleport(name: string): NativeTeleport {
-    if (!/^(varrock|lumbridge|falador|camelot|ardougne|watchtower|trollheim)$/.test(name)) throw Error('unsupported native teleport');
-    let cached = nativeTeleportCache.get(name);
-    if (!cached) {
-        const text = readCached(join(CONTENT_DIR, 'scripts/skill_magic/configs/magic_spells.dbrow'));
-        const body = text.split('[magic_spell_teleport_' + name + ']')[1]?.split('\n[')[0];
-        if (!body) throw Error('native teleport missing');
-        const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-        const parts = field('runesrequired')!.split(',');
-        const runes: Record<number, number> = {};
-        for (let i = 0; i < parts.length; i += 2) if (parts[i] !== 'null') runes[objId(parts[i]!)] = Number(parts[i + 1]);
-        const [level, mx, mz, lx, lz] = field('tele_coord')!.split('_').map(Number);
-        cached = { name, component: 'magic:' + name + '_teleport', level: Number(field('levelrequired')), members: field('members') === 'true', runes, to: { x: mx! * 64 + lx!, z: mz! * 64 + lz!, level: level! } };
-        nativeTeleportCache.set(name, cached);
-    }
-    return { ...cached, runes: { ...cached.runes }, to: { ...cached.to } };
-}
 
 export function teleportReceipt(
     t: NativeTeleport,
@@ -1838,8 +1736,7 @@ export async function runBonesConversion(io: BonesIO, o: { maximum: number; cap:
 }
 
 // Bones to Bananas: the runes of one cast, and the bones one cast converts (a pack holds 28 less the three rune stacks).
-export const BONES_TO_BANANAS_RUNES = { 557: 2, 555: 2, 561: 1 } as const;
-export const BONES_PER_CAST = 25;
+// BONES_TO_BANANAS_RUNES and BONES_PER_CAST are re-exported from ./recipes.
 
 export async function runBonesBank(s: Session, o: { maximum: number; cap: number; members?: boolean; reserve?: number; stop?: () => boolean }) {
     const reserve = o.reserve ?? 0;

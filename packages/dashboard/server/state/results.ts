@@ -4,21 +4,32 @@ import { join } from 'node:path';
 import { hostStopNativeProof, type NativeProof } from '../../collection';
 import { failLoops, LOOP_WINDOW_MS } from '../../../core/src/fail-loops';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from '../../../core/src/fleet';
-import { append, FILES, MAIN, practice, root, statusDirs, tailJsonl, type Status } from '../config';
+import { append, FILES, MAIN, practice, root, scanJsonl, statusDirs, type Status } from '../config';
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
 type Res = { at: number; name: string; goal: string; ok: boolean; text: string; started?: number };
-const allResults = tailJsonl<Res>(FILES.results, 100_000);
-const results: Res[] = allResults.slice(-300).reverse();
+const RESULT_KEEP = 5000;
+const allResults: Res[] = [];
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
 // fill it (three live farmer deaths vanished from the page that way).
 const lastResult = new Map<string, { text: string; started?: number }>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
 const noteRes = (r: Res) => { const key = r.name.toLowerCase(); lastResult.set(key, { text: r.text, started: r.started }); newestRes.set(key, r); if (died(r.text)) newestDeath.set(key, r); };
-for (const r of allResults) noteRes(r);
-// The long read above fed the per-account maps; the list that fleetDiagnostics scans every 2 s keeps the newest RESULT_KEEP.
-const RESULT_KEEP = 5000;
-if (allResults.length > RESULT_KEEP) allResults.splice(0, allResults.length - RESULT_KEEP);
+// Stream the last 100,000 rows without holding all 100,000 parsed objects in memory; keep only the newest RESULT_KEEP.
+const ring = new Array<Res>(RESULT_KEEP);
+let ringCount = 0;
+scanJsonl<Res>(FILES.results, 100_000, r => {
+    noteRes(r);
+    ring[ringCount % RESULT_KEEP] = r;
+    ringCount++;
+});
+if (ringCount <= RESULT_KEEP) {
+    for (let i = 0; i < ringCount; i++) allResults.push(ring[i]!);
+} else {
+    const start = ringCount % RESULT_KEEP;
+    for (let i = 0; i < RESULT_KEEP; i++) allResults.push(ring[(start + i) % RESULT_KEEP]!);
+}
+const results: Res[] = allResults.slice(-300).reverse();
 function trackResult(s: Status) {
     const text = String(s.result ?? '');
     // Two runs can end with the same text: the run start tells them apart.

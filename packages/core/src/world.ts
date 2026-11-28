@@ -18,12 +18,14 @@ export {
     canonicalTransportLeg,
     doorBlock,
     doorBlocks,
+    getKnownDoorFacts,
     transportAllowed,
 } from './world/filters';
 export {
     installDoorPolicy,
+    installRemoteSendFindPath,
     interactionApproach,
     rsPathLength,
 } from './world/pathfinding';
 export { createWorld, goalReachable } from './world/search';
-export { blockwalkNpcIds, npcBlockTiles } from './world/npc-blocks';
+export { blockwalkNpcIds, npcBlockTiles, withNpcBlocks } from './world/npc-blocks';

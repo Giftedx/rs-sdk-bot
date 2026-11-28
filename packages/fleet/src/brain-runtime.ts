@@ -156,29 +156,27 @@ function readJsonSafe(file: string): unknown {
     }
 }
 
-const immutableJsonCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
-function readCachedImmutableJson(file: string, nowWall = Date.now()): unknown {
+type OrderStamp = { mtimeMs: number; size: number; end: number };
+const expiredOrderStampCache = new Map<string, OrderStamp>();
+const activeOrderJsonCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+const activeReceiptJsonCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+
+function readCachedActiveJson(
+    cache: Map<string, { mtimeMs: number; size: number; value: unknown }>,
+    file: string,
+    nowWall: number,
+): unknown {
     try {
-        const hit = immutableJsonCache.get(file);
-        if (hit && nowWall - hit.mtimeMs > 1000) {
-            const st = statSync(file);
-            if (nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
-                return hit.value;
-            }
-            const value = JSON.parse(readFileSync(file, 'utf8'));
-            if (immutableJsonCache.size > 4096) immutableJsonCache.clear();
-            immutableJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
-            return value;
+        const st = statSync(file);
+        const hit = cache.get(file);
+        if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+            return hit.value;
         }
         const value = JSON.parse(readFileSync(file, 'utf8'));
-        if (!hit) {
-            const st = statSync(file);
-            if (immutableJsonCache.size > 4096) immutableJsonCache.clear();
-            immutableJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
-        }
+        cache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
         return value;
     } catch {
-        immutableJsonCache.delete(file);
+        cache.delete(file);
         return undefined;
     }
 }
@@ -1003,6 +1001,9 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         atomicJson(fleetStateFile(root), fleetState);
     }
 
+    if (opts.persist !== false) {
+        Bun.gc(false);
+    }
     return {
         fleetState,
         fleetPlan,
@@ -1271,12 +1272,50 @@ export function materializeBrainTransferOrders(
     const nowWall = Date.now();
     const ordersDir = join(opts.fleetDir, 'orders');
     const receiptsDir = join(opts.fleetDir, 'receipts');
+    const activePairItemKeys = new Set<string>();
+    const existingOrderFiles = new Set<string>();
+    const activeOrders: Order[] = [];
+    const seenOrderPaths = new Set<string>();
+    if (existsSync(ordersDir)) {
+        try {
+            for (const f of readdirSync(ordersDir)) {
+                if (!f.endsWith('.json')) continue;
+                existingOrderFiles.add(f);
+                const full = join(ordersDir, f);
+                seenOrderPaths.add(full);
+                let st;
+                try { st = statSync(full); } catch { continue; }
+                const expired = expiredOrderStampCache.get(full);
+                if (expired && expired.mtimeMs === st.mtimeMs && expired.size === st.size && opts.now >= expired.end) {
+                    continue;
+                }
+                const ord = readCachedActiveJson(activeOrderJsonCache, full, nowWall) as Order | undefined;
+                if (!validOrder(ord) || opts.now >= ord.end) {
+                    const end = validOrder(ord) ? ord.end : 0;
+                    expiredOrderStampCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, end });
+                    activeOrderJsonCache.delete(full);
+                    continue;
+                }
+                expiredOrderStampCache.delete(full);
+                activeOrders.push(ord);
+            }
+        } catch { /* unreadable orders */ }
+    }
+    for (const key of expiredOrderStampCache.keys()) if (!seenOrderPaths.has(key)) expiredOrderStampCache.delete(key);
+    for (const key of activeOrderJsonCache.keys()) if (!seenOrderPaths.has(key)) activeOrderJsonCache.delete(key);
+
+    const activeOrderIds = new Set(activeOrders.map((ord) => ord.id));
     const receiptsByOrderId = new Map<string, Receipt[]>();
-    if (existsSync(receiptsDir)) {
+    const seenReceiptPaths = new Set<string>();
+    if (activeOrderIds.size > 0 && existsSync(receiptsDir)) {
         try {
             for (const f of readdirSync(receiptsDir)) {
                 if (!f.endsWith('.json')) continue;
-                const rec = readCachedImmutableJson(join(receiptsDir, f), nowWall) as Receipt | undefined;
+                const dot = f.lastIndexOf('.', f.length - 6);
+                if (dot <= 0 || !activeOrderIds.has(f.slice(0, dot))) continue;
+                const full = join(receiptsDir, f);
+                seenReceiptPaths.add(full);
+                const rec = readCachedActiveJson(activeReceiptJsonCache, full, nowWall) as Receipt | undefined;
                 if (!rec || typeof rec.id !== 'string') continue;
                 const list = receiptsByOrderId.get(rec.id) ?? [];
                 list.push(rec);
@@ -1284,24 +1323,15 @@ export function materializeBrainTransferOrders(
             }
         } catch { /* unreadable receipts */ }
     }
+    for (const key of activeReceiptJsonCache.keys()) if (!seenReceiptPaths.has(key)) activeReceiptJsonCache.delete(key);
 
-    const activePairItemKeys = new Set<string>();
-    const existingOrderFiles = new Set<string>();
-    if (existsSync(ordersDir)) {
-        try {
-            for (const f of readdirSync(ordersDir)) {
-                if (!f.endsWith('.json')) continue;
-                existingOrderFiles.add(f);
-                const ord = readCachedImmutableJson(join(ordersDir, f), nowWall) as Order | undefined;
-                if (!validOrder(ord) || opts.now >= ord.end) continue;
-                const orderReceipts = receiptsByOrderId.get(ord.id) ?? [];
-                const settlement = tradeSettlement(ord, orderReceipts, opts.now);
-                if (settlement.state === 'pending' || (settlement.state === 'legacy' && orderReceipts.length === 0)) {
-                    const itemKey = ord.itemId !== undefined ? String(ord.itemId) : ord.item.toLowerCase();
-                    activePairItemKeys.add(`${ord.from.toLowerCase()}|${ord.to.toLowerCase()}|${itemKey}`);
-                }
-            }
-        } catch { /* unreadable orders */ }
+    for (const ord of activeOrders) {
+        const orderReceipts = receiptsByOrderId.get(ord.id) ?? [];
+        const settlement = tradeSettlement(ord, orderReceipts, opts.now);
+        if (settlement.state === 'pending' || (settlement.state === 'legacy' && orderReceipts.length === 0)) {
+            const itemKey = ord.itemId !== undefined ? String(ord.itemId) : ord.item.toLowerCase();
+            activePairItemKeys.add(`${ord.from.toLowerCase()}|${ord.to.toLowerCase()}|${itemKey}`);
+        }
     }
 
     let itemsMap: ReturnType<typeof loadItemsMap> | null = null;
