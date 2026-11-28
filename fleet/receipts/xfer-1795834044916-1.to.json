@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795834044916-1",
  "account": "Nockitoff",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "6f355cf2-8748-4dd3-883b-8c77c73ba3ab",
- "count": 0,
- "ok": false,
- "at": 1795834594894,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795834608099,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795834607368
+ },
+ "logout": {
+  "attemptId": "1795834594918-0000003700-0000000001",
+  "at": 1795834608091,
+  "sha256": "4be2a3788a5fa5ea729544ada131f88ce5b6c6ad44712227987ad2c1b034b495"
+ },
+ "screen": true
 }

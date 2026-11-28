@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834596043,
+ "at": 1795834615026,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,61 +185,50 @@
    "role": "pvp"
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pullmybow",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "mining",
-    "ore"
+    "sweep",
+    "elena"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-skiller.ts",
+   "account": "RearEntry",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
   },
   {
    "account": "Fingersmith",
@@ -275,6 +264,36 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1115 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 TARGET_COUNT=1 CAP=1000 STALL_TICKS=280 -- smithing anvil 1000",
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 STALL_TICKS=280 -- smithing anvil 1500"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1311",
    "role": "auto"
   }
  ],
