@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795849856861-1",
  "account": "RearEntry",
  "partner": "Ballbag",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 30,
  "claim": "c1845145-6019-4706-a300-3f77c83da7ce",
- "count": 0,
- "ok": false,
- "at": 1795850082670,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795850147414,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795850146666
+ },
+ "logout": {
+  "attemptId": "1795850082678-0000013256-0000000001",
+  "at": 1795850147407,
+  "sha256": "dd31da5a406b68e577286bae745cedcaff318a6737562664101602d8fe2261e4"
+ },
+ "screen": true
 }
