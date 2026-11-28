@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861575495-1",
  "account": "mmsmk1232",
  "partner": "Ballbag",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "8c8454f1-bafa-4c1f-b5d4-26609adc114b",
- "count": 0,
- "ok": false,
- "at": 1795861968891,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795861981581,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795861980829
+ },
+ "logout": {
+  "attemptId": "1795861968906-0000009308-0000000001",
+  "at": 1795861981573,
+  "sha256": "16f8fdf6d47052e37d42da44789c644f87cd41feade7425e70bbc945cbc26368"
+ },
+ "screen": true
 }

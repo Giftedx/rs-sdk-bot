@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861955576,
+ "at": 1795861983406,
  "jobs": [
   {
    "account": "Balls",
@@ -153,6 +153,27 @@
    "role": "army"
   },
   {
+   "account": "Billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "items",
+    "enchant:sapphire_ring",
+    "-",
+    "2",
+    "1200"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:2550",
+    "BATCH_UNITS": "2",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:2550",
+   "role": "army"
+  },
+  {
    "account": "Hocuspokeus",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -177,8 +198,8 @@
    "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1623-17-o1-p23000 ITEM_ID=1623 QUANTITY=17 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23000 EXPECTED_OWNED=1 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=18 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=18 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+    "scripts/aio-market.ts ORDER_KEY=brain-1623-13-o1-p23000 ITEM_ID=1623 QUANTITY=13 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23000 EXPECTED_OWNED=1 -- ge-buy",
+    "scripts/aio-skiller.ts MAX_MAKE=14 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=14 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
     "ROUNDS": "1"
@@ -187,6 +208,29 @@
    "repeat": false,
    "goal": "goal:supply_chain:1607",
    "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery-trip"
+   ],
+   "env": {
+    "RECIPE": "emerald_ring",
+    "TARGET": "17",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1639",
+    "BATCH_UNITS": "17",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1639",
+   "role": "auto"
   },
   {
    "account": "SporranDip",
@@ -272,8 +316,8 @@
    "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=191 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=191 MAX_MAKE=191 CAP=1928 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1800 TARGET_COUNT=180 PRODUCT_TARGET=181 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=181 MAX_MAKE=181 CAP=1848 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -352,7 +396,6 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "knightrider",
