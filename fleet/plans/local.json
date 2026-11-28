@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795854708567,
+ "at": 1795854781362,
  "jobs": [
   {
    "account": "Balls",
@@ -109,43 +109,6 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "41",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:41",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:41",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=35 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=35 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
@@ -197,6 +160,37 @@
    ]
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=2560 TARGET_COUNT=256 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Moneyshot:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Moneyshot:zanaris",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -205,7 +199,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1127"
+    "BATCH_UNITS": "1061"
    },
    "enabled": true,
    "repeat": false,
@@ -228,7 +222,7 @@
    "env": {
     "ORB_TRIP": "1",
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1208",
+    "BATCH_UNITS": "1137",
     "STALL_TICKS": "700"
    },
    "enabled": true,
