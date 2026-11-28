@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795859045378-2",
  "account": "Woodenstaff",
  "partner": "Kiltlifter",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 3,
  "claim": "15ce9ec8-84f8-4d2c-a6c1-6f22c34fffb0",
- "count": 0,
- "ok": false,
- "at": 1795859725065,
- "detail": "trade claimed",
+ "count": 3,
+ "ok": true,
+ "at": 1795859765277,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795859735445
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795859734653
+ },
+ "logout": {
+  "attemptId": "1795859725094-0000027236-0000000001",
+  "at": 1795859764987,
+  "sha256": "a2be86cce48e14970a4c5b17829b4f83ebc395bcbe104f2924408c7ebe0b83c8"
+ },
+ "screen": true
 }

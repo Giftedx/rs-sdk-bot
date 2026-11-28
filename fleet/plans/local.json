@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795859746333,
+ "at": 1795859790978,
  "jobs": [
   {
    "account": "Balls",
@@ -64,8 +64,8 @@
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1930 TARGET_COUNT=193 PRODUCT_TARGET=198 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=198 MAX_MAKE=198 CAP=1984 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1930 TARGET_COUNT=193 PRODUCT_TARGET=193 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=193 MAX_MAKE=193 CAP=1944 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -77,18 +77,27 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- giant",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1607",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {

@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795859045378-2",
+ "account": "Kiltlifter",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 3,
+ "claim": "15e4512b-47e4-4072-b130-eb69b2da41ac",
+ "count": 3,
+ "ok": true,
+ "at": 1795859767292,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 3,
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795859766256
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795859765848
+ },
+ "logout": {
+  "attemptId": "1795859753633-0000014320-0000000001",
+  "at": 1795859767026,
+  "sha256": "04d40b3af55be082f0b4694d4be4aea76a893bdf0501bb6dda7dea2169fa22c8"
+ },
+ "screen": true
+}
