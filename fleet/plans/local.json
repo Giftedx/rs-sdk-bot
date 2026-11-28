@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870824553,
+ "at": 1795870895589,
  "jobs": [
   {
    "account": "Balls",
@@ -43,6 +43,25 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "tacklebox",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "flax"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "seers-flax"
+   ]
   },
   {
    "account": "unsheathed",
@@ -104,25 +123,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:43",
    "role": "army"
-  },
-  {
-   "account": "tacklebox",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "flax"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "seers-flax"
-   ]
   }
  ],
  "army": [
