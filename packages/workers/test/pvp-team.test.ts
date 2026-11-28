@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { pickEnemy, shouldStopUnseen } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, combatPickupWeapons, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldHaltTeamOnStop, shouldStopOnDying, shouldStopUnseen, team, teamWinner } from '../src/pvp/pk-team';
+import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
+import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
 test('pickEnemy: pair takes its own enemy while in view, else the lowest bar; near the nearest', () => {
     const live = [{ f: 'a', p: { distance: 1 }, h: 0.9 }, { f: 'b', p: { distance: 3 }, h: 0.2 }, { f: 'c', p: { distance: 2 }, h: 0.5 }];
@@ -137,4 +139,416 @@ test('keepPrayer stays off under the start floor of Prayer, and the memory gate 
     expect(squadMemoryGate(5.3, 4)).toEqual({ ok: false, needGB: 5.4 });
     expect(squadMemoryGate(7.4, 24)).toEqual({ ok: true, needGB: 7.4 });
     expect(squadMemoryGate(4.1, 4).ok).toBe(false);
+});
+
+test('resolveTeamKit resolves gang-bait-3plus1 switches and options cleanly without mutating pk-kits', () => {
+    const bait = resolveTeamKit('gang-bait-3plus1');
+    expect(bait.switches).toEqual(BAIT_3PLUS1_SWITCHES);
+    expect(bait.options).toEqual(BAIT_3PLUS1_OPTIONS);
+    expect(bait.switches.ranged).toEqual([861, 2503]);
+    expect(bait.switches.melee).toEqual([1231, 2503]);
+    expect(bait.options.comboFood).toBe(true);
+    expect(bait.options.zeroDrainFlick).toBe(true);
+    expect(bait.options.protectItem).toBe(true);
+    expect(bait.options.freeze).toBe('flee');
+
+    const skull = resolveTeamKit('ganker-dds-skull');
+    expect(skull.switches.melee).toEqual([1231]);
+});
+
+test('bait3Plus1Fixture satisfies strict zero-risk 3+1 death protection with Ring of recoil and BiS switches', () => {
+    const names = getObjNames();
+    const cfg = bait3Plus1Fixture(GANG_STACK.x + 2, GANG_STACK.z);
+    const units = [...(cfg.equipment ?? []), ...(cfg.inventory ?? [])];
+    const risk = assessZeroRiskKit(units, { cost: itemCostOf, nameOf: id => names.get(id), requireProtectItem: true });
+    expect(risk.ok).toBe(true);
+    expect(risk.riskedWeapons4).toEqual([]);
+    expect(risk.riskedValuableGear4).toEqual([]);
+    expect(risk.kept4).toEqual([1231, 2503, 2497, 861]);
+    expect(cfg.equipment?.some(e => e.id === RING_OF_RECOIL_ID && e.slot === 12)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 2412 && e.slot === 1)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 1727 && e.slot === 2)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 1495 && e.slot === 9)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 3105 && e.slot === 10)).toBe(true);
+    expect(cfg.inventory?.some(i => i.id === 577)).toBe(true);
+    expect(cfg.inventory?.filter(i => i.id === 3144).length).toBe(4);
+    expect(cfg.inventory?.length).toBeLessThanOrEqual(27);
+    expect(cfg.varps?.[172]).toBe(1);
+    expect(cfg.varps?.[78]).toBeUndefined();
+});
+
+test('extra:team-{24,25}v49-gang-bait-3plus1-x1 bench cases wire 49 skulled Protect-Item enemies and strict flags', () => {
+    const cases = benchCases();
+    for (const size of [24, 25] as const) {
+        const key = `extra:team-${size}v49-gang-bait-3plus1-x1`;
+        const c = cases.find(x => x.key === key);
+        expect(c).toBeDefined();
+        expect(c!.companions?.length).toBe(size + 49 - 1);
+        expect(c!.presetConfig?.varps?.[78]).toBeUndefined();
+        expect(c!.presetConfig?.equipment?.some(e => e.id === RING_OF_RECOIL_ID)).toBe(true);
+        const sideACompanions = c!.companions!.slice(0, size - 1);
+        const sideBCompanions = c!.companions!.slice(size - 1);
+        expect(sideACompanions.length).toBe(size - 1);
+        expect(sideBCompanions.length).toBe(49);
+        for (const a of sideACompanions) {
+            expect(a.presetConfig?.varps?.[78]).toBeUndefined();
+            expect(a.presetConfig?.equipment?.some(e => e.id === RING_OF_RECOIL_ID)).toBe(true);
+        }
+        for (const b of sideBCompanions) {
+            expect(b.presetConfig?.varps?.[78]).toBe(2000);
+            expect(b.presetConfig?.equipment?.some(e => e.id === 1231)).toBe(true);
+        }
+        const args = c!.scriptArgs ?? [];
+        expect(args).toContain(`SPAR_TEAM=${size}`);
+        expect(args).toContain('SPAR_TEAM_B=49');
+        expect(args).toContain('SPAR_KITS=gang-bait-3plus1:ganker-dds-skull');
+        expect(args).toContain('SPAR_B_OPTS={"protectItem":true}');
+        expect(args).toContain('NEVER_SKULL=1');
+        expect(args).toContain('SPAR_PICKUP=1');
+        expect(args).toContain('SPAR_PICKUP_RADIUS=6');
+        expect(args).toContain('SQUAD_DAGGER=1');
+        expect(args).toContain('STALL_TICKS=3000');
+    }
+});
+
+test('teamBait3Plus1Pass enforces win, zero deaths, zero skulls, enemy kills, and looted enemy weapons', () => {
+    const good = 'RESULT ok team groups=1 size=24 wins=1 losses=0 draws=0 ticks=1450 a=gang-hunter b=ganker-live standing=24-0 diedA=0 diedB=49 takenA=3200 picked=60 weapons=42 skulledA=0';
+    expect(teamBait3Plus1Pass(good)).toBe(true);
+    expect(teamBait3Plus1Pass(good.replace('skulledA=0', 'skulledA=1'))).toBe(false);
+    expect(teamBait3Plus1Pass(`PK NEVER_SKULL VIOLATION: ownSkull=1\n${good}`)).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('diedA=0', 'diedA=1'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('wins=1', 'wins=0'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('weapons=42', 'weapons=0'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('diedB=49', 'diedB=5'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('RESULT ok', 'RESULT fail'))).toBe(false);
+});
+
+test('pickEnemy prioritizes prayer-drained targets ahead of lower-HP non-drained targets', () => {
+    const focus = createTeamFocus();
+    const live = [
+        { f: 'ganker1', p: { distance: 1 }, h: 0.25 },
+        { f: 'ganker2', p: { distance: 2 }, h: 0.85 },
+    ];
+    const picked = pickEnemy(live, undefined as string | undefined, 'low', x => x.h, {
+        focus,
+        memberName: 'ours1',
+        nameOf: x => x.f,
+        drained: x => x.f === 'ganker2',
+    });
+    expect(picked?.f).toBe('ganker2');
+});
+
+test('team() under neverSkull refuses unprovoked attacks, disables auto-retaliate, and records skulled counts', async () => {
+    const mkMock = (name: string, opts: { x: number; z: number; skull: boolean; autoRetaliate?: boolean }) => {
+        let curTick = 0;
+        const listeners = new Set<() => void>();
+        const clicks: number[] = [];
+        let autoRetaliateEnabled = opts.autoRetaliate ?? false;
+        const session = {
+            name,
+            ended: new Promise<void>(() => {}),
+            tick: () => curTick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+            direct: async (cmd: { type: string; componentId?: number }) => {
+                if (cmd.type === 'clickComponent' && cmd.componentId !== undefined) {
+                    clicks.push(cmd.componentId);
+                    autoRetaliateEnabled = false;
+                }
+                return { ok: true };
+            },
+            client: {
+                localPlayer: { headicons: opts.skull ? 1 : 0 },
+                players: [] as unknown[],
+            },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: opts.x, worldZ: opts.z, level: 0, hp: 99, maxHp: 99, lifeId: 1, combatLevel: 126 },
+                    nearbyPlayers: [],
+                    gameMessages: [],
+                    combatEvents: [],
+                    inventory: [],
+                    equipment: [],
+                    skills: [{ name: 'Hitpoints', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                    prayers: { prayerPoints: 99, activePrayers: [] },
+                    autoRetaliateEnabled,
+                }),
+                getInventory: () => [],
+                sendWalk: () => {},
+            },
+            waitForCondition: async () => true,
+            advance: () => {
+                curTick++;
+                for (const fn of [...listeners]) fn();
+            },
+            clicks,
+        };
+        return session;
+    };
+
+    const a1 = mkMock('BaitBot', { x: 3137, z: 3602, skull: false, autoRetaliate: true });
+    const b1 = mkMock('SkulledGanker', { x: 3135, z: 3602, skull: true });
+    let tickCount = 0;
+    const timer = setInterval(() => {
+        tickCount++;
+        a1.advance();
+        b1.advance();
+        if (tickCount > 40) clearInterval(timer);
+    }, 1);
+
+    try {
+        const res = await team(
+            [a1 as never],
+            [b1 as never],
+            { kit: BAIT_3PLUS1_SWITCHES, neverSkull: true, protectItem: true },
+            { kit: { melee: [1231] } },
+            15,
+            () => {},
+            () => tickCount >= 26,
+            { a: 'pair', b: 'pair' },
+            5,
+            new Set([1231]),
+            3,
+            { offReads: 6, holdBelow: 0.7, holdTicks: 300 },
+        );
+        expect(a1.clicks.length).toBeGreaterThanOrEqual(1);
+        expect(res.attacks.a).toBe(0);
+        expect(res.skulled.a).toBe(0);
+        expect(res.skulled.b).toBe(1);
+        expect(res.weapons).toBe(0);
+    } finally {
+        clearInterval(timer);
+    }
+});
+
+test('buildTeamSideOptions applies gang-bait-3plus1 options above gang-hunter profile and below explicit SPAR_A_OPTS', () => {
+    const base = buildTeamSideOptions({
+        profileName: 'gang-hunter',
+        kit: 'gang-bait-3plus1',
+        cap: 3000,
+        neverSkull: false,
+    });
+    expect(base.eatAt).toBe(62);
+    expect(base.freeze).toBe('flee');
+    expect(base.chase).toBe(false);
+    expect(base.comboFood).toBe(true);
+    expect(base.zeroDrainFlick).toBe(true);
+    expect(base.protectItem).toBe(true);
+    expect(base.rotation).toEqual(['ranged', 'melee']);
+    expect(base.kit).toEqual(BAIT_3PLUS1_SWITCHES);
+
+    const overridden = buildTeamSideOptions({
+        profileName: 'gang-hunter',
+        kit: 'gang-bait-3plus1',
+        extraJson: '{"eatAt":72,"freeze":"low"}',
+        cap: 3000,
+        neverSkull: true,
+    });
+    expect(overridden.eatAt).toBe(72);
+    expect(overridden.freeze).toBe('low');
+    expect(overridden.neverSkull).toBe(true);
+    expect(overridden.protectItem).toBe(true);
+    expect(overridden.comboFood).toBe(true);
+});
+
+test('preferUnheldTargets picks open unheld enemies before low-HP held enemies and falls back when all are held', () => {
+    const live = [
+        { f: 'heldLow', p: { distance: 1 }, h: 0.2 },
+        { f: 'openHigh', p: { distance: 2 }, h: 0.9 },
+    ];
+    const pool = preferUnheldTargets(live, x => x.f === 'heldLow');
+    expect(pool.map(x => x.f)).toEqual(['openHigh']);
+    expect(pickEnemy(pool, undefined as string | undefined, 'low', x => x.h)?.f).toBe('openHigh');
+    const allHeld = preferUnheldTargets(live, () => true);
+    expect(allHeld.map(x => x.f)).toEqual(['heldLow', 'openHigh']);
+});
+
+test('team() with SQUAD_DAGGER=1 and NEVER_SKULL=0 does not spin-loop when the sole enemy is held', async () => {
+    const logs: string[] = [];
+    let curTick = 0;
+    const mk = (name: string, x: number, enemyName: string, enemyIdx: number, headicons: number, hp: number) => {
+        const listeners = new Set<() => void>();
+        const players: ({ headicons: number; appearance: number[]; health: number; totalHealth: number; spotanimId: number } | null)[] = [];
+        players[enemyIdx] = { headicons, appearance: [], health: hp, totalHealth: 99, spotanimId: -1 };
+        return {
+            name,
+            ended: new Promise<void>(() => {}),
+            tick: () => curTick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+            direct: async () => ({ ok: true }),
+            client: { localPlayer: { headicons: 0 }, players },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: x, worldZ: 3602, level: 0, hp: 99, maxHp: 99, lifeId: 1, combatLevel: 126 },
+                    nearbyPlayers: [{ name: enemyName, index: enemyIdx, x: x === 3137 ? 3135 : 3137, z: 3602, distance: 2, combatLevel: 126, inCombat: true, combatTargetType: 'player', combatTargetIndex: 0 }],
+                    gameMessages: [],
+                    combatEvents: [],
+                    inventory: [],
+                    equipment: [{ id: 1231, count: 1, slot: 3 }],
+                    skills: [{ name: 'Hitpoints', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                    prayers: { prayerPoints: 99, activePrayers: [] },
+                    autoRetaliateEnabled: false,
+                }),
+                getInventory: () => [],
+                sendWalk: () => {},
+                sendInteractPlayer: () => {},
+                sendTogglePrayer: () => {},
+            },
+            waitForCondition: async () => true,
+            advance: () => { for (const fn of [...listeners]) fn(); },
+        };
+    };
+    // Enemy is skulled (bit 0) + Protect from Melee (bit 1 -> headicons = 3) at 50/99 HP (<= 0.7 holdBelow).
+    const a1 = mk('Ours1', 3137, 'Skulled1', 2, 3, 50);
+    const b1 = mk('Skulled1', 3135, 'Ours1', 1, 0, 99);
+    const timer = setInterval(() => {
+        curTick++;
+        a1.advance();
+        b1.advance();
+        if (curTick > 40) clearInterval(timer);
+    }, 1);
+    try {
+        await team(
+            [a1 as never],
+            [b1 as never],
+            { kit: { melee: [1231] }, neverSkull: false },
+            { kit: { melee: [1231] } },
+            15,
+            l => logs.push(l),
+            () => curTick >= 25,
+            { a: 'pair', b: 'pair' },
+            10,
+            undefined,
+            3,
+            { offReads: 6, holdBelow: 0.7, holdTicks: 300 },
+        );
+        // Should enter fightPlayer once (not stop & re-enter every tick in a spin-loop).
+        const stoppedLines = logs.filter(l => /\[Ours1\] PK stopped against Skulled1/.test(l));
+        expect(stoppedLines.length).toBeLessThanOrEqual(1);
+    } finally {
+        clearInterval(timer);
+    }
+});
+
+test('shouldStopOnDying stays false on Side A when pickup is active so kill messages trigger looting', () => {
+    expect(shouldStopOnDying(true, 10, 'a', true)).toBe(false);
+    expect(shouldStopOnDying(true, 10, 'a', false)).toBe(true);
+    expect(shouldStopOnDying(true, 10, 'b', true)).toBe(true);
+    expect(shouldStopOnDying(true, 1, 'a', false)).toBe(false);
+    expect(shouldStopOnDying(false, 10, 'a', false)).toBe(false);
+});
+
+test('cureAfterEscape drinks carried antipoison after escaping to prevent post-escape poison deaths', async () => {
+    const used: [number, number][] = [];
+    const s = {
+        sdk: {
+            getInventory: () => [
+                { id: 385, slot: 0, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+                { id: 2448, slot: 2, name: 'Super antipoison(4)', optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] },
+            ],
+            sendUseItem: async (slot: number, opIndex: number) => { used.push([slot, opIndex]); },
+        },
+    };
+    expect(await cureAfterEscape(s as never)).toBe(true);
+    expect(used).toEqual([[2, 1]]);
+    expect(await cureAfterEscape({ sdk: { getInventory: () => [] } } as never)).toBe(false);
+});
+
+test('driftedFromHome flags crossing from single-way anchor into multi-way or exceeding leash distance', () => {
+    const home = { x: 3137, z: 3602, multi: false };
+    const multiStub = (x: number, z: number) => x >= 3136 && z <= 3590;
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3598 }, home, 5, multiStub)).toBe(false);
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, home, 5, multiStub)).toBe(true);
+    expect(driftedFromHome({ worldX: 3135, worldZ: 3596 }, home, 5, multiStub)).toBe(true);
+    expect(driftedFromHome({ worldX: 3136, worldZ: 3590 }, { x: 3150, z: 3560, multi: true }, 40, multiStub)).toBe(false);
+});
+
+test('shouldHaltTeamOnStop ignores static 900-tick idle notice when STALL_TICKS is raised while still halting real faults', () => {
+    const idle900 = 'no progress: 900 ticks without xp, items, a new dialog or a journey';
+    expect(shouldHaltTeamOnStop('died', 900)).toBe(false);
+    expect(shouldHaltTeamOnStop(idle900, 900)).toBe(true);
+    expect(shouldHaltTeamOnStop(idle900, 3000)).toBe(false);
+    expect(shouldHaltTeamOnStop(idle900, 0)).toBe(false);
+    expect(shouldHaltTeamOnStop('stop file', 3000)).toBe(true);
+    expect(shouldHaltTeamOnStop('tick stream stalled', 3000)).toBe(true);
+});
+
+test('teamWinner awards win when the opposing side has only fled/stopped survivors off the field', () => {
+    expect(teamWinner({ a: 10, b: 0 }, { a: 10, b: 0 })).toBe('a');
+    expect(teamWinner({ a: 0, b: 4 }, { a: 0, b: 4 })).toBe('b');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 9, b: 0 })).toBe('a');
+    expect(teamWinner({ a: 1, b: 5 }, { a: 0, b: 5 })).toBe('b');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 9, b: 1 })).toBe('draw');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 0, b: 0 })).toBe('draw');
+});
+
+test('combatPickupWeapons uses non-blocking direct pickup, skips multi-way piles, and aborts immediately on HP drop', async () => {
+    let curTick = 0;
+    let hp = 85;
+    const listeners = new Set<() => void>();
+    const inv: { id: number; count: number; slot: number; name: string; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 385, count: 1, slot: 0, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    let ground: { id: number; count: number; x: number; z: number; distance: number }[] = [
+        { id: 1231, count: 1, x: 3136, z: 3585, distance: 2 }, // multi-way tile (must skip)
+        { id: 1231, count: 1, x: 3136, z: 3601, distance: 1 }, // safe single-way tile
+    ];
+    const directCalls: { type: string; itemId?: number; x?: number; z?: number; reason?: string }[] = [];
+    const prayersToggled: number[] = [];
+    const eaten: number[] = [];
+    const s = {
+        tick: () => curTick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+        ended: new Promise<void>(() => {}),
+        direct: async (cmd: { type: string; itemId?: number; x?: number; z?: number; reason?: string }) => {
+            directCalls.push(cmd);
+            if (cmd.type === 'pickupItem' && cmd.x === 3136 && cmd.z === 3601) {
+                inv.push({ id: 1231, count: 1, slot: 1, name: 'Dragon dagger(p)', optionsWithIndex: [] });
+                ground = ground.filter(g => !(g.x === 3136 && g.z === 3601));
+            }
+            return { ok: true };
+        },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3137, worldZ: 3602, hp, maxHp: 99, isDead: false },
+                prayers: { prayerPoints: 99, activePrayers: [] as boolean[] },
+                inventory: inv,
+                groundItems: ground,
+            }),
+            getInventory: () => inv,
+            sendTogglePrayer: async (p: number) => { prayersToggled.push(p); },
+            sendUseItem: async (slot: number) => { eaten.push(slot); },
+        },
+    };
+    const timer = setInterval(() => { curTick++; for (const fn of [...listeners]) fn(); }, 1);
+    try {
+        const got = await combatPickupWeapons(s as never, new Set([1231]), {
+            radius: 6,
+            maxTicks: 10,
+            wait: 0,
+            home: { x: 3137, z: 3602, multi: false },
+            multiFn: (_x, z) => z <= 3590,
+        });
+        expect(got).toEqual({ '1231': 1 });
+        expect(directCalls).toEqual([{ type: 'pickupItem', x: 3136, z: 3601, itemId: 1231, reason: 'pk-team weapon loot' }]);
+        expect(prayersToggled.length).toBeGreaterThanOrEqual(1);
+
+        // Low-HP abort: eats food and exits immediately without issuing any pickupItem.
+        hp = 52;
+        directCalls.length = 0;
+        ground = [{ id: 1231, count: 1, x: 3136, z: 3601, distance: 1 }];
+        const aborted = await combatPickupWeapons(s as never, new Set([1231]), {
+            radius: 6,
+            maxTicks: 10,
+            wait: 4,
+            minHp: 60,
+            eatBelow: 72,
+            home: { x: 3137, z: 3602, multi: false },
+            multiFn: () => false,
+        });
+        expect(aborted).toEqual({});
+        expect(directCalls).toEqual([]);
+        expect(eaten).toEqual([0]);
+    } finally {
+        clearInterval(timer);
+    }
 });
