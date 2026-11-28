@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832791829,
+ "at": 1795832922504,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -219,6 +219,28 @@
    "role": "auto"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "4",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
@@ -232,6 +254,23 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1470",
    "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Pullmybow",
@@ -270,7 +309,6 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"

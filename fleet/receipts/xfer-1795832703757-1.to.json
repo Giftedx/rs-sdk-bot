@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795832703757-1",
  "account": "Pocketrocket",
  "partner": "Shaftsinker",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 4,
  "claim": "59018947-57cd-48d1-a25f-a20a1121c5bd",
- "count": 0,
- "ok": false,
- "at": 1795832875512,
- "detail": "trade claimed",
+ "count": 4,
+ "ok": true,
+ "at": 1795832904183,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 0,
+    "after": 4
+   },
+   "bank": {
+    "count": 4,
+    "at": 1795832903498
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795832903037
+ },
+ "logout": {
+  "attemptId": "1795832875521-0000025512-0000000001",
+  "at": 1795832904175,
+  "sha256": "fb5d71aecc29480853f1d0f5d733093ca9f69dcaa0d4c3fc8700539b2ca61746"
+ },
+ "screen": true
 }
