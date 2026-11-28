@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795857263852-5",
  "account": "Masterbaiter",
  "partner": "Shaftsinker",
@@ -10,20 +10,46 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "7fb36b19-1287-40bf-a65e-0b80e4992c49",
- "count": 0,
- "ok": false,
- "at": 1795857779996,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795857855070,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Lobster",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795857787564
+   }
   },
   {
    "item": "Iron arrow",
    "requested": 28,
-   "count": 0
+   "count": 28,
+   "inventory": {
+    "before": 28,
+    "after": 0
+   },
+   "bank": {
+    "count": 28,
+    "at": 1795857788741
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795857780004-0000011632-0000000001",
+  "at": 1795857855060,
+  "sha256": "0a05cde35f0c0f9957facf3e4150a2c2dc9e36e06acd3512a246b57c67db782f"
+ },
+ "screen": true
 }

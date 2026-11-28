@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857840386,
+ "at": 1795857857311,
  "jobs": [
   {
    "account": "Balls",
@@ -136,7 +136,7 @@
    "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=87 PRODUCT_TARGET=91 MAX_ORE=87 -- mining ore",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=85 PRODUCT_TARGET=91 MAX_ORE=85 -- mining ore",
     "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1820 TARGET_COUNT=182 PRODUCT_TARGET=182 MAX_ORE=182 -- mining ore",
     "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=91 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=91 STALL_TICKS=280 -- smithing smelt 2220 steel"
    ],
@@ -147,25 +147,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army",
-   "resources": [
-    "edgeville-yews"
-   ]
   },
   {
    "account": "Deeppockets",
@@ -216,15 +197,15 @@
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=27 -- woodcutting yews"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1513",
+   "goal": "campaign:haggis:item:1515",
    "role": "auto"
   },
   {
@@ -271,6 +252,21 @@
    "repeat": false,
    "goal": "goal:pvp_unlock:PickpockDick:zanaris",
    "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1436 BATCH_UNITS=2000 -- mining essence"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1436",
+   "role": "helper"
   },
   {
    "account": "Quickhandjob",
