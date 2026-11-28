@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795862872498-1",
  "account": "OreElse",
  "partner": "SporranBulge",
@@ -10,15 +10,37 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "f0ac68c5-3a8f-4cdf-80ef-a0c64d13463c",
- "count": 0,
- "ok": false,
- "at": 1795863299862,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795863311125,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron bar",
    "requested": 3,
-   "count": 0
+   "count": 3,
+   "inventory": {
+    "before": 0,
+    "after": 3
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795863310386
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795863309984
+ },
+ "logout": {
+  "attemptId": "1795863299999-0000023868-0000000001",
+  "at": 1795863311118,
+  "sha256": "687b0fa4fd85b1ab49d90dd6425c6b897f9b3fd5f9802ac4b764be10391b5a03"
+ },
+ "screen": true
 }
