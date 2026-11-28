@@ -167,6 +167,24 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 **Evidence:** `.practice/swarm-logs/Pocketpython.log`: Ardougne bank 2654,3283 -> Barnaby boat -> Karamja -> Customs boat -> Port Sarim -> Grand Exchange 3165,3487; `RESULT ok walk-to {"ok":true,"ticks":511}`; LEDGER move=332 idle=149, longest idle 115 ticks at the start (planning); HP low 9 on Karamja; logout confirmed (MEASURED live, 1 run).
 **Gap:** one live run; the 2 HP of damage on Karamja is not attributed.
 
+## Host route service
+
+**Claim:** one route service for each checkout (`packages/core/src/route-service.ts`) keeps trip plans out of each bot process. A bot process that plans by the service holds no route worker and no map labels (`rsPathLength` `lazyLabels`). Its private memory stays at 322 MB offline after its first local path search. With its own worker, each plan takes it to 757-878 MB until the worker stops 30 s after the last plan. Plans by a warm service are faster than plans by a worker that starts again.
+
+**Conditions:** Windows, offline (no login), snapshot and area labels restored, warm leg cache, `bun scripts/measure/solo-route-memory.ts` with `ROUTE_SERVICE=0` (own worker) and `ROUTE_SERVICE=1` (service), 3 runs each. Live swarm workers (`SWARM_LEASE_HOLDER`) use the service unless `ROUTE_SERVICE=0`. The first plan that finds no service starts one (detached, through a launcher that exits), and the service stops after 15 minutes with no request or when the checkout moves to another commit.
+
+| Plan (ms) | own worker | service |
+|---|---|---|
+| Lumbridge to Varrock, first plan | 898, 851, 901 | 313, 315, 287 |
+| Lumbridge to Catherby | 1,876, 1,649, 1,878 | 801, 705, 628 |
+| Lumbridge to Varrock again | 200, 182, 226 | 168, 135, 171 |
+
+The service with two workers held 618 MB private after these plans: one copy for every bot process of the checkout.
+
+**Evidence:** `scripts/measure/solo-route-memory.ts` (private bytes by `scripts/measure/private-bytes.ts`), `packages/core/test/route-service.test.ts`.
+
+**Gap:** the main-thread grid (about 130 MB: the wasm snapshot restore at the first local path search) stays in each bot process. The local walk legs (`walk/session.ts` `plan`), the door policy on `sdk.findPath`, the harm checks and NPC reach read it synchronously. No live solo process was measured with the service.
+
 ## Offline fleet reachability
 
 The collision-component audit covers 9,549 distinct preset, seller, spawn and fixed-script tiles from Lumbridge and 11 banks for weak (10 HP, 30 coins) and strong (70 melee/HP, 20,000 coins) profiles. It checks 229,176 directed source/target/profile cases. Source hashes, every result and masked area/fare/danger/door observations are retained in `route-audit.json.gz`; `route-audit-summary.json` gives totals. These are offline reachability results, not game progress or shortest route times. Quest flags, items and unlocks are empty in both profiles.

@@ -66,8 +66,8 @@ function sameWornSnapshot(prev: readonly number[], raw: readonly any[] | undefin
 let world: Promise<World> | null = null;
 export function getWorld(): Promise<World> {
     world ??= (async (): Promise<World> => {
-        const { createWorld, rsPathLength } = await import('../world');
-        return { ...createWorld({ pathLength: await rsPathLength() }), offThread: true };
+        const [{ createWorld, rsPathLength }, { serviceWanted }] = await Promise.all([import('../world'), import('../route-plan')]);
+        return { ...createWorld({ pathLength: await rsPathLength({ lazyLabels: serviceWanted() }) }), offThread: true };
     })().catch((e) => {
         world = null;
         throw e;
