@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861430489,
+ "at": 1795861445735,
  "jobs": [
   {
    "account": "Balls",
@@ -70,7 +70,7 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
+   "account": "Moneyshot",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -80,43 +80,18 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "52",
+    "MAX_ITEMS": "53",
     "COIN_RESERVE": "1000",
-    "FLOAT": "22800",
+    "FLOAT": "23200",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "52"
+    "BATCH_UNITS": "53"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "237",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "237"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -138,6 +113,22 @@
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "zanaris"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
   },
   {
    "account": "Kiltlifter",

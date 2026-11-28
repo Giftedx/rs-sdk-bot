@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795860748976-1",
  "account": "Ballspinner",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Emerald",
  "requested": 2,
  "claim": "8c755228-6e47-482e-9be3-f92b96def3aa",
- "count": 0,
- "ok": false,
- "at": 1795861340157,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795861436061,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795861346849
+ },
+ "logout": {
+  "attemptId": "1795861340332-0000011292-0000000001",
+  "at": 1795861436053,
+  "sha256": "3b4179b840c9d92f1bece4773a0809aff8ca445b1575621c49309c9989216e23"
+ },
+ "screen": true
 }

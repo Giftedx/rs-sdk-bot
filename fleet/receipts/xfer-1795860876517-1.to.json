@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795860876517-1",
+ "account": "Mightyrod",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "0cef9907-adab-4fe1-aeb2-7689cd6813fc",
+ "count": 0,
+ "ok": false,
+ "at": 1795861440480,
+ "detail": "trade claimed"
+}
