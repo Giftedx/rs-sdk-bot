@@ -91,12 +91,25 @@ export function lootRoom(pack: readonly Held[], g: Ground, t: LootTables, keep: 
     const native = definition?.(g.id);
     if (typeof native?.stackable !== 'boolean') return null;
     if (lootCapacity({ inventory: pack }, g, native)) return 'ok';
-    const worth = pileValue(g, t), slots = new Map<number, number>();
-    for (const i of pack) slots.set(i.id, (slots.get(i.id) ?? 0) + 1);
+    if (pack.length > 28 || !Number.isSafeInteger(g.count) || g.count < 1 || g.count > 2147483647) return null;
+    let heldTarget = 0;
+    const slots = new Map<number, number>();
+    for (let k = 0; k < pack.length; k++) {
+        const i = pack[k]!;
+        if (!Number.isSafeInteger(i.count) || i.count < 1 || i.count > 2147483647) return null;
+        slots.set(i.id, (slots.get(i.id) ?? 0) + 1);
+        if (i.id === g.id) heldTarget += i.count;
+    }
+    const freeAfterDrop = 28 - pack.length + 1;
+    const worth = pileValue(g, t);
     let best: Held | null = null, bestValue = Infinity;
-    for (const i of pack) {
+    for (let k = 0; k < pack.length; k++) {
+        const i = pack[k]!;
         if (keep(i.id) || (slots.get(i.id) ?? 0) < 2) continue;
-        if (!lootCapacity({ inventory: pack.filter(other => other.slot !== i.slot) }, g, native)) continue;
+        const fits = native.stackable
+            ? (((i.id === g.id ? heldTarget - i.count : heldTarget) > 0 || freeAfterDrop >= 1) && (i.id === g.id ? heldTarget - i.count : heldTarget) + g.count <= 2147483647)
+            : freeAfterDrop >= g.count;
+        if (!fits) continue;
         const v = unitValue(i.id, t) * i.count;
         if (v * 10 >= worth || v > bestValue) continue;
         if (v < bestValue || (best && i.slot > best.slot)) { best = i; bestValue = v; }

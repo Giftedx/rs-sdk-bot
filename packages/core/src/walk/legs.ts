@@ -29,7 +29,39 @@ export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}):
 async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promise<Outcome> {
     const retries = opts.maxRetriesPerLeg ?? 3;
     let total = 0;
-    for (const leg of legs) {
+    for (let li = 0; li < legs.length; li++) {
+        const leg = legs[li]!;
+        // Coalesce consecutive same-plane walk legs that exceed FAR_WALK_TILES into one continuous multi-point
+        // walkPath run, eliminating stop/start dead ticks and duplicate sessionWalker setup between segments.
+        if (leg.kind === 'walk' && typeof (s as { direct?: unknown }).direct === 'function') {
+            let end = li;
+            const p = s.sdk.getState()?.player;
+            let span = p && p.level === leg.to.level ? cheb(leg.to, p) : 0;
+            while (end + 1 < legs.length && legs[end + 1]!.kind === 'walk' && (legs[end + 1] as Extract<Leg, { kind: 'walk' }>).to.level === leg.to.level) {
+                const prev = (legs[end] as Extract<Leg, { kind: 'walk' }>).to;
+                const next = (legs[end + 1] as Extract<Leg, { kind: 'walk' }>).to;
+                span += Math.max(Math.abs(next.x - prev.x), Math.abs(next.z - prev.z));
+                end++;
+            }
+            if (end > li && p && p.level === leg.to.level && span > FAR_WALK_TILES) {
+                const chain = legs.slice(li, end + 1) as Extract<Leg, { kind: 'walk' }>[];
+                const points = chain.map(w => ({ x: w.to.x, z: w.to.z, tol: w.tolerance ?? 2 }));
+                let last: Outcome | null = null;
+                let nextIdx = 0;
+                for (let attempt = 0; attempt < retries; attempt++) {
+                    const r = await walkFarPoints(s, points.slice(nextIdx), leg.to.level, opts);
+                    last = r.outcome;
+                    total += last.ticks;
+                    if (last.ok || last.reason === 'aborted' || opts.signal?.aborted) break;
+                    nextIdx = Math.min(points.length - 1, nextIdx + r.next);
+                    if (last.reason === 'rejected') await waitTicks(s, 2 * (attempt + 1));
+                    if (opts.signal?.aborted) break;
+                }
+                if (!last!.ok) return opts.signal?.aborted ? { ok: false, reason: 'aborted', detail: String(opts.signal.reason ?? 'aborted'), ticks: total } : { ...last!, ticks: total };
+                li = end;
+                continue;
+            }
+        }
         let last: Outcome | null = null;
         for (let attempt = 0; attempt < retries; attempt++) {
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
@@ -74,14 +106,25 @@ function farWalk(s: Walker, to: Tile): boolean {
     return !!p && p.level === to.level && cheb(to, p) > FAR_WALK_TILES && typeof (s as { direct?: unknown }).direct === 'function';
 }
 
-async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number): Promise<Outcome> {
-    const start = s.tick(), p = s.sdk.getState()?.player, budget = Math.max(opts.legTimeoutTicks ?? 0, p ? cheb(to, p) * 3 + 60 : 600);
+async function walkFarPoints(s: Walker, points: { x: number; z: number; tol: number }[], level: number, opts: WalkOptions): Promise<{ outcome: Outcome; next: number }> {
+    const start = s.tick(), p = s.sdk.getState()?.player;
+    let dist = 0, cur = p ? { x: p.worldX, z: p.worldZ } : points[0]!;
+    for (const pt of points) { dist += Math.max(Math.abs(pt.x - cur.x), Math.abs(pt.z - cur.z)); cur = pt; }
+    const budget = Math.max(opts.legTimeoutTicks ?? 0, dist * 3 + 60);
     const { sessionWalker } = await import('./session');
     // goTo took the fare float before it planned; a leg of its route takes none.
     const deps = await sessionWalker(s as unknown as Parameters<typeof sessionWalker>[0], { noFareFloat: true });
-    const r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
-    return r.ok ? { ok: true, ticks: s.tick() - start }
-        : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${to.x},${to.z},${to.level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start };
+    const r = await walkPath(deps, points, { maxTicks: budget, signal: opts.signal });
+    const goal = points[points.length - 1]!;
+    return {
+        outcome: r.ok ? { ok: true, ticks: s.tick() - start }
+            : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${goal.x},${goal.z},${level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start },
+        next: r.next,
+    };
+}
+
+async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number): Promise<Outcome> {
+    return (await walkFarPoints(s, [{ x: to.x, z: to.z, tol: tolerance }], to.level, opts)).outcome;
 }
 
 function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions): Promise<Outcome> {

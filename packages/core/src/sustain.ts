@@ -10,6 +10,16 @@ import {unwrapGuarded} from './worker-execution';
 export type FoodDefinition={heal:number;next?:number};
 export type FoodItem={id:number;slot:number;count:number;optionsWithIndex?:{text:string;opIndex:number}[]};
 export type FoodPolicy={food:readonly number[];eatAt:number|((maxHp:number)=>number);reserved?:Readonly<Record<number,number>>};
+export type ComboFoodPolicy=FoodPolicy&{comboFood?:readonly number[];comboAt?:number|((maxHp:number)=>number)};
+export type SelectedFood={item:FoodItem;opIndex:number;definition:FoodDefinition;hp:number};
+export type SelectedComboFood={primary:SelectedFood;combo:SelectedFood;totalHeal:number;hp:number};
+
+// Server-verified zero-delay combo foods (consume.rs2:38-39 pass null eat_delay and null skill_delay, so they
+// stack with normal food in the same tick and add 0 attack delay). IDs from pack/obj.pack.
+export const COOKED_KARAMBWAN_ID=3144;
+export const COOKED_KARAMBWANJI_ID=3151;
+export const COMBO_FOOD_IDS:ReadonlySet<number>=new Set([COOKED_KARAMBWAN_ID,COOKED_KARAMBWANJI_ID]);
+export const isComboFood=(id:number):boolean=>COMBO_FOOD_IDS.has(id);
 
 // A quest or worker with no eat level of its own eats at 60% of its maximum, at most 40.
 export const defaultEatAt=(maxHp:number)=>Math.min(40,Math.max(10,Math.floor(maxHp*0.6)));
@@ -124,9 +134,24 @@ export function totalAvailableHeal(items:readonly {id:number;count:number}[],foo
 }
 
 const EAT_OR_DRINK_RE=/^(eat|drink)$/i;
-export function selectQuestFood(state:any,policy:FoodPolicy){
- const skill=state?.skills?.find((s:any)=>s.name==='Hitpoints'),hp=skill?.level,max=skill?.baseLevel;
- if(!Number.isFinite(hp)||!Number.isFinite(max)||hp<=0||max<=0||hp>=max||hp>(typeof policy.eatAt==='function'?policy.eatAt(max):policy.eatAt))return null;
+function findHitpointsSkill(state:any):{hp:number;max:number}|null{
+ const skills=state?.skills;
+ if(!Array.isArray(skills))return null;
+ for(let i=0;i<skills.length;i++){
+  const s=skills[i];
+  if(s?.name==='Hitpoints'){
+   const hp=s.level,max=s.baseLevel;
+   return Number.isFinite(hp)&&Number.isFinite(max)&&hp>0&&max>0?{hp,max}:null;
+  }
+ }
+ return null;
+}
+
+export function selectQuestFood(state:any,policy:FoodPolicy):SelectedFood|null{
+ const vitals=findHitpointsSkill(state);
+ if(!vitals)return null;
+ const {hp,max}=vitals;
+ if(hp>=max||hp>(typeof policy.eatAt==='function'?policy.eatAt(max):policy.eatAt))return null;
  const defs=questFoodDefinitions(),allowed=expandFoodStages(policy.food);
  const inventory:FoodItem[]=state?.inventory??[];
  if(!inventory.length)return null;
@@ -136,7 +161,7 @@ export function selectQuestFood(state:any,policy:FoodPolicy){
   counts=new Map<number,number>();
   for(const i of inventory)counts.set(i.id,(counts.get(i.id)??0)+i.count);
  }
- let fallback:{item:FoodItem;opIndex:number;definition:FoodDefinition;hp:number}|null=null;
+ let fallback:SelectedFood|null=null;
  const need=max-hp;
  for(let k=0;k<inventory.length;k++){
   const item=inventory[k]!;
@@ -154,6 +179,76 @@ export function selectQuestFood(state:any,policy:FoodPolicy){
  return fallback;
 }
 
+// Selects a primary food + zero-delay combo food (e.g. shark 385 + cooked karambwan 3144) for same-tick combo eating.
+export function selectComboFood(state:any,policy:ComboFoodPolicy):SelectedComboFood|null{
+ const vitals=findHitpointsSkill(state);
+ if(!vitals)return null;
+ const {hp,max}=vitals;
+ const comboLimit=policy.comboAt!==undefined?(typeof policy.comboAt==='function'?policy.comboAt(max):policy.comboAt):(typeof policy.eatAt==='function'?policy.eatAt(max):policy.eatAt);
+ if(hp>=max||hp>comboLimit)return null;
+ const comboIds=policy.comboFood??[COOKED_KARAMBWAN_ID];
+ if(!comboIds.length)return null;
+ const comboSet=new Set(comboIds.filter(isComboFood));
+ if(!comboSet.size)return null;
+ const primaryFoodIds=policy.food.filter(id=>!comboSet.has(id));
+ const primary=primaryFoodIds.length?selectQuestFood(state,{...policy,food:primaryFoodIds,eatAt:comboLimit}):null;
+ if(!primary)return null;
+ const defs=questFoodDefinitions();
+ const inventory:FoodItem[]=state?.inventory??[];
+ const reserved=policy.reserved;
+ let counts:Map<number,number>|undefined;
+ if(reserved){
+  counts=new Map<number,number>();
+  for(const i of inventory)counts.set(i.id,(counts.get(i.id)??0)+i.count);
+ }
+ let combo:SelectedFood|null=null;
+ const needAfterPrimary=Math.max(0,max-hp-primary.definition.heal);
+ for(let k=0;k<inventory.length;k++){
+  const item=inventory[k]!;
+  if(item.slot===primary.item.slot||!comboSet.has(item.id)||!Number.isSafeInteger(item.slot))continue;
+  if(reserved){
+   const reserve=reserved[item.id]??0;
+   if(!Number.isSafeInteger(reserve)||reserve<0||(counts!.get(item.id)??0)<=reserve)continue;
+  }
+  const op=item.optionsWithIndex?.find(o=>EAT_OR_DRINK_RE.test(o.text));
+  if(!op||!Number.isSafeInteger(op.opIndex))continue;
+  const definition=defs.get(item.id);
+  if(!definition)continue;
+  const candidate:SelectedFood={item,opIndex:op.opIndex,definition,hp};
+  if(definition.heal<=needAfterPrimary){combo=candidate;break;}
+  combo??=candidate;
+ }
+ if(!combo)return null;
+ return {primary,combo,totalHeal:primary.definition.heal+combo.definition.heal,hp};
+}
+
+// Dispatches primary food + zero-delay combo food (plus optional attack resend) in a single tick with zero sleeps.
+export async function comboEat(
+ s:{direct(action:any):Promise<{success?:boolean;message?:string}>},
+ state:any,
+ policy:ComboFoodPolicy,
+ attack?:{type:string;[k:string]:unknown},
+):Promise<{dispatched:boolean;combo:boolean;items:number[];totalHeal:number}>{
+ const pair=selectComboFood(state,policy);
+ if(pair){
+  const actions:any[]=[
+   {type:'useInventoryItem',slot:pair.primary.item.slot,optionIndex:pair.primary.opIndex,reason:'SDK'},
+   {type:'useInventoryItem',slot:pair.combo.item.slot,optionIndex:pair.combo.opIndex,reason:'SDK'},
+   ...(attack?[{...attack}]:[]),
+  ];
+  await Promise.all(actions.map(a=>s.direct(a)));
+  return {dispatched:true,combo:true,items:[pair.primary.item.id,pair.combo.item.id],totalHeal:pair.totalHeal};
+ }
+ const single=selectQuestFood(state,policy);
+ if(!single)return {dispatched:false,combo:false,items:[],totalHeal:0};
+ const actions:any[]=[
+  {type:'useInventoryItem',slot:single.item.slot,optionIndex:single.opIndex,reason:'SDK'},
+  ...(attack?[{...attack}]:[]),
+ ];
+ await Promise.all(actions.map(a=>s.direct(a)));
+ return {dispatched:true,combo:false,items:[single.item.id],totalHeal:single.definition.heal};
+}
+
 // The eat guard of a session (eat-guard.ts) registers its hold here, by the session's SDK object. An eater with
 // timing or checks of its own holds the guard from its start to its stop: a quest sustain, whose debit check accepts
 // no second eater, and the PK fight loop (scripts/pk.ts). `ateAt` is the tick of the guard's last eat: the food delay
@@ -163,7 +258,7 @@ const sessionEaters=new WeakMap<object,EaterHold>();
 export const registerSessionEater=(sdk:object,hold:EaterHold):void=>{sessionEaters.set(unwrapGuarded(sdk),hold);};
 export const holdSessionEater=(sdk:object):{ateAt:number;release():void}=>sessionEaters.get(unwrapGuarded(sdk))?.()??{ateAt:-Infinity,release(){}};
 
-export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<FoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;dropRetries?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
+export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<ComboFoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;dropRetries?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
  // `dropRetries`: how many times in a row an eat with no effect at all (the food count and the next item unchanged) is
  // sent again before the eater fails. The game drops an eat sent while the player is delayed or a window is open
  // (Underground Pass: a failed trap disarm hits inside its delay). Default 0: the first eat with no effect fails.
@@ -174,8 +269,15 @@ export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{succ
  let stopped=false,draining=false,failure:string|null=null,off=()=>{},lastSent=held.ateAt;
  const ac=new AbortController();
  const initial=s.sdk.getState()?.player,lifeId=initial?.lifeId,respawns=initial?.respawnCount??0;
- const count=(st:any,id:number)=>(st?.inventory??[]).filter((i:any)=>i.id===id).reduce((n:number,i:any)=>n+i.count,0);
- type Pending={selected:NonNullable<ReturnType<typeof selectQuestFood>>;before:number;nextBefore:number;at:number;accepted:boolean};
+ const count=(st:any,id:number)=>{
+  const inv=st?.inventory;
+  if(!Array.isArray(inv))return 0;
+  let total=0;
+  for(let i=0;i<inv.length;i++)if(inv[i].id===id)total+=inv[i].count;
+  return total;
+ };
+ type PendingEntry={selected:SelectedFood;before:number;nextBefore:number;accepted:boolean};
+ type Pending={entries:PendingEntry[];at:number;setsDelay:boolean};
  let pending:Pending|undefined;
  const stop=()=>{stopped=true;off();held.release();};
  const fail=(why:string)=>{failure='quest sustain: '+why;ac.abort(failure);stop();};
@@ -185,25 +287,62 @@ export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{succ
   const player=state?.player;
   if(player&&(player.isDead||(player.respawnCount??0)>respawns||(lifeId!==undefined&&player.lifeId!==lifeId))){fail('account life changed');return;}
   if(pending){
-   const p=pending,debit=p.before-count(state,p.selected.item.id),next=p.selected.definition.next;
-   const transformed=next===undefined||count(state,next)===p.nextBefore+1;
-   if(p.accepted&&debit===1&&transformed){
-    pending=undefined;dropped=0;options.onConsumed?.({id:p.selected.item.id,hpBefore:p.selected.hp,hpAfter:state?.skills?.find((v:any)=>v.name==='Hitpoints')?.level??p.selected.hp});return;
+   const p=pending;
+   let allDone=true,anyChange=false,transformFail=false;
+   for(let i=0;i<p.entries.length;i++){
+    const e=p.entries[i]!;
+    const debit=e.before-count(state,e.selected.item.id),next=e.selected.definition.next;
+    const transformed=next===undefined||count(state,next)===e.nextBefore+1;
+    if(debit!==0||(next!==undefined&&count(state,next)!==e.nextBefore))anyChange=true;
+    if(!(e.accepted&&debit===1&&transformed)){
+     allDone=false;
+     if(next!==undefined&&!transformed)transformFail=true;
+    }
    }
-   if(s.tick()-p.at>=timeout){
-    if(p.accepted&&debit===0&&(next===undefined||count(state,next)===p.nextBefore)&&dropped<dropRetries){dropped++;pending=undefined;return;}
-    fail(next!==undefined&&!transformed?'food transform unobserved':'food debit unobserved');
+   if(allDone){
+    pending=undefined;dropped=0;
+    const hpAfter=findHitpointsSkill(state)?.hp;
+    for(const e of p.entries)options.onConsumed?.({id:e.selected.item.id,hpBefore:e.selected.hp,hpAfter:hpAfter??e.selected.hp});
+    // Avoid wasting a dead tick when a lagged normal eat or zero-delay combo eat already cleared the delay window.
+    if(draining||(p.setsDelay&&s.tick()-lastSent<3))return;
+   }else{
+    if(s.tick()-p.at>=timeout){
+     if(p.entries.every(e=>e.accepted)&&!anyChange&&dropped<dropRetries){dropped++;pending=undefined;return;}
+     fail(transformFail?'food transform unobserved':'food debit unobserved');
+    }
+    return;
    }
-   return;
   }
-  if(draining||s.tick()-lastSent<3)return;
+  if(draining)return;
   const reserved=typeof options.reserved==='function'?options.reserved():options.reserved;
-  const choice=selectQuestFood(state,{...options,reserved});if(!choice)return;
-  const selected={...choice,item:{...choice.item}};
-  const p:Pending={selected,before:count(state,selected.item.id),nextBefore:selected.definition.next===undefined?0:count(state,selected.definition.next),at:s.tick(),accepted:false};pending=p;lastSent=s.tick();
-  try{void s.direct({type:'useInventoryItem',slot:selected.item.slot,optionIndex:selected.opIndex,reason:'SDK'}).then(reply=>{
-   if(stopped)return;if(reply.success!==true)fail('consume refused: '+(reply.message??'unknown'));else p.accepted=true;
-  }).catch(error=>{if(!stopped)fail('consume failed: '+String(error));});}catch(error){fail('consume failed: '+String(error));}
+  const policy:ComboFoodPolicy={...options,reserved};
+  const delayReady=s.tick()-lastSent>=3;
+  let picks:SelectedFood[]=[];
+  let setsDelay=false;
+  if(delayReady&&options.comboFood?.length){
+   const combo=selectComboFood(state,policy);
+   if(combo){picks=[combo.primary,combo.combo];setsDelay=true;}
+  }
+  if(!picks.length){
+   const choice=delayReady
+    ? selectQuestFood(state,policy)
+    : (options.comboFood?.length?selectQuestFood(state,{...policy,food:options.comboFood.filter(isComboFood),eatAt:policy.comboAt??policy.eatAt}):null);
+   if(!choice)return;
+   picks=[choice];
+   setsDelay=!isComboFood(choice.item.id);
+  }
+  const entries:PendingEntry[]=picks.map(choice=>{
+   const selected={...choice,item:{...choice.item}};
+   return {selected,before:count(state,selected.item.id),nextBefore:selected.definition.next===undefined?0:count(state,selected.definition.next),accepted:false};
+  });
+  const p:Pending={entries,at:s.tick(),setsDelay};
+  pending=p;
+  if(setsDelay)lastSent=s.tick();
+  for(const e of entries){
+   try{void s.direct({type:'useInventoryItem',slot:e.selected.item.slot,optionIndex:e.selected.opIndex,reason:'SDK'}).then(reply=>{
+    if(stopped)return;if(reply.success!==true)fail('consume refused: '+(reply.message??'unknown'));else e.accepted=true;
+   }).catch(error=>{if(!stopped)fail('consume failed: '+String(error));});}catch(error){fail('consume failed: '+String(error));}
+  }
  });
  void s.ended?.then(stop);
  const settle=async()=>{

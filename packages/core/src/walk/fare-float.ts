@@ -61,12 +61,15 @@ export async function topUpFareFloat(s: FloatSession, to: Tile, opts: { stop?: (
     if (!need) return false;
     const banker = s as unknown as Parameters<typeof takeItems>[0];
     const run = { stop: opts.stop, deadline: performance.now() + 30_000 };
-    let took = await takeItems(banker, need.take, {}, n => waitTicks(s, n), run), taken = took.ok ? need.take : 0;
-    // A bank seen only now: take what it holds when that still pays the fare.
+    const canRetryPartial = need.take > need.fare;
+    let took = await takeItems(banker, need.take, {}, n => waitTicks(s, n), canRetryPartial ? { ...run, keepOpen: true } : run), taken = took.ok ? need.take : 0;
+    // A bank seen only now: take what it holds when that still pays the fare, reusing the open bank interface.
     const short = took.shortfalls?.[995];
     if (!took.ok && short !== undefined && need.take - short > 0 && held + need.take - short >= need.fare) {
         took = await takeItems(banker, need.take - short, {}, n => waitTicks(s, n), run);
         taken = took.ok ? need.take - short : 0;
+    } else if (canRetryPartial && s.sdk.getState()?.bank?.isOpen) {
+        try { await banker.bot.closeBank(); } catch { /* keep withdrawal result authoritative */ }
     }
     if (!took.ok && short !== undefined && !taken) dry.add(s);
     console.log(`WALK_FARE_FLOAT ${JSON.stringify({ at: from, to, bank: need.bank, fare: need.fare, held, took: taken, ok: took.ok, detail: took.detail })}`);

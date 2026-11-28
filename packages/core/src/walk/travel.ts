@@ -2,7 +2,7 @@
 import type { Outcome } from '../act';
 import type { BoatSession } from '../boat';
 import { accountForSdk } from '../door-policy';
-import { waitTicks } from '../ticks';
+import { waitTicks, waitUntil } from '../ticks';
 import { cheb, type WalkOptions, type Walker } from '../walk-leg';
 import type { Leg } from '../world';
 
@@ -132,9 +132,12 @@ async function travelGateLeg(
         // closes its chat between its animations).
         let talked = false, shut = 0;
         await answerTravelDialog(s, b, choices, () => { if (dialogOpen()) { talked = true; shut = 0; } else if (talked) shut++; return across() || shut >= 3; }, stop, 40);
-        if (!across()) await waitTicks(s, 3);
+        if (!across()) await waitUntil(s, () => across() || stop(), { timeoutTicks: 3 });
     }
-    for (let i = 0; i < 3 && !through() && !stop(); i++) { await b.direct({ type: 'walkTo', x: t.to.x, z: t.to.z, running: true, reason: 'SDK' }); await waitTicks(s, 4); }
+    for (let i = 0; i < 3 && !through() && !stop(); i++) {
+        await b.direct({ type: 'walkTo', x: t.to.x, z: t.to.z, running: true, reason: 'SDK' });
+        await waitUntil(s, () => through() || stop(), { timeoutTicks: 4 });
+    }
     return through() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not through ${run.loc} (at ${JSON.stringify(here())})`);
 }
 

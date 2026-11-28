@@ -174,7 +174,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             } else if (expect) { expect = left; expectAt = now; }
             return;
         }
-        if (!expect && 2 * active.length <= room && now - flickAt >= 1 && !regenOn(active)) { flickNow(active, now); stats.early++; }
+        if (!expect && 2 * active.length <= room && now - flickAt >= (a.type === 'walkTo' ? every : 1) && !regenOn(active)) { flickNow(active, now); stats.early++; }
     };
 
     // Every input of the script passes here before the client sends it.
@@ -327,7 +327,12 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
                 return;
             }
             const shown: boolean[] = prayers.activePrayers;
-            const missing = expect.filter(i => !shown[i]);
+            // Skip prayers with a fresher in-flight intent so state lag never triggers double-toggle oscillation.
+            const missing = expect.filter(i => {
+                if (shown[i]) return false;
+                const intent = intents.get(i);
+                return !(intent && intent.at > expectAt && now - intent.at <= STATE_LAG);
+            });
             if (missing.length && !safe && now - expectAt < 10) return;
             expect = null;
             if (missing.length && safe) {
@@ -351,15 +356,25 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
                 for (const i of order) toggle(i);
                 flickAt = now;
                 if (order.length) { stats.flicks++; expect = order; expectAt = now; }
+                for (const i of new Set([...active, ...order])) intents.set(i, { on: order.includes(i), at: now });
+                for (const i of active) if (!order.includes(i)) owned.delete(i);
+                for (const i of missing) owned.set(i, now);
+                if (missing.length) stats.protects++;
             } else {
-                for (const i of stale) toggle(i);
-                for (const i of missing) toggle(i);
-                if (!active.length) flickAt = now;
+                // Bound non-flick transitions to TICK_INPUTS (reserving 1 input for attack resend when fighting)
+                // so toggles never spill across ticks or drop the attack resend.
+                const budget = Math.max(1, TICK_INPUTS - (fights(now) ? 1 : 0));
+                const sortedMissing = [...missing].sort((a, b) => backFirst(a) - backFirst(b));
+                const sendMissing = sortedMissing.slice(0, budget);
+                const sendStale = stale.slice(0, Math.max(0, budget - sendMissing.length));
+                let predicted = [...active];
+                for (const i of sendStale) { toggle(i); predicted = intendToggle(intents, predicted, i, now); }
+                for (const i of sendMissing) { toggle(i); predicted = intendToggle(intents, predicted, i, now); }
+                if (!active.length && sendMissing.length) flickAt = now;
+                for (const i of active) if (!predicted.includes(i)) owned.delete(i);
+                for (const i of sendMissing) owned.set(i, now);
+                if (sendMissing.length) stats.protects++;
             }
-            for (const i of new Set([...active, ...order])) intents.set(i, { on: order.includes(i), at: now });
-            for (const i of stale) owned.delete(i);
-            for (const i of missing) owned.set(i, now);
-            if (missing.length) stats.protects++;
             resend(st);
             return;
         }
