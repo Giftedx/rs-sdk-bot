@@ -1822,6 +1822,51 @@ type MeasuredRoute = { p: Tile[]; route: Tile[]; multi: number };
 export const BANK: Tile = [3094, 3492];
 export const STAGE: Tile = [3060, 3883];
 export const CAMP: Tile = [3060, 3885];
+export const LAVA_MAZE_RUNITE_ROCKS: readonly { id: number; x: number; z: number; level: number }[] = [
+    { id: 2106, x: 3059, z: 3885, level: 0 },
+    { id: 2107, x: 3060, z: 3884, level: 0 },
+];
+export const HEROES_RUNITE_ROCKS: readonly { id: number; x: number; z: number; level: number }[] = [
+    { id: 2107, x: 2937, z: 9882, level: 0 },
+    { id: 2106, x: 2941, z: 9884, level: 0 },
+];
+export const RUNITE_ROCK_IDS: readonly number[] = [2106, 2107];
+
+export function selectAvailableRuniteRock(
+    nearbyLocs: readonly NearbyLoc[],
+    expectedRocks: readonly { id: number; x: number; z: number; level: number }[],
+    nearbyPlayers: readonly { name: string; x: number; z: number }[] = [],
+    ownNames: ReadonlySet<string> = new Set(),
+    exclude?: { x: number; z: number },
+): NearbyLoc | undefined {
+    const matches = nearbyLocs.filter(
+        l =>
+            RUNITE_ROCK_IDS.includes(l.id) &&
+            l.reachable !== false &&
+            expectedRocks.some(r => r.id === l.id && r.x === l.x && r.z === l.z && r.level === l.level) &&
+            l.optionsWithIndex.some(o => /^mine$/i.test(o.text)) &&
+            !nearbyPlayers.some(p => !ownNames.has(p.name.toLowerCase()) && Math.max(Math.abs(p.x - l.x), Math.abs(p.z - l.z)) <= 1),
+    );
+    if (!matches.length) return undefined;
+    const preferred = exclude ? matches.filter(l => l.x !== exclude.x || l.z !== exclude.z) : matches;
+    const pool = preferred.length ? preferred : matches;
+    return pool.sort((a, b) => a.distance - b.distance)[0];
+}
+
+export function runiteDepletionAction(opts: {
+    activeRock?: NearbyLoc;
+    fallbackRock?: NearbyLoc;
+    heldOre: number;
+    targetOre: number;
+    wilderness: boolean;
+    hasAlternateSite?: boolean;
+}): { action: 'mine' | 'switch-rock' | 'bank' | 'rotate-or-hop'; rock?: NearbyLoc } {
+    if (opts.heldOre >= opts.targetOre) return { action: 'bank' };
+    if (opts.activeRock) return { action: 'mine', rock: opts.activeRock };
+    if (opts.fallbackRock) return { action: 'switch-rock', rock: opts.fallbackRock };
+    if (opts.heldOre > 0 && opts.wilderness) return { action: 'bank' };
+    return { action: 'rotate-or-hop' };
+}
 const ESCORT_ORE = 451;
 const ESCORT_FOOD = 385;
 const ESCORT_PICK = 1275;
@@ -1998,17 +2043,35 @@ export function retreatOrTeleportPlan(
     return (deps?.escapeStep ?? defaultEscapeStep)(level, { glory: hasGlory, teleport: hasTele });
 }
 
+// Confirm real PvP provocation before retaliating: facing alone fires on Follow/Trade/walk-up before ~set_pk_vars.
+export function escortProvokedByThreat(
+    escortSlot: number | undefined,
+    escortTick: number,
+    foeTarget: number | undefined,
+    combatEvents: readonly { type: string; sourceType?: string; tick: number }[] = [],
+): boolean {
+    if (escortSlot === undefined || foeTarget !== 32768 + escortSlot) return false;
+    return combatEvents.some(e => e.type === 'damage_taken' && e.sourceType === 'other_player' && e.tick >= escortTick - 8);
+}
+
 export function escortInterceptDecision(
     opts: {
         escortTile: Tile;
         escortCombat: number;
-        threat: { name: string; x: number; z: number; combatLevel: number };
+        threat: { name: string; x: number; z: number; combatLevel: number; attackingSelf?: boolean };
         hasWeapon: boolean;
         hasFood: boolean;
         prayerPoints: number;
+        neverSkull?: boolean;
     },
     deps?: Pick<GatherExternalDeps, 'attackable'>,
 ): { action: 'intercept' | 'screen-retreat'; reason: string } {
+    if (opts.neverSkull && opts.threat.attackingSelf !== true) {
+        return {
+            action: 'screen-retreat',
+            reason: `never-skull guard refuses to initiate on non-aggressor ${opts.threat.name} (combat ${opts.threat.combatLevel})`,
+        };
+    }
     const canHit = (deps?.attackable ?? defaultAttackable)(
         { z: opts.escortTile[1], combatLevel: opts.escortCombat },
         { z: opts.threat.z, combatLevel: opts.threat.combatLevel },
@@ -2522,14 +2585,19 @@ export async function runEscortedOre(
                         throw Error('LAVA_ESCORT_DEFEND requires deps.kitFrom, deps.defaultSpec, deps.fightPlayer');
                     }
                     const kit = deps.kitFrom(escort.sdk.getEquipment(), escort.sdk.getInventory());
+                    const escortState = escort.sdk.getState();
+                    const escortSlot = (escort.client as { selfSlot?: number } | undefined)?.selfSlot;
+                    const foeTarget = (localFoe as { targetIndex?: number }).targetIndex;
+                    const attackingSelf = escortProvokedByThreat(escortSlot, escort.tick(), foeTarget, escortState?.combatEvents ?? []);
                     const decision = escortInterceptDecision(
                         {
                             escortTile: et,
                             escortCombat: player(escort)?.combatLevel ?? 75,
-                            threat: { name: localFoe.name, x: localFoe.x, z: localFoe.z, combatLevel: localFoe.combatLevel },
+                            threat: { name: localFoe.name, x: localFoe.x, z: localFoe.z, combatLevel: localFoe.combatLevel, attackingSelf },
                             hasWeapon: Boolean(kit.melee?.length || kit.ranged?.length || kit.magic?.length),
                             hasFood: held(escort, ESCORT_FOOD) > 0,
                             prayerPoints: prayer(escort),
+                            neverSkull: process.env.LAVA_ESCORT_ALLOW_SKULL !== '1',
                         },
                         deps,
                     );

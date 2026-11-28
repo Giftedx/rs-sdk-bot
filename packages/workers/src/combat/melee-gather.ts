@@ -1942,7 +1942,7 @@ export const CONFIGS: Record<
         npc: /^chaos druid$/i,
         spot: { x: 3115, z: 9928 },
         bankSpot: { x: 3092, z: 3496 },
-        drops: /(herb|nature rune|law rune|vial of water)/i,
+        drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut |half of a key)/i,
     },
     trooper: {
         npc: /^khazard trooper$/i,

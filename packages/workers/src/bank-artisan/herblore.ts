@@ -11,7 +11,18 @@ import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execu
 import { KNOWLEDGE_DIR } from './catalog';
 import { nearestBank, productionStopRequested } from './runtime';
 import type { Session } from './types';
-import { RECIPES, selectRecipe, type BrewRecipe, type Stock } from './herblore-recipes';
+import {
+    GRINDABLE_SECONDARIES,
+    PESTLE_AND_MORTAR,
+    PVP_DECANT_FAMILIES,
+    PVP_POTION_KEYS,
+    RECIPES,
+    effectiveSecondaryCount,
+    selectRecipe,
+    type BrewRecipe,
+    type DecantFamily,
+    type Stock,
+} from './herblore-recipes';
 
 const OPEN_OP_RE = /^open$/i;
 const CLIMB_DOWN_RE = /^climb-down$/i;
@@ -113,8 +124,68 @@ export async function reachSeller(
     throw Error(`no reachable seller for ${item} (${sellers.length} tried): ${detail}`);
 }
 
-export { BOUGHT_SECONDARY, BREW_STOCK_IDS, RECIPES, brewShortfall, selectRecipe } from './herblore-recipes';
-export type { BrewRecipe } from './herblore-recipes';
+export {
+    BOUGHT_SECONDARY,
+    BREW_STOCK_IDS,
+    GRINDABLE_SECONDARIES,
+    PESTLE_AND_MORTAR,
+    PVP_DECANT_FAMILIES,
+    PVP_POTION_KEYS,
+    RECIPES,
+    brewShortfall,
+    effectiveSecondaryCount,
+    selectRecipe,
+} from './herblore-recipes';
+export type { BrewRecipe, DecantFamily } from './herblore-recipes';
+
+export function shopBuyChunk(remaining: number, stock: number, affordable: number): 10 | 5 | 1 | 0 {
+    const max = Math.min(remaining, stock, affordable);
+    if (max >= 10) return 10;
+    if (max >= 5) return 5;
+    if (max >= 1) return 1;
+    return 0;
+}
+
+export function planDecantPair(stock: Stock, family: DecantFamily): { a: number; b: number } | undefined {
+    if ((stock[family.dose3] ?? 0) >= 1 && (stock[family.dose1] ?? 0) >= 1) return { a: family.dose3, b: family.dose1 };
+    if ((stock[family.dose2] ?? 0) >= 2) return { a: family.dose2, b: family.dose2 };
+    if ((stock[family.dose3] ?? 0) >= 2) return { a: family.dose3, b: family.dose3 };
+    if ((stock[family.dose2] ?? 0) >= 1 && (stock[family.dose1] ?? 0) >= 1) return { a: family.dose2, b: family.dose1 };
+    if ((stock[family.dose1] ?? 0) >= 2) return { a: family.dose1, b: family.dose1 };
+    return undefined;
+}
+
+export async function decantInventoryPotions(
+    s: Pick<Session, 'sdk' | 'tick' | 'onTick' | 'ended'>,
+    family: DecantFamily,
+    stop: () => boolean = () => false,
+): Promise<number> {
+    let decanted = 0;
+    while (!stop()) {
+        const inv = s.sdk.getInventory();
+        const counts = stockMap(inv);
+        const pair = planDecantPair(counts, family);
+        if (!pair) break;
+        const first = inv.find(i => i.id === pair.a);
+        const second = inv.find(i => i.id === pair.b && i.slot !== first?.slot);
+        if (!first || !second) break;
+        const before4 = counts[family.dose4] ?? 0;
+        const beforeA = counts[pair.a] ?? 0;
+        await s.sdk.sendUseItemOnItem(first.slot, second.slot);
+        const settled = await waitUntil(
+            s,
+            () => {
+                if (stop()) return true;
+                const now = stockMap(s.sdk.getInventory());
+                return (now[family.dose4] ?? 0) > before4 || (now[pair.a] ?? 0) < beforeA;
+            },
+            { timeoutTicks: 6 },
+        );
+        if (!settled || stop()) break;
+        decanted++;
+    }
+    return decanted;
+}
 
 export function supplyPlan(herbs: number, vials: number, eyes: number, coins: number, vialBudget: number, eyeBudget: number) {
     const v = Math.max(0, herbs - vials);
@@ -289,41 +360,96 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & {
         add(c, 1);
     };
     const buy = async (id: 227 | 221, n: number) => {
-        if (n <= 0) return;
+        if (n <= 0) return 0;
         const startingSpend = spent[id] ?? 0;
         const budget = (id === 227 ? o.vialBudget : o.secondaryBudget) - startingSpend;
         if (n * (id === 227 ? 4 : 3) > budget) throw Error(`${id === 227 ? 'vial' : 'secondary'} budget cannot cover shortfall`);
         const step = <T>(name: string, action: () => Promise<T>) => observeHerbloreStep(`buy ${id}: ${name}`, s, action);
         await step('withdraw coins', () => withdraw(995, Math.min(totals()[995] ?? 0, budget)));
         await step('close bank', () => s.bot.closeBank());
-        const seller = await step('reach seller', () =>
-            reachSeller(id === 227 ? 'vial_water' : 'eye_of_newt', here(), tile => step(`goTo ${tile.x},${tile.z},${tile.level}`, () => attemptMove(tile))),
-        );
-        const npc = s.sdk.getState()?.nearbyNpcs.find(x => x.id === seller.npcId);
-        if (!npc || !(await s.bot.openShop(npc)).success) throw Error(`shop unavailable: ${seller.npc}`);
-        await observed(() => !!s.sdk.getState()?.shop?.isOpen, 'shop');
-        for (let bought = 0; bought < n; bought++) {
+        const itemName = id === 227 ? 'vial_water' : 'eye_of_newt';
+        const sellers = sellersByDistance(itemName, here());
+        let bought = 0;
+        let lastSeller = sellers[0]?.npc ?? 'none';
+        let lastDetail = 'no stocked sellers on this level';
+        for (const seller of sellers) {
+            if (bought >= n) break;
             check();
-            const row = s.sdk.getState()?.shop?.shopItems.find(i => i.id === id);
-            const coins = held(995);
-            const before = held(id);
-            const left = budget - ((spent[id] ?? 0) - startingSpend);
-            if (!row || row.count < 1) throw Error(`shop ${seller.npc} out of stock ${id}`);
-            if (!Number.isSafeInteger(row.buyPrice) || row.buyPrice < 0 || row.buyPrice > left || row.buyPrice > coins) {
-                throw Error(`${id === 227 ? 'vial' : 'secondary'} budget or coins exhausted`);
+            lastSeller = seller.npc;
+            const moved = await step(`goTo ${seller.tile.x},${seller.tile.z},${seller.tile.level}`, () => attemptMove(seller.tile));
+            if (!moved.ok) {
+                lastDetail = `${seller.npc} at ${seller.tile.x},${seller.tile.z},${seller.tile.level}: ${moved.reason} ${moved.detail}`;
+                continue;
             }
-            await s.bot.buyFromShop(row, 1);
-            await observed(() => held(id) === before + 1 && held(995) <= coins, 'purchase');
-            const cost = coins - held(995);
-            if (cost > left) throw Error('shop exceeded quoted budget');
-            spent[id] = (spent[id] ?? 0) + cost;
-            add(id, 1);
-            add(995, -cost);
-            console.log(`HERBLORE_BUY ${JSON.stringify({ id, count: 1, cost, seller: seller.npc, shop: seller.shop })}`);
+            const npc = s.sdk.getState()?.nearbyNpcs.find(x => x.id === seller.npcId);
+            if (!npc || !(await s.bot.openShop(npc)).success) {
+                lastDetail = `shop unavailable: ${seller.npc}`;
+                continue;
+            }
+            await observed(() => !!s.sdk.getState()?.shop?.isOpen, 'shop');
+            while (bought < n) {
+                check();
+                const row = s.sdk.getState()?.shop?.shopItems.find(i => i.id === id);
+                const coins = held(995);
+                const before = held(id);
+                const left = budget - ((spent[id] ?? 0) - startingSpend);
+                if (!row || row.count < 1) break;
+                if (!Number.isSafeInteger(row.buyPrice) || row.buyPrice < 0 || row.buyPrice > left || row.buyPrice > coins) {
+                    if (bought > 0) break;
+                    await step('close shop', () => s.bot.closeShop());
+                    throw Error(`${id === 227 ? 'vial' : 'secondary'} budget or coins exhausted`);
+                }
+                const unitPrice = Math.max(1, row.buyPrice);
+                const affordable = Math.floor(Math.min(left, coins) / unitPrice);
+                const freeSlots = Math.max(0, 28 - inv().length);
+                const chunk = shopBuyChunk(Math.min(n - bought, freeSlots), row.count, affordable);
+                if (chunk < 1) break;
+                await s.bot.buyFromShop(row, chunk);
+                await observed(() => held(id) > before && held(995) <= coins, 'purchase');
+                const got = held(id) - before;
+                const cost = coins - held(995);
+                if (cost > left) throw Error('shop exceeded quoted budget');
+                spent[id] = (spent[id] ?? 0) + cost;
+                add(id, got);
+                add(995, -cost);
+                bought += got;
+                console.log(`HERBLORE_BUY ${JSON.stringify({ id, count: got, cost, seller: seller.npc, shop: seller.shop })}`);
+            }
+            await step('close shop', () => s.bot.closeShop());
         }
-        await step('close shop', () => s.bot.closeShop());
         await step('open bank', openBank);
         await step('deposit', deposit);
+        if (bought < 1) throw Error(`shop ${lastSeller} out of stock ${id} (${lastDetail})`);
+        return bought;
+    };
+    const grindSecondary = async (secId: number, needed: number) => {
+        const grind = GRINDABLE_SECONDARIES[secId];
+        if (!grind || needed < 1) return 0;
+        const bankStock = stockMap(bankRows());
+        const availRaw = bankStock[grind.raw] ?? 0;
+        const hasPestle = (bankStock[grind.tool] ?? 0) > 0 || held(grind.tool) > 0;
+        const countToGrind = Math.min(27, needed, availRaw);
+        if (!hasPestle || countToGrind < 1) return 0;
+        if (held(grind.tool) < 1) await withdraw(grind.tool, 1);
+        await withdraw(grind.raw, countToGrind);
+        await s.bot.closeBank();
+        let ground = 0;
+        while (held(grind.raw) > 0 && ground < countToGrind) {
+            check();
+            const pestle = inv().find(i => i.id === grind.tool);
+            const raw = inv().find(i => i.id === grind.raw);
+            if (!pestle || !raw) break;
+            const r0 = held(grind.raw);
+            const s0 = held(secId);
+            await s.sdk.sendUseItemOnItem(pestle.slot, raw.slot);
+            await observed(() => held(grind.raw) === r0 - 1 && held(secId) === s0 + 1, `grind ${grind.raw}->${secId}`);
+            add(grind.raw, -1);
+            add(secId, 1);
+            ground++;
+        }
+        await openBank();
+        await deposit();
+        return ground;
     };
     await observed(() => !!s.sdk.getState()?.player && !!s.sdk.getSkill('Herblore'), 'entry');
     await openBank();
@@ -331,14 +457,32 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & {
     const xp = s.sdk.getSkillXp('Herblore')!;
     const worn = JSON.stringify(s.sdk.getState()?.equipment ?? []);
     await deposit();
+    let suppliesExhausted = false;
+    let exhaustionDetail = '';
     try {
         if (level() >= o.target) throw Error(`target already met: ${level()} >= ${o.target}`);
         while (level() < o.target) {
             check();
-            const r = selectRecipe(level(), totals(), o.recipe);
-            const all = totals();
-            const herbs = (all[r.dirty] ?? 0) + (all[r.clean] ?? 0);
-            const unf = all[r.unf] ?? 0;
+            let r: BrewRecipe;
+            try {
+                r = selectRecipe(level(), totals(), o.recipe);
+            } catch (err) {
+                if (brewed > 0 && o.recipe === 'auto') {
+                    suppliesExhausted = true;
+                    exhaustionDetail = err instanceof Error ? err.message : String(err);
+                    break;
+                }
+                throw err;
+            }
+            let all = totals();
+            let herbs = (all[r.dirty] ?? 0) + (all[r.clean] ?? 0);
+            let unf = all[r.unf] ?? 0;
+            if (r.sec !== 221 && o.recipe !== 'unf' && (all[r.sec] ?? 0) < 1 && effectiveSecondaryCount(r.sec, all) > 0) {
+                await grindSecondary(r.sec, Math.min(27, herbs + unf));
+                all = totals();
+                herbs = (all[r.dirty] ?? 0) + (all[r.clean] ?? 0);
+                unf = all[r.unf] ?? 0;
+            }
             const secondaries = r.sec === 221 || o.recipe === 'unf' ? 27 : (all[r.sec] ?? 0);
             const batch = workingBatch(herbs, unf, secondaries);
             const make = Math.max(0, batch - Math.min(batch, unf));
@@ -346,13 +490,27 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & {
             if (purchases.length) {
                 supplyPlan(make, all[227] ?? 0, r.sec === 221 ? Math.max(0, (all[221] ?? 0) - Math.min(unf, batch)) : make, all[995] ?? 0, o.vialBudget - (spent[227] ?? 0), o.secondaryBudget - (spent[221] ?? 0));
             }
-            if (secondaries < 1) throw Error(`secondary missing ${r.sec}`);
+            if (secondaries < 1) {
+                if (brewed > 0 && o.recipe === 'auto') {
+                    suppliesExhausted = true;
+                    exhaustionDetail = `secondary missing ${r.sec}`;
+                    break;
+                }
+                throw Error(`secondary missing ${r.sec}`);
+            }
             for (const [id, n] of purchases) await buy(id, n);
             const current = stockMap(bankRows());
             const plan = brewTripPlan(r, current, o.recipe);
             const input = plan.input;
             const n = plan.count;
-            if (n < 1) throw Error(`bank missing supplies for ${r.key}`);
+            if (n < 1) {
+                if (brewed > 0 && o.recipe === 'auto') {
+                    suppliesExhausted = true;
+                    exhaustionDetail = `bank missing supplies for ${r.key}`;
+                    break;
+                }
+                throw Error(`bank missing supplies for ${r.key}`);
+            }
             await withdraw(input, n);
             if (plan.needsVial) await withdraw(227, n);
             if (plan.needsSec) await withdraw(r.sec, n);
@@ -385,7 +543,22 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & {
         const assets = reconcile(before, after, delta);
         const gained = s.sdk.getSkillXp('Herblore')! - xp;
         const equipment = worn === JSON.stringify(s.sdk.getState()?.equipment ?? []);
-        const result = { ok: level() >= o.target && brewed > 0 && gained > 0 && assets && equipment, target: o.target, level: level(), brewed, xp: gained, ticks: s.tick() - start, before, after, delta, spent, assets, equipment };
+        const goalSatisfied = level() >= o.target || (suppliesExhausted && o.recipe === 'auto');
+        const result = {
+            ok: goalSatisfied && brewed > 0 && gained > 0 && assets && equipment,
+            target: o.target,
+            level: level(),
+            brewed,
+            xp: gained,
+            ticks: s.tick() - start,
+            before,
+            after,
+            delta,
+            spent,
+            assets,
+            equipment,
+            ...(suppliesExhausted ? { exhausted: true, exhaustionDetail } : {}),
+        };
         console.log(`HERBLORE_RESULT ${JSON.stringify(result)}`);
         if (!result.ok) throw Error('target, XP or asset reconciliation failed');
         return result;

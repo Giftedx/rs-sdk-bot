@@ -15,6 +15,79 @@ import { CONTENT_DIR, packMap, REPO_ROOT } from './catalog';
 import { productionStopRequested } from './runtime';
 import type { Session } from './types';
 
+// ---- BiS PvP Fletching Recipes (Magic shortbow & Rune arrows) ----
+// Verified against vendor/rs-sdk/server/content/pack/obj.pack & cut_logs.dbrow / bows.dbrow.
+export const PVP_FLETCH_RECIPES = {
+    magic_shortbow: {
+        key: 'magic_shortbow',
+        logId: 1513,
+        unstrungId: 72,
+        bowStringId: 1777,
+        productId: 861,
+        level: 80,
+        cutMode: 'cut-bow:unstrung_magic_shortbow',
+        stringMode: 'bow-string:magic_shortbow',
+    },
+    rune_arrow: {
+        key: 'rune_arrow',
+        tipId: 44,
+        headlessId: 53,
+        productId: 892,
+        level: 75,
+        metal: 'rune' as const,
+        batchSize: 15,
+    },
+} as const;
+
+export function planMagicShortbowBatch(
+    stock: Record<number, number>,
+    fletchingLevel: number,
+    target: number,
+    reserves: { logs?: number; strings?: number } = {},
+) {
+    if (!Number.isSafeInteger(target) || target < 1) throw Error('invalid magic shortbow target');
+    const r = PVP_FLETCH_RECIPES.magic_shortbow;
+    if (fletchingLevel < r.level) throw Error(`magic shortbow requires Fletching ${r.level}, has ${fletchingLevel}`);
+    const availLogs = Math.max(0, (stock[r.logId] ?? 0) - (reserves.logs ?? 0));
+    const availUnstrung = Math.max(0, stock[r.unstrungId] ?? 0);
+    const availStrings = Math.max(0, (stock[r.bowStringId] ?? 0) - (reserves.strings ?? 0));
+    const canStringExisting = Math.min(target, availUnstrung, availStrings);
+    const remainingAfterExisting = Math.max(0, target - canStringExisting);
+    const cutLogs = Math.min(remainingAfterExisting, availLogs, Math.max(0, availStrings - canStringExisting));
+    const stringTotal = canStringExisting + cutLogs;
+    return {
+        cutLogs,
+        stringTotal,
+        shortfallLogs: Math.max(0, target - availUnstrung - availLogs),
+        shortfallStrings: Math.max(0, target - availStrings),
+        cutMode: r.cutMode,
+        stringMode: r.stringMode,
+        productId: r.productId,
+    };
+}
+
+export function planRuneArrowBatch(
+    stock: Record<number, number>,
+    fletchingLevel: number,
+    target: number,
+    reserves: { headless?: number; tips?: number } = {},
+) {
+    if (!Number.isSafeInteger(target) || target < 1) throw Error('invalid rune arrow target');
+    const r = PVP_FLETCH_RECIPES.rune_arrow;
+    if (fletchingLevel < r.level) throw Error(`rune arrows require Fletching ${r.level}, has ${fletchingLevel}`);
+    const availHeadless = Math.max(0, (stock[r.headlessId] ?? 0) - (reserves.headless ?? 0));
+    const availTips = Math.max(0, (stock[r.tipId] ?? 0) - (reserves.tips ?? 0));
+    const craftable = Math.min(target, availHeadless, availTips);
+    return {
+        craftable,
+        actions: Math.ceil(craftable / r.batchSize),
+        shortfallHeadless: Math.max(0, target - availHeadless),
+        shortfallTips: Math.max(0, target - availTips),
+        metal: r.metal,
+        productId: r.productId,
+    };
+}
+
 // ---- Arrow Shafts (fletch-shafts.ts) ----
 
 const LOG = 1511;
@@ -95,15 +168,17 @@ export async function runShafts(
         capture();
     };
     const deposit = async () => {
+        let deposited = false;
         for (const id of [LOG, SHAFT]) {
             if (held(id)) {
                 hold();
                 if (!(await s.bot.depositItem(inv().find(i => i.id === id)!, -1)).success || !await waitUntil(s, () => held(id) === 0, { timeoutTicks: 5 })) {
                     throw Error('shafts deposit incomplete');
                 }
+                deposited = true;
             }
         }
-        await waitTicks(s, 1);
+        if (deposited && !s.bankObservation?.()) await waitTicks(s, 1);
         capture();
     };
     try {
@@ -189,7 +264,7 @@ export async function runShafts(
                     if (!(await s.bot.depositItem(inv().find(i => i.id === KNIFE)!, -1)).success || !await waitUntil(s, () => held(KNIFE) === 0, { timeoutTicks: 5 })) {
                         throw Error('shafts knife return incomplete');
                     }
-                    await waitTicks(s, 1);
+                    if (!s.bankObservation?.()) await waitTicks(s, 1);
                     capture();
                 }
                 await s.bot.closeBank();

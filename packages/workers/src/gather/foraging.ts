@@ -165,7 +165,6 @@ export async function runFlax(s: Session, o: FlaxOptions) {
                     if (!over()) failure = 'no flax progress: production bank unconfirmed';
                     break;
                 }
-                await waitTicks(s, 1);
                 continue;
             }
             const p = pos();
@@ -180,7 +179,7 @@ export async function runFlax(s: Session, o: FlaxOptions) {
             const loc = s.sdk.findNearbyLoc(/^flax$/i);
             if (!loc) {
                 await walk(FLAX_FIELD.x, FLAX_FIELD.z, 4);
-                await waitTicks(s, 2);
+                await waitTicks(s, 1);
                 continue;
             }
             const before = flaxCount();
@@ -770,16 +769,15 @@ export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: numbe
         if (!o.success) fail(`openBank ${o.message}`);
         const n = grapes();
         await s.bot.depositItem(/^grapes$/i, -1);
-        await waitTicks(s, 1);
+        if (grapes() > 0) await waitTicks(s, 1);
         banked += n - grapes();
         bankTrips++;
         await s.bot.closeInterface();
-        await waitTicks(s, 1);
         console.log(`MILESTONE bank ${used()} banked=${banked}`);
         await goUp();
     };
     try {
-        await waitTicks(s, 2);
+        await waitTicks(s, 1);
         hp0 = hp();
         hpMin = hp0;
         console.log(`HP start ${hp0}`);
@@ -805,14 +803,14 @@ export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: numbe
             tries++;
             const before = grapes();
             await s.bot.pickupItem(g);
-            await waitTicks(s, 1);
+            if (grapes() === before) await waitTicks(s, 1);
             if (grapes() > before) {
                 picks++;
                 if (lastPick >= 0) gaps.push(used() - lastPick);
                 lastPick = used();
             } else {
                 lost++;
-                await waitTicks(s, 3);
+                await waitTicks(s, 1);
             }
         }
         const perK = ((picks * 1000) / Math.max(1, used())).toFixed(2);
