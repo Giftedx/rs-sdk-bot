@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795854662411-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Bigchopper",
+  "item": "Staff of fire",
+  "count": 2,
+  "itemId": 1387,
+  "start": 1795854662411,
+  "end": 1795855562411,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
