@@ -934,11 +934,148 @@ export async function tanInventory(s: Session, kind: TanKind, maximum: number, c
     return { ok: !detail && made === maximum && preserved && conserved, made, coinsSpent: initial.coins - final.coins, preserved, conserved, ticks: s.tick() - start, detail };
 }
 
-export async function runTanningCli(botName: string, restArgs: readonly string[]) {
-    const kind = restArgs[0] as TanKind;
-    const maximum = Number(restArgs[1] ?? 1);
-    const cap = Number(restArgs[2] ?? 80);
-    if (!botName || !Object.hasOwn(tanningRecipes, kind) || !Number.isSafeInteger(maximum) || maximum < 1 || !Number.isSafeInteger(cap) || cap < 1) {
+export async function runBankedTanning(
+    s: Session,
+    kind: TanKind,
+    maximum: number,
+    cap = 1500,
+    stop: () => boolean = () => false,
+    deps?: ArtisanExternalDeps,
+) {
+    if (!Object.hasOwn(tanningRecipes, kind) || !Number.isSafeInteger(maximum) || maximum < 0 || !Number.isSafeInteger(cap) || cap < 1) {
+        throw Error('invalid banked tanning order');
+    }
+    const r = tanningRecipes[kind];
+    const start = s.tick();
+    const used = () => s.tick() - start;
+    const life = watchProductionLife(s, stop);
+    const over = () => life.stopped() || used() >= cap;
+    const st = () => s.sdk.getState();
+    const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const banked = (id: number) =>
+        (s.bankObservation?.()?.items ?? st()?.bank?.items ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const waitFor = (pred: () => boolean, timeoutTicks: number) => waitUntil(s, () => over() || pred(), { timeoutTicks });
+    const openBank = async (label: string) => {
+        const generation = s.bankObservation?.()?.generation ?? 0;
+        if (
+            !(await s.bot.openBank()).success ||
+            !(await waitFor(() => !!st()?.bank?.isOpen && (!s.bankObservation || (s.bankObservation()?.generation ?? 0) > generation), 20))
+        ) {
+            throw Error(`${label}: bank did not open`);
+        }
+    };
+    const closeBank = async () => {
+        await s.bot.closeBank();
+        await waitFor(() => !st()?.bank?.isOpen, 10);
+    };
+    const bankPack = async (label: string) => {
+        for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
+            const row = s.sdk.getInventory().find(i => i.id === id);
+            if (row && (!(await s.bot.depositItem(row, held(id))).success || !(await waitFor(() => held(id) === 0, 10)))) {
+                throw Error(`${label}: deposit of item ${id}`);
+            }
+        }
+    };
+    const take = async (id: number, n: number) => {
+        if (n < 1) return;
+        const row = (st()?.bank?.items ?? []).find((i: { id: number }) => i.id === id);
+        const before = held(id);
+        if (!row || banked(id) < n) throw Error(`withdraw: ${n} of item ${id} short in bank (${banked(id)} banked)`);
+        if (!(await s.bot.withdrawItem(row, n, { asNote: false })).success || !(await waitFor(() => held(id) >= before + n, 10))) {
+            throw Error(`withdraw ${n} of item ${id}`);
+        }
+    };
+    const go = async (to: { x: number; z: number; level: number }, label: string) => {
+        if (over()) throw Error('banked tanning stopped');
+        const p = st()?.player;
+        if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 2) return;
+        if (deps?.walkTargetPersist) {
+            const out = await deps.walkTargetPersist(s, to);
+            if (!out.ok) throw Error(`route to ${label}: ${out.reason ?? ''} ${out.detail ?? ''}`);
+            return;
+        }
+        if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 35) {
+            const out = await walkPath(await sessionWalker(s), [{ x: to.x, z: to.z, tol: 1 }], { stop: over });
+            if (out.ok) return;
+        }
+        const out = await goTo(s, await getWorld(), to, accountOf(s));
+        if (!out.ok) throw Error(`route to ${label}: ${out.detail ?? 'unreachable'}`);
+    };
+
+    let made = 0;
+    let coinsSpent = 0;
+    let trips = 0;
+    let detail = '';
+    let goal = 0;
+    try {
+        await go(AL_KHARID_BANK, 'the Al Kharid bank');
+        await openBank('tan-stage');
+        await bankPack('tan-stage');
+        const availableHides = banked(r.input);
+        const availableCoins = banked(COINS);
+        const affordable = Math.min(availableHides, Math.floor(availableCoins / r.cost));
+        goal = maximum > 0 ? Math.min(maximum, affordable) : affordable;
+        if (goal < 1) {
+            await closeBank();
+            throw Error(`no tanning supplies: ${availableHides} hides (${r.input}), ${availableCoins} coins (cost ${r.cost})`);
+        }
+        while (made < goal && !over()) {
+            const n = Math.min(TAN_TRIP, goal - made);
+            await take(r.input, n);
+            await take(COINS, n * r.cost);
+            await closeBank();
+            await go(TANNER, 'Ellis the tanner');
+            const res = await tanInventory(s, kind, n, Math.max(1, Math.min(cap - used(), 60 + n * 12)), over);
+            made += res.made;
+            coinsSpent += res.coinsSpent;
+            if (!res.ok) throw Error(`tanning: ${res.detail} made=${res.made} of ${n}`);
+            await go(AL_KHARID_BANK, 'the Al Kharid bank');
+            await openBank('tan-deposit');
+            await bankPack('tan-deposit');
+            trips++;
+        }
+        await closeBank();
+    } catch (error) {
+        detail = error instanceof Error ? error.message : String(error);
+    }
+    detail ||= life.reason();
+    return {
+        ok: !detail && made > 0 && made === goal,
+        made,
+        goal,
+        coinsSpent,
+        trips,
+        ticks: used(),
+        detail,
+    };
+}
+
+export async function runTanningCli(
+    botName: string,
+    restArgs: readonly string[],
+    env: Record<string, string | undefined> = process.env,
+    deps?: ArtisanExternalDeps,
+) {
+    const argEnv: Record<string, string> = {};
+    const positional: string[] = [];
+    for (const a of restArgs) {
+        const m = a.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
+        if (m) argEnv[m[1]!] = m[2]!;
+        else positional.push(a);
+    }
+    const mergedEnv = { ...env, ...argEnv };
+    const banked = mergedEnv.TAN_BANKED === '1';
+    const kind = (positional[0] ?? mergedEnv.TAN_KIND) as TanKind;
+    const maximum = Number(positional[1] ?? mergedEnv.MAX_MAKE ?? mergedEnv.TARGET_COUNT ?? mergedEnv.BATCH_UNITS ?? (banked ? 27 : 1));
+    const cap = Number(positional[2] ?? mergedEnv.CAP ?? (banked ? 1500 : 80));
+    if (
+        !botName ||
+        !Object.hasOwn(tanningRecipes, kind) ||
+        !Number.isSafeInteger(maximum) ||
+        maximum < (banked ? 0 : 1) ||
+        !Number.isSafeInteger(cap) ||
+        cap < 1
+    ) {
         throw Error('Usage: bun scripts/aio-skiller.ts <account> artisan crafting tanning <soft|hard|green|blue|red|black> [quantity] [ticks]');
     }
     let stopped = false;
@@ -947,11 +1084,13 @@ export async function runTanningCli(botName: string, restArgs: readonly string[]
     const s = await openBot(botName);
     let ok = false;
     try {
-        const result = await tanInventory(s, kind, maximum, cap, () => stopped);
+        const result = banked
+            ? await runBankedTanning(s, kind, maximum, cap, () => stopped, deps)
+            : await tanInventory(s, kind, maximum, cap, () => stopped);
         console.log('TANNING_RESULT ' + JSON.stringify(result));
         ok = result.ok;
     } finally {
-        ok = await settle([s], ok, 'finite tanning order');
+        ok = await settle([s], ok, banked ? 'finite banked tanning order' : 'finite tanning order');
     }
     process.exitCode = ok ? 0 : 1;
 }
@@ -1429,12 +1568,22 @@ export async function runBlackDhideSetsCli(
         }),
     );
     const want = Number(argEnv.SETS ?? env.SETS ?? 0);
+    const tierRaw = (argEnv.TIER ?? env.TIER ?? 'black').trim().toLowerCase() as DhideTier;
+    const tierSpec = Object.hasOwn(DHIDE_TIERS, tierRaw) ? DHIDE_TIERS[tierRaw] : undefined;
     const pieceName = (argEnv.PIECE ?? env.PIECE)?.trim().toLowerCase() as DhidePiece | '' | undefined;
-    const selected = pieceName ? (pieceName in PIECE_BY_NAME ? [PIECE_BY_NAME[pieceName as DhidePiece]] : null) : [...SET_PIECES];
+    const selected = !tierSpec
+        ? null
+        : pieceName
+          ? pieceName in PIECE_INDEX
+              ? [tierSpec.pieces[PIECE_INDEX[pieceName as DhidePiece]]]
+              : null
+          : [...tierSpec.pieces];
     const q = await deps.openQuest({ name: botName, cap: 4000, eatAt: 50, lumbridgeOk: true });
     try {
+        if (!tierSpec) await q.fail(`unknown TIER=${tierRaw}`);
         if (!selected) await q.fail(`unknown PIECE=${pieceName}`);
         if (!Number.isSafeInteger(want) || want < 0 || want > 50) await q.fail('SETS 0-50');
+        const activeTier = tierSpec!;
         const s: Session = q.s;
         const start = s.tick();
         const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
@@ -1482,21 +1631,21 @@ export async function runBlackDhideSetsCli(
         await openBank('stage');
         await bankPack('stage');
         const needle = banked(NEEDLE) < 1;
-        const plan = planFor(selected!, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS), needle);
+        const plan = planFor(selected!, want, banked(activeTier.hide), banked(activeTier.leather), banked(THREAD), banked(COINS), needle, activeTier.tanCost);
         if (plan.count < 1) {
             await closeBank();
-            await q.fail(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
+            await q.fail(`no craft: ${banked(activeTier.hide)} hides, ${banked(activeTier.leather)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
         }
-        q.milestone(`plan ${pieceName || 'sets'}=${plan.count} tan=${plan.tan} thread=${plan.thread}`);
+        q.milestone(`plan ${activeTier.tier} ${pieceName || 'sets'}=${plan.count} tan=${plan.tan} thread=${plan.thread}`);
         let tanned = 0;
         let spent = 0;
         while (tanned < plan.tan) {
             const n = Math.min(TAN_TRIP, plan.tan - tanned);
-            await take(BLACK_HIDE, n);
-            await take(COINS, n * TAN_COST);
+            await take(activeTier.hide, n);
+            await take(COINS, n * activeTier.tanCost);
             await closeBank();
             await go(TANNER, 'the tanner');
-            const r = await tanInventory(s, 'black', n, 60 + n * 12);
+            const r = await tanInventory(s, activeTier.tier, n, 60 + n * 12);
             tanned += r.made;
             spent += r.coinsSpent;
             if (!r.ok) await q.fail(`tanning: ${r.detail} made=${r.made} of ${n}`);
@@ -1543,13 +1692,13 @@ export async function runBlackDhideSetsCli(
         await openBank('end');
         await bankPack('end');
         const sets = Math.min(...selected!.map(p => banked(p.product)));
-        const hidesLeft = banked(BLACK_HIDE);
-        const leatherLeft = banked(BLACK_LEATHER);
+        const hidesLeft = banked(activeTier.hide);
+        const leatherLeft = banked(activeTier.leather);
         await closeBank();
         const detail = selected!.map((p, idx) => `${p.recipe.endsWith('body') ? 'bodies' : p.recipe.endsWith('chaps') ? 'chaps' : 'vambraces'}=${made[idx]}`).join(' ');
         await q.end(
             made.every(n => n === plan.count),
-            `sets=${plan.count} banked=${sets} ${detail} tanned=${tanned} spent=${spent} hidesLeft=${hidesLeft} leatherLeft=${leatherLeft} crafting=${s.sdk.getSkill('Crafting')?.level ?? 0} ticks=${s.tick() - start}`,
+            `tier=${activeTier.tier} sets=${plan.count} banked=${sets} ${detail} tanned=${tanned} spent=${spent} hidesLeft=${hidesLeft} leatherLeft=${leatherLeft} crafting=${s.sdk.getSkill('Crafting')?.level ?? 0} ticks=${s.tick() - start}`,
         );
     } catch (e) {
         await q.fail(String(e));

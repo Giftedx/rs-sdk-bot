@@ -77,7 +77,25 @@ export async function runRunecraftSession(
     }
     if (cfg.mode === 'nature') {
         const job = cfg.natureJob ?? (cfg.jobPath ? (JSON.parse(readFileSync(cfg.jobPath, 'utf8')) as NatureJob) : undefined);
-        if (!job) return { ok: false, kind: 'refused', mode: 'nature', detail: 'nature mode requires natureJob or jobPath' };
+        if (!job) {
+            const res = await runRuneBankCraft(s, runeBankTarget(cfg.targetLevel), {
+                cap: cfg.cap,
+                altar: 'nature',
+                essenceTarget: cfg.essenceTarget,
+                stop,
+                deps: cfg.deps,
+            });
+            const detail = 'failure' in res && res.failure ? String(res.failure) : `runecraft=${res.level} trips=${res.trips} consumed=${res.consumed} crafted=${res.crafted}`;
+            return {
+                ok: res.ok,
+                kind: res.ok ? 'completed' : stop() ? 'stopped' : outcomeFromFailure('nature', detail),
+                mode: 'nature',
+                unitsCompleted: res.consumed,
+                xpGained: typeof res.xp === 'number' ? res.xp : undefined,
+                detail,
+                data: res,
+            };
+        }
         const res = await runNatureTrips(s, job, stop, cfg.deps.runBankProfile);
         return {
             ok: res.ok,
@@ -230,7 +248,10 @@ export async function runRunecraftCli(
 
     if (method === 'nature') {
         const jobPath = args[0];
-        if (!account || !jobPath) throw Error('usage: runecraft nature <account> <job.json>');
+        if (!account) throw Error('usage: runecraft nature <account> [job.json]');
+        if (!jobPath) {
+            return runRunecraftCli('bank-craft', account, [], { ...env, RUNE_ALTAR: 'nature' }, deps);
+        }
         const job = JSON.parse(readFileSync(jobPath, 'utf8')) as NatureJob;
         natureRouteJob(job);
         let stopped = false;

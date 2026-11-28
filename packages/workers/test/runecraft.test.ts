@@ -258,7 +258,10 @@ test('requested output pins the owned, unlocked altar and never falls back', () 
     expect(chooseRuneAltar(99, new Set([1438, 1446])).altar?.name).toBe('body');
     expect(() => chooseRuneAltar(99, new Set([1446]), 'air')).toThrow('air talisman1438 required');
     expect(() => chooseRuneAltar(1, new Set([1438, 1446]), 'body')).toThrow('requires Runecraft20');
-    expect(() => chooseRuneAltar(99, new Set([1438]), 'nature')).toThrow('unknown rune altar');
+    expect(chooseRuneAltar(44, new Set([1462]), 'nature').altar?.name).toBe('nature');
+    expect(() => chooseRuneAltar(43, new Set([1462]), 'nature')).toThrow('requires Runecraft44');
+    expect(() => chooseRuneAltar(99, new Set([1438]), 'nature')).toThrow('nature talisman1462 required');
+    expect(() => chooseRuneAltar(99, new Set([1438]), 'death')).toThrow('unknown rune altar');
 });
 
 test('mixed altar output reconciles every rune type, not just the total', () => {
@@ -322,7 +325,8 @@ test('target is a bounded Runecraft level', () => {
 test('finite production options reject malformed orders before session access', async () => {
     expect(runeBankOptions()).toEqual({ cap: 20000 });
     expect(runeBankOptions({ altar: 'air', essenceTarget: 28 })).toEqual({ cap: 20000, altar: 'air', essenceTarget: 28 });
-    for (const options of [{ altar: '' }, { altar: 'nature' }, { essenceTarget: 0 }, { essenceTarget: 1.5 }, { essenceTarget: Infinity }, { cap: 0 }]) {
+    expect(runeBankOptions({ altar: 'nature', essenceTarget: 27 })).toEqual({ cap: 20000, altar: 'nature', essenceTarget: 27 });
+    for (const options of [{ altar: '' }, { altar: 'death' }, { essenceTarget: 0 }, { essenceTarget: 1.5 }, { essenceTarget: Infinity }, { cap: 0 }]) {
         expect(() => runeBankOptions(options)).toThrow();
         await expect(runRuneBankCraft({} as Session, 99, options)).rejects.toThrow();
     }

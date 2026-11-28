@@ -54,11 +54,13 @@ export async function runArtisan(
     try {
         switch (cfg.skill) {
             case 'cooking': {
-                const { cookingRecipes, DEFAULT_FOOD_TYPE, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runWineSession, validateGeCookingOrder } = await import('./cooking');
+                const { cookingRecipes, DEFAULT_FOOD_TYPE, foodRecipe, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runSessionCookingBatch, runWineSession, validateGeCookingOrder } = await import('./cooking');
                 if (cfg.method === 'food') {
                     const cap = Number(cfg.args[0] ?? setting('CAP', '15000'));
                     const foodType = (setting('FOOD_TYPE', cfg.args[1]) ?? DEFAULT_FOOD_TYPE).toLowerCase();
-                    const r = await runCookFood(s, foodType, cap, halted);
+                    const rawMax = setting('MAX_MAKE') ?? setting('TARGET_COUNT') ?? setting('BATCH_UNITS');
+                    const maximum = rawMax !== undefined ? Number(rawMax) : Infinity;
+                    const r = await runCookFood(s, foodType, cap, halted, maximum);
                     return { ok: r.ok, summary: `cooked=${r.cookedTotal}`, ticks: r.ticks, produced: r.cookedTotal, failure: r.ok ? undefined : r.failure ?? 'cook-food incomplete' };
                 }
                 if (cfg.method === 'stock') {
@@ -108,26 +110,60 @@ export async function runArtisan(
                     });
                     return { ok: r.ok, summary: `completed=${r.completed}`, ticks: r.ticks, produced: r.completed, failure: r.ok ? undefined : r.failure };
                 }
-                const recipeName = setting('RECIPE', cfg.args[0]) ?? 'cooking_generic_trout';
+                const explicitRecipe = setting('RECIPE', cfg.args[0]);
+                const foodType = setting('FOOD_TYPE')?.toLowerCase();
+                if (!explicitRecipe && foodType) {
+                    if (setting('BANKED') !== '0') {
+                        const cap = Number(setting('CAP', '3000'));
+                        const rawMax = setting('MAX_MAKE') ?? setting('TARGET_COUNT') ?? setting('BATCH_UNITS');
+                        const maximum = rawMax !== undefined ? Number(rawMax) : Infinity;
+                        const r = await runCookFood(s, foodType, cap, halted, maximum);
+                        return { ok: r.ok, summary: `cooked=${r.cookedTotal}`, ticks: r.ticks, produced: r.cookedTotal, failure: r.ok ? undefined : r.failure ?? 'cook-food incomplete' };
+                    }
+                    const byFood = foodRecipe(foodType);
+                    if (!byFood) throw Error(`unknown cooking food type: ${foodType}`);
+                    const maximum = Number(setting('MAX_MAKE', setting('TARGET_COUNT', setting('BATCH_UNITS', '1'))));
+                    const cap = Number(setting('CAP', '200'));
+                    const heat = (setting('HEAT', 'range') as 'range' | 'fire');
+                    const r = await runSessionCookingBatch(s, byFood, heat, maximum, cap, halted);
+                    const batchOk = r.processed >= maximum;
+                    return { ok: batchOk, summary: `cooked=${r.cooked} burnt=${r.burnt}`, ticks: r.ticks, produced: r.cooked, failure: batchOk ? undefined : 'cooking batch incomplete' };
+                }
+                const recipeName = explicitRecipe ?? 'cooking_generic_trout';
                 const recipe = cookingRecipes().recipes.find(r => r.name === recipeName);
                 if (!recipe) throw Error(`unknown cooking recipe: ${recipeName}`);
-                const maximum = Number(setting('MAX_MAKE', '1'));
+                const maximum = Number(setting('MAX_MAKE', setting('TARGET_COUNT', setting('BATCH_UNITS', '1'))));
+                const cap = Number(setting('CAP', '200'));
                 const r = await runCookingBatch(
                     {
                         state: () => s.sdk.getState(),
                         tick: () => s.tick(),
                         stop: halted,
                         close: async () => { await s.sdk.sendCloseModal(); },
-                        heat: async slot => {
-                            const loc = s.sdk.getState()?.nearbyLocs.find(l => l.distance <= 3 && l.reachable !== false);
+                        heat: async (slot, _kind, rec) => {
+                            const before = s.sdk.getState();
+                            const loc = before?.nearbyLocs.find(l => l.distance <= 3 && l.reachable !== false);
                             if (!loc) return false;
-                            return (await s.sdk.sendUseItemOnLoc(slot, loc.x, loc.z, loc.id)).success;
+                            if (!(await s.sdk.sendUseItemOnLoc(slot, loc.x, loc.z, loc.id)).success) return false;
+                            if (rec.karambwanChoice) {
+                                const { waitUntil } = await import('../../../core/src/ticks');
+                                const { componentId } = await import('../../../core/src/logout');
+                                await waitUntil(
+                                    s,
+                                    st => halted() || !!st.dialog?.isOpen || (st.inventory ?? []).filter((i: { id: number }) => i.id === rec.raw).length < (before?.inventory ?? []).filter(i => i.id === rec.raw).length,
+                                    { timeoutTicks: 6 },
+                                );
+                                if (s.sdk.getState()?.dialog?.isOpen && !halted()) {
+                                    return (await s.sdk.sendClickComponent(componentId(`multiobj2:objtext${rec.karambwanChoice}`))).success;
+                                }
+                            }
+                            return true;
                         },
                         wait: (test, ticks) => import('../../../core/src/ticks').then(m => m.waitUntil(s, test, { timeoutTicks: ticks })),
                         step: () => import('../../../core/src/ticks').then(m => m.waitTicks(s, 1)),
                     },
                     recipe,
-                    { maximum, cap: Number(setting('CAP', '200')), heat: (setting('HEAT', 'range') as 'range' | 'fire') },
+                    { maximum, cap, heat: (setting('HEAT', 'range') as 'range' | 'fire') },
                 );
                 const batchOk = r.processed >= maximum;
                 return { ok: batchOk, summary: `cooked=${r.cooked} burnt=${r.burnt}`, ticks: r.ticks, produced: r.cooked, failure: batchOk ? undefined : 'cooking batch incomplete' };
@@ -265,7 +301,7 @@ export async function runArtisan(
             case 'crafting': {
                 const {
                     glassSupplyOptions, inventoryRecipes, jewelleryOrderFromEnv, jewelleryRecipes, productionLevelOrder,
-                    runBankedGlass, runBlackDhideSetsSession, runFurnaceGlass, runInventoryBank,
+                    runBankedGlass, runBankedTanning, runBlackDhideSetsSession, runFurnaceGlass, runInventoryBank,
                     runJewellery, runJewelleryOrder, runLegacyCraftJewelryCli, runProgressiveProduction,
                     runSoftenClay, runSpinBowstrings, tanInventory,
                 } = await import('./crafting');
@@ -322,7 +358,13 @@ export async function runArtisan(
                         return { ok: r.ok, summary: `made=${(r as any).made ?? 0}`, ticks: r.ticks, produced: Number((r as any).made ?? 0), failure: r.ok ? undefined : r.failure };
                     }
                     case 'tanning': {
-                        const r = await tanInventory(s, cfg.args[0] as TanKind, Number(cfg.args[1] ?? 1), Number(cfg.args[2] ?? 80), halted);
+                        const kind = (cfg.args[0] ?? setting('TAN_KIND', 'black')) as TanKind;
+                        const banked = setting('TAN_BANKED') === '1';
+                        const qty = Number(cfg.args[1] ?? setting('MAX_MAKE', setting('TARGET_COUNT', setting('BATCH_UNITS', banked ? '27' : '1'))));
+                        const cap = Number(cfg.args[2] ?? setting('CAP', banked ? '1500' : '80'));
+                        const r = banked
+                            ? await runBankedTanning(s, kind, qty, cap, halted, cfg.deps)
+                            : await tanInventory(s, kind, qty, cap, halted);
                         return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.detail };
                     }
                     case 'black-dhide-sets': {
@@ -544,6 +586,9 @@ export async function runArtisanCli(account: string, rawCfg: ArtisanConfig): Pro
         case 'smithing':
             return await runLegacyExitCode(async () => (await import('./smithing')).runSmithingCli(cfg.method, account, cfg.args, env));
         case 'crafting':
+            if (cfg.method === 'tanning') {
+                return await runLegacyExitCode(async () => (await import('./crafting-production')).runTanningCli(account, cfg.args, env, cfg.deps));
+            }
             return await runLegacyExitCode(async () => (await import('./crafting')).runCraftingCli(cfg.method, account, cfg.args, env, cfg.deps));
         case 'herblore':
             return await runLegacyExitCode(async () => (await import('./herblore')).runHerbloreCli(cfg.method, account, cfg.args, env));

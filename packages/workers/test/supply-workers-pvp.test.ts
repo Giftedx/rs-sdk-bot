@@ -312,8 +312,8 @@ describe('Runecraft PvP altars, nearest banks, and Entrana safety', () => {
         expect(LAW_ALTAR).toMatchObject({ name: 'law', rune: 563, talisman: 1458, level: 54, portal: 2472 });
         expect(NATURE_ALTAR).toMatchObject({ name: 'nature', rune: 561, talisman: 1462, level: 44, portal: 2473 });
         expect(chooseRuneAltar(54, new Set([1458]), 'law').altar?.name).toBe('law');
-        // Nature routes through the dedicated Shilo Village runner (shilo.ts), not solo bank-craft.
-        expect(() => chooseRuneAltar(44, new Set([1462]), 'nature')).toThrow('unknown rune altar');
+        expect(chooseRuneAltar(44, new Set([1462]), 'nature').altar?.name).toBe('nature');
+        expect(() => chooseRuneAltar(44, new Set([1462]), 'death')).toThrow('unknown rune altar');
         expect(ruinTarget(LAW_ALTAR).q.id).toBe(2459);
         expect(ruinTarget(NATURE_ALTAR).q.id).toBe(2460);
         expect(PVP_RUNE_ALTARS.map(a => a.name)).toEqual(['air', 'water', 'earth', 'fire', 'cosmic', 'nature', 'law']);

@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
 import {inventoryRecipeExp,inventoryRecipes,parseProductionCli,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from '../src/bank-artisan';
 test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
- const recipes=inventoryRecipes();expect(recipes).toHaveLength(223);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
+ const recipes=inventoryRecipes();expect(recipes).toHaveLength(226);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
  expect(recipes.slice(178).map(r=>r.name)).toEqual([
   'prepare:chicken-stew','prepare:uncooked-stew-chicken','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison',
   'strip:swamp-toad',
@@ -19,6 +19,7 @@ test('native chicken stew and weapon poison variants append without changing any
   'decant:magic_potion','decant2:magic_potion','decant31:magic_potion',
   'decant:zamorak_potion','decant2:zamorak_potion','decant31:zamorak_potion',
   'decant:restore_potion','decant2:restore_potion','decant31:restore_potion',
+  'decant:antipoison','decant2:antipoison','decant31:antipoison',
  ]);
  for(const[name,raw,product]of[['prepare:chicken-stew',1921,1999],['prepare:uncooked-stew-chicken',1997,2001]]as const){const r=recipes.find(r=>r.name===name)!;expect(r.inputs).toEqual([{id:raw===1921?2140:1997,units:1},{id:raw===1921?1921:2140,units:1}]);expect(r.level).toBe(25);const b={items:{[raw]:1,2140:1,995:37},xp:100},a={items:{[product]:1,995:37},xp:100};expect(productionEffect(r,b,a)).toBe('made');expect(productionEffect(r,b,{...a,items:{...a.items,995:38}})).toBe('invalid');}
 });
