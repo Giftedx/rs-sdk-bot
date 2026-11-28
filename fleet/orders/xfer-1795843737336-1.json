@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795843737336-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Shaftmaker",
+  "item": "Rune arrowtips",
+  "count": 63,
+  "itemId": 44,
+  "start": 1795843737336,
+  "end": 1795844637336,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
