@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795846269779-1",
  "account": "Abracadickra",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "34aaaf12-ba38-4caa-b499-e7e3b5f857e6",
- "count": 0,
- "ok": false,
- "at": 1795846377301,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795846594069,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795846579644
+ },
+ "logout": {
+  "attemptId": "1795846377309-0000018724-0000000001",
+  "at": 1795846594023,
+  "sha256": "237e092bd65d96bb84c13f30c5212bacbb81aeb847befdb14a56a56f6787a2f2"
+ },
+ "screen": true
 }

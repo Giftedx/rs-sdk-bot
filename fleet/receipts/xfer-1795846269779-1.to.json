@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795846269779-1",
+ "account": "Pocketpython",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "418fc456-bf25-4463-a0df-45093df24f54",
+ "count": 10,
+ "ok": true,
+ "at": 1795846595676,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795846594844
+ },
+ "logout": {
+  "attemptId": "1795846585726-0000006740-0000000001",
+  "at": 1795846595615,
+  "sha256": "0fa60b78a0c67431090db6b963ca3c7cace970a956974e42ae73e8c36845b6cc"
+ },
+ "screen": true
+}
