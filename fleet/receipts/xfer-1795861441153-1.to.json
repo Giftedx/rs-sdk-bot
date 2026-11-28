@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795861441153-1",
  "account": "Hocuspokeus",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 10,
  "claim": "a3348fa9-261c-4b6d-80c2-6fef6bf2d68d",
- "count": 0,
- "ok": false,
- "at": 1795861701414,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795861727982,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795861727310
+ },
+ "logout": {
+  "attemptId": "1795861701428-0000003496-0000000001",
+  "at": 1795861727975,
+  "sha256": "53d846b3129074a21f8f6d2ff2fc612ec0fead8a70a4077183c86d87b820f26d"
+ },
+ "screen": true
 }
