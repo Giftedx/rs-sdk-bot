@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795871711472-1",
  "account": "billionaire",
  "partner": "bonetopick",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 1,
  "claim": "b19cb6be-7622-400a-829a-7db744d043c3",
- "count": 0,
- "ok": false,
- "at": 1795871993699,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795872054527,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795872053604
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795872053187
+ },
+ "logout": {
+  "attemptId": "1795871993707-0000019180-0000000001",
+  "at": 1795872054445,
+  "sha256": "642fb6f0a3e4f024c6fde18aef03516c5a3ae422163e4bd54147c7244f32278c"
+ },
+ "screen": true
 }
