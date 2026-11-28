@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -374,11 +375,28 @@ test('fleetGitWindowAsync executes real git commands concurrently while keeping 
         clearInterval(interval);
     }
 
-    // Timeout enforcement on a real git subprocess (credential helper sleep via -c): must abort near budgetMs without hanging.
+    // Timeout enforcement on a real git subprocess with nested shell+bun descendants:
+    // must abort near budgetMs and leave zero surviving descendants while this process stays alive.
+    const tag = `fleet-git-timeout-${randomUUID()}`;
     const t0 = performance.now();
-    const slow = fleetGitWindowAsync(process.cwd(), 'timeout-test', 350);
-    await expect(slow(['-c', 'alias.hang=!bun -e "await Bun.sleep(10000)"', 'hang'])).rejects.toThrow(/ETIMEDOUT|timed out|unavailable or changed/);
+    const slow = fleetGitWindowAsync(process.cwd(), 'timeout-test', 1200);
+    await expect(slow(['-c', `alias.hang=!bun -e "await Bun.sleep(20000)" -- ${tag}`, 'hang'])).rejects.toThrow(/ETIMEDOUT|timed out|unavailable or changed/);
     const elapsed = performance.now() - t0;
-    expect(elapsed).toBeLessThan(4000);
+    expect(elapsed).toBeLessThan(6000);
     expect(ticks).toBeGreaterThanOrEqual(1);
-}, 20_000);
+
+    if (process.platform === 'win32') {
+        const probe = Bun.spawn(
+            ['powershell', '-NoProfile', '-Command', `@(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${tag}*' -and $_.ProcessId -ne $PID }).Count`],
+            { stdout: 'pipe', stderr: 'pipe', windowsHide: true },
+        );
+        const [code, stdout] = await Promise.all([probe.exited, new Response(probe.stdout).text()]);
+        expect(code).toBe(0);
+        expect(Number(stdout.trim())).toBe(0);
+    } else {
+        const probe = Bun.spawn(['ps', '-ax', '-o', 'args='], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        const [code, stdout] = await Promise.all([probe.exited, new Response(probe.stdout).text()]);
+        expect(code).toBe(0);
+        expect(stdout).not.toContain(tag);
+    }
+}, 25_000);

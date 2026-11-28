@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
@@ -81,26 +81,70 @@ export function fleetGitWindow(root: string, authority = 'fleet controller lease
     };
 }
 
+async function killGitTreeAsync(pid: number | undefined, killSelf: () => void): Promise<void> {
+    if (pid && Number.isSafeInteger(pid) && pid > 0) {
+        if (process.platform === 'win32') {
+            try {
+                const killer = Bun.spawn(['taskkill', '/PID', String(pid), '/T', '/F'], {
+                    stdin: 'ignore',
+                    stdout: 'ignore',
+                    stderr: 'ignore',
+                    windowsHide: true,
+                });
+                let killerTimer: ReturnType<typeof setTimeout> | undefined;
+                try {
+                    const done = await Promise.race([
+                        killer.exited.then(() => true),
+                        new Promise<boolean>(resolve => {
+                            killerTimer = setTimeout(() => resolve(false), 1500);
+                            killerTimer.unref?.();
+                        }),
+                    ]);
+                    if (!done) {
+                        try { killer.kill('SIGKILL'); } catch { /* already exited */ }
+                    }
+                } finally {
+                    if (killerTimer) clearTimeout(killerTimer);
+                }
+            } catch { /* fallback to direct kill below */ }
+        } else {
+            try { process.kill(-pid, 'SIGKILL'); } catch { /* process group already gone */ }
+        }
+    }
+    try { killSelf(); } catch { /* already exited */ }
+}
+
 async function spawnGitAsync(root: string, args: string[], { input, timeout }: { input?: string; timeout: number }): Promise<string> {
-    const proc = Bun.spawn(['git', ...args], {
+    const child = spawn('git', args, {
         cwd: root,
-        stdin: input !== undefined ? new TextEncoder().encode(input) : 'ignore',
-        stdout: 'pipe',
-        stderr: 'pipe',
+        stdio: [input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+        detached: process.platform !== 'win32',
         windowsHide: true,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
     });
-    const stdoutP = new Response(proc.stdout).text().catch(() => '');
-    const stderrP = new Response(proc.stderr).text().catch(() => '');
+    const outChunks: Buffer[] = [];
+    const errChunks: Buffer[] = [];
+    child.stdout?.on('data', chunk => { outChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); });
+    child.stderr?.on('data', chunk => { errChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)); });
+    if (input !== undefined && child.stdin) {
+        child.stdin.on('error', () => { /* ignore EPIPE if git exits before reading stdin */ });
+        child.stdin.end(input, 'utf8');
+    }
+
+    let closed = false;
     let timedOut = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const closePromise = new Promise<{ kind: 'closed'; code: number | null } | { kind: 'error'; error: Error }>(resolve => {
+        child.once('error', error => { closed = true; resolve({ kind: 'error', error }); });
+        child.once('close', code => { closed = true; resolve({ kind: 'closed', code }); });
+    });
+
     try {
         const outcome = await Promise.race([
-            proc.exited.then(code => ({ kind: 'exited' as const, code })),
+            closePromise,
             new Promise<{ kind: 'timeout' }>(resolve => {
                 timer = setTimeout(() => {
                     timedOut = true;
-                    try { proc.kill('SIGKILL'); } catch { /* already exited */ }
                     resolve({ kind: 'timeout' });
                 }, timeout);
                 timer.unref?.();
@@ -108,24 +152,36 @@ async function spawnGitAsync(root: string, args: string[], { input, timeout }: {
         ]);
         if (timer) { clearTimeout(timer); timer = undefined; }
         if (outcome.kind === 'timeout' || timedOut) {
-            try { proc.kill('SIGKILL'); } catch { /* already exited */ }
-            const [stdout, stderr] = await Promise.race([
-                Promise.all([stdoutP, stderrP]),
-                new Promise<[string, string]>(resolve => setTimeout(() => resolve(['', '']), 50)),
-            ]);
-            void proc.stdout.cancel?.().catch(() => {});
-            void proc.stderr.cancel?.().catch(() => {});
+            await killGitTreeAsync(child.pid, () => { child.kill('SIGKILL'); });
+            let drainTimer: ReturnType<typeof setTimeout> | undefined;
+            try {
+                await Promise.race([
+                    closePromise.then(() => undefined),
+                    new Promise<void>(resolve => {
+                        drainTimer = setTimeout(resolve, 250);
+                        drainTimer.unref?.();
+                    }),
+                ]);
+            } finally {
+                if (drainTimer) clearTimeout(drainTimer);
+            }
+            child.stdout?.destroy();
+            child.stderr?.destroy();
+            const stdout = Buffer.concat(outChunks).toString('utf8');
+            const stderr = Buffer.concat(errChunks).toString('utf8');
             throw Object.assign(Error('spawn git ETIMEDOUT'), { code: 'ETIMEDOUT', stdout, stderr });
         }
-        const [stdout, stderr] = await Promise.all([stdoutP, stderrP]);
+        if (outcome.kind === 'error') throw outcome.error;
+        const stdout = Buffer.concat(outChunks).toString('utf8');
+        const stderr = Buffer.concat(errChunks).toString('utf8');
         if (outcome.code !== 0) {
             throw Object.assign(Error(stderr.trim() || `git exited with code ${outcome.code}`), { code: outcome.code, stdout, stderr });
         }
         return stdout;
     } finally {
         if (timer) clearTimeout(timer);
-        if (proc.exitCode === null) {
-            try { proc.kill('SIGKILL'); } catch { /* ignore */ }
+        if (!closed && child.exitCode === null && child.signalCode === null) {
+            await killGitTreeAsync(child.pid, () => { child.kill('SIGKILL'); });
         }
     }
 }
