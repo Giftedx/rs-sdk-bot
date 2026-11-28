@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795846164204-1",
  "account": "BackdoorMan",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 2,
  "claim": "ab554052-ae60-42a2-bb70-e39d5f2e52a6",
- "count": 0,
- "ok": false,
- "at": 1795846475280,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795846492834,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795846492039
+ },
+ "logout": {
+  "attemptId": "1795846475308-0000026088-0000000001",
+  "at": 1795846492779,
+  "sha256": "63a2bf7499bfc998f6ee4ebc0c087ec527e096577ff79bcf83f651077716227d"
+ },
+ "screen": true
 }

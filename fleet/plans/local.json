@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795846486105,
+ "at": 1795846503846,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -456,7 +456,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1662 -- thieving knights-stable"
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1663 -- thieving knights-stable"
    ],
    "env": {
     "ROUNDS": "1"
