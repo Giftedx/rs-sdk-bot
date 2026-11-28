@@ -53,10 +53,12 @@ try {
     const tele = (label: string, comp: string, x: number, z: number) => q.teleport(label, comp, x, z);
     const named = (re: RegExp, near?: { x: number; z: number }, r = 6) => q.findLoc(l => re.test(l.name) && (!near || Math.max(Math.abs(l.x - near.x), Math.abs(l.z - near.z)) <= r));
     const prayers = (): any => q.st()?.prayers;
+    const prayerPoints = (): number => prayers()?.prayerPoints ?? 0;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const setPfm = async (on: boolean): Promise<void> => {
         if (pfmOn() === on) return;
-        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+        if (on && ((q.s.sdk.getSkill('Prayer')?.baseLevel ?? 0) < 43 || prayerPoints() <= 0)) return;
+        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on || (on && prayerPoints() <= 0), 3, 3);
     };
     // A dialog option chooser: each pattern is chosen once, highest priority first among the options shown.
     const picker = (prio: RegExp[]): RegExp => {

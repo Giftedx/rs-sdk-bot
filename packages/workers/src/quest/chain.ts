@@ -45,6 +45,8 @@ export const QUEST_SKILLS: Record<string, Record<string, number>> = {
     eadgar: { herblore: 31, prayer: 40 },
     hauntedmine: { agility: 15, crafting: 35, prayer: 40 },
     crest: { mining: 40, crafting: 40, smithing: 40, magic: 59 },
+    hero: { cooking: 53, fishing: 53, herblore: 25, mining: 50 },
+    magearena: { magic: 60, prayer: 37 },
     tbwt: { agility: 15, cooking: 30, fishing: 5, firemaking: 30 },
     misc: { herblore: 35, woodcutting: 45 },
 };

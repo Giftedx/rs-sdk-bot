@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Step } from '../../../core/src/chain-step';
 import { QUEST_NAMES, questShortfall } from './chain';
+import { QUEST_POINTS_REQUIRED } from './resume';
 import { REPO_ROOT, type SweepApiOptions } from './types';
 
 let sweepPlanMod: typeof import('./sweep-plan') | undefined;
@@ -101,6 +102,7 @@ export function assessQuestReadiness(
     ownedItems: Readonly<Record<number, number>>,
     completedQuests: ReadonlySet<string> = new Set(),
     skills?: Readonly<Record<string, number>>,
+    questPoints?: number,
 ) {
     const script = resolveQuestScript(questInput);
     const slug = script.slice(script.lastIndexOf('/') + 1).replace(/^quest-/, '').replace(/\.ts$/, '');
@@ -130,6 +132,10 @@ export function assessQuestReadiness(
     }
     const shortfalls = questShortfall(slug, observedSkills);
     for (let i = 0; i < shortfalls.length; i++) blockers.push(`skill ${shortfalls[i]!}`);
+    const qpNeed = QUEST_POINTS_REQUIRED[slug];
+    if (qpNeed !== undefined && questPoints !== undefined && questPoints < qpNeed) {
+        blockers.push(`quest points ${questPoints}/${qpNeed}`);
+    }
     for (const q of QUEST_PREREQUISITES[slug] ?? []) {
         if (!isComplete(q)) blockers.push(`quest ${QUEST_NAMES[q] ?? q} incomplete or unknown`);
     }

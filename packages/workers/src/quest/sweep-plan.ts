@@ -45,8 +45,17 @@ export function presetFor(quest: string): SaveConfig & { position: Tile } {
 export const FOOD = new Set([329, 333, 361, 365, 373, 379, 385, 1891, 1893, 1895, 2309, 554, 555, 556, 557, 563]);
 export const COINS = 995;
 // herogloves-owned: the fire and air runes are the Fire Blasts at the Ice Queen, and the law rune with 5 air is the Camelot
-// Teleport out of the lair.
-export const QUEST_ITEMS_AMONG_FOOD: Record<string, number[]> = { merlin: [2309], 'herogloves-owned': [554, 556, 563] };
+// Teleport out of the lair. death: Tenzing requires 10 bread and 10 trout. crest: Caleb requires the cooked fish and Chronozon
+// plus teleports require the blast and teleport runes. magearena/tbwt/hero: combat and teleport runes required by the scripts.
+export const QUEST_ITEMS_AMONG_FOOD: Record<string, number[]> = {
+    merlin: [2309],
+    'herogloves-owned': [554, 556, 563],
+    death: [2309, 333],
+    crest: [373, 365, 361, 329, 554, 555, 556, 557, 563],
+    magearena: [554, 556],
+    tbwt: [554, 556],
+    hero: [554, 555, 556, 563],
+};
 export const OPTIONAL = new Set([2446]);
 export const QUEST_OPTIONAL: Record<string, number[]> = { druidspirit: [2952] };
 // Items of OPTIONAL that a quest's script cannot do without: Family Crest uses an antipoison on Johnathon
@@ -258,6 +267,7 @@ export const QUEST_KEEP: Record<string, number[]> = {
     sheepherder: [278, 279, 284, 285, 280, 281, 282, 283],
     hunt: [431, 432, 433],
     druidspirit: [2952],
+    zanaris: [771, 772],
 };
 
 export const STURDY = 90;
@@ -309,6 +319,7 @@ export const fightMeals = (quest: string, maxHp: number): number => {
 // Kilron's ladder on foot; a failed walk there left accounts at 2546,3325 with no route out.
 export const QUEST_EXIT_RUNES: Record<string, { magic: number; items: readonly Item[] }> = {
     biohazard: { magic: 51, items: [{ id: 563, count: 2 }, { id: 555, count: 2 }] },
+    zanaris: { magic: 31, items: [{ id: 563, count: 1 }, { id: 556, count: 3 }, { id: 557, count: 1 }] },
 };
 // Moves the exit runes from the optional food plan to the required base plan when the Magic level casts the exit. A rune
 // in neither plan (a resume past the exit spent it) stays out.
@@ -365,8 +376,9 @@ export const buildPack = (quest: string, level: (skill: string) => number): Item
     level('Defence') < 40 && level('Ranged') >= 50 && level('Ranged') > level('Attack') ? BUILD_PACK[quest] ?? [] : [];
 
 // herogloves-owned: the Ice Queen falls to Fire Blast, and worn melee armour lowers Magic attack (a rune full helm,
-// platebody, platelegs and kiteshield total -65, knowledge/gear.json).
-export const BARE = new Set(['zanaris', 'grail', 'viking', 'ikov', 'herogloves-owned']);
+// platebody, platelegs and kiteshield total -65, knowledge/gear.json). magearena: Kolodion and the arena portal refuse
+// any worn or carried armour or weapons (area_mage_arena/scripts/mage_arena.rs2:100-138).
+export const BARE = new Set(['zanaris', 'grail', 'viking', 'ikov', 'herogloves-owned', 'magearena']);
 
 export function ikovExcessMeals(
     pack: readonly Item[],
@@ -407,6 +419,43 @@ export function bareDeposits(
         if (id !== COINS && !need.has(id) && !food.has(id) && !MEAL_SET.has(id) && !keepsItem(quest, id, tradeable)) {
             out.push(id);
         }
+    }
+    return out;
+}
+
+// Pack item ids to deposit before unequipping worn gear for a BARE quest when the pack lacks enough free slots.
+// Meals and food are deposited first because the sweep's plan/mealPlan immediately re-withdraws exact quantities right after.
+export function bareRoomDeposits(pack: readonly Item[], freeNeeded: number): number[] {
+    let free = 28 - pack.length;
+    if (free >= freeNeeded) return [];
+    const slotCounts = new Map<number, number>();
+    for (let i = 0; i < pack.length; i++) {
+        const id = pack[i]!.id;
+        slotCounts.set(id, (slotCounts.get(id) ?? 0) + 1);
+    }
+    const order = [...slotCounts.entries()].sort(([idA, slotsA], [idB, slotsB]) => {
+        const rank = (id: number) => (MEAL_SET.has(id) ? 0 : id === COINS ? 3 : STACKS.has(id) ? 2 : 1);
+        return rank(idA) - rank(idB) || slotsB - slotsA;
+    });
+    const out: number[] = [];
+    for (const [id, slots] of order) {
+        if (free >= freeNeeded) break;
+        out.push(id);
+        free += slots;
+    }
+    return out;
+}
+
+// Worn item ids that a BARE pass unequipped and must deposit back into the bank, including untradeable armour/capes
+// (for example Klank's gauntlets or god capes) that bareDeposits would otherwise retain in the pack.
+export function bareWornDeposits(quest: string, removedWornIds: Iterable<number>, need: ReadonlyMap<number, number>): number[] {
+    const keep = new Set(QUEST_KEEP[quest] ?? []);
+    const out: number[] = [];
+    const seen = new Set<number>();
+    for (const id of removedWornIds) {
+        if (seen.has(id) || need.has(id) || keep.has(id)) continue;
+        seen.add(id);
+        out.push(id);
     }
     return out;
 }
@@ -671,9 +720,11 @@ export const SARIM_NORTH: Pt[] = [
 export const SWEEP_PLAN_BUDGET_MS = 15_000;
 export const SEERS_ALTAR = { id: 409, x: 2694, z: 3462, level: 0, stand: { x: 2695, z: 3462, level: 0 } } as const;
 export const PRAYER_QUESTS: Record<string, number> = {
+    dragon: 43,
     merlin: 30,
     grail: 60,
     ikov: 37,
+    magearena: 37,
     hauntedmine: 40,
     horror: 40,
     eadgar: 40,

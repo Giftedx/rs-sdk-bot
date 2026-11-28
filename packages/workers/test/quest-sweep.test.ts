@@ -2243,7 +2243,7 @@ test('the shop money of a pass comes on top of the coins the quest itself asks f
 import {PRAYER_QUESTS,SEERS_ALTAR,prayerShort,BARE as BARE_QUESTS} from '../src/quest/sweep';
 test('an account short of prayer points prays at the Seers altar before the Camelot quests, and Holy Grail goes bare',()=>{
  // Practice: with no points Merlin's Crystal ended `step protect from melee on` in Keep Le Faye.
- expect(Object.keys(PRAYER_QUESTS).sort()).toEqual(['eadgar','grail','hauntedmine','horror','ikov','merlin','troll','trolllove']);
+ expect(Object.keys(PRAYER_QUESTS).sort()).toEqual(['dragon','eadgar','grail','hauntedmine','horror','ikov','magearena','merlin','troll','trolllove']);
  expect(prayerShort(0,77,PRAYER_QUESTS.merlin!)).toBe(true);
  expect(prayerShort(PRAYER_QUESTS.merlin!-1,77,PRAYER_QUESTS.merlin!)).toBe(true);
  expect(prayerShort(PRAYER_QUESTS.merlin!,77,PRAYER_QUESTS.merlin!)).toBe(false);

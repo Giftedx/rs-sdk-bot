@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, dragonFrom, druidJournalStage, dragonHeld, dragonJournalStage, dragonSpent, grailFrom, grailJournalStage, ikovJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, deathFrom, deathHeld, deathJournalStage, deathSpent, dragonFrom, druidJournalStage, dragonHeld, dragonJournalStage, dragonSpent, grailFrom, grailJournalStage, ikovJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
 
 const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
@@ -522,5 +522,97 @@ describe('dragon', () => {
             expect(src).toContain('[if_button,questlist:dragon]');
             expect(src).toContain('~quest_journal("Dragon Slayer", $text);');
         });
+    });
+});
+
+describe('death plateau resume', () => {
+    const DEATH_JOURNAL = `${QUESTS}/quest_death/scripts/death_journal.rs2`;
+
+    // Builds journal body matching death_journal.rs2 for any (%death_equiproom, ~death_get_map) pair.
+    function renderDeathJournal(equip: number, map: number, spikedHeld = false): string {
+        if (equip === 80) {
+            return '@str@I offered to help Denulth|@red@QUEST COMPLETE!';
+        }
+        if (equip === 0) {
+            return '@dbl@I can start this quest by speaking to @dre@Denulth@dbl@ who is in his|tent at the @dre@Imperial Guard camp@dbl@ in @dre@Burthorpe';
+        }
+        let text = map === 8
+            ? '@str@I have found another way up Death Plateau for Denulth.'
+            : '@dbl@I have offered to help @dre@Denulth@dbl@ by finding @dre@another way@dbl@ up|@dre@Death Plateau.';
+        text += equip < 70
+            ? '@dbl@ I also need to find the @dre@combination@dbl@ to the|@dre@equipment room@dbl@ and @dre@unlock@dbl@ the door.|'
+            : '|@str@I have found the combination to the equipment room and|@str@unlocked the door.|';
+        if (equip >= 40) text += "|@str@The equipment room guard is staying at the local inn, the @str@Toad and Chicken. The guard wouldn't talk to me!|";
+        if (equip === 40) text += '@dre@Eohric@dbl@ says to buy the @dre@guard@dbl@ a @dre@drink';
+        else if (equip >= 50) text += '@str@I bought the guard a drink and he seemed more helpful.';
+        if (equip === 30) text += "|@str@The equipment room guard is staying at the local inn, the Toad @str@and Chicken. The guard wouldn't talk to me!";
+        else if (equip === 20) text += '|@dre@Eohric@dbl@ said that the @dre@equipment room guard@dbl@ is staying at @dbl@the local inn, the @dre@Toad and Chicken';
+        if (equip >= 55) text += ' I @str@gambled with the guard until he ran out of money. He wrote @str@me an IOU.|';
+        if (equip >= 60) text += '|@str@It turned out the IOU was written on the back of the|@str@combination!';
+        if (equip >= 70) text += ' I put the stone balls in the right places on the|@str@stone mechanism and unlocked the door.';
+        if (map >= 6) {
+            text += '||@str@I found the sherpa\'s house. I gave Tenzing the ten loaves|@str@of bread, ten cooked trout and the Spiked boots.';
+            if (map === 8) text += 'Tenzing|@str@has given me a map of the secret way. I checked the @str@secret way|@str@and it is safe for the Imperial Guard to use.';
+            else if (map === 7) text += 'Tenzing|@str@has given me a map of the secret way.|@dbl@I need to @dre@check@dbl@ that the @dre@secret way@dbl@ is @dre@safe@dbl@ for the @dre@Imperial|Guard@dbl@ to use.';
+            text += '||@str@I have given Dunstan the certificate to prove that his son|@str@has been signed up for the Imperial Guard. Dunstan|@str@made me the Spiked boots.';
+            if (map === 8 && equip === 70) text += '||@dbl@I should go and tell @dre@Denulth@dbl@ I\'ve completed my mission.';
+            return text;
+        }
+        if (map >= 2) {
+            text += "||@str@I found the sherpa's house.||@dre@Tenzing@dbl@ will show me a @dre@secret way@dbl@ up Death Plateau if I get|him some items:";
+            if (spikedHeld) {
+                text += '|@str@I have given Dunstan the certificate to prove that his son|@str@has been signed up for the Imperial Guard. Dunstan|@str@made me the Spiked boots.';
+                return text;
+            }
+            text += '||@dre@Tenzing@dbl@ gave me his @dre@climbing boots@dbl@, I need to take them to|@dre@Dunstan@dbl@ in @dre@Burthorpe@dbl@ for the @dre@spikes';
+            if (map === 5) {
+                text += '||@str@I have given Dunstan the certificate to prove that his son|@str@has been signed up for the Imperial Guard.|@dbl@I will need an @dre@Iron bar@dbl@ for the boots';
+                return text;
+            }
+            if (map >= 3) text += '||@dre@Dunstan@dbl@ will help me if I get his @dre@son signed up@dbl@ for the @dre@Imperial Guard@dbl@. I will need an @dre@Iron bar@dbl@ for the boots';
+            if (map === 4) text += "||@dre@Denulth@dbl@ gave me a @dre@certificate@dbl@ to prove that Dunstan's son|has been signed up for the Imperial Guard.";
+        } else if (map === 1) {
+            text += '||@dre@Saba@dbl@ says that there is a @dre@sherpa@dbl@ living @dre@nearby@dbl@ that may|know another way up Death Plateau.';
+        }
+        return text;
+    }
+
+    test('parses every (%death_equiproom, ~death_get_map) combination accurately', () => {
+        expect(deathJournalStage(renderDeathJournal(0, 0))).toBe(0);
+        expect(deathJournalStage(renderDeathJournal(80, 8))).toBe(800);
+        for (const equip of [10, 20, 30, 40, 50, 55, 60, 70]) {
+            for (const map of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
+                expect(deathJournalStage(renderDeathJournal(equip, map))).toBe(equip * 10 + map);
+            }
+        }
+        expect(deathJournalStage(renderDeathJournal(70, 5, true))).toBe(705);
+        expect(deathJournalStage('Death Plateau')).toBeUndefined();
+    });
+
+    test('maps valid stages, spent items, held items, and sweep entry cleanly', () => {
+        expect(deathFrom(100)).toBe(100);
+        expect(deathFrom(708)).toBe(708);
+        expect(deathFrom(800)).toBeUndefined();
+        expect(deathFrom(15)).toBeUndefined();
+        expect(deathFrom(109)).toBeUndefined();
+
+        expect(deathSpent(100)).toEqual([]);
+        expect(deathSpent(500)).toEqual([1905]);
+        expect(deathSpent(550)).toEqual([1905, 2064, 995]);
+        expect(deathSpent(706)).toEqual([1905, 2064, 995, 2351, 2309, 333]);
+
+        expect(deathHeld(550)).toEqual([3103]);
+        expect(deathHeld(704)).toEqual([3102, 3105, 3107, 3114]);
+        expect(deathHeld(708)).toEqual([3102, 3104]);
+
+        expect(questEntry('death', 'Death Plateau', 'started')).toEqual({ kind: 'resume', resume: QUEST_RESUME.death! });
+        expect(resumeStart(QUEST_RESUME.death!, 'Death Plateau', 400)).toEqual({ kind: 'resume', from: 400, spent: [], held: [], extra: [] });
+        expect(resumeStart(QUEST_RESUME.death!, 'Death Plateau', 800)).toEqual({ kind: 'refuse', reason: 'refused: Death Plateau journal stage 800 is complete' });
+    });
+
+    test('matches the server journal button and title', () => {
+        const src = readFileSync(join(REPO_ROOT, DEATH_JOURNAL), 'utf8');
+        expect(src).toContain('[if_button,questlist:death]');
+        expect(src).toContain('~quest_journal("Death Plateau", $text);');
     });
 });
