@@ -47,11 +47,15 @@ test('the service is used only with the same commit and route data and a live pi
     expect(usableService(null, 'abc', 'k', () => true)).toBeNull();
 });
 
-test('live swarm workers use the service unless ROUTE_SERVICE=0', () => {
+test('live swarm workers use the service unless ROUTE_SERVICE=0, and hosted pool contexts stay off-thread', async () => {
+    const { offThreadRouteWanted } = await import('../src/route-query');
+    const { executionContext } = await import('../../../vendor/rs-sdk/sdk/execution-context');
     expect(serviceWanted({})).toBe(false);
     expect(serviceWanted({ SWARM_LEASE_HOLDER: 'h' })).toBe(true);
     expect(serviceWanted({ SWARM_LEASE_HOLDER: 'h', ROUTE_SERVICE: '0' })).toBe(false);
     expect(serviceWanted({ ROUTE_SERVICE: '1' })).toBe(true);
+    expect(offThreadRouteWanted({ ROUTE_SERVICE: '0' })).toBe(false);
+    expect(executionContext.run({ signal: new AbortController().signal, log: () => {} }, () => offThreadRouteWanted({ ROUTE_SERVICE: '0' }))).toBe(true);
 });
 
 test('the pool sends a request to the worker with fewer in flight and replaces a failed worker', async () => {
@@ -268,11 +272,37 @@ test('remote sendFindPath, sessionWalker, interactionApproach and routeHarm use 
         assert.deepEqual(seen, ['sdk-find-path', 'walk-plan', 'walk-danger', 'approach', 'route-exposure']);
         assert.equal(rsmod.__wasm, undefined, 'remote queries must never initialize local rsmod WASM');
 
-        // Fallback when service goes down:
+        // Fallback when service goes down: ROUTE_SERVICE=1 must fall back to off-thread route-worker.ts, never sync local WASM.
+        const workers = [];
+        globalThis.Worker = class {
+            constructor() { workers.push(this); this.requests = []; }
+            ref() {} unref() {} terminate() {}
+            postMessage(r) {
+                this.requests.push(r);
+                let result = null;
+                if (r.kind === 'sdk-find-path') result = { success: true, waypoints: [{ x: r.to.x, z: r.to.z, level: 0 }], reachedDestination: true };
+                else if (r.kind === 'walk-plan') result = [{ x: r.to.x, z: r.to.z }];
+                else if (r.kind === 'walk-danger') result = { verdict: 'clear', start: false, summary: { zone: '-', damage: 0, need: 0, needHeal: 0, eatFirst: 0, floorLine: 0, tiles: 0, zones: [] } };
+                else if (r.kind === 'approach') result = { x: 3062, z: 3376, level: 0 };
+                else if (r.kind === 'route-exposure') result = { tiles: 0, damage: 0, maxHit: 0, burst: 0, zones: [] };
+                queueMicrotask(() => this.onmessage({ data: { id: r.id, result } }));
+            }
+        };
         server.stop(true);
         const fallback = await sdk.sendFindPath(3224, 3218, 500);
-        assert.equal(localCalls, 1);
+        assert.equal(localCalls, 0, 'serviceWanted fallback must never invoke synchronous local findPath');
         assert.equal(fallback.waypoints[0].x, 3224);
+        assert.deepEqual(await deps.planAsync(0, { x: 3222, z: 3218 }, { x: 3236, z: 3221 }), [{ x: 3236, z: 3221 }]);
+        assert.equal((await deps.dangerAsync(0, [{ x: 2840, z: 3497 }])).verdict, 'clear');
+        assert.deepEqual(await interactionApproach(sdk, { x: 3059, z: 3376, level: 0 }, { id: 1733, shape: 10, angle: 1, width: 2, height: 3, blockAccessFlags: 14 }), { x: 3062, z: 3376, level: 0 });
+        assert.equal((await routeHarm({ sdk, tick: () => 0, onTick: () => () => {}, bot: { walkTo: async () => ({}), interactLoc: async () => ({}) } },
+            { x: 2809, z: 3436, level: 0 }, { x: 2895, z: 3445, level: 0 },
+            { skills: { hitpoints: 10 }, varps: {}, items: [] },
+            { cost: 50, legs: [{ kind: 'walk', to: { x: 2895, z: 3445, level: 0 } }] },
+            async () => null)).action, 'clear');
+        assert.equal(workers.length, 1);
+        assert.deepEqual(workers[0].requests.map(r => r.kind), ['sdk-find-path', 'walk-plan', 'walk-danger', 'approach', 'route-exposure']);
+        assert.equal(rsmod.__wasm, undefined, 'off-thread fallback must never initialize local rsmod WASM on main thread');
         process.exit(0);
     `;
     const child = Bun.spawn([process.execPath, '-e', probe], {
@@ -345,3 +375,110 @@ test('workerPool delays overflow worker creation for short bursts, spawns on slo
         expect(pool.activeWorkers()).toBe(0);
     } finally { pool.stop(); }
 });
+
+test('serveRoutes isolates /query onto its own worker pool so slow /plan searches never head-of-line block queries', async () => {
+    FakeWorker.made = [];
+    const dir = mkdtempSync(join(tmpdir(), 'route-service-iso-')), file = join(dir, 'route-service.json');
+    const s = serveRoutes({ workers: 2, queryWorkers: 1, file, makeWorker: make });
+    try {
+        const base = `http://127.0.0.1:${s.info.port}`;
+        // Saturate both /plan workers with slow searches that have not replied yet.
+        const p1 = fetch(`${base}/plan`, { method: 'POST', body: JSON.stringify(req) }).then(r => r.json());
+        const p2 = fetch(`${base}/plan`, { method: 'POST', body: JSON.stringify(req) }).then(r => r.json());
+        while (FakeWorker.made.length < 2 || !FakeWorker.made[0]?.requests.length || !FakeWorker.made[1]?.requests.length) await Bun.sleep(5);
+
+        // Concurrent /query must dispatch immediately to its dedicated query worker without waiting for p1 or p2.
+        const q = { kind: 'walk-plan' as const, level: 0, from: { x: 2628, z: 9859 }, to: { x: 2659, z: 9892 }, blocks: [], acct: {} as any, profile: {} as any };
+        const qPending = fetch(`${base}/query`, { method: 'POST', body: JSON.stringify(q) }).then(r => r.json());
+        while (FakeWorker.made.length < 3 || !FakeWorker.made[2]?.requests.length) await Bun.sleep(5);
+        const qw = FakeWorker.made[2]!;
+        expect(qw.requests[0].kind).toBe('walk-plan');
+        qw.reply(qw.requests[0].id, { result: [{ x: 2659, z: 9892 }] });
+        expect(await qPending).toEqual({ result: [{ x: 2659, z: 9892 }] });
+
+        // Plans are still in flight until their workers finish.
+        const health = await (await fetch(`${base}/health`)).json() as { planInFlight: number; queryInFlight: number };
+        expect(health.planInFlight).toBe(2);
+        expect(health.queryInFlight).toBe(0);
+
+        FakeWorker.made[0]!.reply(FakeWorker.made[0]!.requests[0].id, { plan: { cost: 10, legs: [] } });
+        FakeWorker.made[1]!.reply(FakeWorker.made[1]!.requests[0].id, { plan: { cost: 20, legs: [] } });
+        expect(await p1).toEqual({ plan: { cost: 10, legs: [] } });
+        expect(await p2).toEqual({ plan: { cost: 20, legs: [] } });
+    } finally {
+        s.stop('test');
+        expect(FakeWorker.made.every(w => w.terminated)).toBe(true);
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('planTrip passes admissible maxCost bounds and projects underground z>=6400 starts when ranking surface banks', async () => {
+    const { planTrip } = await import('../src/trip');
+    const seen: { to: { x: number; z: number }; maxCost?: number }[] = [];
+    const world: any = {
+        routeGain: () => true,
+        route(from: { x: number; z: number; level: number }, to: { x: number; z: number; level: number }, _acct: any, opts?: { maxCost?: number }) {
+            seen.push({ to: { x: to.x, z: to.z }, maxCost: opts?.maxCost });
+            if (from.x === 2628 && from.z === 9859 && to.x === 2619 && to.z === 3332) {
+                return { ok: true, cost: 283, legs: [{ kind: 'walk', to }] };
+            }
+            return { ok: false, reason: 'no_route' };
+        },
+    };
+    const banks = [
+        { x: 2539, z: 4716, level: 0 }, // Mage Arena (highest surface z, far in projected distance)
+        { x: 2725, z: 3493, level: 0 }, // Seers (nearest to projected 2628,3459)
+        { x: 2619, z: 3332, level: 0 }, // Ardougne North
+    ];
+    const plan = planTrip(
+        world,
+        { x: 2628, z: 9859, level: 0 },
+        { x: 2619, z: 3332, level: 0 },
+        { skills: {}, varps: {}, items: ['ikov_shinykey'], coins: 0 },
+        { coins: 50000, items: {} },
+        banks,
+        2,
+    );
+    expect(plan).toMatchObject({ cost: 283 });
+    expect(plan?.bank).toBeUndefined();
+    // Seers bank (2725,3493) is ranked ahead of Mage Arena (2539,4716), and every bank probe receives maxCost = 283 - 10.
+    expect(seen[1]).toEqual({ to: { x: 2725, z: 3493 }, maxCost: 273 });
+    expect(seen[2]).toEqual({ to: { x: 2619, z: 3332 }, maxCost: 273 });
+    expect(seen[3]).toEqual({ to: { x: 2539, z: 4716 }, maxCost: 273 });
+});
+
+test('Ikov cellar 2628,9859 -> Ardougne bank 2619,3332 with bank stock plans fast without 45s budget stall', async () => {
+    const { createHash } = await import('node:crypto');
+    const { loadPathfinding } = await import('../src/pathcache');
+    const { createWorld, rsPathLength } = await import('../src/world');
+    const { planTrip } = await import('../src/trip');
+    await loadPathfinding();
+    const mem = new Map<string, number | null>();
+    const pathLength = await rsPathLength({
+        legs: {
+            has: k => mem.has(k),
+            get: k => mem.get(k),
+            set: (k, v) => { mem.set(k, v); },
+            save: () => {},
+            close: () => {},
+            hash: v => createHash('sha1').update(JSON.stringify(v)).digest('hex').slice(0, 12),
+        },
+    });
+    const world = createWorld({ pathLength });
+    const started = performance.now();
+    const plan = planTrip(
+        world,
+        { x: 2628, z: 9859, level: 0 },
+        { x: 2619, z: 3332, level: 0 },
+        { skills: { hitpoints: 80, attack: 70, strength: 70, defence: 70 }, varps: {}, items: ['ikov_shinykey'], counts: { ikov_shinykey: 1 }, coins: 0 },
+        { coins: 50000, items: {} },
+        undefined,
+        undefined,
+        { deadline: started + 20_000 },
+    );
+    const elapsedMs = performance.now() - started;
+    expect(plan).not.toBeNull();
+    expect(plan!.cost).toBe(283);
+    expect(plan!.bank).toBeUndefined();
+    expect(elapsedMs).toBeLessThan(15_000);
+}, 30_000);

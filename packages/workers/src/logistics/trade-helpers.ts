@@ -22,6 +22,7 @@ import {
     type TradeRole,
 } from '../../../core/src/fleet-trade-settlement';
 import type { Session } from '../../../core/src/inprocess';
+import { ledgerPhaseOf, setLedgerPhase } from '../../../core/src/ledger';
 import { laterProcessHolds, processStartTimes } from '../../../core/src/proc';
 import { liveLogoutRef } from '../../../core/src/session-admission';
 import { fleetStateFile } from '../../../core/src/practice-paths';
@@ -54,6 +55,16 @@ export {
     type TradeReceipt,
     type TradeRole,
 };
+
+export async function withTradeWaitPhase<T>(s: object, fn: () => Promise<T>): Promise<T> {
+    const prev = ledgerPhaseOf(s);
+    setLedgerPhase(s, 'trade-wait');
+    try {
+        return await fn();
+    } finally {
+        setLedgerPhase(s, prev);
+    }
+}
 
 // --- Coin / Fan-out / Fan-in / Note-Courier Preflight Helpers ---
 
@@ -623,7 +634,7 @@ export async function serviceCourierFunding(s: Session, courier: string, server:
         writeFundingReceipt(p.dir, { ...base, state: 'prepared', at: Date.now() });
         const before = coinCount(s);
         dispatched = true;
-        const result = await s.bot.serveTrades({ from: new RegExp(`^${courier}$`, 'i'), give: [{ item: /^coins$/i, amount: FUND_AMOUNT }], maxTrades: 1, timeout: 60000 });
+        const result = await withTradeWaitPhase(s, () => s.bot.serveTrades({ from: new RegExp(`^${courier}$`, 'i'), give: [{ item: /^coins$/i, amount: FUND_AMOUNT }], maxTrades: 1, timeout: 60000 }));
         const confirmed = result.trades.some(t => t.success && t.gave.filter(i => /^coins$/i.test(i.name)).reduce((n, i) => n + i.count, 0) === FUND_AMOUNT);
         if (confirmed) await waitUntil(s, () => coinCount(s) === before - FUND_AMOUNT, { timeoutTicks: 8 });
         const debit = before - coinCount(s);
@@ -667,12 +678,12 @@ export async function requestCourierFunding(s: Session, funder: string, server: 
             && Math.max(Math.abs(p.x - FUND_BANK.x), Math.abs(p.z - FUND_BANK.z)) <= 6);
         const progress = () => { try { return readFundingJSON(fundingReceiptPath(p.dir, token)) as FundingReceipt; } catch { return undefined; } };
         const terminal = () => ['paid', 'declined', 'failed', 'unknown'].includes(progress()?.state ?? '');
-        await waitUntil(s, () => !!near() && progress()?.state === 'prepared' || terminal(), { timeoutTicks: 150 });
+        await withTradeWaitPhase(s, () => waitUntil(s, () => !!near() && progress()?.state === 'prepared' || terminal(), { timeoutTicks: 150 }));
         let r: FundingReceipt | undefined;
         try { r = readFundingJSON(fundingReceiptPath(p.dir, token)); } catch { /* ignore */ }
         if (r && ['declined', 'failed', 'unknown'].includes(r.state)) return { received: 0, reason: r.state };
         if (!near() || r?.state !== 'prepared') return { received: 0, reason: 'funder not ready' };
-        const trade = await s.bot.trade(new RegExp(`^${funder}$`, 'i'), { want: [{ item: /^coins$/i, amount: FUND_AMOUNT }], timeout: 60000, requestTimeout: 30000, retryOnBusy: true });
+        const trade = await withTradeWaitPhase(s, () => s.bot.trade(new RegExp(`^${funder}$`, 'i'), { want: [{ item: /^coins$/i, amount: FUND_AMOUNT }], timeout: 60000, requestTimeout: 30000, retryOnBusy: true }));
         if (trade.success) await waitUntil(s, () => coinCount(s) - before === FUND_AMOUNT, { timeoutTicks: 8 });
         const got = coinCount(s) - before;
         if (trade.success && got === FUND_AMOUNT) {
@@ -1073,46 +1084,48 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
         && lines.every(l => offer.filter(o => matchesLine(o, l)).reduce((n, o) => n + o.count, 0) === l.count);
     let result: TradeResult | undefined, capacityDetail: string | undefined;
     if (left() <= 0) throw Error('order window ended before trade');
-    if (role === 'from') {
-        progress.uncertain = true;
-        const served = await s.bot.serveTrades({
-            from: peer, give: lines.map(l => ({ item: l.re, amount: l.count })), accept: offer => offer.length === 0,
-            maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined || gone(),
-        });
-        if (!result && (served.reason === 'timeout' || served.reason === 'until') && !served.trades.length && still()) progress.uncertain = false;
-        if (!result && gone() && !progress.uncertain) throw Error('partner failed: no trade');
-    } else {
-        let ended = false;
-        void s.ended.then(() => { ended = true; });
-        for (let round = 0; !ended && left() > 0; round++) {
-            if (gone()) throw Error('partner failed: no trade');
-            // Avoid sending trade requests and pacing when the partner is not yet visible on screen.
-            if (typeof s.sdk.findNearbyPlayer === 'function' && !s.sdk.findNearbyPlayer(peer)) {
-                await wait(s, () => ended || gone() || left() <= 0 || !!s.sdk.findNearbyPlayer(peer), { timeoutTicks: 10 });
-                if (ended || left() <= 0) break;
-                if (gone()) throw Error('partner failed: no trade');
-                if (!s.sdk.findNearbyPlayer(peer)) continue;
-            }
+    await withTradeWaitPhase(s, async () => {
+        if (role === 'from') {
             progress.uncertain = true;
-            result = await s.bot.trade(peer, {
-                accept: offer => {
-                    capacityDetail = undefined;
-                    if (!offer.length || !exactOffer(offer)) return false;
-                    try {
-                        const { required, free } = receiverSpace(s, offer);
-                        if (free >= required) return true;
-                        capacityDetail = `receiver capacity: ${free} free, ${required} required`;
-                    } catch (error) { capacityDetail = String(error); }
-                    return false;
-                },
-                requestTimeout: Math.min(TRADE_REQUEST_TIMEOUT_MS, left()), timeout: Math.min(60_000, left()),
+            const served = await s.bot.serveTrades({
+                from: peer, give: lines.map(l => ({ item: l.re, amount: l.count })), accept: offer => offer.length === 0,
+                maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined || gone(),
             });
-            if (!requestRefusal(result) || !still()) break;
-            progress.uncertain = false;
-            const tile = (order.meet ?? meetingTiles({ x: 3185, z: 3436 })!)[1];
-            if (!ended && left() > 0) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
+            if (!result && (served.reason === 'timeout' || served.reason === 'until') && !served.trades.length && still()) progress.uncertain = false;
+            if (!result && gone() && !progress.uncertain) throw Error('partner failed: no trade');
+        } else {
+            let ended = false;
+            void s.ended.then(() => { ended = true; });
+            for (let round = 0; !ended && left() > 0; round++) {
+                if (gone()) throw Error('partner failed: no trade');
+                // Avoid sending trade requests and pacing when the partner is not yet visible on screen.
+                if (typeof s.sdk.findNearbyPlayer === 'function' && !s.sdk.findNearbyPlayer(peer)) {
+                    await wait(s, () => ended || gone() || left() <= 0 || !!s.sdk.findNearbyPlayer(peer), { timeoutTicks: 10 });
+                    if (ended || left() <= 0) break;
+                    if (gone()) throw Error('partner failed: no trade');
+                    if (!s.sdk.findNearbyPlayer(peer)) continue;
+                }
+                progress.uncertain = true;
+                result = await s.bot.trade(peer, {
+                    accept: offer => {
+                        capacityDetail = undefined;
+                        if (!offer.length || !exactOffer(offer)) return false;
+                        try {
+                            const { required, free } = receiverSpace(s, offer);
+                            if (free >= required) return true;
+                            capacityDetail = `receiver capacity: ${free} free, ${required} required`;
+                        } catch (error) { capacityDetail = String(error); }
+                        return false;
+                    },
+                    requestTimeout: Math.min(TRADE_REQUEST_TIMEOUT_MS, left()), timeout: Math.min(60_000, left()),
+                });
+                if (!requestRefusal(result) || !still()) break;
+                progress.uncertain = false;
+                const tile = (order.meet ?? meetingTiles({ x: 3185, z: 3436 })!)[1];
+                if (!ended && left() > 0) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
+            }
         }
-    }
+    });
     if (result?.success) await wait(s, moved, { timeoutTicks: 10 });
     const counts = lines.map(l => l.diff());
     lines.forEach((l, i) => {

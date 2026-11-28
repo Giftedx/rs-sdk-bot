@@ -116,14 +116,20 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         rawStock = bankStock(name!, { server: walkerServer(s) });
     }
     const stock = opts.noJewelry && rawStock ? { coins: rawStock.coins, items: Object.fromEntries(Object.entries(rawStock.items ?? {}).filter(([k]) => !TELEPORT_JEWELRY_RE.test(k))) } : rawStock;
-    const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now();
+    const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS;
+    let planMsTotal = 0;
     let why = '';
     const plan = async (a: Account): Promise<TripPlan | null> => {
-        const deadline = performance.now() + budgetMs;
+        const startedAt = performance.now();
+        const deadline = startedAt + budgetMs;
         why = '';
-        return routePlanMod ? await routePlanMod.planTripOffThread(from, to, a, stock, budgetMs)
-            : stock ? planTrip(world, from, to, a, stock, undefined, undefined, { deadline })
-            : (() => { const d = world.route(from, to, a, { deadline }); if (!d.ok) why = d.reason; return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
+        try {
+            return routePlanMod ? await routePlanMod.planTripOffThread(from, to, a, stock, budgetMs)
+                : stock ? planTrip(world, from, to, a, stock, undefined, undefined, { deadline })
+                : (() => { const d = world.route(from, to, a, { deadline }); if (!d.ok) why = d.reason; return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
+        } finally {
+            planMsTotal += performance.now() - startedAt;
+        }
     };
     let r = await plan(acct);
     // Quest varps never reach the client, so a gate that opens from a quest stage stays shut while the stage is unknown.
@@ -173,11 +179,11 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     }
     // A slow plan that found a route: the live logs show how often a walk waits on a cold search (tools/route-prewarm.ts
     // reads these lines and WALK_NO_ROUTE).
-    const planMs = Math.round(performance.now() - planStart);
+    const planMs = Math.round(planMsTotal);
     if (r && planMs >= SLOW_PLAN_MS) console.log(`WALK_PLAN_SLOW ${JSON.stringify({ from, to, ms: planMs, budgetMs, cost: r.cost, bank: !!r.bank })}`);
     if (!r) {
         // What the failed search started from: a live "no route" names only its target otherwise.
-        console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
+        console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: planMs, budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
         return { ok: false, reason: 'precondition', detail: `no route${why === 'budget' ? ` (search over ${budgetMs} ms)` : ''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
     }
     // Harm along the route (danger/exposure.ts): a route whose hunters would take the Hitpoints under the retreat line

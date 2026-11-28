@@ -30,7 +30,7 @@ import {
     absentTakerWatch, giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight, noteIdOf,
     onKaramja, outboundStart, parseCoins, parseFanin, parseFanout, partnerFailed, performFleetTransfer, pickOrder,
     prepareCoinSlot, releaseWatch, requestCourierFunding, runOrderWork, SARIM, separateTroutNotes,
-    waitForGiver, watchTradeScreen, type CoinState, type FleetTradeProgress,
+    waitForGiver, watchTradeScreen, withTradeWaitPhase, type CoinState, type FleetTradeProgress,
 } from './trade-helpers';
 import { REPO_ROOT } from './types';
 import { walkTarget } from './walk';
@@ -100,7 +100,7 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
         await s.bot.walkTo(tile.x, tile.z, 0);
         await observe(s, () => { const p = s.sdk.getState()?.player; return !!p && p.level === tile.level && p.worldX === tile.x && p.worldZ === tile.z; }, `coin meeting tile unobserved: ${s.name}`);
     }
-    if (!await waitUntil(donor, () => { guard(); return tradeState().every(o => o.partner?.reachable === true); }, { timeoutTicks: 10 })) {
+    if (!await withTradeWaitPhase(donor, () => withTradeWaitPhase(receiver, () => waitUntil(donor, () => { guard(); return tradeState().every(o => o.partner?.reachable === true); }, { timeoutTicks: 10 })))) {
         const refused = tradeState();
         console.log('COIN_TRADE_REFUSED ' + JSON.stringify(refused));
         throw Error('coin trade refused: partner unreachable, nothing sent; reconcile before retry: ' + JSON.stringify(refused.map(o => ({ account: o.account, position: o.position, partner: o.partner }))));
@@ -111,16 +111,16 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
     const handoff = createHandoff([995], join(root, 'trade'));
     const childResults: unknown[] = [];
     const transfers = await Promise.allSettled([
-        handoff.sendHandoff(donor, c.receiver, server, [{ id: 995, count: c.amount }], async () => {
+        withTradeWaitPhase(donor, () => handoff.sendHandoff(donor, c.receiver, server, [{ id: 995, count: c.amount }], async () => {
             const result = await donor.bot.serveTrades({ from: exactItem(c.receiver), give: [{ item: exactItem('Coins'), amount: c.amount }], accept: offer => offer.length === 0, maxTrades: 1, timeout: c.requestMs });
             childResults.push(result);
             console.log('COIN_TRADE ' + JSON.stringify({ account: donor.name, result }));
-        }),
-        handoff.receiveHandoff(receiver, c.donor, server, async () => {
+        })),
+        withTradeWaitPhase(receiver, () => handoff.receiveHandoff(receiver, c.donor, server, async () => {
             const result = await receiver.bot.trade(exactItem(c.donor), { accept: offer => offer.length === 1 && offer[0]!.id === 995 && offer[0]!.count === c.amount, requestTimeout: c.requestMs, timeout: c.requestMs });
             childResults.push(result);
             console.log('COIN_TRADE ' + JSON.stringify({ account: receiver.name, result }));
-        }),
+        })),
     ]);
     const tradeExit = { childResults, state: tradeState(), transfers: transfers.map(r => r.status === 'rejected' ? { status: r.status, reason: String(r.reason) } : r) };
     writeFileSync(join(root, 'trade-results.json'), JSON.stringify(tradeExit), { flag: 'wx' });
@@ -305,41 +305,44 @@ export async function itemFaninMain(args: string[], env: Record<string, string |
             if (cancelled) break;
             let donor: Session | undefined, ok = false, count = 0, detail = '';
             try {
-                check([f.receiver, name], [receiver]);
-                donor = await openBot(name, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(name) });
-                await to(donor, meet[0]);
-                const bank = await openBank(donor), row = bank.items.find(i => exactItem(f.item).test(i.name));
-                if (row) {
-                    const n0 = heldItems(donor.sdk.getInventory(), row.id), generation = bank.generation;
-                    if (!(await donor.bot.withdrawItem(exactItem(row.name), row.count)).success || !await waitUntil(donor, () => {
-                        check([f.receiver, name], [receiver!, donor!]);
-                        const observed = donor!.bankObservation?.();
-                        return !!observed && observed.generation > generation && heldItems(donor!.sdk.getInventory(), row.id) === n0 + row.count && heldItems(observed.items, row.id) === 0;
-                    }, { timeoutTicks: 20 })) throw Error('fan-in exact withdrawal unobserved: ' + name);
-                }
-                if (!(await donor.bot.closeBank()).success || !await waitUntil(donor, () => !donor!.sdk.getState()?.bank?.isOpen, { timeoutTicks: 20 })) throw Error('fan-in donor bank did not close: ' + name);
-                const stack = donor.sdk.getInventory().find(i => exactItem(f.item).test(i.name));
-                if (!stack) { detail = `no ${f.item} in the pack or bank`; ok = true; }
-                else {
-                    count = heldItems(donor.sdk.getInventory(), stack.id);
-                    const beforeRx = heldItems(receiver.sdk.getInventory(), stack.id);
-                    const handoff = createHandoff([stack.id], join(dir, 'item-fanin', `${order}-${name}`));
-                    const transfers = await Promise.allSettled([
-                        handoff.sendHandoff(donor, f.receiver, server, [{ id: stack.id, count }], async () => {
-                            const r = await donor!.bot.serveTrades({ from: exactItem(f.receiver), give: [{ item: exactItem(f.item), amount: count }], accept: offer => offer.length === 0, maxTrades: 1, timeout: 60_000 });
-                            console.log('FANIN_TRADE ' + JSON.stringify({ account: name, result: r }));
-                        }),
-                        handoff.receiveHandoff(receiver, name, server, async () => {
-                            const r = await receiver!.bot.trade(exactItem(name), { accept: offer => offer.length === 1 && offer[0]!.id === stack.id && offer[0]!.count === count, requestTimeout: 60_000, timeout: 60_000 });
-                            console.log('FANIN_TRADE ' + JSON.stringify({ account: f.receiver, result: r }));
-                        }),
-                    ]);
-                    const failed = transfers.find(r => r.status === 'rejected');
-                    if (failed?.status === 'rejected') throw failed.reason;
-                    ok = await waitUntil(receiver, () => heldItems(receiver!.sdk.getInventory(), stack.id) === beforeRx + count && heldItems(donor!.sdk.getInventory(), stack.id) === 0, { timeoutTicks: 20 });
-                    detail = ok ? `${name} gave ${count} ${f.item}` : `trade effect unobserved: ${name} ${count} ${f.item}`;
-                    if (ok) received.set(stack.id, (received.get(stack.id) ?? 0) + count);
-                }
+                const rx = receiver!;
+                await withTradeWaitPhase(rx, async () => {
+                    check([f.receiver, name], [rx]);
+                    donor = await openBot(name, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(name) });
+                    await to(donor, meet[0]);
+                    const bank = await openBank(donor), row = bank.items.find(i => exactItem(f.item).test(i.name));
+                    if (row) {
+                        const n0 = heldItems(donor.sdk.getInventory(), row.id), generation = bank.generation;
+                        if (!(await donor.bot.withdrawItem(exactItem(row.name), row.count)).success || !await waitUntil(donor, () => {
+                            check([f.receiver, name], [rx, donor!]);
+                            const observed = donor!.bankObservation?.();
+                            return !!observed && observed.generation > generation && heldItems(donor!.sdk.getInventory(), row.id) === n0 + row.count && heldItems(observed.items, row.id) === 0;
+                        }, { timeoutTicks: 20 })) throw Error('fan-in exact withdrawal unobserved: ' + name);
+                    }
+                    if (!(await donor.bot.closeBank()).success || !await waitUntil(donor, () => !donor!.sdk.getState()?.bank?.isOpen, { timeoutTicks: 20 })) throw Error('fan-in donor bank did not close: ' + name);
+                    const stack = donor.sdk.getInventory().find(i => exactItem(f.item).test(i.name));
+                    if (!stack) { detail = `no ${f.item} in the pack or bank`; ok = true; }
+                    else {
+                        count = heldItems(donor.sdk.getInventory(), stack.id);
+                        const beforeRx = heldItems(rx.sdk.getInventory(), stack.id);
+                        const handoff = createHandoff([stack.id], join(dir, 'item-fanin', `${order}-${name}`));
+                        const transfers = await Promise.allSettled([
+                            withTradeWaitPhase(donor, () => handoff.sendHandoff(donor!, f.receiver, server, [{ id: stack.id, count }], async () => {
+                                const r = await donor!.bot.serveTrades({ from: exactItem(f.receiver), give: [{ item: exactItem(f.item), amount: count }], accept: offer => offer.length === 0, maxTrades: 1, timeout: 60_000 });
+                                console.log('FANIN_TRADE ' + JSON.stringify({ account: name, result: r }));
+                            })),
+                            handoff.receiveHandoff(rx, name, server, async () => {
+                                const r = await rx.bot.trade(exactItem(name), { accept: offer => offer.length === 1 && offer[0]!.id === stack.id && offer[0]!.count === count, requestTimeout: 60_000, timeout: 60_000 });
+                                console.log('FANIN_TRADE ' + JSON.stringify({ account: f.receiver, result: r }));
+                            }),
+                        ]);
+                        const failed = transfers.find(r => r.status === 'rejected');
+                        if (failed?.status === 'rejected') throw failed.reason;
+                        ok = await waitUntil(rx, () => heldItems(rx.sdk.getInventory(), stack.id) === beforeRx + count && heldItems(donor!.sdk.getInventory(), stack.id) === 0, { timeoutTicks: 20 });
+                        detail = ok ? `${name} gave ${count} ${f.item}` : `trade effect unobserved: ${name} ${count} ${f.item}`;
+                        if (ok) received.set(stack.id, (received.get(stack.id) ?? 0) + count);
+                    }
+                });
             } catch (error) { detail = String(error); }
             if (donor) {
                 closing.add(name.toLowerCase());
@@ -427,41 +430,43 @@ export async function noteCourierMain(argv: readonly string[], env: Record<strin
                     deposit: async item => { const current = inv().find(i => i.id === 333 && i.slot === item.slot); return !!current && (await s.bot.depositItem(current, -1)).success; },
                     withdraw: async (item, count) => { const current = s.sdk.getState()?.bank?.items.find(i => i.id === 333 && i.slot === item.slot); return !!current && (await s.bot.withdrawItem(current, count, { asNote: false })).success; },
                     observed: predicate => waitUntil(s, predicate, { timeoutTicks: 20 }),
-                    tradeNotes: async count => {
+                    tradeNotes: async count => withTradeWaitPhase(s, async () => {
                         await waitUntil(s, () => !!s.sdk.findNearbyPlayer(exactItem(targetBot)) || over(), { timeoutTicks: 180 });
                         if (over() || !s.sdk.findNearbyPlayer(exactItem(targetBot))) return { success: false, given: 0 };
                         const result = await s.bot.trade(exactItem(targetBot), { give: [{ item: exactItem('Trout'), amount: count }], accept: items => items.length === 0, timeout: 30000 });
                         return { success: result.success && result.gave.every(i => i.id === 334), given: result.gave.filter(i => i.id === 334).reduce((n, i) => n + i.count, 0) };
-                    },
+                    }),
                 });
                 tradesCompleted++;
                 console.log(`MILESTONE handed to ${targetBot}: ${notes} Trout notes; working food restored`);
                 return notes;
             }
-            if (role === 'collect') await waitUntil(s, () => !!s.sdk.findNearbyPlayer(exactItem(targetBot)) || over(), { timeoutTicks: 180 });
-            const target = s.sdk.findNearbyPlayer(exactItem(targetBot));
-            if (!target) return 0;
-            console.log(`TRADE target ${targetBot} spotted, role=${role}`);
-            if (role === 'deposit') {
-                const giveItems = delivery().map(i => ({ item: exactItem(i.name), amount: i.count }));
-                if (giveItems.length === 0) return 0;
-                const res = await s.bot.trade(exactItem(targetBot), { give: giveItems, timeout: 30000 });
-                if (res.success) {
-                    tradesCompleted++;
-                    console.log(`MILESTONE handed to ${targetBot}: ${res.gave.map(g => `${g.count} ${g.name}`).join(', ')}`);
-                    return res.gave.reduce((n, g) => n + g.count, 0);
+            return withTradeWaitPhase(s, async () => {
+                if (role === 'collect') await waitUntil(s, () => !!s.sdk.findNearbyPlayer(exactItem(targetBot)) || over(), { timeoutTicks: 180 });
+                const target = s.sdk.findNearbyPlayer(exactItem(targetBot));
+                if (!target) return 0;
+                console.log(`TRADE target ${targetBot} spotted, role=${role}`);
+                if (role === 'deposit') {
+                    const giveItems = delivery().map(i => ({ item: exactItem(i.name), amount: i.count }));
+                    if (giveItems.length === 0) return 0;
+                    const res = await s.bot.trade(exactItem(targetBot), { give: giveItems, timeout: 30000 });
+                    if (res.success) {
+                        tradesCompleted++;
+                        console.log(`MILESTONE handed to ${targetBot}: ${res.gave.map(g => `${g.count} ${g.name}`).join(', ')}`);
+                        return res.gave.reduce((n, g) => n + g.count, 0);
+                    }
+                } else {
+                    const res = await s.bot.trade(exactItem(targetBot), { give: [], timeout: 30000, requestTimeout: 90000, retryOnBusy: true, accept: items => items.length > 0 });
+                    if (res.success) {
+                        tradesCompleted++;
+                        const receivedCount = res.received.reduce((n, g) => n + g.count, 0);
+                        itemsCollected += receivedCount;
+                        console.log(`MILESTONE received from ${targetBot}: ${res.received.map(g => `${g.count} ${g.name}`).join(', ')}`);
+                        return receivedCount;
+                    }
                 }
-            } else {
-                const res = await s.bot.trade(exactItem(targetBot), { give: [], timeout: 30000, requestTimeout: 90000, retryOnBusy: true, accept: items => items.length > 0 });
-                if (res.success) {
-                    tradesCompleted++;
-                    const receivedCount = res.received.reduce((n, g) => n + g.count, 0);
-                    itemsCollected += receivedCount;
-                    console.log(`MILESTONE received from ${targetBot}: ${res.received.map(g => `${g.count} ${g.name}`).join(', ')}`);
-                    return receivedCount;
-                }
-            }
-            return 0;
+                return 0;
+            });
         };
         console.log(`START note-courier ${courierName} -> banker ${bankerName}`);
         const attempted = new Map<string, number>();
@@ -725,7 +730,7 @@ export async function runFoodCourier(account: string, env: Record<string, string
             leg(`draynor coins=${coins()}`);
         }
         const before = fishNotes(), who = new RegExp(`^${FROM.replace(/[^a-zA-Z0-9 _-]/g, '')}$`, 'i');
-        if (!resume) await timed(n => waitTicksAt += n, async () => {
+        if (!resume) await timed(n => waitTicksAt += n, () => withTradeWaitPhase(s, async () => {
             console.log(`MILESTONE collecting ${FROM}`);
             const deadline = s.tick() + (HOME_ONLY ? 0 : WAIT);
             while (fishNotes() <= before && s.tick() < deadline && !died) {
@@ -737,7 +742,7 @@ export async function runFoodCourier(account: string, env: Record<string, string
                 const r = collection.result;
                 if (fishNotes() <= before) { console.log(`TRADE ${r.reason} ${r.message}`); await waitTicks(s, 1); }
             }
-        });
+        }));
         leg(`received${received}`);
         if (received <= 0 && !HOME_ONLY && !resume) await fail('no fish notes from the cook');
         if (resume) leg(`resumed-cargo-${resume}`);
@@ -786,11 +791,14 @@ export async function runFoodCourier(account: string, env: Record<string, string
                 const ready = () => deliveryRecipientAtBank(pos(), s.sdk.getState()?.nearbyPlayers ?? [], f, meetBank);
                 for (let tryN = 0; tryN < 3 && fishNotes() === n0 && !died; tryN++) {
                     if (!(await walk([[meetBank.x, meetBank.z, 2]]))) break;
-                    if (!ready() && s.tick() < meetDeadline) await waitUntil(s, () => ready() || died || over(), { timeoutTicks: meetDeadline - s.tick() });
-                    if (!ready() || died || over()) { console.log(`WARN rendezvous ${f} not at delivery bank`); break; }
-                    const expected = give.map(g => ({ id: notes().find(i => g.item.test(i.name))!.id, count: g.amount }));
-                    const delivered = await handoffHelper.sendHandoff(s, f, courierServer, expected, () =>
-                        s.bot.trade(new RegExp(`^${f}$`, 'i'), { give, timeout: 60_000, requestTimeout: 30_000, retryOnBusy: false }));
+                    const delivered = await withTradeWaitPhase(s, async () => {
+                        if (!ready() && s.tick() < meetDeadline) await waitUntil(s, () => ready() || died || over(), { timeoutTicks: meetDeadline - s.tick() });
+                        if (!ready() || died || over()) return null;
+                        const expected = give.map(g => ({ id: notes().find(i => g.item.test(i.name))!.id, count: g.amount }));
+                        return handoffHelper.sendHandoff(s, f, courierServer, expected, () =>
+                            s.bot.trade(new RegExp(`^${f}$`, 'i'), { give, timeout: 60_000, requestTimeout: 30_000, retryOnBusy: false }));
+                    });
+                    if (delivered === null) { console.log(`WARN rendezvous ${f} not at delivery bank`); break; }
                     handed += delivered;
                     console.log(`MILESTONE gave ${f} ${delivered} t=${used()}`);
                     break;

@@ -359,3 +359,28 @@ test('ledgerScriptId formats multi-dispatch AIO and standalone scripts cleanly',
     expect(ledgerScriptId('scripts/goldfarm.ts', ['Dipstick'], 'Dipstick')).toBe('goldfarm');
     expect(ledgerScriptId('', [])).toBeNull();
 });
+
+test('explicit setLedgerPhase trade-wait overrides stale after:closeModal and clears cleanly on null', () => {
+    let t = 0;
+    const cbs: (() => void)[] = [];
+    const state: any = { tick: 0, player: { worldX: 3185, worldZ: 3438, level: 0, animId: -1, combat: { lastDamageTick: -1 } }, skills: [], dialog: { isOpen: false } };
+    const sess: any = {
+        direct: () => ({ success: true }),
+        sdk: { getState: () => state, send: () => {} },
+        onTick: (cb: () => void) => { cbs.push(cb); return () => {}; },
+        tick: () => t,
+    };
+    const led = startLedger(sess, () => null, 50, { script: 'aio-logistics:fleet-trade' });
+    const step = () => { t++; state.tick = t; for (const cb of cbs) cb(); };
+
+    sess.direct({ type: 'closeModal' });
+    step();
+    setLedgerPhase(sess, 'trade-wait');
+    step();
+    step();
+    setLedgerPhase(sess, null);
+    step();
+
+    expect(led.rows.map(r => r.why)).toEqual(['after:closeModal', 'trade-wait', 'trade-wait', 'after:closeModal']);
+    expect(led.stop().idleBy).toEqual([['after:closeModal', 2], ['trade-wait', 2]]);
+});

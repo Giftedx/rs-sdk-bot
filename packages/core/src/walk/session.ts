@@ -1,7 +1,7 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
-import { queryRouteService, serviceWanted } from '../route-query';
+import { offThreadRouteWanted, queryRouteOffThread } from '../route-query';
 import type { WalkDangerResult } from '../route-worker';
 import { fareCrossingAt, fareCrossings, type FareCrossing } from '../travel';
 import { topUpFareFloat } from './fare-float';
@@ -89,11 +89,11 @@ export async function sessionWalker(s: {
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
         plan: planLocal,
         planAsync: async (level, from, to, avoid) => {
-            if (serviceWanted()) {
+            if (offThreadRouteWanted()) {
                 const acct = accountForSdk(s.sdk);
                 const blocks = applyKnownDoorBlocks(s.sdk, level, from, to);
                 const tempDoors = s.sdk.temporaryDoorBlocks?.active?.() ?? [];
-                const remote = await queryRouteService<PathTile[]>({
+                return queryRouteOffThread<PathTile[]>({
                     kind: 'walk-plan',
                     level,
                     from,
@@ -104,7 +104,6 @@ export async function sessionWalker(s: {
                     acct: JSON.parse(JSON.stringify(acct)),
                     profile: stateWalkProfile(acct, s.sdk.getState()?.player),
                 });
-                if (remote !== undefined) return remote;
             }
             return planLocal(level, from, to, avoid);
         },
@@ -118,9 +117,8 @@ export async function sessionWalker(s: {
             if (!huntersNear(p.combat, level, { minX, maxX, minZ, maxZ })) {
                 return { verdict: 'clear', start: false, summary: dangerSummary(noExposure, walkVerdict(p, noExposure)) };
             }
-            if (serviceWanted()) {
-                const remote = await queryRouteService<WalkDangerResult>({ kind: 'walk-danger', level, tiles: [...tiles], profile: p });
-                if (remote !== undefined) return remote;
+            if (offThreadRouteWanted()) {
+                return queryRouteOffThread<WalkDangerResult>({ kind: 'walk-danger', level, tiles: [...tiles], profile: p });
             }
             return dangerLocal(level, tiles);
         },

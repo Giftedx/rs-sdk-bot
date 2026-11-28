@@ -220,6 +220,7 @@ export function routeOnGraph(
     } = graph;
     const W = waypoints.length;
     const deadline = routeOpts?.deadline ?? Infinity;
+    const maxCost = routeOpts?.maxCost ?? Infinity;
     const fromKey = tileKey(from), toKey = tileKey(to);
     const fromExisting = waypointIndex.get(fromKey);
     const toExisting = waypointIndex.get(toKey);
@@ -250,6 +251,7 @@ export function routeOnGraph(
     for (let i = 0; i < transports.length; i++) allowedT[i] = transportAllowed(transports[i]!, acct) ? 1 : 0;
     const travelZeroOk = new Map<Travel, boolean>();
     for (const t of travel) travelZeroOk.set(t, travelAllowed(t, acct));
+    const hasAnywhere = anywhereIndexed.some(tr => travelZeroOk.get(tr.t));
     const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
     // A walk from a transport or travel landing inside the account's closed ground may cross the squares that hold the
     // landing, as a walk from the route start may (danger/guard.ts escapeTiles). Without it a route whose halves both
@@ -345,6 +347,9 @@ export function routeOnGraph(
 
             const rootId = makeId(rootIdx, 0);
             if (!trackFares) bestResolvedFast![rootId] = 0;
+            // Forward lower bounds are exact for every non-root state (anywhere teleports leave only from rootIdx);
+            // backward lower bounds are exact whenever no anywhere teleport is available for this account.
+            const fAdmissible = !backward || !hasAnywhere;
             heap.push({
                 nodeIdx: rootIdx, stateBase: rootIdx, id: rootId, fare: 0,
                 tile: startTile, g: 0, f: h(rootIdx), prev: -1, leg: null,
@@ -353,6 +358,8 @@ export function routeOnGraph(
             try {
                 while (heap.size) {
                     const e = heap.pop()!;
+                    if (e.g >= maxCost) continue;
+                    if (fAdmissible && e.stateBase !== rootIdx && e.f >= maxCost) return { ok: false, reason: 'no_route' };
                     if (isDone(e.id) || dominated(e.stateBase, e.fare, e.g)) continue;
                     if (e.walkToTile) {
                         if (!trackFares && e.g >= bestResolvedFast![e.id]!) continue;
@@ -362,6 +369,8 @@ export function routeOnGraph(
                         if (c !== null) {
                             const prevBest = trackFares ? bestMap!.get(e.prev)! : bestFast![e.prev]!;
                             const g = prevBest + c;
+                            const f = g + h(e.nodeIdx);
+                            if (g >= maxCost || (fAdmissible && f >= maxCost)) { yield; continue; }
                             if (!trackFares) {
                                 if (g >= bestResolvedFast![e.id]!) { yield; continue; }
                                 bestResolvedFast![e.id] = g;
@@ -369,7 +378,7 @@ export function routeOnGraph(
                             e.leg = { kind: 'walk', to: e.walkToTile, tolerance: e.tol };
                             e.walkToTile = undefined;
                             e.g = g;
-                            e.f = g + h(e.nodeIdx);
+                            e.f = f;
                             heap.push(e);
                         }
                         yield;
@@ -403,13 +412,15 @@ export function routeOnGraph(
                         const id = makeId(nextStateBase, e.fare);
                         if (isDone(id)) return;
                         const g = e.g + TRANSPORT_COST;
+                        const f = g + h(nextNodeIdx);
+                        if (g >= maxCost || (fAdmissible && f >= maxCost)) return;
                         if (!trackFares) {
                             if (g >= bestResolvedFast![id]!) return;
                             bestResolvedFast![id] = g;
                         }
                         heap.push({
                             nodeIdx: nextNodeIdx, stateBase: nextStateBase, id, fare: e.fare,
-                            tile: nextTile, g, f: g + h(nextNodeIdx), prev: e.id, leg, approach, approachIdx,
+                            tile: nextTile, g, f, prev: e.id, leg, approach, approachIdx,
                         });
                     };
                     const enqueueWalk = (
@@ -429,6 +440,8 @@ export function routeOnGraph(
                         if (isDone(id)) return;
                         const rem = dist - tol;
                         const g = e.g + (rem > 0 ? rem : 0);
+                        const f = g + h(nextNodeIdx);
+                        if (g >= maxCost || (fAdmissible && f >= maxCost)) return;
                         if (!trackFares && g >= bestResolvedFast![id]!) return;
                         if (hasAreaOf) {
                             const sA = preStartA !== undefined ? preStartA : startAreasOf(wFromIdx);
@@ -437,7 +450,7 @@ export function routeOnGraph(
                         }
                         heap.push({
                             nodeIdx: nextNodeIdx, stateBase: nextStateBase, id, fare: e.fare,
-                            tile: nextTile, g, f: g + h(nextNodeIdx), prev: e.id, leg: null,
+                            tile: nextTile, g, f, prev: e.id, leg: null,
                             walkFromIdx: wFromIdx, walkFromTile: wFromTile,
                             walkToIdx: targetIdx, walkToTile: targetTile, tol, interaction, qId, approach,
                             approachIdx: approach ? qId : undefined,
@@ -448,13 +461,15 @@ export function routeOnGraph(
                         const id = makeId(nextIdx, fare);
                         if (isDone(id)) return;
                         const g = e.g + t.cost;
+                        const f = g + h(nextIdx);
+                        if (g >= maxCost || (fAdmissible && f >= maxCost)) return;
                         if (!trackFares && g >= bestResolvedFast![id]!) return;
                         const allowed = e.fare ? travelAllowed(t, { ...acct, coins: (acct.coins ?? 0) - e.fare }) : travelZeroOk.get(t)!;
                         if (!allowed) return;
                         if (!trackFares) bestResolvedFast![id] = g;
                         heap.push({
                             nodeIdx: nextIdx, stateBase: nextIdx, id, fare, tile: nextTile,
-                            g, f: g + h(nextIdx), prev: e.id, leg: { kind: 'travel', travel: t, at: t.from, to: t.to },
+                            g, f, prev: e.id, leg: { kind: 'travel', travel: t, at: t.from, to: t.to },
                         });
                     };
 

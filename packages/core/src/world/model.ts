@@ -29,7 +29,7 @@ export interface Transport extends TransportMeta {
 // A search stops at its deadline (performance.now() ms) with reason 'budget': a cold search for a crossing the account
 // cannot make, or a far shore, otherwise measures paths for hundreds of ticks while the bot stands still (938 ticks for
 // Al Kharid to Tai Bwo Wannai on practice). The caller then tries its next source or fails fast.
-export type RouteOptions = { deadline?: number };
+export type RouteOptions = { deadline?: number; maxCost?: number };
 export const ROUTE_BUDGET_MS = 45_000;
 
 export type ScopeAreas = { area(level: number, x: number, z: number): number; reach(to: Tile, tol: number, q: InteractionTarget): number[] | null; step(t: Tile): number[] | null; escape(at: Tile, open: Int32Array): number[] };
