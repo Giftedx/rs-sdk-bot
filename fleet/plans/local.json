@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795837704010,
+ "at": 1795837780100,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -200,25 +200,6 @@
    "role": "helper"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -322,19 +303,22 @@
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "auto"
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Swordswallow",
@@ -345,7 +329,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1615"
+    "BATCH_UNITS": "1610"
    },
    "enabled": true,
    "repeat": false,
@@ -390,6 +374,28 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
+   ],
+   "env": {
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "29",
+    "STALL_TICKS": "280"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
   }
  ],
  "army": [
@@ -404,12 +410,12 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "pocketpython",
   "quickhandjob",
   "sausagefest",
   "woodpecker"

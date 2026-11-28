@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795823654705-coincock-hocuspokeus-3531c73e8920a040",
+ "account": "CoinCock",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "582c493e-3cf7-4754-9675-5e39f31153af",
+ "count": 30,
+ "ok": true,
+ "at": 1795837773229,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795837762841
+ },
+ "logout": {
+  "attemptId": "1795837755397-0000026064-0000000001",
+  "at": 1795837773144,
+  "sha256": "4fbbc3ce9cd3f268cd3f481f44f23d744dc8e3fb98c3c46ce687b5469cccf875"
+ },
+ "screen": true
+}

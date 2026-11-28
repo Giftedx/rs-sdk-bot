@@ -55,6 +55,10 @@
    "server": "rs-sdk-demo.fly.dev",
    "home": "cloud"
   },
+  "ChaosInPants": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "CoinCock": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
@@ -258,6 +262,10 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "Rubmyrunes": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "Sausagefest": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev",
@@ -284,6 +292,10 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev",
    "home": "claude-cloud"
+  },
+  "Staffstiffy": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
   },
   "Stirmypot": {
    "side": "local",
