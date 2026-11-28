@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795863276966,
+ "at": 1795863297527,
  "jobs": [
   {
    "account": "Balls",
@@ -62,28 +62,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1511",
    "role": "army",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
-   "account": "dropmyload",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "helper",
    "resources": [
     "draynor-normal-trees"
    ]
@@ -181,6 +159,22 @@
    "repeat": false,
    "goal": "goal:supply_chain:263",
    "role": "army"
+  },
+  {
+   "account": "dropmyload",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   }
  ],
  "army": [
