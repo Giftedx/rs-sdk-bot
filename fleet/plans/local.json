@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855222909,
+ "at": 1795855300403,
  "jobs": [
   {
    "account": "Balls",
@@ -63,31 +63,6 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "80",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "80"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "army"
-  },
-  {
    "account": "TrouserSnake",
    "script": "scripts/chain.ts",
    "args": [
@@ -124,37 +99,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Billionaire BATCH_UNITS=250 -- chicken"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Billionaire",
-   "role": "auto"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
-    "scripts/aio-skiller.ts CAP=2860 TARGET_COUNT=286 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Wandwaver:zanaris BATCH_UNITS=1 -- sweep zanaris"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pvp_unlock:Wandwaver:zanaris",
-   "role": "army"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -171,23 +115,19 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "knights-stable"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "765"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
+   "role": "army"
   },
   {
    "account": "KnightRider",
@@ -198,7 +138,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "765"
+    "BATCH_UNITS": "1253"
    },
    "enabled": true,
    "repeat": false,
@@ -207,6 +147,40 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "Quickhandjob",
@@ -276,6 +250,7 @@
   "UnderMyKilt",
   "ballspinner",
   "bigpackage",
+  "billionaire",
   "bowbeforeme",
   "fingerblastr",
   "hocuspokeus",
