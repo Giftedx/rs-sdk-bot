@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795820172637-bigpackage-mightyrod-5a928ad76748ee5d",
  "account": "Bigpackage",
  "partner": "Mightyrod",
@@ -10,8 +10,18 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "5475761e-7f7d-433d-8c46-6d3ec0907b06",
- "count": 0,
- "ok": false,
- "at": 1795834422078,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795834443107,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795834422086-0000021624-0000000001",
+  "at": 1795834442979,
+  "sha256": "6952a442a01051e09908f17f145e84c31d326382311fd927366033da7a03a496"
+ },
+ "screen": true
 }
