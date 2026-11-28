@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795831049806,
+ "at": 1795831154325,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,7 +185,7 @@
    "role": "pvp"
   },
   {
-   "account": "Shaftsinker",
+   "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -198,7 +198,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
@@ -257,7 +257,6 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
