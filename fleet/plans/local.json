@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795824980752,
+ "at": 1795825065881,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,39 +202,6 @@
    ]
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "demon"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:demon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:demon",
-   "role": "helper"
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -251,6 +218,22 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "blackknight"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:blackknight",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:blackknight",
+   "role": "helper"
   }
  ],
  "army": [
