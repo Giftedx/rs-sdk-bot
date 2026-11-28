@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795846304967,
+ "at": 1795846486105,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -437,11 +437,26 @@
    "role": "auto"
   },
   {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=3000 TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing harpoon harpoon",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=960 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "helper"
+  },
+  {
    "account": "TackleBox",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1664 -- thieving knights-stable"
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1662 -- thieving knights-stable"
    ],
    "env": {
     "ROUNDS": "1"
@@ -450,6 +465,26 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "helper"
+  },
+  {
+   "account": "ChaosInPants",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:ChaosInPants",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:ChaosInPants",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "RearEntry",

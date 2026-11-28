@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795846173142-1",
+ "account": "Ballbag",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "48c00802-7686-45c0-9f37-76a9e9ba09c5",
+ "count": 0,
+ "ok": false,
+ "at": 1795846358483,
+ "detail": "trade claimed"
+}

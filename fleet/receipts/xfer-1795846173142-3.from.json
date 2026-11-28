@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795846173142-3",
+ "account": "ChaosInPants",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "7201c608-1194-490b-abd4-3254d2e215d1",
+ "count": 1,
+ "ok": true,
+ "at": 1795846463982,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795846435098-0000008388-0000000001",
+  "at": 1795846463974,
+  "sha256": "0985f361778208787a3e08c2b26b1c2bb77e20ca5783eacf090baa867276c593"
+ },
+ "screen": true
+}

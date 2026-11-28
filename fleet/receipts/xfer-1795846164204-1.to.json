@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795846164204-1",
+ "account": "BackdoorMan",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "ab554052-ae60-42a2-bb70-e39d5f2e52a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795846475280,
+ "detail": "trade claimed"
+}
