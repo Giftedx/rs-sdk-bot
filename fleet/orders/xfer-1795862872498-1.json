@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795862872498-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "OreElse",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "extra": [
+    {
+      "item": "Iron bar",
+      "count": 3,
+      "itemId": 2351
+    }
+  ],
+  "start": 1795862872498,
+  "end": 1795863772498,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
