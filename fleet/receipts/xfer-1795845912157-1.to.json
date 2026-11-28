@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795845912157-1",
+ "account": "BowBeforeMe",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic logs",
+ "requested": 5,
+ "claim": "34575a7f-eec4-497c-bcbd-5d0e947d1d23",
+ "count": 0,
+ "ok": false,
+ "at": 1795846254273,
+ "detail": "trade claimed"
+}
