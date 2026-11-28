@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795838077033-3",
+ "account": "Pocketpython",
+ "partner": "TackleBox",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 1,
+ "claim": "992a7e5e-502b-4f8e-9af9-917d285f696d",
+ "count": 0,
+ "ok": false,
+ "at": 1795838215631,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Coins",
+   "requested": 156,
+   "count": 0
+  }
+ ]
+}

@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795838077033-5",
+ "account": "Fingerblastr",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "02648513-17b5-4d09-8046-31882f615e96",
+ "count": 1,
+ "ok": true,
+ "at": 1795838310729,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795838232912-0000006104-0000000001",
+  "at": 1795838310719,
+  "sha256": "001bbbb5e5078eca7cb8d39481d796e1e111b14bfd627ac2bb711c17e34a86d0"
+ },
+ "screen": true
+}
