@@ -365,25 +365,25 @@ test('fleetGitWindowAsync executes real git commands concurrently while keeping 
         last = now;
         ticks++;
     }, 25);
+    const tag = `fleet-git-timeout-${randomUUID()}`;
     try {
         const results = await Promise.all(Array.from({ length: 6 }, (_, i) =>
             fleetGitWindowAsync(process.cwd(), 'async-git-test', 10_000)(['hash-object', '--stdin'], `payload-${i}`)));
         expect(results).toHaveLength(6);
         for (const sha of results) expect(sha).toMatch(/^[0-9a-f]{40}$/);
+
+        // Timeout enforcement on a real git subprocess with nested shell+bun descendants:
+        // must abort near budgetMs, keep the 25 ms timer ticking throughout, and leave zero surviving descendants.
+        const t0 = performance.now();
+        const slow = fleetGitWindowAsync(process.cwd(), 'timeout-test', 1200);
+        await expect(slow(['-c', `alias.hang=!bun -e "await Bun.sleep(20000)" -- ${tag}`, 'hang'])).rejects.toThrow(/ETIMEDOUT|timed out|unavailable or changed/);
+        const elapsed = performance.now() - t0;
+        expect(elapsed).toBeLessThan(6000);
+        expect(ticks).toBeGreaterThanOrEqual(10);
         expect(maxGapMs).toBeLessThan(1000);
     } finally {
         clearInterval(interval);
     }
-
-    // Timeout enforcement on a real git subprocess with nested shell+bun descendants:
-    // must abort near budgetMs and leave zero surviving descendants while this process stays alive.
-    const tag = `fleet-git-timeout-${randomUUID()}`;
-    const t0 = performance.now();
-    const slow = fleetGitWindowAsync(process.cwd(), 'timeout-test', 1200);
-    await expect(slow(['-c', `alias.hang=!bun -e "await Bun.sleep(20000)" -- ${tag}`, 'hang'])).rejects.toThrow(/ETIMEDOUT|timed out|unavailable or changed/);
-    const elapsed = performance.now() - t0;
-    expect(elapsed).toBeLessThan(6000);
-    expect(ticks).toBeGreaterThanOrEqual(1);
 
     if (process.platform === 'win32') {
         const probe = Bun.spawn(
