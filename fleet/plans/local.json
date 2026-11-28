@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864417787,
+ "at": 1795864488978,
  "jobs": [
   {
    "account": "Balls",
@@ -45,6 +45,31 @@
    "role": "pvp"
   },
   {
+   "account": "yewfirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "490",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "21600",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "490"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -75,7 +100,7 @@
    ],
    "env": {
     "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "379",
+    "BATCH_UNITS": "399",
     "MAX_COOKED": "100",
     "SHARK_COUNT": "100"
    },
@@ -89,6 +114,28 @@
   },
   {
    "account": "knightrider",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:haggis:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
+   "account": "pocketpool",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -133,50 +180,6 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "army",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
-   "account": "woodpecker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "woodcutting",
-    "yews"
-   ],
-   "env": {
-    "REGION": "draynor",
-    "TREE": "normal",
-    "CAP": "3000",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1511",
-   "role": "army",
-   "resources": [
-    "draynor-normal-trees"
-   ]
-  },
-  {
-   "account": "yewfirst",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "woodcutting",
@@ -329,21 +332,19 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "chicken"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1030"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
   }
  ],
  "army": [
@@ -371,11 +372,11 @@
   "moneyshot",
   "oreelse",
   "pickpockdick",
-  "pocketpool",
   "pocketpython",
   "quickhandjob",
   "sausagefest",
-  "sporrandip"
+  "sporrandip",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
