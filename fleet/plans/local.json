@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795826306908,
+ "at": 1795826389627,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,22 +202,6 @@
    ]
   },
   {
-   "account": "RearEntry",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "prince"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:prince",
-   "role": "helper"
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -234,6 +218,22 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "fluffs"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:fluffs",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:fluffs",
+   "role": "helper"
   },
   {
    "account": "Ballbag",
@@ -254,7 +254,7 @@
    "account": "InTheSack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
     "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
