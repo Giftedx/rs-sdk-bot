@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856422610,
+ "at": 1795856455365,
  "jobs": [
   {
    "account": "Balls",
@@ -400,7 +400,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "810"
+    "BATCH_UNITS": "801"
    },
    "enabled": true,
    "repeat": false,
