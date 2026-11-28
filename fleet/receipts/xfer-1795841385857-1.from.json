@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795841385857-1",
  "account": "Pullmybow",
  "partner": "BackdoorMan",
@@ -12,6 +12,16 @@
  "claim": "9d1c4d94-7c1a-49ae-ac65-8b67c8ae7593",
  "count": 0,
  "ok": false,
- "at": 1795841945539,
- "detail": "trade claimed"
+ "at": 1795842162951,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795842162222
+ },
+ "logout": {
+  "attemptId": "1795841945549-0000020488-0000000001",
+  "at": 1795842162943,
+  "sha256": "ea6f166aa286a9ea540f73ba84061c19c8ad56317db47b9bc83d1b303f4cfdcd"
+ },
+ "screen": false
 }
