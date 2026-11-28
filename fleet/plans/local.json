@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795838488196,
+ "at": 1795838537821,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,18 +186,22 @@
   },
   {
    "account": "RearEntry",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing fishcook",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "helper"
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -275,15 +279,15 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-44-o4-p1681",
+    "ORDER_KEY": "brain-1513-52-o4-p1681",
     "ITEM_ID": "1513",
-    "QUANTITY": "44",
+    "QUANTITY": "52",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "1681",
     "EXPECTED_OWNED": "4",
     "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "44"
+    "BATCH_UNITS": "52"
    },
    "enabled": true,
    "repeat": false,
@@ -328,21 +332,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:145",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2090 TARGET_COUNT=209 PRODUCT_TARGET=234 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
    "role": "army"
   },
   {
@@ -396,93 +385,79 @@
    "role": "army"
   },
   {
+   "account": "WellHung",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2340 TARGET_COUNT=234 PRODUCT_TARGET=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 STALL_TICKS=255 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "helper"
+  },
+  {
    "account": "Ballbag",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "gemshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "556",
-    "ITEMS": "Air rune",
-    "MAX_ITEMS": "144",
+    "ITEM_ID": "1621",
+    "ITEMS": "Uncut emerald",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
+    "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "144"
+    "DEMAND_ID": "campaign:haggis:item:1621",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
+   "goal": "campaign:haggis:item:1621",
    "role": "helper"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/chain.ts",
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic STALL_TICKS=224 --",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=69 PRODUCT_TARGET=250 -- thieving nature-chest",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1000",
+    "TARGET_COUNT": "26",
+    "PRODUCT_TARGET": "26"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
-   "account": "BackdoorMan",
+   "account": "Pocketrocket",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1230 TARGET_COUNT=123 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:vampire BATCH_UNITS=1 -- sweep vampire"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing village",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "helper"
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "auto"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=865 MAX_MAKE=1 BAR_RESERVE=0 CAP=1000 TARGET_COUNT=1 STALL_TICKS=280 -- smithing anvil 1000",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- ranged-camp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
-  },
-  {
-   "account": "mmtha0205",
+   "account": "Abracadickra",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "ranged-camp"
@@ -490,29 +465,12 @@
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "DEMAND_ID": "goal:pk_army:Abracadickra",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
-  },
-  {
-   "account": "ChaosInPants",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:ChaosInPants",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:ChaosInPants",
+   "goal": "goal:pk_army:Abracadickra",
    "role": "auto"
   }
  ],
@@ -528,10 +486,10 @@
   "Deeppockets",
   "UnderMyKilt",
   "bowbeforeme",
-  "fingerblastr",
+  "mmtha0205",
   "mmthv2350",
-  "pocketrocket",
-  "sausagefest"
+  "sausagefest",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
