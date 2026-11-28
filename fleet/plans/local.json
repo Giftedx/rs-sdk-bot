@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795851848354,
+ "at": 1795851888680,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,22 @@
    "role": "pvp"
   },
   {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1607",
+   "role": "auto"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -202,31 +218,6 @@
    "resources": [
     "edgeville-yews"
    ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ardougnegemstall",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1605",
-    "ITEMS": "Emerald",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "goal:supply_chain:1605",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1605",
-   "role": "auto"
   },
   {
    "account": "Pullmybow",
@@ -285,7 +276,23 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "BATCH_UNITS": "1748"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "1748"
    },
    "enabled": true,
    "repeat": false,
@@ -381,7 +388,7 @@
    "role": "army"
   },
   {
-   "account": "RearEntry",
+   "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=40 -- fishing fishcook",
@@ -393,7 +400,30 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:377",
-   "role": "helper"
+   "role": "army"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "staged"
+   ],
+   "env": {
+    "METHOD": "karambwanji",
+    "BANKED": "1",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:3150",
+    "BATCH_UNITS": "480",
+    "AMOUNT": "480"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:3150",
+   "role": "helper",
+   "resources": [
+    "karambwanji-lake"
+   ]
   },
   {
    "account": "WellHung",
@@ -414,6 +444,22 @@
    ]
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "merlin"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:merlin",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:merlin",
+   "role": "auto"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -432,6 +478,23 @@
    "resources": [
     "ardougne-cows"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "glass"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "312"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
   },
   {
    "account": "Ballbag",
@@ -461,9 +524,7 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "bigpackage",
   "bowbeforeme",
-  "fingerblastr",
   "mineyourbiz",
   "mmthv2350",
   "pocketpython",
