@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845571490-1",
  "account": "BowBeforeMe",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Magic logs",
  "requested": 8,
  "claim": "e5b71dcc-9080-422f-bd46-c8ddfe959909",
- "count": 0,
- "ok": false,
- "at": 1795845875203,
- "detail": "trade claimed"
+ "count": 8,
+ "ok": true,
+ "at": 1795845911593,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 8
+ },
+ "bank": {
+  "count": 8,
+  "at": 1795845910855
+ },
+ "logout": {
+  "attemptId": "1795845875365-0000013432-0000000001",
+  "at": 1795845911584,
+  "sha256": "a2ed883bef6f6ea94e097446db0efa5851ba483654e9643b438af6e68825022e"
+ },
+ "screen": true
 }

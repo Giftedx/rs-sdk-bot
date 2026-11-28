@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795845912157-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "BowBeforeMe",
+  "item": "Magic logs",
+  "count": 5,
+  "itemId": 1513,
+  "start": 1795845912157,
+  "end": 1795846812157,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

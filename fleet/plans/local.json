@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795845866317,
+ "at": 1795845944876,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -302,7 +302,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "65"
+    "BATCH_UNITS": "75"
    },
    "enabled": true,
    "repeat": false,
@@ -313,85 +313,29 @@
    ]
   },
   {
-   "account": "MineYourBiz",
+   "account": "SporranBulge",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "ardougnegemstall",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "2",
+    "ITEM_ID": "1607",
+    "ITEMS": "Sapphire",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "cut-sapphire"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
     "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:1607",
-   "role": "auto"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=76 PRODUCT_TARGET=82 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=82 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:235 BATCH_UNITS=82 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:235",
    "role": "helper"
-  },
-  {
-   "account": "ChaosInPants",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "prayer",
-    "bury"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "TRAIN_SKILL": "Prayer",
-    "TARGET_LEVEL": "70",
-    "DEMAND_ID": "goal:pk_army:ChaosInPants",
-    "BATCH_UNITS": "42",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:ChaosInPants",
-   "role": "auto"
   },
   {
    "account": "Woodenstaff",
@@ -414,6 +358,22 @@
    "repeat": false,
    "goal": "campaign:haggis:item:39",
    "role": "auto"
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "vampire"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:vampire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "helper"
   },
   {
    "account": "Ballbag",
@@ -459,20 +419,20 @@
    ]
   },
   {
-   "account": "BoneToPick",
+   "account": "Pocketpython",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "vampire"
+    "zanaris"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
+    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "auto"
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
   },
   {
    "account": "Pullmybow",
@@ -553,9 +513,9 @@
   "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "pocketpython",
   "pocketrocket",
   "sausagefest",
   "woodpecker"

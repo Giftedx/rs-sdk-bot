@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845098198-1",
  "account": "Pocketrocket",
  "partner": "BackdoorMan",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 33,
  "claim": "c7401597-9d21-40b4-a8c2-2b11ff388172",
- "count": 0,
- "ok": false,
- "at": 1795845745371,
- "detail": "trade claimed"
+ "count": 33,
+ "ok": true,
+ "at": 1795845941199,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 33
+ },
+ "bank": {
+  "count": 33,
+  "at": 1795845940453
+ },
+ "logout": {
+  "attemptId": "1795845745379-0000000480-0000000001",
+  "at": 1795845941191,
+  "sha256": "7859de127f464e783644ae64140efe039eb7da0c8c6f15edbce3af2ad856ac05"
+ },
+ "screen": true
 }
