@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855372879,
+ "at": 1795855444988,
  "jobs": [
   {
    "account": "Balls",
@@ -45,51 +45,56 @@
    "role": "pvp"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/aio-fighter.ts",
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
    "args": [
-    "fire-giant"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 TARGET_COUNT=42 CAP=1000 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
    ],
    "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:1333",
-    "BATCH_UNITS": "400"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:1333",
-   "role": "army",
-   "resources": [
-    "fire-giants"
-   ]
+   "goal": "goal:supply_chain:2481",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:unf_guam_potion"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:91",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=35 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=35 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=70 TARGET_COUNT=34 CAP=1000 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=13 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=13 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:dwarf_weed"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=4 PRODUCT_TARGET=4 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "goal:supply_chain:267",
    "role": "army"
   },
   {
@@ -116,7 +121,7 @@
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2560 TARGET_COUNT=256 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=3460 TARGET_COUNT=346 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:PickpockDick:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
@@ -152,7 +157,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1254"
+    "BATCH_UNITS": "776"
    },
    "enabled": true,
    "repeat": false,
@@ -161,23 +166,6 @@
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "glass"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
   },
   {
    "account": "Quickhandjob",
@@ -232,6 +220,24 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "fire-giant"
+   ],
+   "env": {
+    "DEMAND_ID": "mission:mission:pk-squad:item:1333",
+    "BATCH_UNITS": "400"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:1333",
+   "role": "army",
+   "resources": [
+    "fire-giants"
+   ]
   },
   {
    "account": "Abracadickra",
