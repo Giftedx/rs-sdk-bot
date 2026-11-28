@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795847170750-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "WellHung",
+  "to": "Nockitoff",
+  "item": "Trout",
+  "count": 10,
+  "itemId": 333,
+  "start": 1795847170750,
+  "end": 1795848070750,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
