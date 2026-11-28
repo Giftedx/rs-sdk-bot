@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795833748115-1",
+ "account": "Nockitoff",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 10,
+ "claim": "df4c4840-1342-4228-bbd2-abf3b726e2b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795833877367,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}
