@@ -288,3 +288,60 @@ test('remote sendFindPath, sessionWalker, interactionApproach and routeHarm use 
         expect(code).toBe(0);
     } finally { clearTimeout(deadline); }
 }, 35_000);
+
+test('workerPool delays overflow worker creation for short bursts, spawns on slow searches, sleeps primary when idle, and recycles idle worker above RSS threshold', async () => {
+    FakeWorker.made = [];
+    let fakeRss = 100 * 1024 * 1024;
+    const pool = workerPool(2, make, {
+        overflowDelayMs: 60,
+        overflowIdleMs: 30,
+        primaryIdleMs: 50,
+        recycleRssBytes: 300 * 1024 * 1024,
+        rssBytes: () => fakeRss,
+    });
+    try {
+        // Short burst: second request queues and runs on slot 0 once first replies, never opening slot 1.
+        const a = pool.plan(req), b = pool.plan(req);
+        expect(pool.activeWorkers()).toBe(1);
+        expect(pool.inFlight()).toBe(2);
+        const w0 = FakeWorker.made[0]!;
+        expect(w0.requests.length).toBe(1);
+        w0.reply(w0.requests[0].id, { plan: { cost: 1, legs: [] } });
+        expect(await a).toEqual({ plan: { cost: 1, legs: [] } });
+        expect(pool.activeWorkers()).toBe(1);
+        expect(w0.requests.length).toBe(2);
+        w0.reply(w0.requests[1].id, { plan: { cost: 2, legs: [] } });
+        expect(await b).toEqual({ plan: { cost: 2, legs: [] } });
+        expect(FakeWorker.made.length).toBe(1);
+
+        // Slow request exceeding overflowDelayMs opens slot 1 so the second request proceeds.
+        const c = pool.plan(req), d = pool.plan(req);
+        expect(pool.activeWorkers()).toBe(1);
+        await Bun.sleep(90);
+        expect(pool.activeWorkers()).toBe(2);
+        const w1 = FakeWorker.made[1]!;
+        expect(w1.requests.length).toBe(1);
+        // Set RSS high while both are in flight: neither worker terminates until it finishes its in-flight request.
+        fakeRss = 600 * 1024 * 1024;
+        w0.reply(w0.requests[2].id, { plan: { cost: 3, legs: [] } });
+        expect(await c).toEqual({ plan: { cost: 3, legs: [] } });
+        expect(w0.terminated).toBe(true);
+        expect(w1.terminated).toBe(false);
+        w1.reply(w1.requests[0].id, { plan: { cost: 4, legs: [] } });
+        expect(await d).toEqual({ plan: { cost: 4, legs: [] } });
+        expect(w1.terminated).toBe(true);
+        expect(pool.activeWorkers()).toBe(0);
+
+        // Primary idle sleep: after RSS drops below threshold, slot 0 opens for a new request then sleeps when idle.
+        fakeRss = 100 * 1024 * 1024;
+        const e = pool.plan(req);
+        expect(pool.activeWorkers()).toBe(1);
+        const w2 = FakeWorker.made[2]!;
+        w2.reply(w2.requests[0].id, { plan: { cost: 5, legs: [] } });
+        expect(await e).toEqual({ plan: { cost: 5, legs: [] } });
+        expect(w2.terminated).toBe(false);
+        await Bun.sleep(80);
+        expect(w2.terminated).toBe(true);
+        expect(pool.activeWorkers()).toBe(0);
+    } finally { pool.stop(); }
+});

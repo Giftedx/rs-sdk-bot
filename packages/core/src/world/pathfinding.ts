@@ -14,8 +14,17 @@ import { unwrapGuarded } from '../worker-execution';
 let rsPath: { findLongPath: Function; getDoorAt: Function } | null = null;
 let activePathPolicy: { owner: object; blocked: DoorBlock[] } | null = null;
 // Scope labels (rsPathLength labelScope): measured nulls in one scope before it is labelled, scopes kept labelled, and
-// scopes whose nulls are counted.
-const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 2, SCOPE_NULL_KEYS = 256;
+// scopes whose nulls are counted. Keeping 1 scope caps retained scope-label memory at ~20 MB per worker.
+const SCOPE_LABEL_NULLS = 64, SCOPE_LABEL_KEEP = 1, SCOPE_NULL_KEYS = 256;
+function* areaZones(keys: Iterable<number>): Generator<[number, number, number]> {
+    const entry: [number, number, number] = [0, 0, 0];
+    for (const k of keys) {
+        entry[0] = k >>> 28;
+        entry[1] = ((k >>> 14) & 0x3fff) << 3;
+        entry[2] = (k & 0x3fff) << 3;
+        yield entry;
+    }
+}
 const policySdks = new WeakSet<object>();
 const remoteSendSdks = new WeakSet<object>();
 
@@ -140,12 +149,10 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     };
     const buildScopeLabels = (prefix: string, blocked: DoorBlock[]) => {
         scopeNulls.delete(prefix);
-        const zones: [number, number, number][] = [];
-        for (const k of areasOf().zones.keys()) zones.push([k >>> 28, ((k >>> 14) & 0x3fff) << 3, (k & 0x3fff) << 3]);
         // eitherWay: a one-way door of the policy joins its two sides, so a walk out through it is never refused.
         const walkable = (l: number, x: number, z: number): boolean => (pf as any).isTileWalkable(l, x, z);
         const oneWay = new Set(directionalMasks(blocked).map(m => pack(m.level, m.x, m.z)));
-        const labels = scoped(blocked, () => labelAreas(zones, walkable,
+        const labels = scoped(blocked, () => labelAreas(areaZones(areasOf().zones.keys()), walkable,
             eitherWay(walkable, (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL),
                 (l, x, z) => oneWay.has(pack(l, x, z)))));
         if (scopeLabels.size >= SCOPE_LABEL_KEEP) scopeLabels.delete(scopeLabels.keys().next().value!);
@@ -209,7 +216,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
         const seen = recentDanger.find(r => sameTiles(r.lists, lists));
         if (seen) return seen.table;
         const table = tileTable(lists, 2);
-        if (recentDanger.length >= 4) recentDanger.shift();
+        if (recentDanger.length >= 2) recentDanger.shift();
         recentDanger.push({ lists, table });
         return table;
     };
@@ -276,8 +283,8 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     // 113,368 tiles in 25 ms, where one findLongPath leg of 150 to 300 tiles costs 3.75 ms; its distances equalled the
     // findLongPath lengths on 4,773 of 4,773 walks of a search. It keeps only the distances to the route graph's tiles
     // (addTargets), so a few hundred floods stay in memory. A start gets its flood on its second measured walk.
-    const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 192, FLOOD_AFTER = 2;
-    type Flood = { dist: Map<number, number>; complete: boolean; targets: number };
+    const FLOOD_R = 340, FLOOD_SIDE = 2 * FLOOD_R + 1, FLOOD_KEEP = 64, FLOOD_AFTER = 2;
+    type Flood = { keys: Int32Array; dists: Uint16Array; complete: boolean; targets: number };
     const floods = new Map<string, Flood>(), floodMisses = new Map<string, number>();
     let floodsBuilt = 0;
     const scopeIds = new WeakMap<object, number>(), noDanger = {};
@@ -295,36 +302,56 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
             if (list) list.push(k); else targetBuckets.set(b, [k]);
         }
     };
-    let seen: Uint16Array | null = null, qx: Int32Array | null = null, qz: Int32Array | null = null;
+    const lookupFloodDist = (f: Flood, goal: number): number | undefined => {
+        const keys = f.keys;
+        let lo = 0, hi = keys.length - 1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >>> 1;
+            const k = keys[mid]!;
+            if (k === goal) return f.dists[mid]!;
+            if (k < goal) lo = mid + 1;
+            else hi = mid - 1;
+        }
+        return undefined;
+    };
+    let seen: Uint16Array | null = null, qx: Uint16Array | null = null, qz: Uint16Array | null = null;
     const floodFrom = (from: Tile): Flood => {
         const sBuf = seen ??= new Uint16Array(FLOOD_SIDE * FLOOD_SIDE);
-        const xBuf = qx ??= new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
-        const zBuf = qz ??= new Int32Array(FLOOD_SIDE * FLOOD_SIDE);
+        const xBuf = qx ??= new Uint16Array(FLOOD_SIDE * FLOOD_SIDE);
+        const zBuf = qz ??= new Uint16Array(FLOOD_SIDE * FLOOD_SIDE);
         const x0 = from.x - FLOOD_R, z0 = from.z - FLOOD_R, lvl = from.level;
         let head = 0, tail = 0, complete = true;
-        xBuf[tail] = from.x; zBuf[tail++] = from.z; sBuf[FLOOD_R * FLOOD_SIDE + FLOOD_R] = 1;
+        xBuf[tail] = FLOOD_R; zBuf[tail++] = FLOOD_R; sBuf[FLOOD_R * FLOOD_SIDE + FLOOD_R] = 1;
         while (head < tail) {
-            const x = xBuf[head]!, z = zBuf[head++]!, d = sBuf[(x - x0) * FLOOD_SIDE + (z - z0)]! + 1;
+            const rx = xBuf[head]!, rz = zBuf[head++]!;
+            const x = x0 + rx, z = z0 + rz, d = sBuf[rx * FLOOD_SIDE + rz]! + 1;
             for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
                 if (!dx && !dz) continue;
-                const nx = x + dx, nz = z + dz;
-                if (nx < x0 || nz < z0 || nx >= x0 + FLOOD_SIDE || nz >= z0 + FLOOD_SIDE) { if (complete && grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) complete = false; continue; }
-                const i = (nx - x0) * FLOOD_SIDE + (nz - z0);
+                const nrx = rx + dx, nrz = rz + dz;
+                if (nrx < 0 || nrz < 0 || nrx >= FLOOD_SIDE || nrz >= FLOOD_SIDE) { if (complete && grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) complete = false; continue; }
+                const i = nrx * FLOOD_SIDE + nrz;
                 if (sBuf[i] || !grid.canTravel(lvl, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL)) continue;
-                sBuf[i] = d; xBuf[tail] = nx; zBuf[tail++] = nz;
+                sBuf[i] = d; xBuf[tail] = nrx; zBuf[tail++] = nrz;
             }
         }
-        const dist = new Map<number, number>();
+        const pairs: [number, number][] = [];
         for (let bx = x0 >> 6; bx <= (x0 + FLOOD_SIDE - 1) >> 6; bx++) for (let bz = z0 >> 6; bz <= (z0 + FLOOD_SIDE - 1) >> 6; bz++) {
             for (const k of targetBuckets.get(bucketOf(lvl, bx << 6, bz << 6)) ?? []) {
                 const x = (k >>> 14) & 0x3fff, z = k & 0x3fff;
                 if (x < x0 || z < z0 || x >= x0 + FLOOD_SIDE || z >= z0 + FLOOD_SIDE) continue;
                 const d = sBuf[(x - x0) * FLOOD_SIDE + (z - z0)]!;
-                if (d) dist.set(k, d - 1);
+                if (d) pairs.push([k, d - 1]);
             }
         }
-        for (let i = 0; i < tail; i++) sBuf[(xBuf[i]! - x0) * FLOOD_SIDE + (zBuf[i]! - z0)] = 0;
-        return { dist, complete, targets: targetSet.size };
+        for (let i = 0; i < tail; i++) sBuf[xBuf[i]! * FLOOD_SIDE + zBuf[i]!] = 0;
+        pairs.sort((a, b) => a[0] - b[0]);
+        const keys = new Int32Array(pairs.length), dists = new Uint16Array(pairs.length);
+        for (let i = 0; i < pairs.length; i++) {
+            const pair = pairs[i]!;
+            keys[i] = pair[0];
+            dists[i] = pair[1];
+        }
+        return { keys, dists, complete, targets: targetSet.size };
     };
     // The length of a walk read from the flood of its start, null when the walk has no path, or undefined when the
     // flood does not decide it (the walk then goes to findLongPath). A path that leaves the box is at least
@@ -338,7 +365,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
         if (!f) {
             const n = (floodMisses.get(key) ?? 0) + 1;
             if (n < FLOOD_AFTER) {
-                if (floodMisses.size >= 8192) floodMisses.delete(floodMisses.keys().next().value!);
+                if (floodMisses.size >= 2048) floodMisses.delete(floodMisses.keys().next().value!);
                 floodMisses.set(key, n);
                 return undefined;
             }
@@ -350,7 +377,7 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
         }
         // A tile added after the flood was taken is not in it.
         if (targetSet.get(goal)! >= f.targets) return undefined;
-        const d = f.dist.get(goal);
+        const d = lookupFloodDist(f, goal);
         if (d !== undefined) return d <= 2 * (FLOOD_R + 1) - c ? d : undefined;
         // A goal the complete flood did not reach has no path. With a tolerance, findLongPath walks to the nearest
         // tile it reaches, which the flood does not choose.
@@ -520,7 +547,29 @@ export async function rsPathLength(opts: { legs?: LegCache; lazyLabels?: boolean
     };
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
-    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache?.save(); } };
+    let dangerDepth = 0;
+    measure.withDanger = (acct, from, to, query) => {
+        dangerDepth++;
+        try {
+            return guardRoute(grid, acct, [from, to], query);
+        } finally {
+            interactionAreasCache.clear();
+            cache?.save();
+            if (--dangerDepth === 0) {
+                lastBlocked = undefined;
+                lastShut = '';
+                lastDanger = undefined;
+                lastDk = '-';
+                interactionAreasScope = '';
+                tablesBlocked = undefined;
+                tablesDanger = undefined;
+                tables = [NO_CHANGES, NO_CHANGES];
+                seen = null;
+                qx = null;
+                qz = null;
+            }
+        }
+    };
     // A route landing inside the account's closed ground: the closed tiles of the squares that hold it (escapeTiles),
     // which a walk from that landing may cross as a walk from the route start does.
     // An account that avoids harm (guard.ts guardRoute) also has the harm squares holding the landing closed (exposure.ts routeHarmKeep).

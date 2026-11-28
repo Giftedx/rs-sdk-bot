@@ -47,7 +47,7 @@ export function routeServiceEnv(env: Record<string, string | undefined> = proces
 // Starts one detached service through a launcher that exits at once. The service's parent is then a dead process, so
 // a tree kill of the bot that asked for it (taskkill /T) does not stop the service that other bots use.
 export function launchService(root = repoRoot): void {
-    spawn(process.execPath, [join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], {
+    spawn(process.execPath, ['--smol', join(root, 'packages', 'core', 'src', 'route-service.ts'), '--launch'], {
         cwd: root, detached: true, windowsHide: true, stdio: 'ignore', env: routeServiceEnv(process.env),
     }).unref();
 }

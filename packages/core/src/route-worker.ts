@@ -193,6 +193,8 @@ function runQuery(env: PfEnv, req: RouteQuery): unknown {
 }
 
 const isRouteQuery = (r: RouteWorkerRequest): r is RouteQuery & { id: number } => Boolean(r.kind && r.kind !== 'plan');
+const QUERY_GC_INTERVAL = 32;
+let queryCount = 0;
 
 self.onmessage = async e => {
     const req = e.data;
@@ -202,6 +204,9 @@ self.onmessage = async e => {
             const env = await ensurePf();
             const result = runQuery(env, req);
             self.postMessage({ id, result });
+            if (++queryCount % QUERY_GC_INTERVAL === 0) {
+                (globalThis as { Bun?: { gc?: (sync?: boolean) => void } }).Bun?.gc?.(false);
+            }
         } catch (error) {
             self.postMessage({ id, error: String((error as Error)?.stack ?? error) });
         }
