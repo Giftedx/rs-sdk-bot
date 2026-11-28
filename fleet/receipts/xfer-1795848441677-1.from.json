@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795848441677-1",
+ "account": "MineYourBiz",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ruby",
+ "requested": 1,
+ "claim": "ef1faf38-5222-4c43-912d-42ffce30d437",
+ "count": 0,
+ "ok": false,
+ "at": 1795848806926,
+ "detail": "trade claimed"
+}
