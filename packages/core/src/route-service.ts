@@ -124,6 +124,23 @@ export function workerPool(size: number, make: () => Worker = () => new Worker(n
     };
 }
 
+// Bun.serve (1.4.5, Windows) closes a connection that receives no byte for 30 s, with idleTimeout 0 or 255, and a
+// cold plan can search for longer. The client then saw ECONNRESET and planned again with its own route worker (about
+// 700 MB more and the whole search again: 112 s for one prewarm walk). The answer starts at once, and a space goes out
+// every HEARTBEAT_MS until the plan is there. JSON.parse skips the leading spaces.
+export const HEARTBEAT_MS = 10_000;
+export function planResponse(plan: Promise<unknown>, heartbeatMs = HEARTBEAT_MS): Response {
+    const space = new Uint8Array([0x20]);
+    return new Response(new ReadableStream<Uint8Array>({
+        async start(c) {
+            const beat = setInterval(() => { try { c.enqueue(space); } catch { /* the client left */ } }, heartbeatMs);
+            let text: string;
+            try { text = JSON.stringify(await plan); } catch (error) { text = JSON.stringify({ error: String(error) }); } finally { clearInterval(beat); }
+            try { c.enqueue(new TextEncoder().encode(text)); c.close(); } catch { /* the client left */ }
+        },
+    }), { headers: { 'content-type': 'application/json' } });
+}
+
 export function serveRoutes(opts: { workers?: number; idleMs?: number; file?: string; onStop?: () => void; makeWorker?: () => Worker } = {}) {
     const workers = opts.workers ?? DEFAULT_WORKERS, idleMs = opts.idleMs ?? DEFAULT_IDLE_MS, file = opts.file ?? SERVICE_FILE;
     const pool = workerPool(workers, opts.makeWorker);
@@ -140,10 +157,7 @@ export function serveRoutes(opts: { workers?: number; idleMs?: number; file?: st
             try { body = await req.json() as ServicePlan; } catch { return new Response('bad request', { status: 400 }); }
             if (!body?.from || !body?.to || !body?.acct) return new Response('bad request', { status: 400 });
             last = Date.now();
-            const out = await pool.plan(body);
-            last = Date.now();
-            served++;
-            return Response.json(out);
+            return planResponse(pool.plan(body).then(out => { last = Date.now(); served++; return out; }));
         },
     });
     const info: ServiceInfo = { pid: process.pid, port: server.port!, rev: checkoutRev(), dataKey: pathfindingDataKey(), workers, started: Date.now() };

@@ -11,6 +11,8 @@ import {unplacedCause} from '../../core/src/order-refusal';
 import {hasStopFile,readStopFile,statusReadDirs} from '../../core/src/practice-paths';
 import {DRAIN_STOP_TEXT,workerDrain} from '../../core/src/live-update-pending';
 import {killTree} from '../../core/src/proc';
+import {parseStep,runChainSteps,type Step} from '../../core/src/chain-step';
+import {childResult,indentWriter} from '../../core/src/run-child';
 import {existsSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 
@@ -45,7 +47,7 @@ export async function runWorker(cmd: readonly string[], opts: {
 }): Promise<{ stdout: string; stderr: string; exitCode: number; stalled: boolean }> {
     const started = Date.now(), stallMs = opts.stallMs ?? STALL_MS;
     let lastOutput = started, stalled = false;
-    const p = Bun.spawn([...cmd], { stdout: 'pipe', stderr: 'pipe', env: opts.env ?? process.env, windowsHide: true });
+    const p = Bun.spawn([...cmd], { cwd: opts.root, stdout: 'pipe', stderr: 'pipe', env: opts.env ?? process.env, windowsHide: true });
     const out = opts.write ?? { stdout: (c: string) => process.stdout.write(c), stderr: (c: string) => process.stderr.write(c) };
     const watch = setInterval(() => {
         const last = Math.max(started, lastOutput, newestStatusWrite(opts.accounts, opts.root));
@@ -67,6 +69,41 @@ export async function runWorker(cmd: readonly string[], opts: {
     } finally {
         clearInterval(watch);
     }
+}
+
+// A job of scripts/chain.ts runs its steps here: the same steps, ROUNDS, stop file, drain check and output as
+// chain.ts, and each step is still its own child process with its own login. Only the chain process is not started:
+// about 95 MB private on Windows for a loop that waits. Each step child has the stall watch of runWorker, so a
+// stalled step ends the chain with that step's stall RESULT.
+export const CHAIN_SCRIPT = 'scripts/chain.ts';
+type WorkerOpts = Parameters<typeof runWorker>[1];
+export async function runChainHere(account: string, texts: readonly string[], opts: WorkerOpts & { root: string }): Promise<{ stdout: string; stderr: string; exitCode: number; stalled: boolean }> {
+    const out = opts.write ?? { stdout: (c: string) => process.stdout.write(c), stderr: (c: string) => process.stderr.write(c) };
+    const keepOut = lineKeeper(opts.match.stdout), keepErr = lineKeeper(opts.match.stderr), env = opts.env ?? process.env;
+    const emit = (c: string) => { keepOut.push(c); out.stdout(c); }, emitErr = (c: string) => { keepErr.push(c); out.stderr(c); };
+    const done = (exitCode: number, stalled = false) => ({ stdout: keepOut.text(), stderr: keepErr.text(), exitCode, stalled });
+    if (!texts.length) { emit('RESULT fail usage: chain.ts <account> "<script> [args] [KEY=value]" ...\n'); return done(2); }
+    let steps: Step[];
+    // chain.ts parses its steps at top level, so a bad step text is its uncaught error.
+    try { steps = texts.map(parseStep); } catch (e) { emitErr(`error: ${(e as Error).message}\n`); return done(1); }
+    let stalled = false;
+    const result = await runChainSteps(steps, Number(env.ROUNDS ?? 1), {
+        stopped: () => existsSync(join(opts.root, '.practice', `stop-${account}`)),
+        log: line => emit(`${line}\n`),
+        drained: () => workerDrain(opts.root),
+        run: async st => {
+            const r = await runWorker(['bun', st.script, account, ...st.args], {
+                ...opts, env: { ...env, ...st.env },
+                match: { stdout: l => l.startsWith('RESULT ') ? 'RESULT' : null, stderr: l => /^error: \S/.test(l) ? 'ERROR' : null },
+                write: { stdout: indentWriter(emit), stderr: emitErr },
+            });
+            stalled ||= r.stalled;
+            const error = lastMatchingLine(r.stderr, l => l.startsWith('error: '));
+            return childResult(r.exitCode, lastMatchingLine(r.stdout, l => l.startsWith('RESULT ')), error?.slice('error: '.length));
+        },
+    });
+    emit(`${result}\n`);
+    return done(/^RESULT ok(?: |$)/.test(result) ? 0 : 1, stalled);
 }
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
@@ -372,14 +409,15 @@ if (import.meta.main) {
         run: async () => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
-            const r = await runWorker(workerCommand(bot,script,scriptArgs), {
+            const opts = {
                 accounts: participants,
                 root: process.cwd(),
                 match: {
-                    stdout: l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : isHpFloorLine(l) ? 'HP_FLOOR' : null,
-                    stderr: l => isUncaughtErrorLine(l) ? 'ERROR' : null,
+                    stdout: (l: string) => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : isHpFloorLine(l) ? 'HP_FLOOR' : null,
+                    stderr: (l: string) => isUncaughtErrorLine(l) ? 'ERROR' : null,
                 },
-            });
+            };
+            const r = script === CHAIN_SCRIPT ? await runChainHere(bot, scriptArgs, opts) : await runWorker(workerCommand(bot,script,scriptArgs), opts);
             return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode };
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),

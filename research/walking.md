@@ -185,6 +185,16 @@ The service with two workers held 618 MB private after these plans: one copy for
 
 **Gap:** the main-thread grid (about 130 MB: the wasm snapshot restore at the first local path search) stays in each bot process. The local walk legs (`walk/session.ts` `plan`), the door policy on `sdk.findPath`, the harm checks and NPC reach read it synchronously. No live solo process was measured with the service.
 
+### Plans longer than 30 s
+
+**Claim:** `Bun.serve` closes a connection that gets no byte for 30 s, with `idleTimeout` 0 or 255. The service answers each plan with a stream that sends a space every 10 s until the plan is there (`planResponse`), so a cold plan of any length reaches the bot. A plan that the service dropped went to the bot's own route worker: the whole search again and about 700 MB more in that process. The route prewarm plans through the service, not in a route world of its own.
+
+**Conditions:** Bun 1.4.5, Windows. A test server that answers after 40 s: curl `(52) Empty reply from server` at 30,140 ms, Bun `fetch` `ECONNRESET` at 30,124 ms with `idleTimeout: 0` and at 30,103 ms with 255. The streamed answer arrives at 40,102 ms. A cold plan by the live-code service failed at 29,995 ms. A 150 s prewarm by the changed service planned 5 walks, one of 87,512 ms, with no `ROUTE_SERVICE_SKIP` line. The prewarm process peaked at 149 MB private. The live prewarm with its own route world held 2,462 MB.
+
+**Evidence:** scratchpad server tests (not committed), `.practice/prewarm-test.log` of the test worktree, `packages/core/test/route-service.test.ts`.
+
+**Gap:** the prewarm holds one of the two service workers for its budget (20 minutes at most), so two bot plans at once can wait for each other in that time.
+
 ## Offline fleet reachability
 
 The collision-component audit covers 9,549 distinct preset, seller, spawn and fixed-script tiles from Lumbridge and 11 banks for weak (10 HP, 30 coins) and strong (70 melee/HP, 20,000 coins) profiles. It checks 229,176 directed source/target/profile cases. Source hashes, every result and masked area/fare/danger/door observations are retained in `route-audit.json.gz`; `route-audit-summary.json` gives totals. These are offline reachability results, not game progress or shortest route times. Quest flags, items and unlocks are empty in both profiles.

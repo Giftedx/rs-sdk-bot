@@ -68,20 +68,32 @@ if (import.meta.main) {
     walks.sort((a, b) => b.ms - a.ms);
     console.log(`PREWARM walks=${walks.length} minMs=${minMs} budgetMs=${budgetMs}${dry ? ' dry' : ''}`);
     if (dry) { for (const w of walks) console.log(`PREWARM walk ${w.bot} ${JSON.stringify(w.from)} -> ${JSON.stringify(w.to)} ${w.ms} ms`); process.exit(0); }
-    const [{ loadPathfinding }, { createWorld, rsPathLength }, { bankStock, planTrip }] = await Promise.all([
-        import('../packages/core/src/pathcache'), import('../packages/core/src/world'), import('../packages/core/src/trip'),
-    ]);
-    await loadPathfinding();
-    // --store: another leg store file (a proof run on an empty store); the shared store otherwise.
-    const store = process.argv.includes('--store') ? (await import('../packages/core/src/leg-cache')).legCache(resolve(arg('--store', ''))) : undefined;
-    const world = createWorld({ pathLength: await rsPathLength(store ? { legs: store } : {}) }), end = Date.now() + budgetMs;
+    const { bankStock } = await import('../packages/core/src/trip');
+    type Acct = NonNullable<Awaited<ReturnType<typeof statusAccount>>>;
+    // The plans go to the host route service (packages/core/src/route-service.ts). It writes the same shared leg store
+    // and keeps its warm search state for the bots. A route world in this process held 2.4 GB private next to the
+    // service's own. --store (another leg store file, for a proof run on an empty store) plans in this process.
+    const planWalk = await (async () => {
+        if (!process.argv.includes('--store')) {
+            process.env.ROUTE_SERVICE = '1';
+            const { planTripOffThread } = await import('../packages/core/src/route-plan');
+            return (w: SlowWalk, acct: Acct, ms: number) => planTripOffThread(w.from, w.to, acct, bankStock(w.bot, { base }), ms);
+        }
+        const [{ loadPathfinding }, { createWorld, rsPathLength }, { planTrip }, { legCache }] = await Promise.all([
+            import('../packages/core/src/pathcache'), import('../packages/core/src/world'), import('../packages/core/src/trip'), import('../packages/core/src/leg-cache'),
+        ]);
+        await loadPathfinding();
+        const world = createWorld({ pathLength: await rsPathLength({ legs: legCache(resolve(arg('--store', ''))) }) });
+        return async (w: SlowWalk, acct: Acct, ms: number) => planTrip(world, w.from, w.to, acct, bankStock(w.bot, { base }), undefined, undefined, { deadline: performance.now() + ms });
+    })();
+    const end = Date.now() + budgetMs;
     let done = 0;
     for (const w of walks) {
         const left = end - Date.now();
         if (left <= 0) break;
         const acct = await statusAccount(w.bot, statusDirs);
         if (!acct) continue;
-        const t0 = performance.now(), plan = planTrip(world, w.from, w.to, acct, bankStock(w.bot, { base }), undefined, undefined, { deadline: performance.now() + Math.min(left, 120_000) });
+        const t0 = performance.now(), plan = await planWalk(w, acct, Math.min(left, 120_000));
         done++;
         console.log(`PREWARM ${JSON.stringify({ bot: w.bot, from: w.from, to: w.to, liveMs: w.ms, ms: Math.round(performance.now() - t0), ok: !!plan })}`);
     }

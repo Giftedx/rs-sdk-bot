@@ -291,6 +291,30 @@ Steps, cheapest first, for a single-bot process (the host already pays these onc
 
 Recommendation: use the host. 4 bots in one host cost about one bot process plus the sessions.
 
+## 5. Process count and engine threads (one bot per process)
+
+A live swarm bot is `supervise.ts`, then (for a chain job) `chain.ts`, then the worker. Live private bytes on one
+pass: supervisors 77-105 MB, `chain.ts` 95 MB, workers 313-515 MB.
+
+**Engine threads.** On Windows each JSC helper thread commits its stack. A 16-core PC gets 8 parallel GC markers
+and, at the first wasm module (the rsmod route finder), 15 wasm compiler threads. `packages/core/src/lean-bun-env.ts`
+sets one of each for every process that the swarm and the watchdog start; their children inherit it. Measured with
+`scripts/measure/solo-route-memory.ts`, 3 runs each, same plan times:
+
+| Process | Default | Lean env |
+|---|---|---|
+| idle bun (threads) | 87 MB (11) | 68 MB (3) |
+| worker after `getWorld` | 192-199 MB | 109 MB |
+| worker after route plans | 327-331 MB | 256-257 MB |
+
+**Chain in the supervisor.** `supervise.ts` runs the steps of a `scripts/chain.ts` job itself (`runChainHere`): the
+same steps, ROUNDS, stop file, drain check and output lines, one child process per step. A chain job tree with one
+idle step, 3 runs: 3 processes and 284-285 MB (supervise 97, chain 99, step 88-89) against 2 processes and 154 MB
+(supervise 82, step 72), with the same `RESULT ok chain rounds=1 ok=1 failed=0`.
+
+Gap: the supervisor stays its own process, because the swarm starts it detached and adopts it again after a swarm
+restart. No live run has the lean env yet; GC pause times under a full session heap are not measured.
+
 ## Open
 
 - More than 4 bots per host not measured. CPU per host not measured.

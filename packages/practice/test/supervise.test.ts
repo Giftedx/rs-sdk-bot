@@ -632,6 +632,52 @@ test('a worker that spins with no output and no status write is ended, and the j
     }
 }, 30_000);
 
+// Two fake step scripts in a scratch checkout: `a` works and ends ok, `b` throws.
+function chainRoot(): string {
+    const root = mkdtempSync(join(tmpdir(), 'supervise-chain-'));
+    mkdirSync(join(root, 'scripts'));
+    writeFileSync(join(root, 'scripts', 'a.ts'), 'console.log(`ARGV ${process.argv[2]} ${process.argv.slice(3).join(",")} K=${process.env.K ?? "-"}`);\nconsole.log("LEDGER ticks=400 xp=1 inventory=1 idle=3");\nconsole.log("RESULT ok a");\n');
+    writeFileSync(join(root, 'scripts', 'b.ts'), 'throw new Error("boom");\n');
+    return root;
+}
+const chainMatch = { stdout: (l: string) => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null, stderr: (l: string) => /^error: /.test(l) ? 'ERROR' : null };
+
+test('a chain job runs its steps in the supervisor with the output of chain.ts', async () => {
+    const { runChainHere } = await import('../src/supervise');
+    const root = chainRoot();
+    try {
+        let out = '';
+        const r = await runChainHere('Acc', ['scripts/a.ts x y K=1', 'scripts/b.ts'], {
+            accounts: ['Acc'], root, env: { ...process.env, ROUNDS: '' }, match: chainMatch,
+            write: { stdout: c => { out += c; }, stderr: () => undefined },
+        });
+        const lines = out.trimEnd().split('\n');
+        expect(lines).toContain('  | ARGV Acc x,y K=1');
+        expect(lines).toContain('  | RESULT ok a');
+        expect(lines).toContain('CHAIN round=1 scripts/a.ts ok RESULT ok a');
+        expect(lines).toContain('CHAIN round=1 scripts/b.ts fail RESULT fail boom');
+        expect(lines.at(-1)).toBe('RESULT fail boom chain rounds=1 ok=1 failed=1');
+        // As under chain.ts, the step's LEDGER line is indented, so only the chain's RESULT is kept.
+        expect(r).toEqual({ stdout: 'RESULT fail boom chain rounds=1 ok=1 failed=1', stderr: expect.stringMatching(/^error: /), exitCode: 1, stalled: false });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+}, 30_000);
+
+test('a chain job repeats ROUNDS times, and a stop file ends it before a step', async () => {
+    const { runChainHere } = await import('../src/supervise');
+    const root = chainRoot();
+    const opts = { accounts: ['Acc'], root, match: chainMatch, write: { stdout: () => undefined, stderr: () => undefined } };
+    try {
+        const ok = await runChainHere('Acc', ['scripts/a.ts'], { ...opts, env: { ...process.env, ROUNDS: '2' } });
+        expect(ok).toMatchObject({ stdout: 'RESULT ok chain rounds=2 ok=2 failed=0', exitCode: 0 });
+        mkdirSync(join(root, '.practice'));
+        writeFileSync(join(root, '.practice', 'stop-Acc'), 'owner');
+        const stopped = await runChainHere('Acc', ['scripts/a.ts'], { ...opts, env: { ...process.env, ROUNDS: '2' } });
+        expect(stopped).toMatchObject({ stdout: 'RESULT fail stop file chain rounds=0 ok=0 failed=0', exitCode: 1 });
+        const bad = await runChainHere('Acc', ['tools/x.ts'], opts);
+        expect(bad).toMatchObject({ stdout: '', stderr: 'error: chain step needs a scripts/*.ts path: tools/x.ts', exitCode: 1 });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+}, 30_000);
+
 test('a status write keeps a quiet worker alive past the stall limit', async () => {
     const { runWorker } = await import('../src/supervise');
     const root = mkdtempSync(join(tmpdir(), 'supervise-quiet-'));

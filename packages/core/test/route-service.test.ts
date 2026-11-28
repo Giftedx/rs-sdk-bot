@@ -2,8 +2,16 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { claimLaunch, LAUNCH_LOCK_MS, readServiceInfo, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
+import { claimLaunch, LAUNCH_LOCK_MS, planResponse, readServiceInfo, serveRoutes, usableService, workerPool, type ServiceInfo } from '../src/route-service';
 import { serviceWanted } from '../src/route-plan';
+
+test('a slow plan answer sends spaces until the plan, and still reads as JSON', async () => {
+    const res = planResponse(Bun.sleep(70).then(() => ({ plan: { cost: 3 } })), 20);
+    const text = await res.text();
+    expect(text).toMatch(/^ {2,}\{/);
+    expect(JSON.parse(text)).toEqual({ plan: { cost: 3 } });
+    expect(await planResponse(Promise.reject(Error('boom')), 20).json()).toEqual({ error: 'Error: boom' });
+});
 
 test('one launcher at a time holds the launch lock; a stale lock is taken again', () => {
     const dir = mkdtempSync(join(tmpdir(), 'route-launch-')), lock = join(dir, 'route-service.json.lock');

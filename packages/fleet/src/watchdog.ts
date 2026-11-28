@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { CONTROLLERS, controllerState, readLaunch, type Controller, type Launch } from '../../core/src/controllers';
+import { leanBunEnv } from '../../core/src/lean-bun-env';
 import { hasStopFile } from '../../core/src/practice-paths';
 import { pidStartedAfter } from '../../core/src/proc';
 import { ensureHostedQualification, type QualifyDeps } from './recovery-qualify';
@@ -120,7 +121,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             const repo = publisherRepo(remote);
             if (!repo) log(`publisher not restarted: no GitHub origin in ${clone}`);
             else {
-                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: { ...process.env, FLEET_COMMAND_REPO: repo }, stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
+                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: leanBunEnv({ ...process.env, FLEET_COMMAND_REPO: repo }), stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
                 log(`publisher restarted for ${repo} (previous pid=${pid || 'none'}): ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
             }
         }
@@ -141,7 +142,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
         if (!launch) continue;
         const start = restartCommand(c.name, launch, p => existsSync(resolve(base, p)));
         if (typeof start === 'string') { log(`${c.name} not restarted: ${start}`); continue; }
-        const env = { ...process.env, ...launch.env };
+        const env = leanBunEnv({ ...process.env, ...launch.env });
         if (deps.restartController) {
             deps.restartController(c, start, env);
             continue;
