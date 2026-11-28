@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795845072963,
+ "at": 1795845148959,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -188,22 +188,23 @@
    "account": "Shaftmaker",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "fishing",
-    "cage",
-    "cage"
+    "crafting",
+    "inventory",
+    "cut-bow:unstrung_magic_shortbow"
    ],
    "env": {
-    "CAP": "3000",
-    "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "86"
+    "MAX_MAKE": "1",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:72",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:377",
-   "role": "auto",
-   "resources": [
-    "catherby-lobsters"
-   ]
+   "goal": "goal:supply_chain:72",
+   "role": "auto"
   },
   {
    "account": "TossTheCaber",
@@ -251,7 +252,7 @@
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=1000 TARGET_COUNT=21 PRODUCT_TARGET=22 -- woodcutting yews",
+    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=22 -- woodcutting yews",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
     "scripts/aio-skiller.ts MAX_MAKE=22 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:72 BATCH_UNITS=22 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-bow:unstrung_magic_shortbow"
    ],
@@ -287,44 +288,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:42",
    "role": "army"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
   },
   {
    "account": "DropMyLoad",
@@ -366,41 +329,48 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "RearEntry",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "mining",
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "2000"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "TackleBox",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/thieving60.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 --",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1672 -- thieving knights-stable"
+    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1687 -- thieving knights-stable"
    ],
    "env": {
     "ROUNDS": "1"
@@ -411,26 +381,19 @@
    "role": "helper"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-market.ts",
+   "account": "BoneToPick",
+   "script": "scripts/chain.ts",
    "args": [
-    "ge-buy"
+    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- chicken"
    ],
    "env": {
-    "ORDER_KEY": "brain-436-4-o0-p23",
-    "ITEM_ID": "436",
-    "QUANTITY": "4",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "23",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:436",
-    "BATCH_UNITS": "4"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:436",
-   "role": "army"
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   },
   {
    "account": "YewGotWood",
@@ -484,19 +447,24 @@
    "role": "auto"
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/chain.ts",
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-logistics.ts RECOVERY_TARGET_HUB=varrock_west -- walk-to 3185 3436 0 --or=2619,3332,0 --or-bank",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- chicken"
+    "chicken"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Nockitoff",
-   "role": "auto"
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "Quickhandjob",
