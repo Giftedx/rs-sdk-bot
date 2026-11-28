@@ -906,6 +906,54 @@ export class DemandEngine {
             return take;
         };
 
+        const hasUnlockableShop = (itemId: number): boolean => {
+            const entries = shopCatalog.get(itemId);
+            if (!entries || entries.length === 0) return false;
+            return entries.some((shop) => {
+                if (!shop.requiresQuest) return true;
+                const lower = shop.requiresQuest.toLowerCase();
+                if (completedQuests.has(lower)) return true;
+                for (const ck of questCandidateKeys(shop.requiresQuest)) {
+                    if (completedQuests.has(ck)) return true;
+                }
+                return this.catalog.findByQuest(shop.requiresQuest).some((qa) => qa.trust !== 'experimental');
+            });
+        };
+
+        const producerChainViableCache = new Map<number, boolean>();
+        const hasViableProducerChain = (itemId: number, visiting = new Set<number>()): boolean => {
+            const cached = producerChainViableCache.get(itemId);
+            if (cached !== undefined) return cached;
+            if (visiting.has(itemId)) return false;
+            visiting.add(itemId);
+            const candidates = this.catalog
+                .findByOutputItem(itemId)
+                .filter((a) => a.trust !== 'experimental' && canQuestUnlockOrHold(a));
+            let viable = false;
+            for (const prod of candidates) {
+                if (!prod.inputs || prod.inputs.length === 0) {
+                    viable = true;
+                    break;
+                }
+                if (prod.inputs.every((inp) =>
+                    hasUnlockableShop(inp.itemId)
+                    || hasViableProducerChain(inp.itemId, visiting))) {
+                    viable = true;
+                    break;
+                }
+            }
+            visiting.delete(itemId);
+            if (visiting.size === 0) producerChainViableCache.set(itemId, viable);
+            return viable;
+        };
+
+        const isInputSupplyViable = (itemId: number, needed: number): boolean =>
+            hasAbundantShop(itemId, needed)
+            || hasUnlockableShop(itemId)
+            || (remainingStock.get(itemId) ?? 0) >= needed
+            || (remainingGeSell.get(itemId) ?? 0) >= needed
+            || hasViableProducerChain(itemId);
+
         const pickProducer = (itemId: number): ActivityDefinition | undefined => {
             const nonExp = this.catalog.findByOutputItem(itemId).filter((a) => a.trust !== 'experimental');
             if (nonExp.length === 0) return undefined;
@@ -924,7 +972,18 @@ export class DemandEngine {
                     }
                     return hits;
                 };
+                const allInputsViable = (act: ActivityDefinition): number =>
+                    (act.inputs ?? []).every((inp) => isInputSupplyViable(inp.itemId, inp.countPerUnit)) ? 1 : 0;
+                const viableCount = (act: ActivityDefinition): number => {
+                    let hits = 0;
+                    for (const inp of act.inputs ?? []) {
+                        if (isInputSupplyViable(inp.itemId, inp.countPerUnit)) hits++;
+                    }
+                    return hits;
+                };
                 return satScore(b) - satScore(a)
+                    || allInputsViable(b) - allInputsViable(a)
+                    || viableCount(b) - viableCount(a)
                     || b.baselineRate.unitsPerTick - a.baselineRate.unitsPerTick
                     || a.id.localeCompare(b.id);
             })[0];

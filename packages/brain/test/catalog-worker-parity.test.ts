@@ -284,6 +284,7 @@ describe('catalog-worker parity', () => {
         const artisanAcct = makeTestAccount({
             name: 'MasterMaker',
             skills: {
+                Hitpoints: { level: 75, xp: 1_210_421 },
                 Magic: { level: 70, xp: 800_000 },
                 Smithing: { level: 99, xp: 14_000_000 },
                 Herblore: { level: 40, xp: 40_000 },

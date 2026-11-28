@@ -102,6 +102,7 @@ export interface ShopCatalogEntry {
     readonly requiresQuest?: string;
     readonly requiresSkill?: { readonly skill: string; readonly level: number };
     readonly requiresQuestPoints?: number;
+    readonly requiresItems?: readonly number[];
 }
 
 export interface AcquireRequest {
@@ -152,15 +153,21 @@ export interface AcquireResolution {
     readonly skippedReasons: readonly { readonly source: AcquireSourceKind; readonly reason: string }[];
 }
 
-const PROFILE_GATES: Readonly<Record<string, { readonly requiresQuest?: string; readonly requiresSkill?: { readonly skill: string; readonly level: number }; readonly requiresQuestPoints?: number }>> = {
+// Realm and dialog-buy profiles explicitly verified for autonomous shop-buy with full preflight gates.
+const VERIFIED_SPECIAL_SHOP_PROFILES: ReadonlySet<string> = new Set([
+    'jukat_dagger',
+    'tenzing',
+]);
+
+const PROFILE_GATES: Readonly<Record<string, { readonly requiresQuest?: string; readonly requiresSkill?: { readonly skill: string; readonly level: number }; readonly requiresQuestPoints?: number; readonly requiresItems?: readonly number[] }>> = {
     oziach: SHOP_GATES.runeplateshop!,
     scavvo: SHOP_GATES.championshop!,
     valaine: SHOP_GATES.championshop!,
     skulgrimen: SHOP_GATES.viking_weapons_shop!,
     siegfried: SHOP_GATES.legendsguildshop!,
     helemos: SHOP_GATES.dragonaxeshop!,
-    jukat: SHOP_GATES.dragonswordshop!,
-    jukat_dagger: SHOP_GATES.dragonswordshop!,
+    jukat: { ...SHOP_GATES.dragonswordshop!, requiresItems: [772, 1601] },
+    jukat_dagger: { ...SHOP_GATES.dragonswordshop!, requiresItems: [772, 1601] },
     tenzing: { requiresQuest: 'Death Plateau' },
 };
 
@@ -215,7 +222,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     // whose shops lack gear-sources spawns or exceed DATA_BANK_RANGE in derivedProfile.
     const ordinaryShops = shops.filter((s) => !/^(skill_guide_|smithing_|crafting_make_)|_free$/.test(s.inv));
     for (const [profileKey, profile] of Object.entries(PROFILES)) {
-        if (profile.realm || profile.dialogBuy) continue;
+        if ((profile.realm || profile.dialogBuy) && !VERIFIED_SPECIAL_SHOP_PROFILES.has(profileKey)) continue;
         const level = profile.npcSpot.level ?? 0;
         const tile = { x: profile.npcSpot.x, z: profile.npcSpot.z, level };
         // The walker has no route to Entrana (core/src/travel.ts leaves its boats out), so no seller there is a source.
@@ -241,6 +248,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
             let matchedMeta: ItemMeta | undefined;
             let matchedStock = itemRule.shelf ?? 5;
             let matchedRestock: number | null = 100;
+            let matchedCost: number | undefined;
             for (const s of matchingShops) {
                 const row = s.stock.find((r) => {
                     if (r.count <= 0) return false;
@@ -252,6 +260,17 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
                     matchedStock = row.count;
                     matchedRestock = row.restockTicks;
                     break;
+                }
+            }
+            if (!matchedMeta && profile.dialogBuy) {
+                for (const meta of items.values()) {
+                    if (!meta.debugname.startsWith('cert_') && itemRule.re.test(meta.name)) {
+                        matchedMeta = meta;
+                        matchedStock = itemRule.shelf ?? 28;
+                        matchedRestock = 5;
+                        matchedCost = profile.dialogBuy.cost;
+                        break;
+                    }
                 }
             }
             if (!matchedMeta) continue;
@@ -269,7 +288,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
                 itemId: matchedMeta.id,
                 stock: matchedStock,
                 restockTicks: matchedRestock,
-                cost: Math.max(1, matchedMeta.cost),
+                cost: Math.max(1, matchedCost ?? matchedMeta.cost),
                 tile,
                 ...(mergedGate ?? {}),
             });
@@ -363,6 +382,9 @@ function shopIsAccessible(
     if (shop.requiresQuest && !cachedHasCompletedQuest(acct, shop.requiresQuest, acctCache)) return false;
     if (shop.requiresSkill && cachedAccountSkillLevel(acct, shop.requiresSkill.skill, acctCache) < shop.requiresSkill.level) return false;
     if (shop.requiresQuestPoints && questPoints < shop.requiresQuestPoints) return false;
+    if (shop.requiresItems && shop.requiresItems.some((id) => accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: true }) < 1)) {
+        return false;
+    }
     return true;
 }
 

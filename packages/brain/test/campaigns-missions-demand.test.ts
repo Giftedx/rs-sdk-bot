@@ -715,7 +715,7 @@ describe('Campaigns, Missions & DemandEngine', () => {
         expect(byItem.has(1605)).toBe(false);          // Emerald has GE sell=50
         expect(byItem.has(2357)).toBe(false);          // Gold bar has GE sell=500
         expect(byItem.has(1631)).toBe(false);          // Uncut dragonstone has GE sell=20
-        expect(byItem.has(451)).toBe(false);           // Runite ore has no practice_passed producer
+        expect(byItem.get(451)?.remaining).toBe(3);    // Runite ore propagates via gather:mining-heroes-runite
 
         // Once 2x Runite bar is already held by HeroHelper, remaining shrinks to 1.
         const stockedHero = makeAccount('HeroHelper', {
