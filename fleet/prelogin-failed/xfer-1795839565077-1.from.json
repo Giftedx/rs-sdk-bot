@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795839565077-1",
+ "role": "from",
+ "account": "Spitroaster",
+ "partner": "BowBeforeMe",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795840468998,
+ "detail": "Error: fleet trade: outside order window"
+}
