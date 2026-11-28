@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795861983406,
+ "at": 1795861999151,
  "jobs": [
   {
    "account": "Balls",
@@ -328,7 +328,7 @@
    "role": "helper"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Ballbag",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -342,46 +342,57 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:mineshafted:item:440",
-   "role": "army",
+   "role": "helper",
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Fingerblastr:druid BATCH_UNITS=1 -- sweep druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Fingerblastr:druid",
+   "role": "army"
   },
   {
    "account": "Kiltlifter",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "barcrawl"
+    "druid"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "DEMAND_ID": "goal:pvp_unlock:Kiltlifter:druid",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:pvp_unlock:Kiltlifter:druid",
    "role": "army"
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "chicken"
+    "sweep",
+    "druid"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:pvp_unlock:Swordswallow:druid",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "goal:pvp_unlock:Swordswallow:druid",
+   "role": "army"
   }
  ],
  "army": [
