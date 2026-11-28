@@ -183,6 +183,28 @@ export function resolveActivityWorkerRoute(
                 ? [...explicitArgs]
                 : [skill, ...(rawMethod ? [rawMethod] : []), ...explicitArgs];
 
+            if (activity.family === 'gather' && !standaloneScript) {
+                const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                const units = Number(rawUnits);
+                if (rawUnits && Number.isSafeInteger(units) && units > 0) {
+                    if (skill === 'fishing' && rawMethod === 'shark') {
+                        if (extraEnv.MAX_COOKED === undefined && extraEnv.SHARK_COUNT === undefined) {
+                            const clamped = Math.min(100, units);
+                            env.MAX_COOKED = String(clamped);
+                            env.SHARK_COUNT = String(clamped);
+                        }
+                    } else if (skill === 'mining' && rawMethod === 'ore') {
+                        if (extraEnv.MAX_ORE === undefined) {
+                            env.MAX_ORE = String(units);
+                        }
+                    } else if (skill === 'fishing' && rawMethod === 'staged' && env.BANKED === '1') {
+                        if (extraEnv.AMOUNT === undefined) {
+                            env.AMOUNT = String(units);
+                        }
+                    }
+                }
+            }
+
             if (activity.family === 'bank-artisan' && !standaloneScript) {
                 if (routeParts[1] === 'skill-action' && typeof cfg.method !== 'string') {
                     if (skill === 'smithing') {
@@ -259,14 +281,50 @@ export function resolveActivityWorkerRoute(
                             if (env.ORDER_MODE === undefined) env.ORDER_MODE = 'best-effort';
                         }
                     }
+                } else if (skill === 'cooking' && (rawMethod === 'food' || rawMethod === 'batch')) {
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && extraEnv.MAX_MAKE === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.MAX_MAKE = String(units);
+                        if (extraEnv.CAP === undefined) {
+                            env.CAP = String(Math.max(Number(env.CAP) || 1500, units * 8 + 400));
+                        }
+                    }
                 } else if (skill === 'crafting' && rawMethod === 'tanning' && args.length >= 4) {
                     const units = Number(extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS);
                     if (Number.isSafeInteger(units) && units > 0) {
-                        // tanInventory operates on one unnoted pack (max 27 hides + coins).
-                        const capped = Math.min(27, units);
-                        args[3] = String(capped);
-                        if (extraEnv.CAP !== undefined && args.length >= 5) args[4] = extraEnv.CAP;
-                        else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 200, capped * 8 + 120));
+                        if (env.TAN_BANKED === '1') {
+                            args[3] = String(units);
+                            if (extraEnv.MAX_MAKE === undefined) env.MAX_MAKE = String(units);
+                            if (extraEnv.CAP !== undefined && args.length >= 5) args[4] = extraEnv.CAP;
+                            else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 600, Math.ceil(units / 27) * 120 + 200));
+                        } else {
+                            // Pack-only tanInventory operates on one unnoted pack (max 27 hides + coins).
+                            const capped = Math.min(27, units);
+                            args[3] = String(capped);
+                            if (extraEnv.CAP !== undefined && args.length >= 5) args[4] = extraEnv.CAP;
+                            else if (args.length >= 5) args[4] = String(Math.max(Number(args[4]) || 200, capped * 8 + 120));
+                        }
+                    }
+                } else if (skill === 'crafting' && rawMethod === 'black-dhide-sets') {
+                    const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                    const units = Number(rawUnits);
+                    if (rawUnits && extraEnv.SETS === undefined && Number.isSafeInteger(units) && units > 0) {
+                        env.SETS = String(Math.min(50, units));
+                    }
+                } else if (skill === 'fletching' && rawMethod === 'shafts') {
+                    if (extraEnv.MAX_MAKE === undefined) {
+                        // runShafts accepts MAX_MAKE in logs (1..25); TARGET_COUNT arrives in output shafts (15 per log).
+                        const targetShafts = extraEnv.TARGET_COUNT !== undefined ? Number(extraEnv.TARGET_COUNT) : undefined;
+                        const batchLogs = extraEnv.BATCH_UNITS !== undefined ? Number(extraEnv.BATCH_UNITS) : undefined;
+                        const logs = targetShafts !== undefined && Number.isSafeInteger(targetShafts) && targetShafts > 0
+                            ? Math.ceil(targetShafts / 15)
+                            : batchLogs !== undefined && Number.isSafeInteger(batchLogs) && batchLogs > 0
+                                ? batchLogs
+                                : undefined;
+                        if (logs !== undefined) {
+                            env.MAX_MAKE = String(Math.min(25, Math.max(1, logs)));
+                        }
                     }
                 } else if (skill === 'fletching' && rawMethod === 'arrows' && (env.MODE === 'headless' || env.MODE === 'native-arrows')) {
                     // Arrow runs make MAX_MAKE arrows in sets of 15 (fletching.ts runHeadless/runNativeArrows): the
@@ -365,6 +423,13 @@ export function resolveActivityWorkerRoute(
                 : routeParts[1] && routeParts[1] !== 'skill-action'
                     ? routeParts[1]
                     : inferred.method ?? 'bank-craft';
+            if (method === 'bank-craft') {
+                const rawUnits = extraEnv.TARGET_COUNT ?? extraEnv.BATCH_UNITS;
+                const units = Number(rawUnits);
+                if (rawUnits && extraEnv.ESSENCE_TARGET === undefined && Number.isSafeInteger(units) && units > 0) {
+                    env.ESSENCE_TARGET = String(units);
+                }
+            }
             const args = standaloneScript ? explicitArgs : ['runecraft', method, ...explicitArgs];
             return {
                 family: 'runecraft',
@@ -429,14 +494,24 @@ export function resolveActivityWorkerRoute(
                 : aioRoute && aioCategory === 'fighter'
                     ? aioRoute
                     : inferred.method ?? 'cow';
+            // Generic melee-gather targets absent from aio-fighter FIGHTER_PROFILES dispatch via `druid <target> TARGET=<target>`.
+            const isExtendedMeleeTarget = target.startsWith('taverley_') || target === 'chaos_wine';
+            const combatArgs = standaloneScript
+                ? explicitArgs
+                : isExtendedMeleeTarget
+                    ? ['druid', target, `TARGET=${target}`, ...explicitArgs]
+                    : [target, ...explicitArgs];
+            const combatEnv = GENERIC_COMBAT_MODES.has(target)
+                ? { ...env, ...(env.BANK_PACK === undefined ? { BANK_PACK: '1' } : {}), ...(isExtendedMeleeTarget ? { TARGET: target } : {}) }
+                : env;
             return {
                 family: 'combat',
                 workerId: 'combat',
                 activityId: activity.id,
                 routeKey: target,
-                args: standaloneScript ? explicitArgs : [target, ...explicitArgs],
+                args: combatArgs,
                 // The bank trips of a generic combat job bank the items that an earlier job left in the pack.
-                env: GENERIC_COMBAT_MODES.has(target) && env.BANK_PACK === undefined ? { ...env, BANK_PACK: '1' } : env,
+                env: combatEnv,
                 config: {
                     ...cfg,
                     target,

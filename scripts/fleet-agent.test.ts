@@ -5,6 +5,8 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {AGENT_LOG_DIRECT,agentAlive,agentDaemonEnv,agentLog,readAgentJobs,swarmBusy,syncResult,tradeEnvironment,tradeStop} from './fleet-agent';
 import {SWARM_STOP} from './swarm';
+import {leanBunEnv} from '../packages/core/src/lean-bun-env';
+import {serviceWanted} from '../packages/core/src/route-query';
 
 test('a daemon agent writes each line to its log file and not also to the console; a foreground agent prints it',()=>{
  const calls:string[]=[];
@@ -64,6 +66,18 @@ test('a transfer keeps unrelated loot and random events off even when the agent 
  for(const inherited of [{},{LOOT_WATCH:'1',RANDOM_EVENTS:'1'}]){
   expect(tradeEnvironment('/fleet',inherited,'current')).toMatchObject({LOOT_WATCH:'0',RANDOM_EVENTS:'0'});
  }
+});
+
+test('trade workers delegate routing to route-service by default and honor explicit ROUTE_SERVICE=0 overrides',()=>{
+ const defaultEnv=leanBunEnv(tradeEnvironment('/fleet',{},'current'));
+ expect(defaultEnv.ROUTE_SERVICE).toBe('1');
+ expect(serviceWanted(defaultEnv)).toBe(true);
+ const emptyEnv=tradeEnvironment('/fleet',{ROUTE_SERVICE:''},'current');
+ expect(emptyEnv.ROUTE_SERVICE).toBe('1');
+ expect(serviceWanted(emptyEnv)).toBe(true);
+ const disabledEnv=leanBunEnv(tradeEnvironment('/fleet',{ROUTE_SERVICE:'0'},'current'));
+ expect(disabledEnv.ROUTE_SERVICE).toBe('0');
+ expect(serviceWanted(disabledEnv)).toBe(false);
 });
 
 test('a sync child reports its own RESULT line, or its exit code when it printed none',()=>{

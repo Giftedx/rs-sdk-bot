@@ -158,7 +158,16 @@ export function tradeEnvironment(
     env: Record<string, string | undefined> = process.env,
     release = capabilityRevision([TRADE_SCRIPT], root),
 ) {
-    return { ...env, FLEET_DIR: dir, WORKER_RELEASE: release, WORKER_ENTRY: TRADE_SCRIPT, STALL_TICKS: '0', LOOT_WATCH: '0', RANDOM_EVENTS: '0' };
+    return {
+        ...env,
+        ROUTE_SERVICE: env.ROUTE_SERVICE === '0' ? '0' : '1',
+        FLEET_DIR: dir,
+        WORKER_RELEASE: release,
+        WORKER_ENTRY: TRADE_SCRIPT,
+        STALL_TICKS: '0',
+        LOOT_WATCH: '0',
+        RANDOM_EVENTS: '0',
+    };
 }
 
 // With `clear` false the check removes nothing: a stop file of the swarm that a start would remove does not hold.

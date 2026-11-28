@@ -836,3 +836,42 @@ test('a venue that failed is not planned again and the plan reaches the GE; a GE
     expect(bound.ok).toBe(false);
     expect(bound.skippedReasons).toContainEqual({ source: 'ge', reason: 'item is untradeable' });
 });
+
+test('verified special shop profiles jukat_dagger (1215) and tenzing (3105) enforce quest/item gates while unverified realm shops stay gated', () => {
+    const shopIndex = loadShopCatalogByItem();
+    const daggerShops = shopIndex.get(1215) ?? [];
+    expect(daggerShops.some((s) => s.shop === 'jukat_dagger' && s.requiresQuest === 'Lost City')).toBe(true);
+    const bootShops = shopIndex.get(3105) ?? [];
+    expect(bootShops.some((s) => s.shop === 'tenzing' && s.requiresQuest === 'Death Plateau' && s.cost === 12)).toBe(true);
+    // Unverified realm profile jukat (Dragon longsword 1305) remains gated.
+    expect((shopIndex.get(1305) ?? []).some((s) => s.shop === 'jukat')).toBe(false);
+
+    const worldOf = (a: AccountState): WorldSnapshot => ({
+        schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { [a.name]: a },
+    });
+    const baseCoins = { 995: 100_000 };
+
+    // Dragon dagger (1215) requires Lost City + Dramen staff (772) + Diamond (1601) toll.
+    const noQuest = makeAcct({ bank: { items: { ...baseCoins, 772: 1, 1601: 1 }, observedAt: NOW - 5_000, trusted: true } });
+    expect(resolveAcquireItem(noQuest, { itemId: 1215, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(noQuest) }).ok).toBe(false);
+
+    const noStaff = makeAcct({ quests: { zanaris: 'complete' }, bank: { items: { ...baseCoins, 1601: 1 }, observedAt: NOW - 5_000, trusted: true } });
+    expect(resolveAcquireItem(noStaff, { itemId: 1215, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(noStaff) }).ok).toBe(false);
+
+    const noDiamond = makeAcct({ quests: { zanaris: 'complete' }, bank: { items: { ...baseCoins, 772: 1 }, observedAt: NOW - 5_000, trusted: true } });
+    expect(resolveAcquireItem(noDiamond, { itemId: 1215, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(noDiamond) }).ok).toBe(false);
+
+    const readyDagger = makeAcct({ quests: { zanaris: 'complete' }, bank: { items: { ...baseCoins, 772: 1, 1601: 1 }, observedAt: NOW - 5_000, trusted: true } });
+    const daggerRes = resolveAcquireItem(readyDagger, { itemId: 1215, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(readyDagger) });
+    expect(daggerRes.ok).toBe(true);
+    expect(daggerRes.step).toMatchObject({ source: 'npc_shop', shopId: 'jukat_dagger', itemId: 1215, quantity: 1 });
+
+    // Climbing boots (3105) require Death Plateau.
+    const noDeath = makeAcct({ quests: {}, bank: { items: baseCoins, observedAt: NOW - 5_000, trusted: true } });
+    expect(resolveAcquireItem(noDeath, { itemId: 3105, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(noDeath) }).ok).toBe(false);
+
+    const readyBoots = makeAcct({ quests: { death: 'complete' }, bank: { items: baseCoins, observedAt: NOW - 5_000, trusted: true } });
+    const bootsRes = resolveAcquireItem(readyBoots, { itemId: 3105, quantity: 1, allowedSources: ['npc_shop'] }, { world: worldOf(readyBoots) });
+    expect(bootsRes.ok).toBe(true);
+    expect(bootsRes.step).toMatchObject({ source: 'npc_shop', shopId: 'tenzing', itemId: 3105, quantity: 1, estimatedCoinCost: 12 });
+});

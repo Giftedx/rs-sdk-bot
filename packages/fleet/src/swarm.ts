@@ -633,6 +633,15 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
 
 export const botCountEnv = (accounts: readonly string[]) => ({ SWARM_BOTS: String(accounts.length) });
 
+// Delegate pathfinding to the shared route-service for swarm workers unless ROUTE_SERVICE=0 is set explicitly.
+export function workerRouteServiceEnv(
+    baseEnv: Record<string, string | undefined> = process.env,
+    overrideEnv?: Record<string, string | undefined>,
+): { ROUTE_SERVICE: '0' | '1' } {
+    const raw = overrideEnv?.ROUTE_SERVICE !== undefined ? overrideEnv.ROUTE_SERVICE : baseEnv.ROUTE_SERVICE;
+    return { ROUTE_SERVICE: raw === '0' ? '0' : '1' };
+}
+
 export function writeStateFile(
     file: string,
     text: string,
@@ -1908,6 +1917,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
                 env: leanBunEnv({
                     ...process.env,
+                    ...workerRouteServiceEnv(process.env),
                     SWARM_BOTS: String(POOL_MAX_BOTS),
                     SWARM_LEASE_HOLDER: lease.holder,
                     WORKER_RELEASE: source,
@@ -2110,6 +2120,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             writeSync(out, jobLogStart(job));
             const sharedBotEnv: Record<string, string> = {
                 ...(job.env ?? {}),
+                ...workerRouteServiceEnv(process.env, job.env),
                 SWARM_LEASE_HOLDER: lease.holder,
                 SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'),
                 WORKER_RELEASE: workRelease,

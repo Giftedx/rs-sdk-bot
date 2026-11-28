@@ -241,8 +241,9 @@ describe('ActivityCatalog & RateStore', () => {
         const gloryCharged = catalog.findByOutputItem(1712);
         const chargeAct = gloryCharged.find((a) => a.id === 'logistics:charge-glory');
         expect(chargeAct?.trust).toBe('practice_passed');
-        expect(chargeAct?.inputs).toEqual([{ itemId: 1704, countPerUnit: 1 }]);
+        expect(chargeAct?.inputs).toEqual([{ itemId: 1704, countPerUnit: 1, unlessOwned: [1706, 1708, 1710] }]);
         expect(chargeAct?.config.requiredQuests).toEqual(['hero']);
+        expect(chargeAct?.config.requiredSkills).toEqual({ Hitpoints: 75 });
 
         const agility4 = catalog.findByOutputItem(3032).find((a) => a.id === 'bank-artisan:decant-agility_potion');
         expect(agility4?.trust).toBe('practice_passed');

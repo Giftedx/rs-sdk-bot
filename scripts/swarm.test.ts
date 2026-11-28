@@ -1310,4 +1310,12 @@ test('host pool eligibility, selection, release pinning, and reduced attach admi
     // Becoming active clears idleSince.
     expect(poolIdleExpired(idleSlot, 1, 10_000 + POOL_IDLE_DRAIN_MS + 100)).toBe(false);
     expect(idleSlot.idleSince).toBeUndefined();
+
+    // Swarm worker spawns enable ROUTE_SERVICE=1 unless explicitly disabled with ROUTE_SERVICE=0.
+    const { workerRouteServiceEnv } = await import('./swarm');
+    expect(workerRouteServiceEnv({})).toEqual({ ROUTE_SERVICE: '1' });
+    expect(workerRouteServiceEnv({ ROUTE_SERVICE: '0' })).toEqual({ ROUTE_SERVICE: '0' });
+    expect(workerRouteServiceEnv({ ROUTE_SERVICE: '1' }, { ROUTE_SERVICE: '0' })).toEqual({ ROUTE_SERVICE: '0' });
+    expect(workerRouteServiceEnv({ ROUTE_SERVICE: '0' }, { ROUTE_SERVICE: '1' })).toEqual({ ROUTE_SERVICE: '1' });
+    expect(supervisorCommand(brainSkiller, ['Alice']).slice(0, 2)).toEqual(['bun', '--smol']);
 });

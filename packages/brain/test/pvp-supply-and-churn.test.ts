@@ -133,27 +133,37 @@ describe('PvP BiS missions and self-sustaining supply chain', () => {
             (itemId) => catalog.findByOutputItem(itemId).filter((a) => a.trust !== 'experimental').length === 0,
         );
         expect(missing).toEqual([]);
-        // Magic log gathering must pass WOOD_GROVE=native-processing to select Seers magic trees.
+        // Magic log gathering must pass WOOD_GROVE=native-processing to select Seers magic trees and require an axe.
         const magicWc = catalog.get('gather:woodcutting-magic')!;
         expect((magicWc.config.defaultEnv as Record<string, string>)?.WOOD_GROVE).toBe('native-processing');
-        // Pack-only / at-site routes stay experimental by default and promote once bench-qualified.
-        const experimentalIds = [
+        expect(magicWc.config.requiredTools).toEqual([1359]);
+        // Banked Wave-3 supply routes are practice_passed; at-site / job-file routes remain experimental.
+        const bankedSupplyIds = [
             'gather:mining-coal',
             'gather:mining-gold',
+            'gather:mining-heroes-runite',
+            'gather:woodcutting-normal',
+            'gather:fishing-raw-shark',
             'bank-artisan:tanning-black-dragonhide',
+            'bank-artisan:tanning-blue-dragonhide',
+            'bank-artisan:tanning-green-dragonhide',
             'gather:fishing-karambwanji',
             'gather:fishing-karambwan',
             'bank-artisan:cooking-karambwan',
+            'runecraft:bank-craft-air',
+            'runecraft:bank-craft-law',
+            'runecraft:bank-craft-nature',
+            'combat:boss-blue-dragon',
+            'combat:taverley-scales',
+            'combat:chaos-wine',
         ];
-        for (const id of experimentalIds) {
-            expect(catalog.get(id)?.trust).toBe('experimental');
+        for (const id of bankedSupplyIds) {
+            expect(catalog.get(id)?.trust, id).toBe('practice_passed');
         }
-        const promotedCatalog = createActivityCatalog({
-            benchPassedIds: new Set(experimentalIds),
-        });
-        for (const id of experimentalIds) {
-            expect(promotedCatalog.get(id)?.trust).toBe('practice_passed');
+        for (const expId of ['runecraft:runecraft-nature', 'runecraft:runecraft-air', 'gather:mining-at-site', 'gather:foraging-crystal-chest']) {
+            expect(catalog.get(expId)?.trust, expId).toBe('experimental');
         }
+        const promotedCatalog = catalog;
 
         const pvpAcct = makeAccount({
             name: 'PvpHero',
@@ -251,12 +261,126 @@ describe('Sub-5-minute login churn and preflight root-cause fixes', () => {
 
         const tan = catalog.get('bank-artisan:tanning-black-dragonhide')!;
         const tanRoute = resolveActivityWorkerRoute(tan, { BATCH_UNITS: '54' });
-        // Pack-only tanning caps at 27 unnoted hides (+ coins slot).
-        expect(tanRoute.args[3]).toBe('27');
+        // Banked tanning runs multi-trip Al Kharid bank <-> Ellis without the 27-hide pack cap.
+        expect(tanRoute.env.TAN_BANKED).toBe('1');
+        expect(tanRoute.args[3]).toBe('54');
+        expect(tanRoute.env.MAX_MAKE).toBe('54');
+        // Pack-only tanning without TAN_BANKED=1 still caps at 27 hides.
+        const packTanRoute = resolveActivityWorkerRoute({ ...tan, config: { ...tan.config, defaultEnv: {} } }, { BATCH_UNITS: '54' });
+        expect(packTanRoute.args[3]).toBe('27');
 
         const arrows = catalog.get('bank-artisan:fletching-rune-arrows')!;
         const arrowRoute = resolveActivityWorkerRoute(arrows, { BATCH_UNITS: '100' });
         expect(arrowRoute.env.MAX_MAKE).toBe('105');
+
+        // Wave-3 BATCH_UNITS propagation: fishing:shark, cooking:food, black-dhide-sets, fletching:shafts, runecraft:bank-craft, mining:ore, banked fishing:staged.
+        const sharkRoute = resolveActivityWorkerRoute(catalog.require('gather:fishing-shark'), { BATCH_UNITS: '140' });
+        expect(sharkRoute.env.MAX_COOKED).toBe('100');
+        expect(sharkRoute.env.SHARK_COUNT).toBe('100');
+        const rawSharkRoute = resolveActivityWorkerRoute(catalog.require('gather:fishing-raw-shark'), { BATCH_UNITS: '30' });
+        expect(rawSharkRoute.env.RAW_ONLY).toBe('1');
+        expect(rawSharkRoute.env.MAX_COOKED).toBe('30');
+
+        const cookRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:cooking-karambwan'), { BATCH_UNITS: '60' });
+        expect(cookRoute.env.FOOD_TYPE).toBe('karambwan');
+        expect(cookRoute.env.MAX_MAKE).toBe('60');
+
+        const dhideSetsRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:crafting-black-dhide-sets'), { BATCH_UNITS: '75' });
+        expect(dhideSetsRoute.env.SETS).toBe('50');
+
+        const shaftsBatchRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:fletching-shafts'), { BATCH_UNITS: '20' });
+        expect(shaftsBatchRoute.env.MAX_MAKE).toBe('20');
+        const shaftsTargetRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:fletching-shafts'), { TARGET_COUNT: '150' });
+        expect(shaftsTargetRoute.env.MAX_MAKE).toBe('10');
+
+        const rcLawRoute = resolveActivityWorkerRoute(catalog.require('runecraft:bank-craft-law'), { BATCH_UNITS: '81' });
+        expect(rcLawRoute.env.RUNE_ALTAR).toBe('law');
+        expect(rcLawRoute.env.ESSENCE_TARGET).toBe('81');
+
+        const coalRoute = resolveActivityWorkerRoute(catalog.require('gather:mining-coal'), { BATCH_UNITS: '54' });
+        expect(coalRoute.env.ORE_PROFILE).toBe('coal');
+        expect(coalRoute.env.MAX_ORE).toBe('54');
+
+        const kbjiRoute = resolveActivityWorkerRoute(catalog.require('gather:fishing-karambwanji'), { BATCH_UNITS: '120' });
+        expect(kbjiRoute.env.BANKED).toBe('1');
+        expect(kbjiRoute.env.AMOUNT).toBe('120');
+    });
+
+    test('pickProducer prefers supply-chain viable inputs over dead-end higher-rate producers when satScore === 0', () => {
+        const baseCatalog = createActivityCatalog();
+        // Force tanning-black-dragonhide to experimental so leather-black_dragonhide_body's input (2509) dead-ends.
+        const deadEndTanning = {
+            ...baseCatalog.require('bank-artisan:tanning-black-dragonhide'),
+            trust: 'experimental' as const,
+        };
+        const testCatalog = createActivityCatalog({ extraActivities: [deadEndTanning] });
+        const pvpAcct = makeAccount({
+            name: 'DhideSeeker',
+            role: 'army',
+            quests: { dragon: 'complete' },
+            bank: { items: { 995: 50_000 }, observedAt: NOW - 5_000, trusted: true },
+        });
+        const engine = new DemandEngine({
+            catalog: testCatalog,
+            campaigns: [],
+            missions: [{
+                id: 'mission:dhide-test',
+                participants: ['DhideSeeker'],
+                state: 'staging',
+                kitTargets: [{ itemId: 2503, itemName: 'Dragonhide body', countPerParticipant: 2, slot: 'body' }],
+                consumables: [],
+                weight: 1.0,
+            }],
+            goalWeights: { main_supply: 0, specialist_prep: 0, quest_board: 0, gear_collection: 0, pk_army: 1, squad_supply: 1, coin_fund: 0 },
+        });
+        const report = engine.evaluate(makeWorld([pvpAcct]), { marketQuotes: {} });
+        const supplyItemIds = new Set(
+            report.demands
+                .filter((d) => d.id.startsWith('goal:supply_chain:') && d.target.kind === 'item')
+                .map((d) => (d.target as { itemId: number }).itemId),
+        );
+        // Must pick crafting-black-dhide-sets (input 1747 viable via black dragons) instead of dead-ending on 2509.
+        expect(supplyItemIds.has(1747)).toBe(true);
+        expect(supplyItemIds.has(2509)).toBe(false);
+    });
+
+    test('Wave-3 supply producers expose exact outputs, preflights, and extended melee-gather routes', () => {
+        const catalog = createActivityCatalog();
+        // Druid outputs all herbs, snape grass, uncut gems, and key halves.
+        const druidOutputs = new Set((catalog.require('combat:druid').outputs ?? []).map((o) => o.itemId));
+        for (const id of [201, 207, 209, 213, 215, 217, 231, 1623, 1621, 1619, 1617, 985, 987]) {
+            expect(druidOutputs.has(id), `druid output ${id}`).toBe(true);
+        }
+        // Blue dragon & ranged-camp output blue dragonhide (1751) and dragon bones (536).
+        for (const actId of ['combat:boss-blue-dragon', 'combat:ranged-camp']) {
+            const outs = new Set((catalog.require(actId).outputs ?? []).map((o) => o.itemId));
+            expect(outs.has(1751)).toBe(true);
+            expect(outs.has(536)).toBe(true);
+        }
+        // Taverley scales (243) and Chaos wine (245) route cleanly through aio-fighter druid fallback.
+        const scalesRoute = resolveActivityWorkerRoute(catalog.require('combat:taverley-scales'));
+        expect(scalesRoute.routeKey).toBe('taverley_scales');
+        expect(scalesRoute.args).toEqual(['druid', 'taverley_scales', 'TARGET=taverley_scales']);
+        const wineRoute = resolveActivityWorkerRoute(catalog.require('combat:chaos-wine'));
+        expect(wineRoute.routeKey).toBe('chaos_wine');
+        expect(wineRoute.args).toEqual(['druid', 'chaos_wine', 'TARGET=chaos_wine']);
+
+        // brew:weapon_poison requires Druidic Ritual.
+        expect(catalog.require('bank-artisan:brew-weapon_poison').config.requiredQuests).toEqual(['druid']);
+
+        // gather:fishing-shark enforces Fishing 76, Cooking 80, Hitpoints 40, and harpoon (311).
+        const sharkAct = catalog.require('gather:fishing-shark');
+        const lowCook = makeAccount({ skills: { ...makeAccount().skills, Cooking: { level: 70, xp: 750_000 } }, bank: { items: { 995: 5000, 311: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(lowCook, sharkAct, makeWorld([lowCook])).blockers.some((b) => b.kind === 'skill_level' && b.skill === 'Cooking')).toBe(true);
+        const noHarpoon = makeAccount({ bank: { items: { 995: 5000 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(noHarpoon, sharkAct, makeWorld([noHarpoon])).missingItems?.some((m) => m.itemId === 311)).toBe(true);
+
+        // logistics:charge-glory enforces Hitpoints >= 75 and accepts glory(1..3) as well as uncharged (1704).
+        const gloryAct = catalog.require('logistics:charge-glory');
+        const lowHpGlory = makeAccount({ skills: { ...makeAccount().skills, Hitpoints: { level: 70, xp: 800_000 } }, bank: { items: { 995: 5000, 1704: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(lowHpGlory, gloryAct, makeWorld([lowHpGlory])).blockers.some((b) => b.kind === 'skill_level' && b.skill === 'Hitpoints' && b.required === 75)).toBe(true);
+        const partialGlory = makeAccount({ skills: { ...makeAccount().skills, Hitpoints: { level: 75, xp: 1_210_421 } }, bank: { items: { 995: 5000, 1706: 1 }, observedAt: NOW - 5_000, trusted: true } });
+        expect(activityPreflightFromConfig(partialGlory, gloryAct, makeWorld([partialGlory])).ok).toBe(true);
     });
 
     test('preflight blocks woodcutting-fresh45 at WC >= 45, fishing-village below Fishing 20, and ranged-camp without BLUE_KIT', () => {
