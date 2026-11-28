@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795841871632-1",
+ "account": "Woodenstaff",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "6b857927-924a-499b-a6ba-65803d3be60a",
+ "count": 0,
+ "ok": false,
+ "at": 1795842240493,
+ "detail": "trade claimed"
+}

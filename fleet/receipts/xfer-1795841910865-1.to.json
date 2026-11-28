@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795841910865-1",
+ "account": "Nockitoff",
+ "partner": "Ballbag",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "751d111f-80ff-4e90-ad1d-7b30191a616a",
+ "count": 0,
+ "ok": false,
+ "at": 1795842299758,
+ "detail": "trade claimed"
+}

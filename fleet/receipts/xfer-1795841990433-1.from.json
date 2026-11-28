@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795841990433-1",
+ "account": "CoinCock",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 1,
+ "claim": "5e385356-15db-45fe-bd81-6d590dc03187",
+ "count": 0,
+ "ok": false,
+ "at": 1795842318513,
+ "detail": "trade claimed"
+}
