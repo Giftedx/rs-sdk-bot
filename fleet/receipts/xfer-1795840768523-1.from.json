@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795840768523-1",
  "account": "Woodpecker",
  "partner": "WellHung",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 1078,
  "claim": "d419adef-9a7a-4966-b530-af3c491e5c9d",
- "count": 0,
- "ok": false,
- "at": 1795840960114,
- "detail": "trade claimed"
+ "count": 1078,
+ "ok": true,
+ "at": 1795841101821,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1078,
+  "after": 0
+ },
+ "bank": {
+  "count": 1078,
+  "at": 1795841062658
+ },
+ "logout": {
+  "attemptId": "1795840960123-0000021524-0000000001",
+  "at": 1795841101809,
+  "sha256": "9950a490f8bf2568415b46aa7d7c200fa623700c5c6d6c79523c60919b68625d"
+ },
+ "screen": true
 }
