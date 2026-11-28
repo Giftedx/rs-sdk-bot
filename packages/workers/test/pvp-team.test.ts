@@ -127,13 +127,14 @@ test('shouldStopUnseen keeps waiting when enemies are in view under refusal cool
     expect(shouldStopUnseen(false, 101, 100)).toBe(true);
 });
 
-test('keepPrayer stays off under the start floor of Prayer, and the memory gate asks for the floor plus one GiB a bot', async () => {
+test('keepPrayer stays off under the start floor of Prayer, and the memory gate asks for the floor, one GiB for the process and a tenth of a GiB a bot', async () => {
     const { keepPrayer, squadMemoryGate } = await import('../src/pvp/squad');
     const targets = new Set(['goondelf']), near = [{ name: 'Goondelf', distance: 3 }];
     expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100, points: 80, base: 99 })).toBe(true);
     expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100, points: 70, base: 99 })).toBe(false);
     expect(keepPrayer({ view: near, targets, now: 100, damagedAt: 95, points: 30, base: 99 })).toBe(false);
-    expect(squadMemoryGate(8, 4)).toEqual({ ok: true, needGB: 8 });
-    expect(squadMemoryGate(7.9, 4)).toEqual({ ok: false, needGB: 8 });
+    expect(squadMemoryGate(5.4, 4)).toEqual({ ok: true, needGB: 5.4 });
+    expect(squadMemoryGate(5.3, 4)).toEqual({ ok: false, needGB: 5.4 });
+    expect(squadMemoryGate(7.4, 24)).toEqual({ ok: true, needGB: 7.4 });
     expect(squadMemoryGate(4.1, 4).ok).toBe(false);
 });

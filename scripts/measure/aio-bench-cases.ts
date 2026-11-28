@@ -1291,7 +1291,7 @@ return [
   // against 12 of them, each side's accounts against their own (SPAR_*_PICK=pair), the rest wait for a free target.
   ...([6, 10] as const).map(n => teamCase(`extra:team-${n}v12-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 12)),
   // The squad against all 49 of the stack: the squad size that kills the stack with no deaths, from one pack each.
-  ...([6, 10, 15, 20, 25] as const).map(n => teamCase(`extra:team-${n}v49-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=3000'], 49)),
+  ...([6, 10, 15, 20, 22, 24, 25] as const).map(n => teamCase(`extra:team-${n}v49-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=3000'], 49)),
   // The four against the skulled gang (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
   teamCase('extra:team-4v3-gang-skull-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   // A squad against one runner (kit runner, SPAR_B_OPTS {"escapeAt":60}: its food gone at 60 HP or less it runs south
