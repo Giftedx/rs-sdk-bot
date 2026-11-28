@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795839893029-2",
  "account": "Woodenstaff",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 6,
  "claim": "58b30552-d526-4366-b73d-60092b31bdd6",
- "count": 0,
- "ok": false,
- "at": 1795840537700,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795840550228,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795840549481
+ },
+ "logout": {
+  "attemptId": "1795840537710-0000023832-0000000001",
+  "at": 1795840550220,
+  "sha256": "46216a050141a5e36cf1041c9c8396b145f30d977185dd25d84e7d4a103798e8"
+ },
+ "screen": true
 }

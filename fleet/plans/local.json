@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795840525112,
+ "at": 1795840553503,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -267,6 +267,28 @@
    "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-14-o4-p1681",
+    "ITEM_ID": "1513",
+    "QUANTITY": "14",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "1681",
+    "EXPECTED_OWNED": "4",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "14"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-market.ts",
+   "args": [
     "shop-buy",
     "runeshop",
     "3000"
@@ -274,19 +296,19 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "59",
+    "MAX_ITEMS": "58",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "59"
+    "BATCH_UNITS": "58"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:560",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "Swordswallow",
@@ -315,72 +337,19 @@
   },
   {
    "account": "Ballbag",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "shop-buy",
-    "gemshop2",
-    "3000"
+    "sweep",
+    "vampire"
    ],
    "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
+    "DEMAND_ID": "goal:quest_board:vampire",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1623",
+   "goal": "goal:quest_board:vampire",
    "role": "helper"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-1-o6-p1681",
-    "ITEM_ID": "1513",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "1681",
-    "EXPECTED_OWNED": "6",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
-  },
-  {
-   "account": "Pullmybow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-2353-1-o0-p919",
-    "ITEM_ID": "2353",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "919",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "auto"
   },
   {
    "account": "TossTheCaber",
@@ -442,21 +411,6 @@
    "role": "army"
   },
   {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "helper"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -483,34 +437,35 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "ranged-camp"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
+   "goal": "goal:pk_army:FishAndChips",
    "role": "auto"
   },
   {
-   "account": "BoneToPick",
+   "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1472",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1470",
+   "role": "helper"
   },
   {
    "account": "SporranBulge",
@@ -532,14 +487,31 @@
    ]
   },
   {
-   "account": "Nockitoff",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=865 MAX_MAKE=1 BAR_RESERVE=0 CAP=1000 TARGET_COUNT=1 STALL_TICKS=280 -- smithing anvil 1000",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- ranged-camp"
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1472 BATCH_UNITS=13 -- imp"
    ],
    "env": {
     "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1472",
+   "role": "auto"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "nature-chest"
+   ],
+   "env": {
+    "CAP": "1000",
+    "TARGET_COUNT": "76",
+    "PRODUCT_TARGET": "76"
    },
    "enabled": true,
    "repeat": false,
@@ -547,61 +519,7 @@
    "role": "auto"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Shaftmaker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "merlin"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:merlin",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto"
-  },
-  {
-   "account": "Fingerblastr",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -618,6 +536,22 @@
    "resources": [
     "essence-mine"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "scorpion"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:scorpion",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:scorpion",
+   "role": "army"
   }
  ],
  "army": [
@@ -631,7 +565,6 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "bowbeforeme",
   "mmtha0205",
   "mmthv2350",
   "pocketrocket",
