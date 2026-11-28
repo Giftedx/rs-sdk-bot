@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795845912157-1",
  "account": "MineYourBiz",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Magic logs",
  "requested": 5,
  "claim": "274cf1e6-54c6-400b-834f-cd0971c41d34",
- "count": 0,
- "ok": false,
- "at": 1795846218519,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795846266399,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795846243635
+ },
+ "logout": {
+  "attemptId": "1795846218527-0000018684-0000000001",
+  "at": 1795846266391,
+  "sha256": "84aec9c1a30a1f50b5cef39cc2f61fe61f127bcd0be2f6c92269d6c900066ad1"
+ },
+ "screen": true
 }
