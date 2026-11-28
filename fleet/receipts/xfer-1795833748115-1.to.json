@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795833748115-1",
+ "account": "Pocketrocket",
+ "partner": "Nockitoff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 10,
+ "claim": "87b2ac35-9267-4f8d-af9e-d52d2cb9868b",
+ "count": 10,
+ "ok": true,
+ "at": 1795833972193,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 10,
+   "count": 10,
+   "inventory": {
+    "before": 0,
+    "after": 10
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795833971386
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795833971018
+ },
+ "logout": {
+  "attemptId": "1795833956554-0000003492-0000000001",
+  "at": 1795833972109,
+  "sha256": "88f93a20dac5371611a784e8bdcfbda8b5d76836651db086922c8ec569e1e824"
+ },
+ "screen": true
+}

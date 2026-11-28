@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819924643-hocuspokeus-masterbaiter-25ec54faf20eba0a",
+ "account": "Hocuspokeus",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrow",
+ "requested": 300,
+ "claim": "4e1801d2-ac62-48fc-b6fd-4e3e2947ec53",
+ "count": 0,
+ "ok": false,
+ "at": 1795834043294,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Nature rune",
+   "requested": 20,
+   "count": 0
+  }
+ ]
+}

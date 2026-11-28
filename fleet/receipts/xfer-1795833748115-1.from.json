@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795833748115-1",
  "account": "Nockitoff",
  "partner": "Pocketrocket",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 10,
  "claim": "df4c4840-1342-4228-bbd2-abf3b726e2b6",
- "count": 0,
- "ok": false,
- "at": 1795833877367,
- "detail": "trade claimed",
+ "count": 10,
+ "ok": true,
+ "at": 1795833970118,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 10,
+    "after": 0
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795833951426
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795833950996
+ },
+ "logout": {
+  "attemptId": "1795833877376-0000010552-0000000001",
+  "at": 1795833970110,
+  "sha256": "ac1237a48e58e00278927aee33ae7c9bbd237d533e817061f4ad45269b0e19fc"
+ },
+ "screen": true
 }

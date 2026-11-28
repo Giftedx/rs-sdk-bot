@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795833926598,
+ "at": 1795834045509,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,96 +185,101 @@
    "role": "pvp"
   },
   {
-   "account": "Swordswallow",
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
+  },
+  {
+   "account": "YewGotWood",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "chompy"
+    "ranged-camp"
    ],
    "env": {
     "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
    "role": "army"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto"
+  },
+  {
    "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
+   "goal": "campaign:haggis:item:1519",
    "role": "auto",
    "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
+    "draynor-willows"
    ]
   },
   {
@@ -291,6 +296,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
+   "role": "helper"
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- fishing staged",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
   },
   {
@@ -330,26 +350,20 @@
    "role": "auto"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Nockitoff",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "decant:super_strength"
+    "sweep",
+    "blackknight"
    ],
    "env": {
-    "MAX_MAKE": "3",
-    "CAP": "1000",
-    "MEMBERS": "1",
-    "DEMAND_ID": "mission:mission:pk-squad:item:2440",
-    "BATCH_UNITS": "3",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
+    "DEMAND_ID": "goal:quest_board:blackknight",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:2440",
-   "role": "army"
+   "goal": "goal:quest_board:blackknight",
+   "role": "auto"
   }
  ],
  "army": [
@@ -364,14 +378,12 @@
   "Deeppockets",
   "UnderMyKilt",
   "bigpackage",
-  "bowbeforeme",
   "fingerblastr",
   "kiltlifter",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"

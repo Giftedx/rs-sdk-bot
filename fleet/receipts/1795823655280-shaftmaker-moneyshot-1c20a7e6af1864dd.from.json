@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823655280-shaftmaker-moneyshot-1c20a7e6af1864dd",
+ "account": "Shaftmaker",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 14,
+ "claim": "165733c5-674a-455a-a242-5fe881fd1ee5",
+ "count": 0,
+ "ok": false,
+ "at": 1795833968729,
+ "detail": "trade claimed"
+}

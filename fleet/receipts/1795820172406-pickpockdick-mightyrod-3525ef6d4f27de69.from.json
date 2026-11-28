@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795820172406-pickpockdick-mightyrod-3525ef6d4f27de69",
+ "account": "PickpockDick",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon dagger(p)",
+ "requested": 1,
+ "claim": "570c4e88-7b08-4e85-bc69-16b2ae0af7d4",
+ "count": 0,
+ "ok": false,
+ "at": 1795833982916,
+ "detail": "trade claimed"
+}

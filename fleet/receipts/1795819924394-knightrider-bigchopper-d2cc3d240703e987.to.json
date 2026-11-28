@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819924394-knightrider-bigchopper-d2cc3d240703e987",
+ "account": "Bigchopper",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "abf42c47-bb49-4591-9031-b521758dcc65",
+ "count": 0,
+ "ok": false,
+ "at": 1795834039231,
+ "detail": "trade claimed"
+}
