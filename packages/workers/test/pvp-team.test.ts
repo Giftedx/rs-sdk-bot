@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldHaltTeamOnStop, shouldStopOnDying, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, buildTeamSideOptions, combatPickupWeapons, createTeamFocus, cureAfterEscape, driftedFromHome, pickEnemy, preferUnheldTargets, resolveTeamKit, shouldHaltTeamOnStop, shouldStopOnDying, shouldStopUnseen, team, teamWinner } from '../src/pvp/pk-team';
 import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
 import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
@@ -470,4 +470,85 @@ test('shouldHaltTeamOnStop ignores static 900-tick idle notice when STALL_TICKS 
     expect(shouldHaltTeamOnStop(idle900, 0)).toBe(false);
     expect(shouldHaltTeamOnStop('stop file', 3000)).toBe(true);
     expect(shouldHaltTeamOnStop('tick stream stalled', 3000)).toBe(true);
+});
+
+test('teamWinner awards win when the opposing side has only fled/stopped survivors off the field', () => {
+    expect(teamWinner({ a: 10, b: 0 }, { a: 10, b: 0 })).toBe('a');
+    expect(teamWinner({ a: 0, b: 4 }, { a: 0, b: 4 })).toBe('b');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 9, b: 0 })).toBe('a');
+    expect(teamWinner({ a: 1, b: 5 }, { a: 0, b: 5 })).toBe('b');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 9, b: 1 })).toBe('draw');
+    expect(teamWinner({ a: 9, b: 1 }, { a: 0, b: 0 })).toBe('draw');
+});
+
+test('combatPickupWeapons uses non-blocking direct pickup, skips multi-way piles, and aborts immediately on HP drop', async () => {
+    let curTick = 0;
+    let hp = 85;
+    const listeners = new Set<() => void>();
+    const inv: { id: number; count: number; slot: number; name: string; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 385, count: 1, slot: 0, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    let ground: { id: number; count: number; x: number; z: number; distance: number }[] = [
+        { id: 1231, count: 1, x: 3136, z: 3585, distance: 2 }, // multi-way tile (must skip)
+        { id: 1231, count: 1, x: 3136, z: 3601, distance: 1 }, // safe single-way tile
+    ];
+    const directCalls: { type: string; itemId?: number; x?: number; z?: number; reason?: string }[] = [];
+    const prayersToggled: number[] = [];
+    const eaten: number[] = [];
+    const s = {
+        tick: () => curTick,
+        onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+        ended: new Promise<void>(() => {}),
+        direct: async (cmd: { type: string; itemId?: number; x?: number; z?: number; reason?: string }) => {
+            directCalls.push(cmd);
+            if (cmd.type === 'pickupItem' && cmd.x === 3136 && cmd.z === 3601) {
+                inv.push({ id: 1231, count: 1, slot: 1, name: 'Dragon dagger(p)', optionsWithIndex: [] });
+                ground = ground.filter(g => !(g.x === 3136 && g.z === 3601));
+            }
+            return { ok: true };
+        },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3137, worldZ: 3602, hp, maxHp: 99, isDead: false },
+                prayers: { prayerPoints: 99, activePrayers: [] as boolean[] },
+                inventory: inv,
+                groundItems: ground,
+            }),
+            getInventory: () => inv,
+            sendTogglePrayer: async (p: number) => { prayersToggled.push(p); },
+            sendUseItem: async (slot: number) => { eaten.push(slot); },
+        },
+    };
+    const timer = setInterval(() => { curTick++; for (const fn of [...listeners]) fn(); }, 1);
+    try {
+        const got = await combatPickupWeapons(s as never, new Set([1231]), {
+            radius: 6,
+            maxTicks: 10,
+            wait: 0,
+            home: { x: 3137, z: 3602, multi: false },
+            multiFn: (_x, z) => z <= 3590,
+        });
+        expect(got).toEqual({ '1231': 1 });
+        expect(directCalls).toEqual([{ type: 'pickupItem', x: 3136, z: 3601, itemId: 1231, reason: 'pk-team weapon loot' }]);
+        expect(prayersToggled.length).toBeGreaterThanOrEqual(1);
+
+        // Low-HP abort: eats food and exits immediately without issuing any pickupItem.
+        hp = 52;
+        directCalls.length = 0;
+        ground = [{ id: 1231, count: 1, x: 3136, z: 3601, distance: 1 }];
+        const aborted = await combatPickupWeapons(s as never, new Set([1231]), {
+            radius: 6,
+            maxTicks: 10,
+            wait: 4,
+            minHp: 60,
+            eatBelow: 72,
+            home: { x: 3137, z: 3602, multi: false },
+            multiFn: () => false,
+        });
+        expect(aborted).toEqual({});
+        expect(directCalls).toEqual([]);
+        expect(eaten).toEqual([0]);
+    } finally {
+        clearInterval(timer);
+    }
 });

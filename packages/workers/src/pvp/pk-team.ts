@@ -49,6 +49,115 @@ export function shouldHaltTeamOnStop(reason: string, stallTicks: number): boolea
     return true;
 }
 
+/** Resolves team winner from surviving and active (not fled/stopped) counts. */
+export function teamWinner(standing: { a: number; b: number }, active: { a: number; b: number }): 'a' | 'b' | 'draw' {
+    if (standing.a > 0 && standing.b === 0) return 'a';
+    if (standing.b > 0 && standing.a === 0) return 'b';
+    if (active.a > 0 && active.b === 0) return 'a';
+    if (active.b > 0 && active.a === 0) return 'b';
+    return 'draw';
+}
+
+const KARAMBWAN_ID = 3144;
+const EMPTY_VIAL_ID = 229;
+
+/** Non-blocking tick-by-tick weapon pickup under live combat: guards HP and Protect from Melee every tick and aborts immediately on incoming burst so fightPlayer never stalls inside bot.pickupItem. */
+export async function combatPickupWeapons(
+    s: Session,
+    ids: ReadonlySet<number>,
+    opts: {
+        radius: number;
+        maxTicks: number;
+        wait: number;
+        minHp?: number;
+        eatBelow?: number;
+        home?: { x: number; z: number; multi: boolean } | null;
+        stop?: () => boolean;
+        multiFn?: (x: number, z: number) => boolean;
+    },
+): Promise<Record<string, number>> {
+    const got: Record<string, number> = {};
+    const start = s.tick();
+    const minHp = opts.minHp ?? 60;
+    const eatBelow = opts.eatBelow ?? 72;
+    const multiFn = opts.multiFn ?? isMulti;
+    const tried = new Set<string>();
+    let prevHp = s.sdk.getState()?.player?.hp ?? 99;
+    let pending: { id: number; x: number; z: number; before: number; sentAt: number } | null = null;
+    const invCount = (inv: readonly { id: number; count: number }[], id: number) =>
+        inv.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+
+    while (s.tick() - start < opts.maxTicks && !opts.stop?.()) {
+        const st = s.sdk.getState();
+        const me = st?.player;
+        if (!st || !me || me.isDead) break;
+        if (opts.home && !opts.home.multi && multiFn(me.worldX, me.worldZ)) break;
+        const hp = me.hp ?? 99;
+        const inv = s.sdk.getInventory?.() ?? st.inventory ?? [];
+        if (hp < eatBelow && typeof s.sdk.sendUseItem === 'function') {
+            const food = bestFood(inv);
+            const eatOp = food?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
+            if (food && eatOp) void s.sdk.sendUseItem(food.slot, eatOp.opIndex);
+            if (hp < minHp) {
+                const karam = inv.find(i => i.id === KARAMBWAN_ID && i.slot !== food?.slot);
+                const kOp = karam?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
+                if (karam && kOp) void s.sdk.sendUseItem(karam.slot, kOp.opIndex);
+            }
+        }
+        if (hp < minHp || (hp < prevHp && hp < eatBelow)) break;
+        prevHp = hp;
+        if ((st.prayers?.prayerPoints ?? 0) > 0 && !st.prayers?.activePrayers?.[PRAYER.melee] && typeof s.sdk.sendTogglePrayer === 'function') {
+            void s.sdk.sendTogglePrayer(PRAYER.melee);
+        }
+        const ground = st.groundItems ?? [];
+        if (pending) {
+            const gained = invCount(inv, pending.id) - pending.before;
+            if (gained > 0) {
+                got[pending.id] = (got[pending.id] ?? 0) + gained;
+                tried.add(`${pending.id}@${pending.x},${pending.z}`);
+                pending = null;
+            } else {
+                const stillThere = ground.some(g => g.id === pending!.id && g.x === pending!.x && g.z === pending!.z);
+                if (!stillThere || s.tick() - pending.sentAt >= 4) {
+                    tried.add(`${pending.id}@${pending.x},${pending.z}`);
+                    pending = null;
+                } else {
+                    if (!await nextTick(s)) break;
+                    continue;
+                }
+            }
+        }
+        const candidates = ground
+            .filter(g => ids.has(g.id) && g.distance <= opts.radius && !tried.has(`${g.id}@${g.x},${g.z}`)
+                && (!opts.home || opts.home.multi || !multiFn(g.x, g.z)))
+            .sort((a, b) => a.distance - b.distance);
+        const next = candidates[0];
+        if (!next) {
+            if (s.tick() - start < opts.wait && await nextTick(s)) continue;
+            break;
+        }
+        if (inv.length >= 28) {
+            const vial = inv.find(i => i.id === EMPTY_VIAL_ID);
+            const edibles = inv.filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text)));
+            const dropTarget = vial ?? (edibles.length >= 6 ? edibles[edibles.length - 1] : undefined);
+            if (!dropTarget || typeof s.sdk.sendDropItem !== 'function') break;
+            void s.sdk.sendDropItem(dropTarget.slot);
+            if (!await nextTick(s)) break;
+            continue;
+        }
+        if (typeof s.direct !== 'function') break;
+        pending = { id: next.id, x: next.x, z: next.z, before: invCount(inv, next.id), sentAt: s.tick() };
+        void Promise.resolve(s.direct({ type: 'pickupItem', x: next.x, z: next.z, itemId: next.id, reason: 'pk-team weapon loot' })).catch(() => {});
+        if (!await nextTick(s)) break;
+    }
+    if (pending) {
+        const inv = s.sdk.getInventory?.() ?? s.sdk.getState()?.inventory ?? [];
+        const gained = invCount(inv, pending.id) - pending.before;
+        if (gained > 0) got[pending.id] = (got[pending.id] ?? 0) + gained;
+    }
+    return got;
+}
+
 /** Drinks an antipoison dose if carried after escaping to a safe zone so lingering poison cannot kill an escaped account. */
 export async function cureAfterEscape(s: Session): Promise<boolean> {
     const inv = s.sdk.getInventory?.() ?? [];
@@ -327,7 +436,30 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             } : undefined);
             // No enemy in view for SPAR_TEAM_WAIT ticks (default 100): the enemies left are away, as the gang meeting's `away`.
             const anyEnemyInView = foes.some(f => !isOut(f) && view.some(v => v.name.toLowerCase() === f.name.toLowerCase()));
-            if (!pick) { teamFocus?.unassign(s.name); if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
+            if (!pick) {
+                teamFocus?.unassign(s.name);
+                if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; }
+                if (key === 'a' && pickup && sideDagger && !ended() && !isOut(s)) {
+                    const stIdle = s.sdk.getState();
+                    const hasSafeWeapon = (stIdle?.player?.hp ?? 0) >= 70
+                        && (stIdle?.groundItems ?? []).some(g => ENEMY_WEAPON_IDS.has(g.id) && g.distance <= pickupRadius && (!home || home.multi || !isMulti(g.x, g.z)));
+                    if (hasSafeWeapon) {
+                        const got = await combatPickupWeapons(s, ENEMY_WEAPON_IDS, {
+                            radius: pickupRadius,
+                            maxTicks: 6,
+                            wait: 0,
+                            minHp: 62,
+                            eatBelow: 72,
+                            home,
+                            stop: () => ended() || isOut(s),
+                        });
+                        for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
+                        continue;
+                    }
+                }
+                if (!await nextTick(s)) return;
+                continue;
+            }
             unseen = 0;
             teamFocus?.assign(s.name, pick.f.name);
             activeTarget = pick.f.name.toLowerCase();
@@ -366,27 +498,17 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
             if (killed && pickup && key === 'a') {
                 const enemiesLeft = foes.some(f => !isOut(f));
-                const stLoot = s.sdk.getState();
-                if (enemiesLeft && stLoot) {
-                    if (stLoot.prayers.prayerPoints > 0 && !stLoot.prayers.activePrayers[PRAYER.melee] && typeof s.sdk.sendTogglePrayer === 'function') {
-                        void s.sdk.sendTogglePrayer(PRAYER.melee);
-                    }
-                    // Eat once during the 4-tick death animation if HP is below safe looting margin so pickUp never aborts on tick 0.
-                    if ((stLoot.player?.hp ?? 99) < 68 && typeof s.sdk.sendUseItem === 'function') {
-                        const food = bestFood(s.sdk.getInventory?.() ?? stLoot.inventory ?? []);
-                        const eatOp = food?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
-                        if (food && eatOp) void s.sdk.sendUseItem(food.slot, eatOp.opIndex);
-                    }
-                }
-                const lootIds = sideDagger && enemiesLeft ? ENEMY_WEAPON_IDS : pickup;
-                const got = await pickUp(s, lootIds, {
-                    radius: pickupRadius,
-                    maxTicks: sideDagger && enemiesLeft ? 12 : 30,
-                    wait: 6,
-                    stop: () => over || halt()
-                        || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 45)
-                        || (enemiesLeft && home !== null && !home.multi && (() => { const p = s.sdk.getState()?.player; return !!p && isMulti(p.worldX, p.worldZ); })()),
-                });
+                const got = sideDagger && enemiesLeft
+                    ? await combatPickupWeapons(s, ENEMY_WEAPON_IDS, {
+                        radius: pickupRadius,
+                        maxTicks: 12,
+                        wait: 6,
+                        minHp: 60,
+                        eatBelow: 72,
+                        home,
+                        stop: () => over || halt(),
+                    })
+                    : await pickUp(s, pickup, { radius: pickupRadius, maxTicks: 30, wait: 6, stop: () => over || halt() });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
             }
@@ -405,8 +527,8 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             // Zero-tick-waste switch: only wait a tick when fightPlayer consumed 0 ticks.
             if (s.tick() === began && !await nextTick(s)) return;
         }
-        // Post-victory battlefield sweep: once all enemies are out, surviving Side A members vacuum remaining dropped weapons/loot.
-        if (key === 'a' && pickup && !isOut(s) && !halt() && foes.every(isOut)) {
+        // Post-victory battlefield sweep: once all enemies are out or fled/stopped, surviving Side A members vacuum remaining dropped weapons/loot.
+        if (key === 'a' && pickup && !isOut(s) && !halt() && foes.every(f => isOut(f) || stopped.has(f))) {
             const sweep = await pickUp(s, pickup, { radius: Math.max(pickupRadius, 12), maxTicks: 30, wait: 4, stop: () => halt() });
             for (const [id, n] of Object.entries(sweep)) picked[id] = (picked[id] ?? 0) + n;
         }
@@ -417,8 +539,9 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     over = true;
     for (const u of unwatch) u();
     const standing = { a: a.filter(s => !isOut(s)).length, b: b.filter(s => !isOut(s)).length };
+    const active = { a: a.filter(s => !isOut(s) && !stopped.has(s)).length, b: b.filter(s => !isOut(s) && !stopped.has(s)).length };
     const died = { a: a.filter(s => dead(s, lives.get(s))).length, b: b.filter(s => dead(s, lives.get(s))).length };
-    const winner = standing.a > 0 && standing.b === 0 ? 'a' : standing.b > 0 && standing.a === 0 ? 'b' : 'draw';
+    const winner = teamWinner(standing, active);
     const weaponSummary = pickup ? summarizeWeaponLoot(picked, id => getObjNames().get(id)) : undefined;
     return {
         winner,
