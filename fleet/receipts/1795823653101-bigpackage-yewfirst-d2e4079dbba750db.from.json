@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795823653101-bigpackage-yewfirst-d2e4079dbba750db",
  "account": "Bigpackage",
  "partner": "YewFirst",
@@ -10,15 +10,33 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "3eef8d42-0b25-44ee-a5a8-f7863e737f9e",
- "count": 0,
- "ok": false,
- "at": 1795834696002,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795834793299,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Earth rune",
    "requested": 16,
-   "count": 0
+   "count": 16,
+   "inventory": {
+    "before": 16,
+    "after": 0
+   },
+   "bank": {
+    "count": 16,
+    "at": 1795834758192
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795834696011-0000022408-0000000001",
+  "at": 1795834793291,
+  "sha256": "db54df12ac164813d77e78535732bbb3537a740aa7dddb15148fcec37e748b72"
+ },
+ "screen": true
 }

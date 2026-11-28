@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795823653101-bigpackage-yewfirst-d2e4079dbba750db",
+ "account": "YewFirst",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "f4fd0a71-dc6f-48ba-a986-625484b8f3e6",
+ "count": 2,
+ "ok": true,
+ "at": 1795834795299,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Earth rune",
+   "requested": 16,
+   "count": 16,
+   "inventory": {
+    "before": 0,
+    "after": 16
+   },
+   "bank": {
+    "count": 16,
+    "at": 1795834794548
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795834794159
+ },
+ "logout": {
+  "attemptId": "1795834768579-0000005140-0000000001",
+  "at": 1795834795286,
+  "sha256": "e887b2689345e2473fb6f002be119e3421e4d4c41bca38667d29acc73cdf554f"
+ },
+ "screen": true
+}
