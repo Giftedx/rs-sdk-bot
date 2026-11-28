@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795857263852-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballspinner",
+  "to": "BoneToPick",
+  "item": "Cosmic rune",
+  "count": 2,
+  "itemId": 564,
+  "start": 1795857263852,
+  "end": 1795858163852,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

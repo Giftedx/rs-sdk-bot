@@ -1,0 +1,36 @@
+{
+  "id": "xfer-1795857263852-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Masterbaiter",
+  "to": "Shaftsinker",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "extra": [
+    {
+      "item": "Lobster",
+      "count": 5,
+      "itemId": 379
+    },
+    {
+      "item": "Iron arrow",
+      "count": 28,
+      "itemId": 884
+    }
+  ],
+  "start": 1795857263852,
+  "end": 1795858163852,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
