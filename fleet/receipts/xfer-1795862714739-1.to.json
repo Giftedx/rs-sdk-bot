@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795862714739-1",
  "account": "Fingerblastr",
  "partner": "BoneToPick",
@@ -12,6 +12,12 @@
  "claim": "30742505-cc12-4c4a-9738-9f268656efb8",
  "count": 0,
  "ok": false,
- "at": 1795863494070,
- "detail": "trade claimed"
+ "at": 1795863615155,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795863494079-0000027068-0000000001",
+  "at": 1795863615144,
+  "sha256": "9b8016218c72b4e9bb70e6ac26f52eeeb00c69a2a5a771b82b6d6bf5c5f508c6"
+ },
+ "screen": false
 }

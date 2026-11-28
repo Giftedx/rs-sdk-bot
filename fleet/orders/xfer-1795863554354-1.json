@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795863554354-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Mightyrod",
+  "to": "Wandwaver",
+  "item": "Snape grass",
+  "count": 1,
+  "itemId": 231,
+  "start": 1795863554354,
+  "end": 1795864454354,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
