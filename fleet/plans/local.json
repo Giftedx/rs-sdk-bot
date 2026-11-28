@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795827677642,
+ "at": 1795827764425,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -189,7 +189,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving knights",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=1 STALL_TICKS=280 -- smithing smelt 1500 iron"
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=2 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
     "ROUNDS": "1"
@@ -198,6 +198,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
    "role": "auto"
+  },
+  {
+   "account": "InTheSack",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1857"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
   },
   {
    "account": "RearEntry",
@@ -213,21 +228,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
-   "account": "TackleBox",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Thieving TARGET_LEVEL=55 -- thieving nature-chest",
-    "scripts/aio-skiller.ts DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=1856 -- thieving knights"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
    "role": "helper"
   },
   {
