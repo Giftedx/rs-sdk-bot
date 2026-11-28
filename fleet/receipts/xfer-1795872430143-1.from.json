@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795872430143-1",
+ "account": "billionaire",
+ "partner": "ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 10,
+ "claim": "4f4b12ad-66cf-4a94-9cbd-45e0bd36b695",
+ "count": 0,
+ "ok": false,
+ "at": 1795872499753,
+ "detail": "trade claimed"
+}
