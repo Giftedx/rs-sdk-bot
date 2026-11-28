@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
-import { createShim,connectInProcess,clientTransportState,observeClientTransport,connectFailedDetail, type ClientLike } from '../src/inprocess';
+import { createShim,connectInProcess,clientTransportState,observeClientTransport,connectFailedDetail,startInProcessSession, type ClientLike } from '../src/inprocess';
 import { tradeRefusal } from '../src/tradeguard';
 import { waitTicks } from '../src/ticks';
 import { equipmentObserved } from '../src/container-observation';
@@ -378,4 +378,60 @@ test('connect-failed detail keeps the request that threw inside the 300-characte
     const rows = JSON.parse(detail.slice(detail.indexOf(' http=') + 6));
     expect(rows.at(-1)).toEqual({ url: '127.0.0.1:8890/config123', error: 'Error: The socket connection was closed unexpectedly', ms: 40 });
     expect(connectFailedDetail(new Error('login refused'), [])).toBe('Error: login refused');
+});
+
+test('startInProcessSession trims unused 3D/layout arrays once dom-shim is loaded while preserving interface fields', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join, resolve } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const webclient = (rel: string) => join(resolve(import.meta.dir, '..', '..', '..'), 'vendor', 'rs-sdk', 'server', 'webclient', 'src', rel);
+    await import(webclient('lite/dom-shim.ts'));
+    const IfType = (await import(webclient('config/IfType.ts'))).default as any;
+    const Model = (await import(webclient('dash3d/Model.ts'))).default as any;
+    const Pix3D = (await import(webclient('dash3d/Pix3D.ts'))).default as any;
+    const prevList = IfType.list, prevSprite = IfType.spriteCache, prevDepth = Model.tmpDepthFaces, prevPrio = Model.tmpPriorityFaces, prevCol = Pix3D.colourTable;
+    const root = mkdtempSync(join(tmpdir(), 'inprocess-trim-'));
+    try {
+        const com = { id: 1, children: [2, 3], childX: [10, 20], childY: [30, 40], invBackgroundX: new Int16Array(20), invBackgroundY: new Int16Array(20), invBackground: new Array(20).fill(null), linkObjType: new Int32Array(28), text: 'keep' };
+        IfType.list = [undefined, com];
+        IfType.spriteCache = { dummy: true };
+        Model.tmpDepthFaces = [new Int32Array(4)];
+        Model.tmpPriorityFaces = [new Int32Array(4)];
+        Pix3D.colourTable = new Int32Array(16);
+        const c = fakeClient();
+        const session = await startInProcessSession(
+            { name: 'TrimBot', password: 'pw', server: 'localhost:8888' },
+            {
+                startSession: async (o: any) => { o.onClient?.(c); return { client: c, stop() {}, stopped: Promise.resolve({ reason: 'stopped' }) }; },
+                sdk: newSdk(),
+                Actions: class { constructor(public sdk: any) {} } as any,
+                cacheDir: root,
+                lifecycle: { root },
+                recordOwned: () => {},
+            },
+        );
+        try {
+            expect(Model.tmpDepthFaces).toHaveLength(0);
+            expect(Model.tmpPriorityFaces).toHaveLength(0);
+            expect(Pix3D.colourTable.length).toBe(0);
+            expect(IfType.spriteCache).toBeNull();
+            expect(com.childX).toBeNull();
+            expect(com.childY).toBeNull();
+            expect(com.invBackgroundX).toBeNull();
+            expect(com.invBackgroundY).toBeNull();
+            expect(com.invBackground).toBeNull();
+            expect(com.children).toEqual([2, 3]);
+            expect(com.linkObjType.length).toBe(28);
+            expect(com.text).toBe('keep');
+        } finally {
+            await session.close();
+        }
+    } finally {
+        IfType.list = prevList;
+        IfType.spriteCache = prevSprite;
+        Model.tmpDepthFaces = prevDepth;
+        Model.tmpPriorityFaces = prevPrio;
+        Pix3D.colourTable = prevCol;
+        rmSync(root, { recursive: true, force: true });
+    }
 });

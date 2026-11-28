@@ -1,8 +1,9 @@
 import {expect,test} from 'bun:test';
-import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {liveUpdateFile,readLiveUpdate,reloadDue,writeLiveUpdate} from '../src/live-reload';
+import {LEAN_BUN_ENV} from '../src/lean-bun-env';
+import {daemonSpawnArgs,liveUpdateFile,readLiveUpdate,reloadDue,respawnDaemon,writeLiveUpdate} from '../src/live-reload';
 
 test('a later unrelated update cannot clear an earlier dashboard reload request',()=>{
  const root=mkdtempSync(join(tmpdir(),'daemon-reload-'));
@@ -36,5 +37,30 @@ test('the writer preserves legacy reload times without aging them into a new req
   expect(reloadDue(root,'dashboard-publish',350)).toBe(true);
   expect(reloadDue(root,'dashboard-publish',400)).toBe(false);
   expect(reloadDue(root,'watchdog',0)).toBe(false);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('daemonSpawnArgs prepends --smol once and respawnDaemon passes LEAN_BUN_ENV to the child',async()=>{
+ expect(daemonSpawnArgs(['scripts/swarm.ts'])).toEqual(['--smol','scripts/swarm.ts']);
+ expect(daemonSpawnArgs(['--smol','scripts/swarm.ts'])).toEqual(['--smol','scripts/swarm.ts']);
+ const root=mkdtempSync(join(tmpdir(),'daemon-respawn-'));
+ try{
+  const log=join(root,'out.log');
+  const script=join(root,'probe.ts');
+  writeFileSync(script,'console.log(JSON.stringify({dfg:process.env.BUN_JSC_useDFGJIT,ftl:process.env.BUN_JSC_useFTLJIT,wasm:process.env.BUN_JSC_numberOfWasmCompilerThreads,gc:process.env.BUN_JSC_numberOfGCMarkers}));');
+  const pid=respawnDaemon(root,[script],log);
+  expect(pid).toBeGreaterThan(0);
+  const deadline=Date.now()+5000;
+  let text='';
+  while(Date.now()<deadline){
+   text=readFileSync(log,'utf8').trim();
+   if(text.startsWith('{')&&text.endsWith('}'))break;
+   await Bun.sleep(25);
+  }
+  const got=JSON.parse(text);
+  expect(got.dfg).toBe(process.env.BUN_JSC_useDFGJIT||LEAN_BUN_ENV.BUN_JSC_useDFGJIT);
+  expect(got.ftl).toBe(process.env.BUN_JSC_useFTLJIT||LEAN_BUN_ENV.BUN_JSC_useFTLJIT);
+  expect(got.wasm).toBe(process.env.BUN_JSC_numberOfWasmCompilerThreads||LEAN_BUN_ENV.BUN_JSC_numberOfWasmCompilerThreads);
+  expect(got.gc).toBe(process.env.BUN_JSC_numberOfGCMarkers||LEAN_BUN_ENV.BUN_JSC_numberOfGCMarkers);
  }finally{rmSync(root,{recursive:true,force:true});}
 });

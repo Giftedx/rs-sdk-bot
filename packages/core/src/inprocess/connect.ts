@@ -21,6 +21,44 @@ import { connectFailedDetail, inProcessSdkConfig, loginJitterFor, observeFetch, 
 import type { ClientLike, Session, Shim, StartSession, TradeAdmission } from './types';
 
 let pathfindingReady = false;
+const trimmedIfLists = new WeakSet<object>();
+
+// Headless LiteClient sessions never draw 3D models, sprites, or interface layouts. Release the static rendering
+// scratch tables and unused per-component layout/background arrays once per unpacked IfType.list baseline.
+async function trimHeadlessClientCaches(): Promise<void> {
+    if (typeof globalThis.document === 'undefined') return;
+    try {
+        const [ifMod, modelMod, pixMod] = await Promise.all([
+            import(vendor('server/webclient/src/config/IfType.ts')),
+            import(vendor('server/webclient/src/dash3d/Model.ts')),
+            import(vendor('server/webclient/src/dash3d/Pix3D.ts')),
+        ]);
+        const IfType = ifMod.default as { list?: any[]; spriteCache?: unknown } | undefined;
+        const Model = modelMod.default as { tmpDepthFaces?: unknown[]; tmpPriorityFaces?: unknown[] } | undefined;
+        const Pix3D = pixMod.default as { colourTable?: Int32Array } | undefined;
+        if (Model) {
+            if (Model.tmpDepthFaces?.length) Model.tmpDepthFaces = [];
+            if (Model.tmpPriorityFaces?.length) Model.tmpPriorityFaces = [];
+        }
+        if (Pix3D?.colourTable?.length) Pix3D.colourTable = new Int32Array(0);
+        if (IfType) {
+            IfType.spriteCache = null;
+            const list = IfType.list;
+            if (Array.isArray(list) && !trimmedIfLists.has(list)) {
+                trimmedIfLists.add(list);
+                for (let i = 0; i < list.length; i++) {
+                    const com = list[i];
+                    if (!com) continue;
+                    com.childX = null;
+                    com.childY = null;
+                    com.invBackgroundX = null;
+                    com.invBackgroundY = null;
+                    com.invBackground = null;
+                }
+            }
+        }
+    } catch { /* optional memory trim when vendor modules are absent in unit doubles */ }
+}
 
 // Bots of this process that log in or are logged in. A host job (packages/core/src/host.ts) and a squad job hold
 // several. Each Git call of a login claim is synchronous, so a claim that waits stalls each bot of its process.
@@ -57,17 +95,21 @@ export async function connectInProcess(opts: {
     installGameWebSocketProxy();
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
-    const [{ startSession }, { BotSDK }, { BotActions }] = await Promise.all([
+    const [{ startSession }, { BotSDK }, { BotActions }, { serviceWanted }] = await Promise.all([
         import(vendor('server/webclient/src/lite/session.ts')),
         import(vendor('sdk/index.ts')),
         import(vendor('sdk/actions.ts')),
+        import('../route-plan'),
         shareLocIndex(),
     ]);
+    const useService = serviceWanted();
     if (!pathfindingReady) {
-        // With a saved snapshot of the current source key (a stale one does not count) the route finder loads on its first use (pathcache.ts restorePathfindingOnFirstUse, or
-        // loadPathfinding() from a route call), so a bot that stands at one bank never holds the grid. Without a
-        // snapshot this login builds it and saves it (14 s, once for the machine). ROUTE_FINDER=eager always loads it here.
-        if (process.env.ROUTE_FINDER === 'eager' || !pathfindingSnapshotUsable()) await loadPathfinding();
+        // With a saved snapshot of the current source key (a stale one does not count) or an active route service,
+        // the local route finder loads on its first use (pathcache.ts restorePathfindingOnFirstUse, or
+        // loadPathfinding() from a route call), so a bot that delegates to route-service or stands at one bank never
+        // holds the grid. Without either, this login builds and saves the snapshot once for the machine.
+        // ROUTE_FINDER=eager always loads it here.
+        if (process.env.ROUTE_FINDER === 'eager' || (!useService && !pathfindingSnapshotUsable())) await loadPathfinding();
         pathfindingReady = true;
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
@@ -89,9 +131,14 @@ export async function connectInProcess(opts: {
         }
         opts.trade?.check(server);
     };
+    const sdk = new BotSDK(inProcessSdkConfig(opts));
+    if (useService) {
+        const pathMod = await import('../world/pathfinding') as { installRemoteSendFindPath?: (sdk: BotSDK) => void };
+        pathMod.installRemoteSendFindPath?.(sdk);
+    }
     return startInProcessSession(opts, {
         startSession,
-        sdk: new BotSDK(inProcessSdkConfig(opts)),
+        sdk,
         Actions: BotActions,
         cacheDir,
         beforeConnect,
@@ -254,5 +301,6 @@ export async function startInProcessSession(
     // no guard of its own still cannot fight on to a death. Only a local practice server can turn it off (hpFloorOff).
     const floorMod = await import('../hp-floor');
     if (!floorMod.hpFloorOff(process.env, isLocalServer(host), process.argv[1] ?? '')) floorMod.installHpFloor(result);
+    await trimHeadlessClientCaches();
     return result;
 }
