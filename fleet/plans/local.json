@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795864676512,
+ "at": 1795864887862,
  "jobs": [
   {
    "account": "Balls",
@@ -46,57 +46,42 @@
   },
   {
    "account": "bigchopper",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "woodcutting",
+    "yews"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "DEMAND_ID": "campaign:haggis:item:1515",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
+   "goal": "campaign:haggis:item:1515",
+   "role": "army",
+   "resources": [
+    "edgeville-yews"
+   ]
   },
   {
    "account": "pocketrocket",
-   "script": "scripts/aio-logistics.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
+    "mining",
+    "ore"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27",
+    "MAX_ORE": "27"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "deeppockets",
@@ -138,57 +123,54 @@
    "account": "shaftmaker",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "fishing",
-    "shark"
+    "fletching",
+    "arrows"
    ],
    "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "399",
-    "MAX_COOKED": "100",
-    "SHARK_COUNT": "100"
+    "MODE": "native-arrows",
+    "TIP_TYPE": "rune",
+    "MAX_MAKE": "345",
+    "HEADLESS_RESERVE": "200",
+    "TIP_RESERVE": "5",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "339",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "auto",
-   "resources": [
-    "catherby-sharks"
-   ]
+   "goal": "campaign:haggis:item:892",
+   "role": "auto"
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "foraging",
-    "feathers"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "campaign:haggis:item:2351",
    "role": "army"
   },
   {
    "account": "pocketpool",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "giant"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=11 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=13 -- runecraft supply",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1820",
-    "BANK_PACK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
+   "goal": "campaign:haggis:item:245",
+   "role": "army"
   }
  ],
  "army": [
@@ -207,6 +189,7 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
