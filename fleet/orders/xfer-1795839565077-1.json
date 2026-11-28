@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795839565077-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "BowBeforeMe",
+  "item": "Rune pickaxe",
+  "count": 1,
+  "itemId": 1275,
+  "start": 1795839565077,
+  "end": 1795840465077,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

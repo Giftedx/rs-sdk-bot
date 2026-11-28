@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795839655144-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Pocketrocket",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795839655144,
+  "end": 1795840555144,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
