@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795857937874-1",
  "account": "PickpockDick",
  "partner": "Abracadickra",
@@ -12,6 +12,16 @@
  "claim": "31255497-e3d8-4755-b28a-e9f8161287d5",
  "count": 0,
  "ok": false,
- "at": 1795858291674,
- "detail": "trade claimed"
+ "at": 1795858349969,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795858317903
+ },
+ "logout": {
+  "attemptId": "1795858293355-0000026984-0000000001",
+  "at": 1795858349076,
+  "sha256": "2248ac1338d9f58f6f0cd3fb9d49c1ae30c812bf7167fb5178b7eeaede2c8530"
+ },
+ "screen": false
 }
