@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { productionReview } from '../../collection';
-import { fleetSidesView } from '../../fleet-view';
+import { compactExpiredOrderSummary, fleetSidesView } from '../../fleet-view';
 import { tradeSettlement, validOrder } from '../../../core/src/fleet-trade-settlement';
 import { isLocalServer } from '../../../core/src/localserver';
 import { BANKER, every, FILES, MAIN, placeOf, shortPhase, snapshotFiles, type Status } from '../config';
@@ -134,19 +134,6 @@ function projectCompactOrder(raw: any): any {
     };
 }
 
-function projectExpiredOrder(raw: any): any {
-    if (!raw || typeof raw !== 'object') return raw;
-    return {
-        id: raw.id,
-        from: raw.from,
-        to: raw.to,
-        item: raw.item,
-        count: raw.count,
-        start: raw.start,
-        end: raw.end,
-    };
-}
-
 type ExpiredUnsettledEntry = { mtimeMs: number; size: number; receiptSig: string; order: any; receipts: any[] };
 const expiredUnsettledCache = new Map<string, ExpiredUnsettledEntry>();
 
@@ -227,23 +214,7 @@ function readOpenFleetOrdersAndReceipts(now: number): { orders: any[]; receipts:
             }
             settledOrdersCache.delete(f);
             if (Number.isFinite(order.end) && now > order.end && orderReceipts.every(r => !Number.isFinite(r?.at) || r.at <= now)) {
-                const slimOrder = projectExpiredOrder(order);
-                let slimReceipts: any[];
-                if (orderReceipts.some(r => r?.version !== undefined)) {
-                    if (!validOrder(order)) {
-                        slimReceipts = [{ id: order.id, version: 2, role: 'from', state: 'reconcile' }];
-                    } else {
-                        const s = tradeSettlement(order, orderReceipts, now).state;
-                        slimReceipts = s === 'failed'
-                            ? [{ id: order.id, ok: false }]
-                            : [{ id: order.id, version: 2, role: 'from', state: s }];
-                    }
-                } else if (orderReceipts.some(r => r?.ok === false)) {
-                    slimReceipts = [{ id: order.id, ok: false }];
-                } else {
-                    const okRoles = new Set<string>(orderReceipts.filter(r => r?.ok === true).map(r => r.role));
-                    slimReceipts = [...okRoles].map(role => ({ id: order.id, role, ok: true }));
-                }
+                const { order: slimOrder, receipts: slimReceipts } = compactExpiredOrderSummary(order, orderReceipts, now);
                 expiredUnsettledCache.set(f, { mtimeMs: st.mtimeMs, size: st.size, receiptSig, order: slimOrder, receipts: slimReceipts });
                 openOrderJsonCache.delete(full);
                 for (const rf of rFiles) openReceiptJsonCache.delete(join(receiptsDir, rf));
