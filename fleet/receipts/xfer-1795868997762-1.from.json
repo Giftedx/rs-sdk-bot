@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795868997762-1",
  "account": "coincock",
  "partner": "knightstick",
@@ -10,8 +10,18 @@
  "item": "Herb",
  "requested": 1,
  "claim": "e6fd7ed2-59d9-4623-9260-77df1ddb6579",
- "count": 0,
- "ok": false,
- "at": 1795869211678,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795869537258,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795869211686-0000010604-0000000001",
+  "at": 1795869537251,
+  "sha256": "870e0f9eb740bc4791100b0db783874e6ce87d527603485071def41c16d9cf22"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869507242,
+ "at": 1795869541516,
  "jobs": [
   {
    "account": "Balls",
@@ -45,6 +45,22 @@
    "role": "pvp"
   },
   {
+   "account": "quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=72 PRODUCT_TARGET=72 BANK_PACK=1 -- giant",
+    "scripts/aio-skiller.ts MAX_MAKE=72 CAP=1000 DEMAND_ID=goal:supply_chain:1601 BATCH_UNITS=72 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-diamond"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
    "account": "pullmybow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -65,19 +81,22 @@
    ]
   },
   {
-   "account": "quickhandjob",
-   "script": "scripts/chain.ts",
+   "account": "rearentry",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=20 PRODUCT_TARGET=20 BANK_PACK=1 -- giant",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:ikov BATCH_UNITS=1 -- sweep ikov"
+    "chicken"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "818"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ikov",
-   "role": "army"
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "chickens"
+   ]
   },
   {
    "account": "shaftsinker",
@@ -132,24 +151,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "rearentry",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "826"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "chickens"
-   ]
   }
  ],
  "army": [
