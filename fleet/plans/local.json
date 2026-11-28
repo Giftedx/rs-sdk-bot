@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795872074690,
+ "at": 1795872084913,
  "jobs": [
   {
    "account": "Balls",
@@ -173,86 +173,6 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "helper"
-  },
-  {
-   "account": "bigchopper",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "meatntwoveg",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
-  },
-  {
-   "account": "bonetopick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-436-2-o0-p23",
-    "ITEM_ID": "436",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "23",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:436",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:436",
-   "role": "auto"
-  },
-  {
-   "account": "billionaire",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "1",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
   }
  ],
  "army": [
@@ -267,6 +187,7 @@
   "Deeppockets",
   "UnderMyKilt",
   "ballspinner",
+  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
