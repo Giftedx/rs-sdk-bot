@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795834044916-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Nockitoff",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "start": 1795834044916,
+  "end": 1795834944916,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
