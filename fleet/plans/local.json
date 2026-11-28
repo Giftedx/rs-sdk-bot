@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834952969,
+ "at": 1795835040295,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,23 +185,19 @@
    "role": "pvp"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
   },
   {
    "account": "Pocketpython",
@@ -237,6 +233,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:440",
    "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "auto",
    "resources": [
     "varrock-se-mine"
    ]
@@ -292,13 +307,14 @@
   },
   {
    "account": "Pullmybow",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=7720 TARGET_COUNT=772 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
+    "sweep",
+    "blackknight"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:blackknight",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -360,7 +376,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
