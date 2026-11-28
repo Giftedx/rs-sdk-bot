@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795819453213-pocketpool-bigchopper-fa7f2f2127ad1f63",
+ "account": "Bigchopper",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "5b6ad058-5a70-48ed-8040-9aebaefbf533",
+ "count": 1,
+ "ok": true,
+ "at": 1795828202866,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795828202036
+ },
+ "logout": {
+  "attemptId": "1795828189792-0000014380-0000000001",
+  "at": 1795828202784,
+  "sha256": "10670515dbef02fe080f1bd90dac3a3570a839bf7546671f886c4de29bf17247"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795828160210,
+ "at": 1795828206546,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -200,21 +200,20 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "RearEntry",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   },
   {
    "account": "Nockitoff",
