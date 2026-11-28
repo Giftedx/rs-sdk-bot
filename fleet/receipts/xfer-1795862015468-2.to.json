@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795862015468-2",
  "account": "RearEntry",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 30,
  "claim": "67213eee-cec9-4b4b-9b78-5c7991af60a6",
- "count": 0,
- "ok": false,
- "at": 1795862664315,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795862744745,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795862743992
+ },
+ "logout": {
+  "attemptId": "1795862664661-0000022504-0000000001",
+  "at": 1795862744736,
+  "sha256": "d2c9ae045d9c2ab1321064f9329fb3b6616eb2a90a509b31330a1a3942c87f34"
+ },
+ "screen": true
 }
