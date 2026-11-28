@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795849465398-1",
+ "account": "Pocketrocket",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "8f5cf480-c432-4da6-81d4-6f1c674ac732",
+ "count": 1,
+ "ok": true,
+ "at": 1795850069830,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795850068701
+ },
+ "logout": {
+  "attemptId": "1795850057740-0000014780-0000000001",
+  "at": 1795850069823,
+  "sha256": "3798871348922ac365781846a2a6a90b2b2d09f4fce8c223ffe5cb7d559e5c43"
+ },
+ "screen": true
+}

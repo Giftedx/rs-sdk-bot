@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795849856861-1",
+ "account": "Ballbag",
+ "partner": "RearEntry",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 30,
+ "claim": "e2861319-963f-43ce-8dfe-3baaf623a1a9",
+ "count": 0,
+ "ok": false,
+ "at": 1795850063654,
+ "detail": "trade claimed"
+}
