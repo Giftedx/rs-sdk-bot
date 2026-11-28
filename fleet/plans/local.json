@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842606316,
+ "at": 1795842638068,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -213,8 +213,8 @@
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2370 TARGET_COUNT=237 PRODUCT_TARGET=237 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=237 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2360 TARGET_COUNT=236 PRODUCT_TARGET=236 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=236 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -228,8 +228,8 @@
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2370 TARGET_COUNT=237 PRODUCT_TARGET=237 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=237 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2360 TARGET_COUNT=236 PRODUCT_TARGET=236 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=236 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -243,8 +243,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2370 TARGET_COUNT=237 PRODUCT_TARGET=237 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=237 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2360 TARGET_COUNT=236 PRODUCT_TARGET=236 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=236 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -252,31 +252,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "28",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
    "role": "army"
   },
   {
@@ -451,6 +426,21 @@
    "role": "army"
   },
   {
+   "account": "Swordswallow",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "21",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
+  },
+  {
    "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
@@ -504,18 +494,18 @@
   },
   {
    "account": "DropMyLoad",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "sweep",
-    "scorpion"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:scorpion",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "1000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:scorpion",
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
   }
  ],
