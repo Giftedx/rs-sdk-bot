@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795855300403,
+ "at": 1795855372879,
  "jobs": [
   {
    "account": "Balls",
@@ -63,10 +63,9 @@
    ]
   },
   {
-   "account": "TrouserSnake",
+   "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=54 TARGET_COUNT=14 CAP=1000 STALL_TICKS=200 -- herblore potions",
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 BANK_PACK=1 -- druid",
     "scripts/aio-skiller.ts MAX_MAKE=35 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=35 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
    ],
@@ -76,6 +75,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=4 PRODUCT_TARGET=4 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=4 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
    "role": "army"
   },
   {
@@ -99,6 +113,21 @@
    ]
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2560 TARGET_COUNT=256 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:PickpockDick:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:PickpockDick:zanaris",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -115,21 +144,6 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -138,7 +152,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1253"
+    "BATCH_UNITS": "1254"
    },
    "enabled": true,
    "repeat": false,
@@ -150,23 +164,6 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "glass"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army"
-  },
-  {
-   "account": "PickpockDick",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
@@ -235,6 +232,31 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "240",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "240"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
   }
  ],
  "army": [
