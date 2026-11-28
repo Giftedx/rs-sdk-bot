@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795856586478-1",
+ "account": "OreElse",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "19797a71-a3ad-4f04-955b-2abf198f476e",
+ "count": 1,
+ "ok": true,
+ "at": 1795856851516,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Uncut emerald",
+   "requested": 15,
+   "count": 15,
+   "inventory": {
+    "before": 0,
+    "after": 15
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795856850785
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795856850042
+ },
+ "logout": {
+  "attemptId": "1795856821556-0000010640-0000000001",
+  "at": 1795856851509,
+  "sha256": "f9fecfc5abffea59160052be4635ac0d3305a77334a5fdf23b2a6eed6dafe95c"
+ },
+ "screen": true
+}

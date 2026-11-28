@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795856611033-1",
+ "account": "Wandwaver",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "07ac96b1-61de-4c67-a8b7-53f3e5e9b4cd",
+ "count": 0,
+ "ok": false,
+ "at": 1795856868394,
+ "detail": "trade claimed"
+}

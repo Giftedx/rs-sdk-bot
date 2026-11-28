@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795856479699-2",
  "account": "TrouserSnake",
  "partner": "Woodenstaff",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 2,
  "claim": "75d18a11-f108-49fc-86c4-8b99fed5c35a",
- "count": 0,
- "ok": false,
- "at": 1795856725369,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795856755927,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795856755193
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795856754784
+ },
+ "logout": {
+  "attemptId": "1795856725377-0000019684-0000000001",
+  "at": 1795856755920,
+  "sha256": "6c21eeda2df25b510dcc7907e2ff0f5e982af9e6ca9c3c947ef37f6152d2e531"
+ },
+ "screen": true
 }

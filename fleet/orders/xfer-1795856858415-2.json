@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795856858415-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Fingerblastr",
+  "item": "Chisel",
+  "count": 1,
+  "itemId": 1755,
+  "start": 1795856858415,
+  "end": 1795857758415,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795856586478-3",
+ "account": "Fatstack",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 11,
+ "claim": "0ad9c979-fa4e-4fcf-87fa-878682b49ccf",
+ "count": 0,
+ "ok": false,
+ "at": 1795856847927,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795856840016-0000016948-0000000001",
+  "at": 1795856847919,
+  "sha256": "c20e65c39008454585ef7738983e3213269d401ff8b29bc126cfb75c34f8a7ba"
+ },
+ "screen": false
+}
