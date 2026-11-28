@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795857648891-1",
  "account": "ChaosInPants",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Small fishing net",
  "requested": 1,
  "claim": "cb46b7d8-6aa2-4fed-8656-9e38355158ae",
- "count": 0,
- "ok": false,
- "at": 1795858204923,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795858510492,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795858493100
+ },
+ "logout": {
+  "attemptId": "1795858204958-0000010140-0000000001",
+  "at": 1795858510243,
+  "sha256": "7d55b086b907f1bb167cfb75ef13108b5f6a88703736b224349e60377866f1d1"
+ },
+ "screen": true
 }
