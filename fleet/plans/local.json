@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856405209,
+ "at": 1795856422610,
  "jobs": [
   {
    "account": "Balls",
@@ -48,8 +48,8 @@
    "account": "Mightyrod",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=97 PRODUCT_TARGET=97 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=97 CAP=1164 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=97 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=91 PRODUCT_TARGET=91 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=91 CAP=1092 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=91 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
     "ROUNDS": "1"
@@ -88,7 +88,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "250"
+    "BATCH_UNITS": "146"
    },
    "enabled": true,
    "repeat": false,
@@ -97,19 +97,22 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 -- runecraft supply",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:supply_chain:207",
+    "BATCH_UNITS": "33",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:245",
-   "role": "army"
+   "goal": "goal:supply_chain:207",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   },
   {
    "account": "Fatstack",
@@ -120,7 +123,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "250"
+    "BATCH_UNITS": "146"
    },
    "enabled": true,
    "repeat": false,
@@ -136,7 +139,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "250"
+    "BATCH_UNITS": "146"
    },
    "enabled": true,
    "repeat": false,
@@ -152,7 +155,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "250"
+    "BATCH_UNITS": "146"
    },
    "enabled": true,
    "repeat": false,
@@ -211,6 +214,48 @@
    },
    "enabled": true,
    "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "worker"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Fletching",
+    "TARGET_LEVEL": "75",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
+   "role": "helper"
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "120",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "120"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
    "role": "army"
   },
   {
@@ -302,32 +347,29 @@
     "druid"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "39",
+    "CAP": "1000",
+    "TARGET_COUNT": "13",
+    "PRODUCT_TARGET": "13",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "campaign:haggis:item:245",
+   "role": "army"
   },
   {
    "account": "TrouserSnake",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=17 PRODUCT_TARGET=25 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=25 CAP=1000 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=48 TARGET_COUNT=25 STALL_TICKS=150 ORDER_MODE=level -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:261 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:avantoe"
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=11 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:245 BATCH_UNITS=13 BANK_PACK=1 TARGET=chaos_wine -- druid chaos_wine TARGET=chaos_wine"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:261",
+   "goal": "campaign:haggis:item:245",
    "role": "army"
   },
   {
@@ -337,13 +379,13 @@
     "druid"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "39",
+    "DEMAND_ID": "campaign:haggis:item:1623",
+    "BATCH_UNITS": "20",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
+   "goal": "campaign:haggis:item:1623",
    "role": "army",
    "resources": [
     "chaos-druids"
@@ -358,7 +400,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "870"
+    "BATCH_UNITS": "810"
    },
    "enabled": true,
    "repeat": false,
