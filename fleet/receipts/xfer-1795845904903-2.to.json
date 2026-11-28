@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795845904903-2",
+ "account": "BoneToPick",
+ "partner": "ChaosInPants",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 48,
+ "claim": "0dd8bbc2-9ebc-41cd-bf8a-35b512f6a60f",
+ "count": 0,
+ "ok": false,
+ "at": 1795846101413,
+ "detail": "trade claimed"
+}
