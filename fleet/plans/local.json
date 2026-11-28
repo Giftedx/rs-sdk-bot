@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832596091,
+ "at": 1795832695757,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,36 +185,19 @@
    "role": "pvp"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "prince"
+    "vampire"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
+    "DEMAND_ID": "goal:quest_board:vampire",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:prince",
+   "goal": "goal:quest_board:vampire",
    "role": "auto"
   },
   {
@@ -235,18 +218,17 @@
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
+   "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
   },
   {
@@ -266,6 +248,23 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
