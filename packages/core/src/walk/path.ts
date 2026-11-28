@@ -471,10 +471,10 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 for (const unsubscribe of abortSubscriptions) unsubscribe();
                 resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
             };
-            const replanThen = (p: PathTile, why: string, failDetail: string, after: () => void): boolean => {
+            const replanThen = (p: PathTile, why: string, failDetail: string, after: (cur: { x: number; z: number; level: number }) => void): boolean => {
                 if (!deps.planAsync) {
                     if (!replan(p, why)) { finish(false, failDetail); return false; }
-                    after();
+                    after({ ...p, level });
                     return true;
                 }
                 if (replanning) return false;
@@ -483,11 +483,14 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 void buildAroundAsync(p, firstPoint).then(() => {
                     replanning = false;
                     if (done) return;
+                    const cur = deps.pos();
+                    if (!cur) { finish(false, 'no position'); return; }
+                    if (cur.level !== level) { finish(false, `left level ${level}`); return; }
                     idx = -1; target = -1; res.repaths++; boxRepaths++;
                     log(`re-plan: ${why}`);
                     if (tiles.length === 0) { finish(false, failDetail); return; }
-                    idx = nearest(p).i;
-                    after();
+                    idx = nearest(cur).i;
+                    after(cur);
                 }, error => {
                     replanning = false;
                     if (done) return;
@@ -527,40 +530,7 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                 if (rejectedWalks >= 3) { finish(false, detail); return; }
                 if (!rejectionReplanned) rejectionReplan = true;
             };
-            const decide = () => {
-                if (replanning) return;
-                sentThisTick = false;
-                const p = deps.pos();
-                if (!p) return finish(false, 'no position');
-                if (p.level !== level) return finish(false, `left level ${level}`);
-                // Near the goal is arrival, unless the goal is out of reach and a closed door lies on the path: then
-                // the door is opened first (a bot two tiles from an NPC, behind its house wall, cannot talk to it).
-                if (d8(p, goal) <= goalTol && !(deps.reach?.({ x: goal.x, z: goal.z, level }, { adjacentOk: true }) === false && shutDoorAt(Math.max(0, idx), tiles.length - 1))) return finish(true);
-                if (opts.stop?.()) return finish(false, 'stopped');
-                if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
-                const moved = p.x !== last.x || p.z !== last.z;
-                if (moved) { movementEpoch++; rejectedWalks = 0; movementRepaths = res.repaths; rejectionReplan = false; rejectionReplanned = false; }
-                last = { x: p.x, z: p.z };
-                still = moved ? 0 : still + 1;
-                if (ticks > 0 && !moved) res.still++;
-
-                // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
-                if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
-
-                if (rejectionReplan) {
-                    rejectionReplan = false; rejectionReplanned = true;
-                    if (!replanThen(p, 'client walk rejection', `no path from ${p.x},${p.z}`, () => {
-                        if (deps.planAsync) clickAhead(look);
-                    })) return;
-                }
-                const n = nearest(p);
-                if (n.d > 3) {
-                    // Off the planned path (the client routed round something): plan again from here.
-                    if (!replanThen(p, `off path by ${n.d}`, `no path from ${p.x},${p.z}`, () => {
-                        if (deps.planAsync) clickAhead(look);
-                    })) return;
-                } else idx = n.i;
-
+            const continueDecide = (p: { x: number; z: number; level: number }) => {
                 const curSeg = seg[Math.max(0, idx)] ?? 0;
                 const advancedSeg = curSeg > maxSeg;
                 if (advancedSeg) maxSeg = curSeg;
@@ -674,6 +644,41 @@ function walkPathFrom(deps: PathDeps, points: PathPoint[], opts: PathOptions): P
                     if (target === tiles.length - 1 && still === 0) return;
                     clickAhead(look);
                 }
+            };
+            const decide = () => {
+                if (replanning) return;
+                sentThisTick = false;
+                const p = deps.pos();
+                if (!p) return finish(false, 'no position');
+                if (p.level !== level) return finish(false, `left level ${level}`);
+                // Near the goal is arrival, unless the goal is out of reach and a closed door lies on the path: then
+                // the door is opened first (a bot two tiles from an NPC, behind its house wall, cannot talk to it).
+                if (d8(p, goal) <= goalTol && !(deps.reach?.({ x: goal.x, z: goal.z, level }, { adjacentOk: true }) === false && shutDoorAt(Math.max(0, idx), tiles.length - 1))) return finish(true);
+                if (opts.stop?.()) return finish(false, 'stopped');
+                if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
+                const moved = p.x !== last.x || p.z !== last.z;
+                if (moved) { movementEpoch++; rejectedWalks = 0; movementRepaths = res.repaths; rejectionReplan = false; rejectionReplanned = false; }
+                last = { x: p.x, z: p.z };
+                still = moved ? 0 : still + 1;
+                if (ticks > 0 && !moved) res.still++;
+
+                // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
+                if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
+
+                if (rejectionReplan) {
+                    rejectionReplan = false; rejectionReplanned = true;
+                    if (!replanThen(p, 'client walk rejection', `no path from ${p.x},${p.z}`, cur => {
+                        if (deps.planAsync) continueDecide(cur);
+                    })) return;
+                }
+                const n = nearest(p);
+                if (n.d > 3) {
+                    // Off the planned path (the client routed round something): plan again from here.
+                    if (!replanThen(p, `off path by ${n.d}`, `no path from ${p.x},${p.z}`, cur => {
+                        if (deps.planAsync) continueDecide(cur);
+                    })) return;
+                } else idx = n.i;
+                continueDecide(p);
             };
             const off = watchTickStream(deps, () => { ticks++; decide(); }, error => finish(false, error.message), opts.idleMs);
             const onAbort = () => finish(false, 'stopped');

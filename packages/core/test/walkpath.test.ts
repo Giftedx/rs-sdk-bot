@@ -618,3 +618,71 @@ test('walkPath uses planAsync and dangerAsync for initial plans and off-path rep
     expect(asyncPlans).toBeGreaterThanOrEqual(1);
     expect(asyncDangers).toBe(1);
 });
+
+test('async off-path replan opens a shut door ahead and refreshes position/level on resolve', async () => {
+    // Part 1: off-path async replan lands in front of a shut door; must open it instead of clicking past it.
+    let pos = { x: 3000, z: 3200, level: 0 }, doorShut = true;
+    const listeners = new Set<() => void>(), inputs: string[] = [];
+    const door: PathLoc = { id: 1530, x: 3010, z: 3210, name: 'Door', optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    let plans = 0;
+    const deps: PathDeps = {
+        pos: () => ({ ...pos }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        locs: () => doorShut ? [door] : [],
+        walk: (x, z) => { inputs.push(`walk ${x},${z}`); if (!doorShut || x < 3010) pos = { ...pos, x, z }; },
+        interactLoc: l => { inputs.push(`open ${l.x},${l.z}`); doorShut = false; },
+        plan: () => [],
+        planAsync: async (_l, _f, to) => {
+            plans++;
+            await Bun.sleep(2);
+            return plans === 1 ? [{ x: 3020, z: 3200 }] : [{ x: 3010, z: 3210 }, to];
+        },
+    };
+    let res1: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done1 = walkPath(deps, [{ x: 3020, z: 3210, tol: 1 }], { maxTicks: 20 }).then(r => res1 = r);
+    await Bun.sleep(10); // initial async plan finishes and clicks walk 3020,3200
+    // Push player off-path to z=3210 (n.d = 10 > 3), triggering async replan with shut door at 3010,3210 ahead.
+    pos = { x: 3005, z: 3210, level: 0 };
+    for (let i = 0; i < 15 && !res1; i++) {
+        for (const cb of [...listeners]) cb();
+        await Bun.sleep(5);
+    }
+    const r1 = await done1;
+    expect(r1.ok).toBe(true);
+    expect(r1.doors).toBe(1);
+    const openIdx = inputs.indexOf('open 3010,3210');
+    const pastDoorWalk = inputs.findIndex(s => s.startsWith('walk 3020,3210'));
+    expect(openIdx).toBeGreaterThanOrEqual(0);
+    expect(pastDoorWalk).toBeGreaterThan(openIdx);
+
+    // Part 2: level changes while async replan is in flight -> finishes cleanly with 'left level 0' and no click.
+    let pos2 = { x: 3000, z: 3200, level: 0 };
+    const l2 = new Set<() => void>(), clicks2: string[] = [];
+    let releaseReplan!: () => void;
+    let p2Count = 0;
+    const deps2: PathDeps = {
+        pos: () => ({ ...pos2 }),
+        onTick: cb => { l2.add(cb); return () => l2.delete(cb); },
+        locs: () => [],
+        walk: (x, z) => { clicks2.push(`${x},${z}`); },
+        interactLoc: () => {},
+        plan: () => [],
+        planAsync: async (_l, _f, to) => {
+            if (++p2Count === 1) return [to];
+            await new Promise<void>(r => { releaseReplan = r; });
+            return [to];
+        },
+    };
+    const done2 = walkPath(deps2, [{ x: 3020, z: 3200, tol: 1 }], { maxTicks: 20 });
+    await Bun.sleep(5);
+    pos2 = { x: 3000, z: 3210, level: 0 }; // off-path triggers replan #2
+    for (const cb of [...l2]) cb();
+    await Bun.sleep(5);
+    const beforeReleaseClicks = clicks2.length;
+    pos2 = { x: 3000, z: 3210, level: 1 }; // player changed level while replan in flight
+    releaseReplan();
+    const r2 = await done2;
+    expect(r2.ok).toBe(false);
+    expect(r2.detail).toBe('left level 0');
+    expect(clicks2.length).toBe(beforeReleaseClicks);
+});
