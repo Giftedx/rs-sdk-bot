@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832255090,
+ "at": 1795832340583,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -186,45 +186,38 @@
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
+    "sweep",
+    "prince"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "9",
-    "STALL_TICKS": "280"
+    "DEMAND_ID": "goal:quest_board:prince",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
+   "goal": "goal:quest_board:prince",
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "account": "Pullmybow",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
    "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:quest_board:elena",
+   "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "WellHung",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -237,21 +230,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
-   "role": "auto"
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
-    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
   },
   {
@@ -271,6 +249,23 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   }
  ],
  "army": [
@@ -293,7 +288,6 @@
   "mmtha0205",
   "mmthv2350",
   "pocketpython",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "woodpecker"
