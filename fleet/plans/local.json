@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795859790978,
+ "at": 1795859837055,
  "jobs": [
   {
    "account": "Balls",
@@ -48,31 +48,16 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=38 PRODUCT_TARGET=38 MAX_ORE=38 -- mining ore",
-    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1000 TARGET_COUNT=76 PRODUCT_TARGET=76 MAX_ORE=76 -- mining ore",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=38 ORE_RESERVE=0 MAX_MAKE=38 STALL_TICKS=350 -- smithing smelt"
+    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy khazardshop 3000",
+    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1930 TARGET_COUNT=193 PRODUCT_TARGET=193 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=193 MAX_MAKE=193 CAP=1944 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
+   "goal": "goal:supply_chain:1607",
    "role": "army"
   },
   {
@@ -86,14 +71,14 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "1",
+    "MAX_ITEMS": "5",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "1"
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
@@ -119,6 +104,38 @@
    "resources": [
     "chickens"
    ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=3760 TARGET_COUNT=376 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Wandwaver:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Wandwaver:zanaris",
+   "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "359"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   },
   {
    "account": "Quickhandjob",
@@ -232,6 +249,31 @@
    "role": "army"
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "43",
+    "ITEMS": "Adamant arrowtips",
+    "MAX_ITEMS": "188",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:43",
+    "BATCH_UNITS": "188"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
    "account": "Abracadickra",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -267,66 +309,69 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Kiltlifter",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "giant"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
-    "MAX_MAKE": "2",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "2",
-    "STALL_TICKS": "280"
+    "DEMAND_ID": "campaign:haggis:item:564",
+    "BATCH_UNITS": "1757",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "army"
+   "goal": "campaign:haggis:item:564",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=74740 TARGET_COUNT=7474 PRODUCT_TARGET=7519 -- woodcutting yews",
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=80 TARGET_COUNT=7519 CAP=90228 MAX_MAKE=25 STALL_TICKS=150 -- fletching shafts",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:72 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-bow:unstrung_magic_shortbow"
+    "crafting",
+    "inventory",
+    "brew:unf_marrentill_potion"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:93",
+    "BATCH_UNITS": "1",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "169"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:72",
-   "role": "helper"
+   "goal": "campaign:haggis:item:93",
+   "role": "auto"
   },
   {
    "account": "Ballbag",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "magicshop",
+    "wydinstore",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "562",
-    "ITEMS": "Chaos rune",
+    "ITEM_ID": "1933",
+    "ITEMS": "Pot of flour",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:562",
+    "DEMAND_ID": "campaign:haggis:item:1933",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:562",
+   "goal": "campaign:haggis:item:1933",
    "role": "helper"
   }
  ],
@@ -347,7 +392,6 @@
   "dipstick",
   "fingerblastr",
   "hocuspokeus",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
