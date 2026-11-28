@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795838316771,
+ "at": 1795838362621,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -275,15 +275,15 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-46-o4-p1681",
+    "ORDER_KEY": "brain-1513-53-o4-p1681",
     "ITEM_ID": "1513",
-    "QUANTITY": "46",
+    "QUANTITY": "53",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "1681",
     "EXPECTED_OWNED": "4",
     "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "46"
+    "BATCH_UNITS": "53"
    },
    "enabled": true,
    "repeat": false,
@@ -301,14 +301,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "66",
+    "MAX_ITEMS": "72",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "66"
+    "BATCH_UNITS": "72"
    },
    "enabled": true,
    "repeat": false,
@@ -334,8 +334,8 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2040 TARGET_COUNT=204 PRODUCT_TARGET=229 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=229 STALL_TICKS=255 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2090 TARGET_COUNT=209 PRODUCT_TARGET=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 STALL_TICKS=255 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -346,53 +346,28 @@
    "role": "army"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "gemshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1623",
-   "role": "auto"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "ranging_guild_bowshop",
+    "magicshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "2",
+    "ITEM_ID": "556",
+    "ITEMS": "Air rune",
+    "MAX_ITEMS": "252",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "252"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -412,6 +387,21 @@
    "role": "army"
   },
   {
+   "account": "BackdoorMan",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1230 TARGET_COUNT=123 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:vampire BATCH_UNITS=1 -- sweep vampire"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:vampire",
+   "role": "helper"
+  },
+  {
    "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
@@ -428,51 +418,17 @@
   },
   {
    "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=865 MAX_MAKE=1 BAR_RESERVE=0 CAP=1000 TARGET_COUNT=1 STALL_TICKS=280 -- smithing anvil 1000",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Nockitoff BATCH_UNITS=250 -- ranged-camp"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
-   "role": "auto"
-  },
-  {
-   "account": "ChaosInPants",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:ChaosInPants",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:ChaosInPants",
-   "role": "auto"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "merlin"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:merlin",
+   "goal": "goal:pk_army:Nockitoff",
    "role": "auto"
   }
  ],

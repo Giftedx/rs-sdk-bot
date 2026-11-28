@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795838326907-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewGotWood",
+  "to": "Ballbag",
+  "item": "Rune essence",
+  "count": 224,
+  "itemId": 1436,
+  "start": 1795838326907,
+  "end": 1795839226907,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

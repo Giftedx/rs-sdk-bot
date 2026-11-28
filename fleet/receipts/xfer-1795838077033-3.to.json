@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795838077033-3",
+ "account": "TackleBox",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 1,
+ "claim": "94bd6820-4ff4-4a89-8fce-5078e95f7ca7",
+ "count": 0,
+ "ok": false,
+ "at": 1795838353948,
+ "detail": "Error: route to 2617, 3333: precondition walk danger from 2632,3299,0: route danger to 2617,3333,0: Guard dog 2624,3319 needs 0 heal of food (expected damage 4.4)",
+ "lines": [
+  {
+   "item": "Coins",
+   "requested": 156,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795838343715-0000001792-0000000001",
+  "at": 1795838353922,
+  "sha256": "ddefd0844d81c21d24af3831d0070be03e394b1f7c66332aca411e5ff620fa10"
+ },
+ "screen": false
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795838318927-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "Shaftsinker",
+  "item": "Nature rune",
+  "count": 250,
+  "itemId": 561,
+  "start": 1795838318927,
+  "end": 1795839218927,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
