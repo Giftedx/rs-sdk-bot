@@ -2047,11 +2047,22 @@ export function retreatOrTeleportPlan(
 export function escortProvokedByThreat(
     escortSlot: number | undefined,
     escortTick: number,
-    foeTarget: number | undefined,
-    combatEvents: readonly { type: string; sourceType?: string; tick: number }[] = [],
+    foe: { index: number; combatTargetType?: string; combatTargetIndex?: number; faceEntity?: number },
+    combatEvents: readonly { type: string; sourceType?: string; sourceIndex?: number; targetType?: string; tick: number }[] = [],
 ): boolean {
-    if (escortSlot === undefined || foeTarget !== 32768 + escortSlot) return false;
-    return combatEvents.some(e => e.type === 'damage_taken' && e.sourceType === 'other_player' && e.tick >= escortTick - 8);
+    if (escortSlot === undefined) return false;
+    const targetingEscort =
+        (foe.combatTargetType === 'player' && foe.combatTargetIndex === escortSlot) ||
+        foe.faceEntity === 32768 + escortSlot;
+    if (!targetingEscort) return false;
+    return combatEvents.some(
+        e =>
+            e.type === 'damage_taken' &&
+            e.sourceType === 'other_player' &&
+            e.sourceIndex === foe.index &&
+            (e.targetType === undefined || e.targetType === 'player') &&
+            e.tick >= escortTick - 8,
+    );
 }
 
 export function escortInterceptDecision(
@@ -2587,8 +2598,18 @@ export async function runEscortedOre(
                     const kit = deps.kitFrom(escort.sdk.getEquipment(), escort.sdk.getInventory());
                     const escortState = escort.sdk.getState();
                     const escortSlot = (escort.client as { selfSlot?: number } | undefined)?.selfSlot;
-                    const foeTarget = (localFoe as { targetIndex?: number }).targetIndex;
-                    const attackingSelf = escortProvokedByThreat(escortSlot, escort.tick(), foeTarget, escortState?.combatEvents ?? []);
+                    const rawFace = (escort.client as { players?: Record<number, { faceEntity?: number }> } | undefined)?.players?.[localFoe.index]?.faceEntity;
+                    const attackingSelf = escortProvokedByThreat(
+                        escortSlot,
+                        escort.tick(),
+                        {
+                            index: localFoe.index,
+                            combatTargetType: localFoe.combatTargetType,
+                            combatTargetIndex: localFoe.combatTargetIndex,
+                            faceEntity: rawFace,
+                        },
+                        escortState?.combatEvents ?? [],
+                    );
                     const decision = escortInterceptDecision(
                         {
                             escortTile: et,

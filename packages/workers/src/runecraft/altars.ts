@@ -84,7 +84,9 @@ export const NATURE_ALTAR: RuneAltar = {
     portal: 2473,
 };
 
-export const ALL_ALTARS: readonly RuneAltar[] = [...RUNE_ALTARS, COSMIC_ALTAR];
+// Solo bank-craft altars (Nature uses the dedicated Shilo Village runner in shilo.ts).
+// Order matches loc.pack ruined temple IDs 2452..2459 (air..body, cosmic=2458, law=2459).
+export const ALL_ALTARS: readonly RuneAltar[] = [...RUNE_ALTARS, COSMIC_ALTAR, LAW_ALTAR];
 export const PVP_RUNE_ALTARS: readonly RuneAltar[] = [
     ...RUNE_ALTARS.filter(a => ['air', 'water', 'earth', 'fire'].includes(a.name)),
     COSMIC_ALTAR,
@@ -156,8 +158,9 @@ export function chooseRuneAltar(level: number, owned: ReadonlySet<number>, force
 }
 
 type RuinTargetEntry = { at: Tile; q: InteractionTarget };
+const RUIN_LOC_ALTARS: readonly RuneAltar[] = [...ALL_ALTARS, NATURE_ALTAR];
 const RUIN_TARGETS_BY_NAME = new Map<string, RuinTargetEntry>(
-    ALL_ALTARS.map((a, idx) => {
+    RUIN_LOC_ALTARS.map((a, idx) => {
         const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
         return [
             a.name,
@@ -183,7 +186,7 @@ export function ruinTarget(a: RuneAltar): { at: Tile; q: InteractionTarget } {
     const cached = RUIN_TARGETS_BY_NAME.get(a.name);
     if (cached) return { at: { ...cached.at }, q: { ...cached.q } };
     const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
-    const id = 2452 + ALL_ALTARS.indexOf(a);
+    const id = 2452 + RUIN_LOC_ALTARS.indexOf(a);
     return {
         at,
         q: {

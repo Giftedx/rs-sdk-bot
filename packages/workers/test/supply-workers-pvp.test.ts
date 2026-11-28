@@ -48,8 +48,10 @@ import {
     NATURE_ALTAR,
     PVP_RUNE_ALTARS,
     ZANARIS_BANK,
+    chooseRuneAltar,
     entranaContraband,
     nearestBankForAltar,
+    ruinTarget,
 } from '../src/runecraft';
 
 describe('Sharks & cooking zero-waste behavior', () => {
@@ -196,9 +198,16 @@ describe('Runite mining safety, depletion rotation, and rune smithing', () => {
             neverSkull: true,
             threat: { name: 'Pker', x: 3061, z: 3885, combatLevel: 65, attackingSelf: false },
         };
-        expect(escortProvokedByThreat(7, 50, 32768 + 7, [])).toBe(false);
-        expect(escortProvokedByThreat(7, 50, 32768 + 7, [{ type: 'damage_taken', sourceType: 'npc', tick: 49 }])).toBe(false);
-        expect(escortProvokedByThreat(7, 50, 32768 + 7, [{ type: 'damage_taken', sourceType: 'other_player', tick: 49 }])).toBe(true);
+        const foe = { index: 12, combatTargetType: 'player', combatTargetIndex: 7 };
+        expect(escortProvokedByThreat(7, 50, foe, [])).toBe(false);
+        expect(escortProvokedByThreat(7, 50, foe, [{ type: 'damage_taken', sourceType: 'npc', sourceIndex: 12, targetType: 'player', tick: 49 }])).toBe(false);
+        // Different player hitting the escort cannot provoke retaliation against foe #12.
+        expect(escortProvokedByThreat(7, 50, foe, [{ type: 'damage_taken', sourceType: 'other_player', sourceIndex: 99, targetType: 'player', tick: 49 }])).toBe(false);
+        // Foe #12 hitting an NPC cannot provoke retaliation.
+        expect(escortProvokedByThreat(7, 50, foe, [{ type: 'damage_taken', sourceType: 'other_player', sourceIndex: 12, targetType: 'npc', tick: 49 }])).toBe(false);
+        expect(escortProvokedByThreat(7, 50, foe, [{ type: 'damage_taken', sourceType: 'other_player', sourceIndex: 12, targetType: 'player', tick: 49 }])).toBe(true);
+        // Raw faceEntity fallback also requires matching sourceIndex + recent player damage.
+        expect(escortProvokedByThreat(7, 50, { index: 12, faceEntity: 32768 + 7 }, [{ type: 'damage_taken', sourceType: 'other_player', sourceIndex: 12, tick: 48 }])).toBe(true);
         expect(escortInterceptDecision(base).action).toBe('screen-retreat');
         expect(
             escortInterceptDecision({
@@ -302,6 +311,11 @@ describe('Runecraft PvP altars, nearest banks, and Entrana safety', () => {
     test('all PvP rune altars have nearest banks and Entrana contraband filter catches weapons/armour', () => {
         expect(LAW_ALTAR).toMatchObject({ name: 'law', rune: 563, talisman: 1458, level: 54, portal: 2472 });
         expect(NATURE_ALTAR).toMatchObject({ name: 'nature', rune: 561, talisman: 1462, level: 44, portal: 2473 });
+        expect(chooseRuneAltar(54, new Set([1458]), 'law').altar?.name).toBe('law');
+        // Nature routes through the dedicated Shilo Village runner (shilo.ts), not solo bank-craft.
+        expect(() => chooseRuneAltar(44, new Set([1462]), 'nature')).toThrow('unknown rune altar');
+        expect(ruinTarget(LAW_ALTAR).q.id).toBe(2459);
+        expect(ruinTarget(NATURE_ALTAR).q.id).toBe(2460);
         expect(PVP_RUNE_ALTARS.map(a => a.name)).toEqual(['air', 'water', 'earth', 'fire', 'cosmic', 'nature', 'law']);
         expect(nearestBankForAltar('water')).toEqual({ x: 3092, z: 3243, level: 0 });
         expect(nearestBankForAltar('fire')).toEqual({ x: 3269, z: 3167, level: 0 });

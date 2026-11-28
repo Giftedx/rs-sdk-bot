@@ -373,7 +373,7 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & {
         let lastSeller = sellers[0]?.npc ?? 'none';
         let lastDetail = 'no stocked sellers on this level';
         for (const seller of sellers) {
-            if (bought >= n) break;
+            if (bought >= n || 28 - inv().length <= 0) break;
             check();
             lastSeller = seller.npc;
             const moved = await step(`goTo ${seller.tile.x},${seller.tile.z},${seller.tile.level}`, () => attemptMove(seller.tile));
