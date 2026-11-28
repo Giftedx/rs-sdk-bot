@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819449486-knightrider-wandwaver-07b781b616c83809",
+ "account": "KnightRider",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "8d453f34-7c70-4829-9bf2-1386bb9345b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795828920189,
+ "detail": "trade claimed"
+}
