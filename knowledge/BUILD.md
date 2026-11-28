@@ -37,10 +37,10 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - doors: 2718
 - doors_open: 984
 - doors_key: 49
-- doors_locked: 1532
+- doors_locked: 1530
 - doors_quest: 77
 - doors_team: 4
-- doors_one_way: 23
+- doors_one_way: 25
 - doors_unknown: 34
 - doors_skill: 12
 - doors_conditional: 3

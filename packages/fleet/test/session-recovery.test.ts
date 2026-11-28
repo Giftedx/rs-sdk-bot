@@ -165,6 +165,64 @@ describe('fleet standalone session recovery', () => {
         })).toEqual({ eligible: true, endedAt: end.at });
     });
 
+    test('assessRecoveryEligibility treats a Windows-reused PID whose start time is newer than the claim as dead', () => {
+        const heldProof = {
+            state: 'held' as const,
+            account: 'nabtheknob',
+            server: 'rs-sdk-demo.fly.dev',
+            domain: 'live' as const,
+            attemptId: '1700000001000-0000015748-0000000001',
+            reason: 'disconnect',
+        };
+        const claimAt = 1_700_000_000_000;
+        const end = { at: claimAt + 2_000, reason: 'stopped after 1 runs' };
+        const claim = { phase: 'held' as const, kind: 'swarm', host: 'box-a', pid: 15748, at: claimAt };
+
+        // Original owner process started before the claim: still alive.
+        expect(assessRecoveryEligibility({
+            proof: heldProof,
+            claim,
+            end,
+            stopText: undefined,
+            pidAlive: pid => pid === 15748,
+            processStarts: () => new Map([[15748, claimAt - 10_000]]),
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'worker still alive', log: false });
+
+        // Later process reused PID 15748 well after claim.at: owner is dead, account is eligible.
+        expect(assessRecoveryEligibility({
+            proof: heldProof,
+            claim,
+            end,
+            stopText: undefined,
+            pidAlive: pid => pid === 15748,
+            processStarts: () => new Map([[15748, claimAt + 60_000]]),
+            host: 'box-a',
+        })).toEqual({ eligible: true, endedAt: end.at });
+
+        // Unreadable process start times keep the conservative alive verdict.
+        expect(assessRecoveryEligibility({
+            proof: heldProof,
+            claim,
+            end,
+            stopText: undefined,
+            pidAlive: pid => pid === 15748,
+            processStarts: () => null,
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'worker still alive', log: false });
+
+        // Reused PID on a held trade claim logs the dead-owner refusal instead of hiding it.
+        expect(assessRecoveryEligibility({
+            proof: heldProof,
+            claim: { phase: 'held', orderId: 'o-reused', host: 'box-a', pid: 15748, at: claimAt },
+            end,
+            stopText: undefined,
+            pidAlive: pid => pid === 15748,
+            processStarts: () => new Map([[15748, claimAt + 60_000]]),
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
+    });
+
     test('a held trade claim is always refused, and the refusal is logged only when no live trade worker of this host holds it', () => {
         const proof = { state: 'held' as const, account: 'worker1', server: 'rs-sdk-demo.fly.dev', domain: 'live' as const, attemptId: '1700000001000-pid-nonce', reason: 'disconnect' };
         const trade = { phase: 'held' as const, orderId: 'o1', host: 'box-a', pid: 24460 };

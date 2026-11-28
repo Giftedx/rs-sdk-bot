@@ -186,4 +186,25 @@ test('the walker plans out of the essence mine, the chaos altar and the Wizards\
     }
     // Without Agility 15 no route leaves Trollheim: every way down is a climb (quest_troll.rs2:18, :140, :164).
     expect(world.route(pockets[1]![0], pockets[1]![1], { ...able, skills: { ...able.skills, agility: 14 } }).ok).toBe(false);
+    // Temple of Ikov Armadyl Guardian room (2645,9893,0): secretdoor2 (1586) at 2643,9892,0 opens to ladder_from_cellar
+    // (2659,9892,0 -> 2659,3492,0), and ikov_shinykeydoor (2657,3496,0) opens out to mainland with ikov_shinykey.
+    const toShack = world.route({ x: 2645, z: 9893, level: 0 }, { x: 2659, z: 3492, level: 0 }, broke);
+    expect(toShack.ok).toBe(true);
+    expect(exits(toShack)).toContain('loc:secretdoor2');
+    expect(exits(toShack)).toContain('ladder_from_cellar');
+    const withShinyKey: Account = { ...strong, items: ['ikov_shinykey'], counts: { ikov_shinykey: 1 } };
+    for (const to of [{ x: 2809, z: 3441, level: 0 }, { x: 2727, z: 3492, level: 0 }]) {
+        const ikov = world.route({ x: 2645, z: 9893, level: 0 }, to, withShinyKey);
+        expect(ikov.ok).toBe(true);
+        expect(exits(ikov)).toContain('loc:secretdoor2');
+        expect(exits(ikov)).toContain('ladder_from_cellar');
+    }
+    expect(world.route({ x: 2645, z: 9893, level: 0 }, { x: 2809, z: 3441, level: 0 }, strong).ok).toBe(false);
+    // Keep Le Faye ground floor (2768,3409,0): the double doors at 2763,3401-3402 open one way from inside
+    // (quest_arthur.rs2:94-116) and stay shut from outside.
+    expect(world.route({ x: 2768, z: 3409, level: 0 }, { x: 2762, z: 3401, level: 0 }, broke).ok).toBe(true);
+    for (const to of [{ x: 2810, z: 3440, level: 0 }, { x: 2655, z: 3283, level: 0 }]) {
+        expect(world.route({ x: 2768, z: 3409, level: 0 }, to, strong).ok).toBe(true);
+    }
+    expect(world.route({ x: 2758, z: 3401, level: 0 }, { x: 2768, z: 3402, level: 0 }, strong).ok).toBe(false);
 }, 120_000);

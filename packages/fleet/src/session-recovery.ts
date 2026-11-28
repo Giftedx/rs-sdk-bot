@@ -114,6 +114,7 @@ export function assessRecoveryEligibility(v: {
     end: EndRecord | undefined;
     stopText: string | undefined;
     pidAlive: (pid: number) => boolean;
+    processStarts?: ProcessStarts;
     host: string;
     retried?: boolean;
 }): Eligibility {
@@ -121,20 +122,26 @@ export function assessRecoveryEligibility(v: {
     if (v.stopText !== undefined && !swarmWroteStopText(v.stopText)) {
         return { eligible: false, reason: 'owner stop file holds the account', log: true };
     }
+    const claimOwnerAlive = (claim: NonNullable<ClaimView>): boolean =>
+        claim.host === v.host && typeof claim.pid === 'number' && (
+            Number.isFinite(claim.at)
+                ? savedProcessAlive(claim.pid, claim.at!, v.processStarts, v.pidAlive)
+                : v.pidAlive(claim.pid)
+        );
     const isReleasedTrade = v.claim?.phase === 'released'
         && (typeof v.claim.orderId === 'string' || (typeof v.claim.kind === 'string' && v.claim.kind !== 'swarm'))
         && v.proof.reason !== 'session active or outcome unknown';
     if (!v.claim || v.claim.phase !== 'held') {
         if (!v.end) return { eligible: false, reason: 'end record gone; manual diagnosis required', log: true };
         if (isReleasedTrade) {
-            if (v.claim!.host === v.host && typeof v.claim!.pid === 'number' && v.pidAlive(v.claim!.pid)) {
+            if (claimOwnerAlive(v.claim!)) {
                 return { eligible: false, reason: 'worker still alive', log: false };
             }
         } else if (!v.end.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) {
             return { eligible: false, reason: 'no held fleet account claim', log: false };
         }
     } else {
-        const ownerAlive = v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid);
+        const ownerAlive = claimOwnerAlive(v.claim);
         // A trade worker that still runs holds its claim by design, so that refusal is not logged. A held trade claim
         // with no live worker on this host is logged: it can block the account until its trade is reconciled.
         if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: !ownerAlive };
@@ -430,6 +437,7 @@ async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<
             end,
             stopText,
             pidAlive: alive,
+            processStarts: opts.processStarts,
             host,
             retried: end !== undefined && tried.has(`${lower}|${end.at}`),
         });

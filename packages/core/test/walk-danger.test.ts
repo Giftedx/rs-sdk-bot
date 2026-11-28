@@ -6,7 +6,7 @@ import {
 import { floorLine } from '../src/hp-floor';
 import { npcHunters } from '../../knowledge/src/npc-hunters';
 import { installDoorPolicy } from '../src/world';
-import { eatBeforeWalk, foodToTake, walkPath, type PathDeps } from '../src/walk';
+import { eatBeforeWalk, foodToTake, routeHarm, walkPath, type PathDeps } from '../src/walk';
 
 const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
 const grid: any = await import('../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
@@ -249,6 +249,31 @@ test('walkPath does not start a walk that the harm check refuses, and starts one
     const going = await p;
     expect(going.detail ?? '').not.toContain('walk danger');
 });
+
+test('Ardougne north bank to market: routeHarm prices the planAroundHarm detour around the Guard dogs instead of refusing with needs 0 heal', async () => {
+    pf.initPathfinding();
+    const reach = npcReach(grid, pf.getDoorAt);
+    const from = { x: 2618, z: 3332, level: 0 }, to = { x: 2655, z: 3283, level: 0 };
+    const acct = { skills: { attack: 1, strength: 1, defence: 1, hitpoints: 10 }, varps: {}, items: ['trout'], counts: { trout: 2 }, coins: 0 };
+    const p = walkProfile(acct, { energy: 100 });
+    // The bare open path walks past the Guard dogs (max hit 5, floor line 10 >= 10 HP -> refuse with needHeal 0).
+    const open = pf.findLongPath(0, from.x, from.z, to.x, to.z, 500);
+    const bareExp = walkExposure(p, 0, cornerTiles(from, open), { reach });
+    expect(bareExp.zones.some(z => z.name === 'Guard dog')).toBe(true);
+    expect(walkVerdict(p, bareExp)).toMatchObject({ verdict: 'refuse', needHeal: 0 });
+    // routeHarm measures the detoured walk path (planAroundHarm), which avoids the Guard dogs with 0 damage.
+    const prevService = process.env.ROUTE_SERVICE;
+    process.env.ROUTE_SERVICE = '0';
+    try {
+        const plan = { cost: 101, legs: [{ kind: 'walk' as const, to }] };
+        const fakeWalker: any = { sdk: { getState: () => ({ player: { runEnergy: 100, runWeight: 0, maxHp: 10 } }) } };
+        const res = await routeHarm(fakeWalker, from, to, acct, plan, async () => plan);
+        expect(res.action).toBe('clear');
+    } finally {
+        if (prevService === undefined) delete process.env.ROUTE_SERVICE;
+        else process.env.ROUTE_SERVICE = prevService;
+    }
+}, 120_000);
 
 test('food staging takes the highest heal first within the free slots and 20 pieces', () => {
     const heal = (n: string) => ({ lobster: 12, trout: 7, shrimps: 3 } as Record<string, number>)[n];

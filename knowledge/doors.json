@@ -841,6 +841,9 @@
   "z": 9575,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "golrie_key_waterfall_quest"
+  },
   "trigger": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:331",
   "src": "maps/m39_149.jm2:4720"
  },
@@ -1380,6 +1383,9 @@
   "z": 3325,
   "level": 1,
   "kind": "key",
+  "need": {
+   "item": "mournerkeytw"
+  },
   "trigger": "scripts/quests/quest_biohazard/scripts/quest_biohazard.rs2:119",
   "src": "maps/m39_51.jm2:8086"
  },
@@ -1390,6 +1396,9 @@
   "z": 3326,
   "level": 1,
   "kind": "key",
+  "need": {
+   "item": "mournerkeytw"
+  },
   "trigger": "scripts/quests/quest_biohazard/scripts/quest_biohazard.rs2:118",
   "src": "maps/m39_51.jm2:8087"
  },
@@ -4346,6 +4355,9 @@
   "z": 3496,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "ikov_shinykey"
+  },
   "trigger": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:221",
   "src": "maps/m41_54.jm2:5137"
  },
@@ -4389,6 +4401,9 @@
   "z": 3667,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "viking_key"
+  },
   "trigger": "scripts/quests/quest_viking/scripts/viking_peer.rs2:1035",
   "src": "maps/m41_57.jm2:6567"
  },
@@ -5466,7 +5481,13 @@
   "x": 2763,
   "z": 3401,
   "level": 0,
-  "kind": "locked",
+  "angle": 2,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis is true",
+   "whenAxis": true
+  },
   "trigger": "scripts/quests/quest_arthur/scripts/quest_arthur.rs2:94",
   "src": "maps/m43_53.jm2:5050"
  },
@@ -5476,7 +5497,13 @@
   "x": 2763,
   "z": 3402,
   "level": 0,
-  "kind": "locked",
+  "angle": 2,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis is true",
+   "whenAxis": true
+  },
   "trigger": "scripts/quests/quest_arthur/scripts/quest_arthur.rs2:94",
   "src": "maps/m43_53.jm2:5051"
  },
@@ -5710,6 +5737,9 @@
   "z": 4450,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:16",
   "src": "maps/m43_69.jm2:4889"
  },
@@ -5720,6 +5750,9 @@
   "z": 4450,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:1",
   "src": "maps/m43_69.jm2:4939"
  },
@@ -5740,6 +5773,9 @@
   "z": 4593,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:1",
   "src": "maps/m43_71.jm2:5902"
  },
@@ -5750,6 +5786,9 @@
   "z": 4594,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:16",
   "src": "maps/m43_71.jm2:5903"
  },
@@ -5760,6 +5799,9 @@
   "z": 4594,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:16",
   "src": "maps/m43_71.jm2:6161"
  },
@@ -5770,6 +5812,9 @@
   "z": 4595,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "hauntedmine_reward_key"
+  },
   "trigger": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:1",
   "src": "maps/m43_71.jm2:6162"
  },
@@ -26827,6 +26872,9 @@
   "z": 3028,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "metal_key"
+  },
   "trigger": "scripts/quests/quest_desertrescue/scripts/quest_desertrescue.rs2:5",
   "src": "maps/m51_47.jm2:4280"
  },
@@ -26837,6 +26885,9 @@
   "z": 3029,
   "level": 0,
   "kind": "key",
+  "need": {
+   "item": "metal_key"
+  },
   "trigger": "scripts/quests/quest_desertrescue/scripts/quest_desertrescue.rs2:4",
   "src": "maps/m51_47.jm2:4281"
  },
