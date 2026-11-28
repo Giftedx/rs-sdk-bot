@@ -459,6 +459,71 @@ const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {
     // A side's kits joined by `+` go to its members in turn (scripts/pk-team.ts).
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: sideA(i + 1) ? kitFixture(kitOf(kitA, (i + 1) % group), at.x + 2, at.z) : kitFixture(kitOf(kitB, (i + 1) % group - size), at.x, at.z)}))};
 };
+// Zero-risk 3+1 bait kit (scripts/squad-ready.ts gang-bait-3plus1): keeps DDS(p) + Black d'hide body/chaps + Magic shortbow
+// under Protect Item, wears Ring of recoil + BiS zero-cost switches (Saradomin cape, Amulet of magic, Klank's gauntlets,
+// Climbing boots), carries Wizard robe freeze switch, Entangle/escape runes, Super antipoison, and shark+karambwan combo food.
+export const bait3Plus1Fixture = (x: number, z: number): SaveConfig => ({
+  position: {x, z, level: 0},
+  skills: kitSkills('tribrid-snare-dhide'),
+  varps: {147: 6, 172: 1, 300: 1000, 314: 80},
+  equipment: [
+    {id: 2412, count: 1, slot: 1},   // Cape of saradomin (+10 magic attack, 100gp)
+    {id: 1727, count: 1, slot: 2},   // Amulet of magic (+10 magic attack, 900gp)
+    {id: 1231, count: 1, slot: 3},   // Dragon dagger(p) (keep #1, 24k)
+    {id: 2503, count: 1, slot: 4},   // Black d'hide body (keep #2, 13.48k)
+    {id: 2497, count: 1, slot: 7},   // Black d'hide chaps (keep #3, 6.22k)
+    {id: 1495, count: 1, slot: 9},   // Klank's gauntlets (+2 str/att, 6gp)
+    {id: 3105, count: 1, slot: 10},  // Climbing boots (+2 str, 12gp)
+    {id: 2550, count: 1, slot: 12},  // Ring of recoil (reflects damage, zero skull risk)
+    {id: 892, count: 300, slot: 13}, // Rune arrows
+  ],
+  inventory: [
+    {id: 861, count: 1},   // Magic shortbow (keep #4 with Protect Item, 1.6k)
+    {id: 577, count: 1},   // Wizard robe (zero-cost magic freeze switch, 15gp)
+    {id: 2448, count: 1},  // Super antipoison(4)
+    {id: 557, count: 50},  // Earth runes (Entangle)
+    {id: 555, count: 50},  // Water runes (Entangle)
+    {id: 561, count: 40},  // Nature runes (Entangle)
+    {id: 563, count: 2},   // Law runes (Camelot escape)
+    {id: 556, count: 10},  // Air runes (Camelot escape)
+    ...Array.from({length: 4}, () => ({id: 3144, count: 1})), // Cooked karambwans (combo eat)
+    ...Array.from({length: 15}, () => ({id: 385, count: 1})), // Sharks
+  ],
+});
+// Strict 49-gang never-skull bait-3+1 pass gate: win, zero deaths, zero accidental skulls, high kills, and looted enemy weapons.
+export const teamBait3Plus1Pass = (s: string): boolean => {
+  const line = s.match(/^RESULT ok team\b.*$/m)?.[0];
+  if (!line || /NEVER_SKULL VIOLATION/.test(s)) return false;
+  const wins = Number(/\bwins=(\d+)\b/.exec(line)?.[1] ?? 0);
+  const diedA = Number(/\bdiedA=(\d+)\b/.exec(line)?.[1] ?? -1);
+  const diedB = Number(/\bdiedB=(\d+)\b/.exec(line)?.[1] ?? 0);
+  const skulledA = Number(/\bskulledA=(\d+)\b/.exec(line)?.[1] ?? -1);
+  const weapons = Number(/\bweapons=(\d+)\b/.exec(line)?.[1] ?? 0);
+  return wins >= 1 && diedA === 0 && skulledA === 0 && diedB >= 20 && weapons >= 10;
+};
+const teamBait3Plus1Case = (key: string, size: number, sizeB: number, at: {x: number; z: number} = GANG_STACK): BenchCase => {
+  const one = 'bcdefghijklmnopqrstuvwxyz0123456789'.split(''), two = one.flatMap(p => one.map(s => p + s));
+  const letters = [...one, ...two].slice(0, size + sizeB - 1);
+  return {
+    key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge',
+    timeoutMs: 600_000, pass: teamBait3Plus1Pass, output: /weapons=(\d+)/,
+    presetConfig: bait3Plus1Fixture(at.x + 2, at.z),
+    scriptArgs: [
+      'team', ...letters.map(l => `{bot:${l}}`), '900',
+      `SPAR_TEAM=${size}`, `SPAR_TEAM_B=${sizeB}`,
+      'SPAR_KITS=gang-bait-3plus1:ganker-dds-skull',
+      'SPAR_A=gang-hunter', 'SPAR_B=ganker-live',
+      'SPAR_B_OPTS={"protectItem":true}',
+      'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair',
+      'NEVER_SKULL=1', 'SPAR_PICKUP=1', 'SQUAD_DAGGER=1',
+      'SPAR_CAP=3000',
+    ],
+    companions: letters.map((suffix, i) => ({
+      suffix, preset: 'fresh_lumbridge',
+      presetConfig: i + 1 < size ? bait3Plus1Fixture(at.x + 2, at.z) : kitFixture('ganker-dds-skull', at.x, at.z),
+    })),
+  };
+};
 // Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
 // (SPAR_POST): one walk of 150 tiles, not two.
 const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
@@ -1292,6 +1357,9 @@ return [
   ...([6, 10] as const).map(n => teamCase(`extra:team-${n}v12-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=1200'], 12)),
   // The squad against all 49 of the stack: the squad size that kills the stack with no deaths, from one pack each.
   ...([6, 10, 15, 20, 22, 24, 25] as const).map(n => teamCase(`extra:team-${n}v49-gang-stack-rune-x1`, 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 1, GANG_STACK, n, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_A_PICK=pair', 'SPAR_B_PICK=pair', 'SPAR_CAP=3000'], 49)),
+  // 24/25-account zero-risk 3+1 bait squad (Ring of recoil + BiS switches, NEVER_SKULL=1, SPAR_PICKUP=1, SQUAD_DAGGER=1)
+  // against all 49 skulled gang bots (ganker-dds-skull, Protect Item ON) on GANG_STACK.
+  ...([24, 25] as const).map(n => teamBait3Plus1Case(`extra:team-${n}v49-gang-bait-3plus1-x1`, n, 49, GANG_STACK)),
   // The four against the skulled gang (its loot as live), for SPAR_PICKUP=1 with SPAR_B_OPTS {"protectItem":false} or not.
   teamCase('extra:team-4v3-gang-skull-west-x2', 'live-walker-iron-snare-rune-nopot', 'ganker-dds-skull', 2, {x: 3066, z: 3640}, 4, ['SPAR_A=gang-hunter', 'SPAR_B=ganker-live', 'SPAR_CAP=1200'], 3),
   // A squad against one runner (kit runner, SPAR_B_OPTS {"escapeAt":60}: its food gone at 60 HP or less it runs south

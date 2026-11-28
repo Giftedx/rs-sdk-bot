@@ -7,11 +7,30 @@
 // be kits joined by `+` (tribrid-snare-spear+tribrid-snare), taken in turn by its members.
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../../../core/src/inprocess';
-import { createNeverSkullGuard, fightPlayer, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, recordKillLoot, wildernessLevel, type FightOptions } from './fight';
+import { RETALIATE_OFF } from '../../../core/src/combat-end';
+import { createNeverSkullGuard, fightPlayer, getObjNames, isDying, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
 import { TRIBRID_KIT } from './hunt-kits';
 import { kitOptions, kitSwitches } from '../../../core/src/pk-kits/kits';
 import { sparOptions } from './pk-spar';
 import { pickUp, PICKUP_ITEMS } from './pk-gang';
+import { createDaggerWatch, daggerOptionsOf, type DaggerOptions } from './squad-dagger';
+
+export const BAIT_3PLUS1_SWITCHES: Kit = { ranged: [861, 2503], melee: [1231, 2503] };
+export const BAIT_3PLUS1_OPTIONS: Partial<FightOptions> = {
+    rotation: ['ranged', 'melee'],
+    comboFood: true,
+    zeroDrainFlick: true,
+    freeze: 'flee',
+    eatAt: 62,
+    protectItem: true,
+};
+
+/** Resolves a SPAR_KITS entry into fight switches and options, including the zero-risk gang-bait-3plus1 profile. */
+export function resolveTeamKit(kit: string | undefined): { switches: Kit; options: Partial<FightOptions> } {
+    if (kit === 'gang-bait-3plus1') return { switches: BAIT_3PLUS1_SWITCHES, options: BAIT_3PLUS1_OPTIONS };
+    if (!kit) return { switches: TRIBRID_KIT, options: {} };
+    return { switches: kitSwitches(kit), options: kitOptions(kit) };
+}
 
 /** Maximum simultaneous attackers assigned to a wounded target before overflow rolls to the secondary focus (eliminates 24v49 overkill waste). */
 export function maxOverkillAttackers(hpFrac: number): number {
@@ -53,7 +72,18 @@ export function createTeamFocus() {
 }
 export type TeamFocus = ReturnType<typeof createTeamFocus>;
 
-export type TeamResult = { winner: 'a' | 'b' | 'draw'; ticks: number; standing: { a: number; b: number }; died: { a: number; b: number }; attacks: { a: number; b: number }; taken: { a: number; b: number }; picked?: Record<string, number> };
+export type TeamResult = {
+    winner: 'a' | 'b' | 'draw';
+    ticks: number;
+    standing: { a: number; b: number };
+    died: { a: number; b: number };
+    attacks: { a: number; b: number };
+    taken: { a: number; b: number };
+    skulled: { a: number; b: number };
+    picked?: Record<string, number>;
+    weapons?: number;
+    weaponLoot?: Record<string, number>;
+};
 
 // An account died when it has a new life id or stands at the Lumbridge spawn; it is out when it died or left the
 // Wilderness.
@@ -103,18 +133,37 @@ export function pickEnemy<F, X extends { f: F; p?: { name?: string; distance: nu
     });
     return nonOverkill ?? sorted.find(x => health(x) > 0) ?? sorted[0];
 }
+async function disableTeamAutoRetaliate(s: Session): Promise<void> {
+    const state = s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined;
+    if (!state || state.autoRetaliateEnabled !== true || typeof s.direct !== 'function') return;
+    await s.direct({ type: 'clickComponent', componentId: RETALIATE_OFF, reason: 'team auto-retaliate off' });
+    for (let t = 0; t < 3 && (s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined)?.autoRetaliateEnabled === true; t++) {
+        if (!await nextTick(s)) break;
+    }
+}
+
 // optionsA and optionsB: one side's options, or a function of the member's place on its side (per-member kits).
 type SideOptions = FightOptions | ((member: number) => FightOptions);
 export async function team(a: readonly Session[], b: readonly Session[], optionsA: SideOptions, optionsB: SideOptions, cap: number,
-    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }, wait = 100, pickup?: ReadonlySet<number>, pickupRadius = 3): Promise<TeamResult> {
+    log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false, picks: { a: TeamPick; b: TeamPick } = { a: 'low', b: 'low' }, wait = 100, pickup?: ReadonlySet<number>, pickupRadius = 3, daggerOptions?: DaggerOptions): Promise<TeamResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
     for (let i = 0; i < 10; i++) if ((await Promise.all([...a, ...b].map(s => nextTick(s)))).some(t => !t)) break;
     const lives = new Map([...a, ...b].map(s => [s, s.sdk.getState()?.player?.lifeId] as const));
     const isOut = (s: Session) => out(s, lives.get(s));
     const start = a[0]!.tick(), attacks = { a: 0, b: 0 }, taken = { a: 0, b: 0 }, picked: Record<string, number> = {};
+    const skulledSet = { a: new Set<string>(), b: new Set<string>() };
+    const dagger = daggerOptions ? createDaggerWatch(daggerOptions) : undefined;
     // HP lost by each side: the sum of each account's drops, read each tick.
     const lastHp = new Map<Session, number>();
-    const unwatch = [...a, ...b].map(s => s.onTick(() => { const hp = s.sdk.getState()?.player?.hp; if (hp === undefined) return; const was = lastHp.get(s); if (was !== undefined && hp < was) taken[a.includes(s) ? 'a' : 'b'] += was - hp; lastHp.set(s, hp); }));
+    const unwatch = [...a, ...b].map(s => s.onTick(() => {
+        const key = a.includes(s) ? 'a' : 'b';
+        if (ownSkull(s.client) === true) skulledSet[key].add(s.name.toLowerCase());
+        const hp = s.sdk.getState()?.player?.hp;
+        if (hp === undefined) return;
+        const was = lastHp.get(s);
+        if (was !== undefined && hp < was) taken[key] += was - hp;
+        lastHp.set(s, hp);
+    }));
     let over = false;
     // A side whose accounts are all out or stopped (each saw no enemy for `wait` ticks) ends the meeting. An account
     // whose fight loop ends for another reason (it escaped, it fled) is not stopped: a runner is still chased.
@@ -122,26 +171,33 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     const ended = () => over || halt() || a.every(isOut) || b.every(isOut) || a[0]!.tick() - start >= cap || a.every(s => isOut(s) || stopped.has(s)) || b.every(s => isOut(s) || stopped.has(s));
     const side = (mine: readonly Session[], foes: readonly Session[], sideOptions: SideOptions, key: 'a' | 'b') => {
         const teamFocus = mine.length >= 4 ? createTeamFocus() : undefined;
+        const foeNames = new Set(foes.map(f => f.name.toLowerCase()));
         return mine.map(async (s, member) => {
         const options = typeof sideOptions === 'function' ? sideOptions(member) : sideOptions;
         const allies = mine.filter(x => x !== s).map(x => x.name.toLowerCase());
         const allySet = new Set(allies);
         const skullGuard = options.neverSkull ? createNeverSkullGuard({ selfName: s.name }) : null;
+        const sideDagger = key === 'a' ? dagger : undefined;
+        if (key === 'a' && (skullGuard || sideDagger)) await disableTeamAutoRetaliate(s);
         // The game refuses an attack on an enemy while another one has hit us in the last 8 ticks (pvp_combat.rs2:104-112:
         // "I'm already under attack.", and "Someone else is already fighting your opponent." for an enemy that another one
         // hit): the fight stops on the refusal and the pick leaves that enemy out for 8 ticks.
         let seenMessage = 0, refusedAt = -100, unseen = 0, skullSeenEvent = 0;
+        let activeTarget: string | null = null, holdCancelledFor: string | null = null;
         const skip = new Map<Session, number>();
         const unwatchRefusals = s.onTick(() => {
             const st = s.sdk.getState();
+            const now = s.tick();
+            if (ownSkull(s.client) === true) skulledSet[key].add(s.name.toLowerCase());
             for (const msg of st?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
-                if (msg.tick >= start && /already under attack|already fighting your opponent/i.test(msg.text)) refusedAt = s.tick(); }
+                if (msg.tick >= start && /already under attack|already fighting your opponent/i.test(msg.text)) refusedAt = now; }
+            const selfSlot = localPlayerSlot(s.client);
             if (skullGuard && st) {
                 const clientPlayers = (s.client as { players?: ({ faceEntity?: number; primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
                 skullSeenEvent = observeProvocations({
                     guard: skullGuard,
-                    now: s.tick(),
-                    selfSlot: localPlayerSlot(s.client),
+                    now,
+                    selfSlot,
                     allies: allySet,
                     nearbyPlayers: st.nearbyPlayers ?? [],
                     combatEvents: st.combatEvents,
@@ -149,6 +205,32 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                     minTick: start,
                     clientPlayers,
                 });
+            }
+            if (sideDagger && st) {
+                for (const q of st.nearbyPlayers ?? []) {
+                    const qKey = q.name.toLowerCase();
+                    if (!foeNames.has(qKey)) continue;
+                    const seen = observePlayer(s.client, q.index);
+                    if (!seen) continue;
+                    const fighting = q.combatTargetType === 'player' && q.combatTargetIndex !== undefined && q.combatTargetIndex >= 0;
+                    if (fighting && selfSlot >= 0 && q.combatTargetIndex === selfSlot) sideDagger.attacked(qKey, now);
+                    sideDagger.read(qKey, now, {
+                        skulled: skulled(seen.headicons),
+                        overhead: protectedStyles(seen.headicons).size > 0,
+                        inCombat: q.inCombat === true || fighting,
+                        hp: seen.totalHealth > 0 ? seen.health / seen.totalHealth : null,
+                        wornIds: seen.worn,
+                    });
+                }
+                if (activeTarget && sideDagger.held(activeTarget, now)) {
+                    if (holdCancelledFor !== activeTarget) {
+                        holdCancelledFor = activeTarget;
+                        const me = st.player;
+                        if (me && typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(me.worldX, me.worldZ);
+                    }
+                } else if (holdCancelledFor === activeTarget) {
+                    holdCancelledFor = null;
+                }
             }
         });
         try {
@@ -160,30 +242,56 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                 .filter(x => x.p && !isDying(observePlayer(s.client, x.p.index)));
             const live = skullGuard ? liveAll.filter(x => skullGuard.canAttackSafely(x.f.name, s.tick())) : liveAll;
             const health = (x: { p?: { index: number } }) => { const o = x.p ? observePlayer(s.client, x.p.index) : null; return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; };
-            const pick = pickEnemy(live, foes[member], picks[key], health, teamFocus ? { focus: teamFocus, memberName: s.name, nameOf: x => x.f.name } : undefined);
+            const pick = pickEnemy(live, foes[member], picks[key], health, teamFocus ? {
+                focus: teamFocus,
+                memberName: s.name,
+                nameOf: x => x.f.name,
+                ...(sideDagger ? { drained: (x: { f: Session }) => sideDagger.drained(x.f.name) } : {}),
+            } : undefined);
             // No enemy in view for SPAR_TEAM_WAIT ticks (default 100): the enemies left are away, as the gang meeting's `away`.
             const anyEnemyInView = foes.some(f => !isOut(f) && view.some(v => v.name.toLowerCase() === f.name.toLowerCase()));
             if (!pick) { teamFocus?.unassign(s.name); if (!anyEnemyInView && shouldStopUnseen(false, ++unseen, wait)) { stopped.add(s); return; } if (!await nextTick(s)) return; continue; }
             unseen = 0;
             teamFocus?.assign(s.name, pick.f.name);
+            activeTarget = pick.f.name.toLowerCase();
+            holdCancelledFor = null;
             const began = s.tick();
             const r = await fightPlayer(s, pick.f.name, {
                 ...options,
-                ...(skullGuard ? { provokedBy: (name: string) => skullGuard.canAttackSafely(name, s.tick()) } : {}),
+                ...(skullGuard ? {
+                    provokedBy: (name: string) => skullGuard.canAttackSafely(name, s.tick()) && !(sideDagger?.held(name, s.tick()) ?? false),
+                    onUnexpectedSkull: () => { skulledSet[key].add(s.name.toLowerCase()); },
+                } : {}),
+                ...(sideDagger ? {
+                    smiteBurst: () => sideDagger.smiteReady(pick.f.name),
+                    holdSpecForDrain: () => sideDagger.holdSpecForDrain(pick.f.name, s.tick()),
+                } : {}),
                 stopOnDying: teamFocus !== undefined && liveAll.length > 1,
                 allies,
                 cap: Math.max(1, cap - (s.tick() - start)),
-                stop: () => ended() || isOut(pick.f) || refusedAt > began,
+                stop: () => ended() || isOut(pick.f) || refusedAt > began || (!skullGuard && !!sideDagger?.held(pick.f.name, s.tick())),
                 log: l => log(`[${s.name}] ${l}`),
             });
+            activeTarget = null;
+            holdCancelledFor = null;
             teamFocus?.unassign(s.name);
+            if (r.unexpectedSkull) skulledSet[key].add(s.name.toLowerCase());
             if (refusedAt > began) skip.set(pick.f, s.tick() + 8);
-            if (r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) skullGuard?.recordDeath(pick.f.name);
+            const killed = r.outcome === 'kill' || dead(pick.f, lives.get(pick.f));
+            if (killed) {
+                skullGuard?.recordDeath(pick.f.name);
+                sideDagger?.died(pick.f.name);
+            }
             // `pickup`: after its kill the account takes the wanted stacks within `pickupRadius` tiles (SPAR_PICKUP_RADIUS,
             // default 3; scripts/pk-gang.ts pickUp). It runs on after the meeting ends: the last kill ends it.
             // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
-            if ((r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) && pickup && key === 'a') {
-                const got = await pickUp(s, pickup, { radius: pickupRadius, maxTicks: 30, wait: 6, stop: () => over || halt() });
+            if (killed && pickup && key === 'a') {
+                const got = await pickUp(s, pickup, {
+                    radius: pickupRadius,
+                    maxTicks: sideDagger ? 14 : 30,
+                    wait: 6,
+                    stop: () => over || halt() || (s.sdk.getState()?.player?.hp ?? 99) < 55,
+                });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
             }
@@ -201,7 +309,17 @@ export async function team(a: readonly Session[], b: readonly Session[], options
     const standing = { a: a.filter(s => !isOut(s)).length, b: b.filter(s => !isOut(s)).length };
     const died = { a: a.filter(s => dead(s, lives.get(s))).length, b: b.filter(s => dead(s, lives.get(s))).length };
     const winner = standing.a > 0 && standing.b === 0 ? 'a' : standing.b > 0 && standing.a === 0 ? 'b' : 'draw';
-    return { winner, ticks: a[0]!.tick() - start, standing, died, attacks, taken, ...(pickup ? { picked } : {}) };
+    const weaponSummary = pickup ? summarizeWeaponLoot(picked, id => getObjNames().get(id)) : undefined;
+    return {
+        winner,
+        ticks: a[0]!.tick() - start,
+        standing,
+        died,
+        attacks,
+        taken,
+        skulled: { a: skulledSet.a.size, b: skulledSet.b.size },
+        ...(pickup ? { picked, weapons: weaponSummary!.totalWeapons, weaponLoot: weaponSummary!.weapons } : {}),
+    };
 }
 
 export async function runPkTeamCli(
@@ -215,12 +333,14 @@ export async function runPkTeamCli(
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const [kitA, kitB] = (env.SPAR_KITS ?? '').split(':');
     const neverSkullA = neverSkullOf((k, d) => env[k] ?? d, false);
+    const daggerOptions = daggerOptionsOf((k, d) => env[k] ?? d);
     const options = (sideB: boolean, group: number) => (member: number): FightOptions => {
         const kits = (sideB ? kitB : kitA)?.split('+').filter(Boolean) ?? [];
         const kit = kits.length ? kits[member % kits.length] : undefined;
+        const resolved = resolveTeamKit(kit);
         const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + group * 2 + (sideB ? 1 : 0) };
         return {
-            ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, kit ? kitOptions(kit) : {}),
+            ...sparOptions(sideB ? nameB : nameA, sideB ? env.SPAR_B_OPTS : env.SPAR_A_OPTS, resolved.switches, cap, resolved.options),
             ...(!sideB && neverSkullA ? { neverSkull: true, protectItem: true } : {}),
             ...seed,
         };
@@ -237,11 +357,15 @@ export async function runPkTeamCli(
     for (const s of groups.flat()) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
     const pickOf = (v?: string): TeamPick => (v === 'near' || v === 'pair' ? v : 'low');
     const results = await Promise.all(groups.map((g, i) => team(g.slice(0, size), g.slice(size), options(false, i), options(true, i), cap, undefined, () => halted !== undefined,
-        { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) }, Number(env.SPAR_TEAM_WAIT ?? 100), env.SPAR_PICKUP === '1' ? new Set(PICKUP_ITEMS) : undefined, Number(env.SPAR_PICKUP_RADIUS ?? 3))));
+        { a: pickOf(env.SPAR_A_PICK), b: pickOf(env.SPAR_B_PICK) }, Number(env.SPAR_TEAM_WAIT ?? 100), env.SPAR_PICKUP === '1' ? new Set(PICKUP_ITEMS) : undefined, Number(env.SPAR_PICKUP_RADIUS ?? 3), daggerOptions)));
     for (const r of results) console.log(`TEAM ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const wins = results.filter(r => r.winner === 'a').length, losses = results.filter(r => r.winner === 'b').length;
-    const ok = halted === undefined && results.every(r => r.attacks.a > 0 && r.attacks.b > 0);
+    const totalSkulledA = results.reduce((n, r) => n + r.skulled.a, 0);
+    const allPicked: Record<string, number> = {};
+    for (const r of results) for (const [id, n] of Object.entries(r.picked ?? {})) allPicked[id] = (allPicked[id] ?? 0) + n;
+    const weaponSummary = summarizeWeaponLoot(allPicked, id => getObjNames().get(id));
+    const ok = halted === undefined && results.every(r => r.attacks.a > 0 && r.attacks.b > 0) && (!neverSkullA || totalSkulledA === 0);
     await finish(groups.flat(), ok, `team groups=${results.length} size=${size} wins=${wins} losses=${losses} draws=${results.length - wins - losses} ticks=${Math.max(0, ...results.map(r => r.ticks))} a=${nameA} b=${nameB} `
-        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)} takenA=${results.reduce((n, r) => n + r.taken.a, 0)} picked=${results.reduce((n, r) => n + Object.values(r.picked ?? {}).reduce((x, c) => x + c, 0), 0)}${halted ? ` halted=${halted}` : ''}`);
+        + `standing=${results.map(r => `${r.standing.a}-${r.standing.b}`).join(',')} diedA=${results.reduce((n, r) => n + r.died.a, 0)} diedB=${results.reduce((n, r) => n + r.died.b, 0)} takenA=${results.reduce((n, r) => n + r.taken.a, 0)} picked=${results.reduce((n, r) => n + Object.values(r.picked ?? {}).reduce((x, c) => x + c, 0), 0)}${env.SPAR_PICKUP === '1' ? ` weapons=${weaponSummary.totalWeapons}` : ''} skulledA=${totalSkulledA}${halted ? ` halted=${halted}` : ''}`);
     return ok ? 0 : 1;
 }

@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { pickEnemy, shouldStopUnseen } from '../src/pvp/pk-team';
+import { BAIT_3PLUS1_OPTIONS, BAIT_3PLUS1_SWITCHES, createTeamFocus, pickEnemy, resolveTeamKit, shouldStopUnseen, team } from '../src/pvp/pk-team';
+import { assessZeroRiskKit, getObjNames, itemCostOf, RING_OF_RECOIL_ID } from '../src/pvp/fight';
+import { bait3Plus1Fixture, benchCases, GANG_STACK, teamBait3Plus1Pass } from '../../../scripts/measure/aio-bench-cases';
 
 test('pickEnemy: pair takes its own enemy while in view, else the lowest bar; near the nearest', () => {
     const live = [{ f: 'a', p: { distance: 1 }, h: 0.9 }, { f: 'b', p: { distance: 3 }, h: 0.2 }, { f: 'c', p: { distance: 2 }, h: 0.5 }];
@@ -137,4 +139,181 @@ test('keepPrayer stays off under the start floor of Prayer, and the memory gate 
     expect(squadMemoryGate(5.3, 4)).toEqual({ ok: false, needGB: 5.4 });
     expect(squadMemoryGate(7.4, 24)).toEqual({ ok: true, needGB: 7.4 });
     expect(squadMemoryGate(4.1, 4).ok).toBe(false);
+});
+
+test('resolveTeamKit resolves gang-bait-3plus1 switches and options cleanly without mutating pk-kits', () => {
+    const bait = resolveTeamKit('gang-bait-3plus1');
+    expect(bait.switches).toEqual(BAIT_3PLUS1_SWITCHES);
+    expect(bait.options).toEqual(BAIT_3PLUS1_OPTIONS);
+    expect(bait.switches.ranged).toEqual([861, 2503]);
+    expect(bait.switches.melee).toEqual([1231, 2503]);
+    expect(bait.options.comboFood).toBe(true);
+    expect(bait.options.zeroDrainFlick).toBe(true);
+    expect(bait.options.protectItem).toBe(true);
+    expect(bait.options.freeze).toBe('flee');
+
+    const skull = resolveTeamKit('ganker-dds-skull');
+    expect(skull.switches.melee).toEqual([1231]);
+});
+
+test('bait3Plus1Fixture satisfies strict zero-risk 3+1 death protection with Ring of recoil and BiS switches', () => {
+    const names = getObjNames();
+    const cfg = bait3Plus1Fixture(GANG_STACK.x + 2, GANG_STACK.z);
+    const units = [...(cfg.equipment ?? []), ...(cfg.inventory ?? [])];
+    const risk = assessZeroRiskKit(units, { cost: itemCostOf, nameOf: id => names.get(id), requireProtectItem: true });
+    expect(risk.ok).toBe(true);
+    expect(risk.riskedWeapons4).toEqual([]);
+    expect(risk.riskedValuableGear4).toEqual([]);
+    expect(risk.kept4).toEqual([1231, 2503, 2497, 861]);
+    expect(cfg.equipment?.some(e => e.id === RING_OF_RECOIL_ID && e.slot === 12)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 2412 && e.slot === 1)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 1727 && e.slot === 2)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 1495 && e.slot === 9)).toBe(true);
+    expect(cfg.equipment?.some(e => e.id === 3105 && e.slot === 10)).toBe(true);
+    expect(cfg.inventory?.some(i => i.id === 577)).toBe(true);
+    expect(cfg.inventory?.filter(i => i.id === 3144).length).toBe(4);
+    expect(cfg.inventory?.length).toBeLessThanOrEqual(27);
+    expect(cfg.varps?.[172]).toBe(1);
+    expect(cfg.varps?.[78]).toBeUndefined();
+});
+
+test('extra:team-{24,25}v49-gang-bait-3plus1-x1 bench cases wire 49 skulled Protect-Item enemies and strict flags', () => {
+    const cases = benchCases();
+    for (const size of [24, 25] as const) {
+        const key = `extra:team-${size}v49-gang-bait-3plus1-x1`;
+        const c = cases.find(x => x.key === key);
+        expect(c).toBeDefined();
+        expect(c!.companions?.length).toBe(size + 49 - 1);
+        expect(c!.presetConfig?.varps?.[78]).toBeUndefined();
+        expect(c!.presetConfig?.equipment?.some(e => e.id === RING_OF_RECOIL_ID)).toBe(true);
+        const sideACompanions = c!.companions!.slice(0, size - 1);
+        const sideBCompanions = c!.companions!.slice(size - 1);
+        expect(sideACompanions.length).toBe(size - 1);
+        expect(sideBCompanions.length).toBe(49);
+        for (const a of sideACompanions) {
+            expect(a.presetConfig?.varps?.[78]).toBeUndefined();
+            expect(a.presetConfig?.equipment?.some(e => e.id === RING_OF_RECOIL_ID)).toBe(true);
+        }
+        for (const b of sideBCompanions) {
+            expect(b.presetConfig?.varps?.[78]).toBe(2000);
+            expect(b.presetConfig?.equipment?.some(e => e.id === 1231)).toBe(true);
+        }
+        const args = c!.scriptArgs ?? [];
+        expect(args).toContain(`SPAR_TEAM=${size}`);
+        expect(args).toContain('SPAR_TEAM_B=49');
+        expect(args).toContain('SPAR_KITS=gang-bait-3plus1:ganker-dds-skull');
+        expect(args).toContain('SPAR_B_OPTS={"protectItem":true}');
+        expect(args).toContain('NEVER_SKULL=1');
+        expect(args).toContain('SPAR_PICKUP=1');
+        expect(args).toContain('SQUAD_DAGGER=1');
+    }
+});
+
+test('teamBait3Plus1Pass enforces win, zero deaths, zero skulls, enemy kills, and looted enemy weapons', () => {
+    const good = 'RESULT ok team groups=1 size=24 wins=1 losses=0 draws=0 ticks=1450 a=gang-hunter b=ganker-live standing=24-0 diedA=0 diedB=49 takenA=3200 picked=60 weapons=42 skulledA=0';
+    expect(teamBait3Plus1Pass(good)).toBe(true);
+    expect(teamBait3Plus1Pass(good.replace('skulledA=0', 'skulledA=1'))).toBe(false);
+    expect(teamBait3Plus1Pass(`PK NEVER_SKULL VIOLATION: ownSkull=1\n${good}`)).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('diedA=0', 'diedA=1'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('wins=1', 'wins=0'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('weapons=42', 'weapons=0'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('diedB=49', 'diedB=5'))).toBe(false);
+    expect(teamBait3Plus1Pass(good.replace('RESULT ok', 'RESULT fail'))).toBe(false);
+});
+
+test('pickEnemy prioritizes prayer-drained targets ahead of lower-HP non-drained targets', () => {
+    const focus = createTeamFocus();
+    const live = [
+        { f: 'ganker1', p: { distance: 1 }, h: 0.25 },
+        { f: 'ganker2', p: { distance: 2 }, h: 0.85 },
+    ];
+    const picked = pickEnemy(live, undefined as string | undefined, 'low', x => x.h, {
+        focus,
+        memberName: 'ours1',
+        nameOf: x => x.f,
+        drained: x => x.f === 'ganker2',
+    });
+    expect(picked?.f).toBe('ganker2');
+});
+
+test('team() under neverSkull refuses unprovoked attacks, disables auto-retaliate, and records skulled counts', async () => {
+    const mkMock = (name: string, opts: { x: number; z: number; skull: boolean; autoRetaliate?: boolean }) => {
+        let curTick = 0;
+        const listeners = new Set<() => void>();
+        const clicks: number[] = [];
+        let autoRetaliateEnabled = opts.autoRetaliate ?? false;
+        const session = {
+            name,
+            ended: new Promise<void>(() => {}),
+            tick: () => curTick,
+            onTick: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
+            direct: async (cmd: { type: string; componentId?: number }) => {
+                if (cmd.type === 'clickComponent' && cmd.componentId !== undefined) {
+                    clicks.push(cmd.componentId);
+                    autoRetaliateEnabled = false;
+                }
+                return { ok: true };
+            },
+            client: {
+                localPlayer: { headicons: opts.skull ? 1 : 0 },
+                players: [] as unknown[],
+            },
+            sdk: {
+                getState: () => ({
+                    player: { worldX: opts.x, worldZ: opts.z, level: 0, hp: 99, maxHp: 99, lifeId: 1, combatLevel: 126 },
+                    nearbyPlayers: [],
+                    gameMessages: [],
+                    combatEvents: [],
+                    inventory: [],
+                    equipment: [],
+                    skills: [{ name: 'Hitpoints', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                    prayers: { prayerPoints: 99, activePrayers: [] },
+                    autoRetaliateEnabled,
+                }),
+                getInventory: () => [],
+                sendWalk: () => {},
+            },
+            waitForCondition: async () => true,
+            advance: () => {
+                curTick++;
+                for (const fn of [...listeners]) fn();
+            },
+            clicks,
+        };
+        return session;
+    };
+
+    const a1 = mkMock('BaitBot', { x: 3137, z: 3602, skull: false, autoRetaliate: true });
+    const b1 = mkMock('SkulledGanker', { x: 3135, z: 3602, skull: true });
+    let tickCount = 0;
+    const timer = setInterval(() => {
+        tickCount++;
+        a1.advance();
+        b1.advance();
+        if (tickCount > 40) clearInterval(timer);
+    }, 1);
+
+    try {
+        const res = await team(
+            [a1 as never],
+            [b1 as never],
+            { kit: BAIT_3PLUS1_SWITCHES, neverSkull: true, protectItem: true },
+            { kit: { melee: [1231] } },
+            15,
+            () => {},
+            () => tickCount >= 26,
+            { a: 'pair', b: 'pair' },
+            5,
+            new Set([1231]),
+            3,
+            { offReads: 6, holdBelow: 0.7, holdTicks: 300 },
+        );
+        expect(a1.clicks.length).toBeGreaterThanOrEqual(1);
+        expect(res.attacks.a).toBe(0);
+        expect(res.skulled.a).toBe(0);
+        expect(res.skulled.b).toBe(1);
+        expect(res.weapons).toBe(0);
+    } finally {
+        clearInterval(timer);
+    }
 });
