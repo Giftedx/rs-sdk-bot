@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795866758127,
+ "at": 1795867370512,
  "jobs": [
   {
    "account": "Balls",
@@ -45,44 +45,185 @@
    "role": "pvp"
   },
   {
-   "account": "ballbag",
+   "account": "dipstick",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "wydinstore",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1933",
-    "ITEMS": "Pot of flour",
-    "MAX_ITEMS": "1",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "237",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1933",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "237"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1933",
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fishing",
+    "staged"
+   ],
+   "env": {
+    "METHOD": "karambwanji",
+    "BANKED": "1",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:supply_chain:3150",
+    "BATCH_UNITS": "237",
+    "AMOUNT": "237"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:3150",
+   "role": "army",
+   "resources": [
+    "karambwanji-lake"
+   ]
+  },
+  {
+   "account": "chaosinpants",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:chaosinpants",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:chaosinpants",
+   "role": "auto"
+  },
+  {
+   "account": "bonetopick",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:bonetopick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:bonetopick",
+   "role": "auto"
+  },
+  {
+   "account": "ballbag",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
+  },
+  {
+   "account": "dropmyload",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "2000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
    "role": "helper"
   },
   {
    "account": "backdoorman",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "470"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "ballspinner",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 CAP=3000 DEMAND_ID=goal:coin_fund:fleet BATCH_UNITS=20 BANK_PACK=1 -- trooper"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "helper"
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "billionaire",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "470"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
+  },
+  {
+   "account": "fingersmith",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "meatntwoveg",
@@ -103,39 +244,18 @@
    "role": "auto"
   },
   {
-   "account": "ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "cut-sapphire"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1000",
-    "DEMAND_ID": "goal:supply_chain:1607",
-    "BATCH_UNITS": "1",
-    "ORDER_MODE": "best-effort",
-    "STALL_TICKS": "150"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "army"
-  },
-  {
-   "account": "bigpackage",
+   "account": "fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=303 \"ITEMS=Small fishing net\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
-    "scripts/aio-skiller.ts METHOD=karambwanji BANKED=1 CAP=3000 DEMAND_ID=goal:supply_chain:3150 BATCH_UNITS=238 AMOUNT=238 -- fishing staged"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:556 BATCH_UNITS=2000 -- runecraft supply"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:3150",
+   "goal": "mission:mission:pk-squad:item:556",
    "role": "army"
   }
  ],
@@ -150,12 +270,8 @@
   "Knightstick",
   "Deeppockets",
   "UnderMyKilt",
-  "billionaire",
   "bowbeforeme",
-  "dipstick",
   "fatstack",
-  "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
