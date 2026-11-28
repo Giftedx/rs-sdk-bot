@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795870300569-1",
+ "account": "wellhung",
+ "partner": "tossthecaber",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "d39ba5df-5b69-4eff-a5c9-4674543b0921",
+ "count": 1,
+ "ok": true,
+ "at": 1795870422839,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795870412073
+ },
+ "logout": {
+  "attemptId": "1795870383588-0000021728-0000000001",
+  "at": 1795870422795,
+  "sha256": "cce7cd31038b172f7e4afe0525b456d45442b82ef9e94dc9edd9ddd0122129ff"
+ },
+ "screen": true
+}
