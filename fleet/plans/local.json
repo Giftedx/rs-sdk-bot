@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832511673,
+ "at": 1795832596091,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,23 @@
    "role": "pvp"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Nockitoff",
    "script": "scripts/aio-quester.ts",
    "args": [
@@ -198,6 +215,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:prince",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
    "role": "auto"
   },
   {
@@ -217,21 +250,6 @@
    "role": "helper"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=7220 TARGET_COUNT=722 -- thieving knights",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:blackknight BATCH_UNITS=1 -- sweep blackknight"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:blackknight",
-   "role": "auto"
-  },
-  {
    "account": "MeatNTwoVeg",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -248,23 +266,6 @@
    "enabled": true,
    "repeat": false,
    "role": "auto"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "WC_SITE": "draynor",
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   }
  ],
  "army": [
