@@ -144,20 +144,44 @@ export function slimIfTypeSource(src: string): string {
 export function slimSeqTypeSource(src: string): string {
     return replaceOrKeep(src, [
         [
+            '    decode(dat: Packet): void {\n        while (true) {',
+            '    decode(dat: Packet): void {\n        let hadWalkmerge = false;\n        while (true) {',
+        ],
+        [
             '                this.frames = new Int16Array(this.numFrames);\n                this.iframes = new Int16Array(this.numFrames);\n                this.delay = new Int16Array(this.numFrames);\n\n                for (let i: number = 0; i < this.numFrames; i++) {\n                    this.frames[i] = dat.g2();\n\n                    this.iframes[i] = dat.g2();\n                    if (this.iframes[i] === 65535) {\n                        this.iframes[i] = -1;\n                    }\n\n                    this.delay[i] = dat.g2();\n                }',
             '                this.frames = new Int16Array(this.numFrames);\n                this.delay = new Int16Array(this.numFrames);\n\n                for (let i: number = 0; i < this.numFrames; i++) {\n                    this.frames[i] = dat.g2();\n                    dat.pos += 2;\n                    this.delay[i] = dat.g2();\n                }',
+        ],
+        [
+            '            } else if (code === 3) {\n                const count: number = dat.g1();\n                this.walkmerge = new Int32Array(count + 1);\n\n                for (let i: number = 0; i < count; i++) {\n                    this.walkmerge[i] = dat.g1();\n                }\n\n                this.walkmerge[count] = 9999999;',
+            '            } else if (code === 3) {\n                const count: number = dat.g1();\n                dat.pos += count;\n                hadWalkmerge = true;',
         ],
         [
             '            this.iframes = new Int16Array(1);\n            this.iframes[0] = -1;',
             '            this.iframes = null;',
         ],
         [
-            '        if (this.preanim_move === -1) {',
-            '        const hadWalkmerge = this.walkmerge !== null;\n        this.walkmerge = null;\n        if (this.preanim_move === -1) {',
-        ],
-        [
-            '            if (this.walkmerge === null) {',
-            '            if (!hadWalkmerge) {',
+            `        if (this.preanim_move === -1) {
+            if (this.walkmerge === null) {
+                this.preanim_move = PreanimMove.DELAYMOVE;
+            } else {
+                this.preanim_move = PreanimMove.MERGE;
+            }
+        }
+
+        if (this.postanim_move === -1) {
+            if (this.walkmerge === null) {
+                this.postanim_move = PostanimMove.DELAYMOVE;
+            } else {
+                this.postanim_move = PostanimMove.MERGE;
+            }
+        }`,
+            `        if (this.preanim_move === -1) {
+            this.preanim_move = hadWalkmerge ? PreanimMove.MERGE : PreanimMove.DELAYMOVE;
+        }
+
+        if (this.postanim_move === -1) {
+            this.postanim_move = hadWalkmerge ? PostanimMove.MERGE : PostanimMove.DELAYMOVE;
+        }`,
         ],
     ]);
 }
@@ -406,18 +430,18 @@ function buildCollisionInto(index: LocIndex, baseX: number, baseZ: number, maps:
 }
 
 const SLIM_TRANSFORMS: readonly [RegExp, (src: string) => string][] = [
-    [/[\\/]webclient[\\/]src[\\/]datastruct[\\/]LruCache\.ts$/, slimLruCacheSource],
-    [/[\\/]webclient[\\/]src[\\/]dash3d[\\/]Model\.ts$/, slimModelSource],
-    [/[\\/]webclient[\\/]src[\\/]dash3d[\\/]Pix3D\.ts$/, slimPix3dSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]cache\.ts$/, slimCacheSource],
-    [/[\\/]webclient[\\/]src[\\/]config[\\/]IfType\.ts$/, slimIfTypeSource],
-    [/[\\/]webclient[\\/]src[\\/]config[\\/]SeqType\.ts$/, slimSeqTypeSource],
-    [/[\\/]webclient[\\/]src[\\/]config[\\/]SpotType\.ts$/, slimSpotTypeSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]interfaces\.ts$/, slimInterfacesSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]LiteClient\.ts$/, slimLiteClientSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]protocol[\\/]zone\.ts$/, slimZoneSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]protocol[\\/]incoming\.ts$/, slimIncomingSource],
-    [/[\\/]webclient[\\/]src[\\/]lite[\\/]world[\\/]CollisionBuilder\.ts$/, slimCollisionBuilderSource],
+    [/[\\/]webclient[\\/]src[\\/]datastruct[\\/]LruCache\.ts(?:\?.*)?$/, slimLruCacheSource],
+    [/[\\/]webclient[\\/]src[\\/]dash3d[\\/]Model\.ts(?:\?.*)?$/, slimModelSource],
+    [/[\\/]webclient[\\/]src[\\/]dash3d[\\/]Pix3D\.ts(?:\?.*)?$/, slimPix3dSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]cache\.ts(?:\?.*)?$/, slimCacheSource],
+    [/[\\/]webclient[\\/]src[\\/]config[\\/]IfType\.ts(?:\?.*)?$/, slimIfTypeSource],
+    [/[\\/]webclient[\\/]src[\\/]config[\\/]SeqType\.ts(?:\?.*)?$/, slimSeqTypeSource],
+    [/[\\/]webclient[\\/]src[\\/]config[\\/]SpotType\.ts(?:\?.*)?$/, slimSpotTypeSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]interfaces\.ts(?:\?.*)?$/, slimInterfacesSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]LiteClient\.ts(?:\?.*)?$/, slimLiteClientSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]protocol[\\/]zone\.ts(?:\?.*)?$/, slimZoneSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]protocol[\\/]incoming\.ts(?:\?.*)?$/, slimIncomingSource],
+    [/[\\/]webclient[\\/]src[\\/]lite[\\/]world[\\/]CollisionBuilder\.ts(?:\?.*)?$/, slimCollisionBuilderSource],
 ];
 
 // Install synchronous onLoad transforms before session.ts loads webclient modules.
@@ -431,7 +455,8 @@ export function installHeadlessClientSlim(): void {
             for (const [filter, transform] of SLIM_TRANSFORMS) {
                 build.onLoad({ filter }, args => {
                     try {
-                        const raw = readFileSync(args.path, 'utf8');
+                        const file = args.path.split('?')[0]!;
+                        const raw = readFileSync(file, 'utf8');
                         return { contents: transform(raw.replace(/\r\n/g, '\n')), loader: 'ts' };
                     } catch {
                         return undefined;

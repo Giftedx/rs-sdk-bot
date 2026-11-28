@@ -202,3 +202,32 @@ test('releaseSessionClient clears heavy arrays while preserving status-readable 
     expect(client.varServ[101]).toBe(32);
     expect(client.membersAccount).toBe(1);
 });
+
+test('slimmed SeqType preserves preanim_move and postanim_move for walkmerge and plain sequences', async () => {
+    installHeadlessClientSlim();
+    await import(vendor('server/webclient/src/lite/dom-shim.ts'));
+    const SeqType = (await import(`${vendor('server/webclient/src/config/SeqType.ts')}?slimtest=1`)).default as any;
+    const Packet = (await import(vendor('server/webclient/src/io/Packet.ts'))).default as any;
+
+    // Code 1 (1 frame: frame=7, iframe=65535, delay=5), code 3 (walkmerge len=2: [1, 2]), code 0 (end).
+    const withMerge = new SeqType();
+    const bufMerge = new Packet(new Uint8Array([1, 1, 0, 7, 255, 255, 0, 5, 3, 2, 1, 2, 0]));
+    withMerge.decode(bufMerge);
+    expect(bufMerge.pos).toBe(bufMerge.length);
+    expect(withMerge.numFrames).toBe(1);
+    expect(withMerge.delay[0]).toBe(5);
+    expect(withMerge.iframes).toBeNull();
+    expect(withMerge.walkmerge).toBeNull();
+    expect(withMerge.preanim_move).toBe(2); // PreanimMove.MERGE
+    expect(withMerge.postanim_move).toBe(2); // PostanimMove.MERGE
+
+    // Plain sequence without walkmerge: both default to DELAYMOVE (0).
+    const plain = new SeqType();
+    const bufPlain = new Packet(new Uint8Array([1, 1, 0, 9, 0, 1, 0, 3, 0]));
+    plain.decode(bufPlain);
+    expect(bufPlain.pos).toBe(bufPlain.length);
+    expect(plain.iframes).toBeNull();
+    expect(plain.walkmerge).toBeNull();
+    expect(plain.preanim_move).toBe(0); // PreanimMove.DELAYMOVE
+    expect(plain.postanim_move).toBe(0); // PostanimMove.DELAYMOVE
+});
