@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795832922504,
+ "at": 1795833449450,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -189,15 +189,15 @@
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "prince"
+    "vampire"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
+    "DEMAND_ID": "goal:quest_board:vampire",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:prince",
+   "goal": "goal:quest_board:vampire",
    "role": "auto"
   },
   {
