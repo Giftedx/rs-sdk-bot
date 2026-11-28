@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795844894810-1",
+ "account": "mmtha0205",
+ "partner": "WellHung",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "020d45e0-81ca-43cd-b6c6-6506548c43d4",
+ "count": 1,
+ "ok": true,
+ "at": 1795845224044,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795845223295
+ },
+ "logout": {
+  "attemptId": "1795845210167-0000025692-0000000001",
+  "at": 1795845224035,
+  "sha256": "12ba97051dd90cbe3fbe8bca623630b80a7f01cf886f00e7a00ddaf94372bd44"
+ },
+ "screen": true
+}

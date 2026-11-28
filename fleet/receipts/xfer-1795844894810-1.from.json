@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795844894810-1",
  "account": "WellHung",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "2a48cae2-3e9b-43ed-a410-014137d33590",
- "count": 0,
- "ok": false,
- "at": 1795845019215,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795845222437,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795845204114
+ },
+ "logout": {
+  "attemptId": "1795845019224-0000009304-0000000001",
+  "at": 1795845222428,
+  "sha256": "0133ac2495fc16a0bd21d05c9b7bada787ea65b0e144b9727ff8a5995a7d3c99"
+ },
+ "screen": true
 }
