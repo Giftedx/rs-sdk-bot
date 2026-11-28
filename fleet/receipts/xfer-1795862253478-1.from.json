@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795862253478-1",
  "account": "PickpockDick",
  "partner": "Ballbag",
@@ -10,8 +10,22 @@
  "item": "Super attack(3)",
  "requested": 8,
  "claim": "a7f32594-bf8c-414c-bc8a-7812927ece3d",
- "count": 0,
- "ok": false,
- "at": 1795862606246,
- "detail": "trade claimed"
+ "count": 8,
+ "ok": true,
+ "at": 1795862732346,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8,
+  "after": 0
+ },
+ "bank": {
+  "count": 8,
+  "at": 1795862624002
+ },
+ "logout": {
+  "attemptId": "1795862606255-0000019992-0000000001",
+  "at": 1795862732337,
+  "sha256": "eac48c04d43cb2d527486f2b46f60c6b5dceb02d80311945cf67f2847431bf85"
+ },
+ "screen": true
 }

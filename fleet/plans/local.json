@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795862715029,
+ "at": 1795862740114,
  "jobs": [
   {
    "account": "Balls",
@@ -95,19 +95,20 @@
    "role": "army"
   },
   {
-   "account": "Knightstick",
+   "account": "Nockitoff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=95 PRODUCT_TARGET=95 MAX_ORE=95 -- mining ore",
+    "scripts/aio-skiller.ts ORE_PROFILE=coal CAP=1900 TARGET_COUNT=190 PRODUCT_TARGET=190 MAX_ORE=190 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=steel MAX_MAKE=95 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=95 STALL_TICKS=280 -- smithing smelt 2300 steel"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
   },
   {
    "account": "Swordswallow",
@@ -126,6 +127,21 @@
   },
   {
    "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 MAX_ORE=35 -- mining ore",
+    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=35 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 STALL_TICKS=280 -- smithing smelt 1500 iron"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2351",
+   "role": "army"
+  },
+  {
+   "account": "Knightstick",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -185,7 +201,7 @@
    ]
   },
   {
-   "account": "Woodenstaff",
+   "account": "TackleBox",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -199,10 +215,73 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "role": "helper",
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=34 PRODUCT_TARGET=34 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=34 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=34 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:263",
+   "role": "army"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1600 TARGET_COUNT=160 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Pocketpython:zanaris BATCH_UNITS=1 -- sweep zanaris"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
+   "role": "army"
   }
  ],
  "army": [
@@ -220,7 +299,6 @@
   "bigpackage",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -231,7 +309,6 @@
   "mmthv2350",
   "pickpockdick",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",

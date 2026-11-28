@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795862253478-1",
+ "account": "Ballbag",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Super attack(3)",
+ "requested": 8,
+ "claim": "66d52af0-9b63-49c2-bbc8-433f548d8baa",
+ "count": 8,
+ "ok": true,
+ "at": 1795862733954,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 8
+ },
+ "bank": {
+  "count": 8,
+  "at": 1795862733199
+ },
+ "logout": {
+  "attemptId": "1795862722010-0000024624-0000000001",
+  "at": 1795862733947,
+  "sha256": "8e6c0fc2a06c689950bafa23dcff9ef39d923ef550262c336c4db32cc44fd40c"
+ },
+ "screen": true
+}
