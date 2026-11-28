@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869557960,
+ "at": 1795869575312,
  "jobs": [
   {
    "account": "Balls",
@@ -81,6 +81,29 @@
    ]
   },
   {
+   "account": "shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:shaftsinker",
+    "BATCH_UNITS": "250",
+    "STALL_TICKS": "700"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:shaftsinker",
+   "role": "auto"
+  },
+  {
    "account": "rearentry",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -88,7 +111,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "768"
+    "BATCH_UNITS": "766"
    },
    "enabled": true,
    "repeat": false,
@@ -114,24 +137,6 @@
    "repeat": false,
    "goal": "goal:coin_fund:fleet",
    "role": "army"
-  },
-  {
-   "account": "shaftsinker",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0",
-    "--or=2619,3332,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "auto"
   },
   {
    "account": "sporranbulge",

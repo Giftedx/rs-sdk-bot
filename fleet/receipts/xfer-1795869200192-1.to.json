@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795869200192-1",
  "account": "pickpockdick",
  "partner": "hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "0deec7de-2b7b-46a0-9b20-553544ff2d6c",
- "count": 0,
- "ok": false,
- "at": 1795869501578,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795869572451,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795869571716
+ },
+ "logout": {
+  "attemptId": "1795869501587-0000022628-0000000001",
+  "at": 1795869572440,
+  "sha256": "d1a2cc8caa0d77a36fd9b77ed1c3a7380a929c0b0c3d53c264b58ecc7b3285cf"
+ },
+ "screen": true
 }
