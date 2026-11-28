@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795854853634,
+ "at": 1795854925805,
  "jobs": [
   {
    "account": "Balls",
@@ -66,31 +66,16 @@
    "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=54 TARGET_COUNT=17 CAP=1000 STALL_TICKS=200 -- herblore potions",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=35 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=35 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:kwuarm"
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=70 TARGET_COUNT=62 CAP=1000 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=13 PRODUCT_TARGET=13 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=13 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:267 BATCH_UNITS=13 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:dwarf_weed"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=7 PRODUCT_TARGET=7 BANK_PACK=1 -- druid",
-    "scripts/aio-skiller.ts MAX_MAKE=7 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=7 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "goal:supply_chain:267",
    "role": "army"
   },
   {
@@ -114,6 +99,21 @@
    ]
   },
   {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=5 PRODUCT_TARGET=5 BANK_PACK=1 -- druid",
+    "scripts/aio-skiller.ts MAX_MAKE=5 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=5 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:ranarr_weed"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
    "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
@@ -134,6 +134,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 -- thieving knights",
     "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Wandwaver:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
@@ -145,56 +146,35 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "knights-stable"
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=36 -- woodcutting yews",
+    "scripts/aio-skiller.ts CAP=2560 TARGET_COUNT=256 -- thieving knights",
+    "scripts/aio-quester.ts DEMAND_ID=goal:pvp_unlock:Moneyshot:zanaris BATCH_UNITS=1 -- sweep zanaris"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1239"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "glass"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "goal:pvp_unlock:Moneyshot:zanaris",
    "role": "army"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "KnightRider",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "crafting",
-    "glass"
+    "sweep",
+    "barcrawl"
    ],
    "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "2000",
-    "STALL_TICKS": "312"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:coin_fund:fleet",
+   "goal": "goal:quest_board:barcrawl",
    "role": "army"
   },
   {
@@ -252,18 +232,24 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
+    "crafting",
+    "inventory",
+    "cut-ruby"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "2",
+    "CAP": "1000",
+    "DEMAND_ID": "goal:supply_chain:1603",
+    "BATCH_UNITS": "2",
+    "ORDER_MODE": "best-effort",
+    "STALL_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
+   "goal": "goal:supply_chain:1603",
    "role": "army"
   }
  ],
