@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795842573625-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Nockitoff",
+  "item": "Fire rune",
+  "count": 380,
+  "itemId": 554,
+  "start": 1795842573625,
+  "end": 1795843473625,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

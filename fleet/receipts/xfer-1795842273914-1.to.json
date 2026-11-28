@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842273914-1",
+ "account": "BowBeforeMe",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 626,
+ "claim": "10769b46-5206-4db9-8def-049ba0b22270",
+ "count": 626,
+ "ok": true,
+ "at": 1795842566622,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 626
+ },
+ "bank": {
+  "count": 626,
+  "at": 1795842565047
+ },
+ "logout": {
+  "attemptId": "1795842549841-0000014048-0000000001",
+  "at": 1795842566541,
+  "sha256": "23a6cc4737e0473eae4e9f0c5cb7a9c063077c62d6352321cb1108ca060996b6"
+ },
+ "screen": true
+}

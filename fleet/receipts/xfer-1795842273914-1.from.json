@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795842273914-1",
  "account": "TossTheCaber",
  "partner": "BowBeforeMe",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 626,
  "claim": "c2e5e96a-757a-431f-b5e7-5296e2003d3c",
- "count": 0,
- "ok": false,
- "at": 1795842493972,
- "detail": "trade claimed"
+ "count": 626,
+ "ok": true,
+ "at": 1795842562941,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1681,
+  "after": 1055
+ },
+ "logout": {
+  "attemptId": "1795842493980-0000021468-0000000001",
+  "at": 1795842562931,
+  "sha256": "e099b683fc42efc5be35890ee5be1824507430339fbc8c29d7a951d3f4f9c9e8"
+ },
+ "screen": true
 }
