@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795857273399,
+ "at": 1795857283260,
  "jobs": [
   {
    "account": "Balls",
@@ -45,43 +45,7 @@
    "role": "pvp"
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "Quickhandjob",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0",
-    "--or=3185,3436,0",
-    "--or-bank"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -117,50 +81,39 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Dipstick",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "foraging",
-    "wool"
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:1759",
-    "BATCH_UNITS": "146"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1759",
-   "role": "helper"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 MAX_MAKE=25 STALL_TICKS=150 -- fletching shafts",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/aio-quester.ts",
+   "account": "Unsheathed",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "sweep",
-    "zanaris"
+    "walk-to",
+    "2619",
+    "3332",
+    "0",
+    "--or=3185,3436,0",
+    "--or-bank"
    ],
    "env": {
-    "DEMAND_ID": "goal:pvp_unlock:Pocketpython:zanaris",
-    "BATCH_UNITS": "1"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pvp_unlock:Pocketpython:zanaris",
    "role": "army"
   },
   {
@@ -200,6 +153,21 @@
    "role": "army"
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts CAP=21000 TARGET_COUNT=2100 PRODUCT_TARGET=2100 MAX_MAKE=25 STALL_TICKS=150 -- fletching shafts",
+    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:53",
+   "role": "army"
+  },
+  {
    "account": "ChaosInPants",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -218,6 +186,51 @@
    "resources": [
     "chickens"
    ]
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Nockitoff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Nockitoff",
+   "role": "auto",
+   "resources": [
+    "chickens"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
   }
  ],
  "army": [
@@ -240,12 +253,12 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "oreelse",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "sausagefest",
   "sporrandip",
   "woodpecker",
