@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795820172406-pickpockdick-mightyrod-3525ef6d4f27de69",
  "account": "Mightyrod",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Dragon dagger(p)",
  "requested": 1,
  "claim": "b6a57f5b-66c6-4959-982f-e0c3fb60aa3f",
- "count": 0,
- "ok": false,
- "at": 1795834178823,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795834192521,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795834191779
+ },
+ "logout": {
+  "attemptId": "1795834178831-0000005244-0000000001",
+  "at": 1795834192509,
+  "sha256": "ce6a62a95e79b6870e54ede4e1229c20d0e86d58ec8efb8ab86219fb86799c5b"
+ },
+ "screen": true
 }
