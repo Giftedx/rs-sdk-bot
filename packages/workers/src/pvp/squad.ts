@@ -287,11 +287,13 @@ export function idlePrayersOff(active: readonly boolean[], keepItem: boolean): n
     return active.flatMap((on, i) => (on && !(keepItem && i === PRAYER.item) ? [i] : []));
 }
 
-// The memory gate of a live squad start: the fleet's floor and one GiB for each squad bot (the swarm admits a bot the same way,
-// scripts/swarm.ts START_BUDGET_GB).
-export const SQUAD_BOT_GB = 1;
+// The memory gate of a live squad start: the fleet's floor, one GiB for the squad process and a tenth of a GiB for each squad bot.
+// All squad bots share one process: the team process of extra:team-10v12-gang-stack-rune-x1 held 22 bots at a peak of 682 MB
+// private and 414 MB working set (a one-bot worker holds 523 MB private), about 30 MB a bot past the first.
+export const SQUAD_PROCESS_GB = 1;
+export const SQUAD_BOT_GB = 0.1;
 export function squadMemoryGate(freeGB: number, bots: number, floorGB: number = FREE_FLOOR_GB): { ok: boolean; needGB: number } {
-    const needGB = floorGB + SQUAD_BOT_GB * bots;
+    const needGB = Math.round((floorGB + SQUAD_PROCESS_GB + SQUAD_BOT_GB * bots) * 10) / 10;
     return { ok: freeGB >= needGB, needGB };
 }
 

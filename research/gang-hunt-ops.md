@@ -164,8 +164,9 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   bank and the quiver together: under one pack's worth is a block (`stock under one pack`), under two a note (`stock for one trip
   only`). A bank trip that cannot be filled says which item and how many (`bank lacks trip requirements ... (iron arrow: 75
   items needed, 33 in the bank)`; the log line names the member).
-- **Memory.** A live start of `pk-squad.ts` needs the fleet's floor plus 1 GiB for each of our accounts of free memory
-  (8 GiB for four): `RESULT fail host memory` and exit 75 otherwise. The bench on a local server has no gate.
+- **Memory.** A live start of `pk-squad.ts` needs free memory of the fleet's floor, 1 GiB for the squad process and
+  0.1 GiB for each of our accounts (5.4 GiB for four, 7.4 GiB for 24; `squadMemoryGate`): `RESULT fail host memory`
+  and exit 75 otherwise. All squad accounts share one process: a bench team process held 22 bots at 682 MB private. The bench on a local server has no gate.
 - **Kit tile.** The kit step (`aio-logistics.ts <account> loadout <file>`) needs the account within 3 tiles of the bank
   tile of its file and stock for every line of the file: from (3092,3497) it stops at tick 0 with `owned loadout
   life/state/stop/budget`, and a file that asks for more than the account holds stops with `stock missing before
@@ -273,7 +274,7 @@ The kit holds no prayer potion and no boost: the cheapest measured method uses n
 From "fixes merged, pause lifted" to "the squad repeats". Each step names its check. A failed check stops the list.
 
 1. **State.** `bun scripts/now.ts`: no stop file with owner text, the main checkout at `origin/master`, the swarm
-   up, free RAM over 4 GiB plus 1 GiB. `.practice/coordinator/jobs.json` names none of the squad accounts.
+   up, free RAM over the squad memory gate above. `.practice/coordinator/jobs.json` names none of the squad accounts.
 2. **Fresh status.** Each squad account and each donor has a bank read 6 hours old or less
    (`bun scripts/fleet-inspect.ts <account>` makes one). Check: `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4>`
    prints no `bank read ... old` line.
