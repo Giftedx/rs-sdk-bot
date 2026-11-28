@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795858440587,
+ "at": 1795858452104,
  "jobs": [
   {
    "account": "Balls",
@@ -43,209 +43,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1755 ITEMS=Chisel MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy arheinstore 3000",
-    "scripts/aio-market.ts ITEM_ID=1623 \"ITEMS=Uncut sapphire\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy gemshop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 DEMAND_ID=goal:supply_chain:1607 BATCH_UNITS=1 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory cut-sapphire"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:1607",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2070 TARGET_COUNT=207 PRODUCT_TARGET=207 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=207 MAX_MAKE=207 CAP=2056 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 STALL_TICKS=255 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2070 TARGET_COUNT=207 PRODUCT_TARGET=207 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=207 MAX_MAKE=207 CAP=2056 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2060 TARGET_COUNT=206 PRODUCT_TARGET=207 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=207 MAX_MAKE=207 CAP=2056 STALL_TICKS=255 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "helper"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
-   "role": "army"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "2000"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "army",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=2470 TARGET_COUNT=247 PRODUCT_TARGET=250 BANK_PACK=1 -- druid",
-    "scripts/aio-fighter.ts CAP=2500 TARGET_COUNT=250 PRODUCT_TARGET=250 -- chicken",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 STALL_TICKS=280 -- magic alch-train 90 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=96 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=75 -- woodcutting yews",
-    "scripts/aio-skiller.ts TREE=magic REGION=seers WOOD_GROVE=native-processing CAP=3000 DEMAND_ID=campaign:haggis:item:1513 BATCH_UNITS=96 -- woodcutting yews"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "helper"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "38"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
   }
  ],
  "army": [
@@ -263,19 +60,26 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
+  "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
+  "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
