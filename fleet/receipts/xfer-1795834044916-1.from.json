@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795834044916-1",
+ "account": "Pocketpython",
+ "partner": "Nockitoff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "f57bef8a-9895-4bda-b8d1-fc43711cefc0",
+ "count": 0,
+ "ok": false,
+ "at": 1795834528112,
+ "detail": "trade claimed"
+}

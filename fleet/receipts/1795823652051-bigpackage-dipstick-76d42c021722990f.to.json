@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795823652051-bigpackage-dipstick-76d42c021722990f",
+ "account": "Dipstick",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "79e8dad3-2c31-4e1b-97a1-39578022b63d",
+ "count": 0,
+ "ok": false,
+ "at": 1795834592564,
+ "detail": "Error: route to 2810, 3440: precondition no route to 2810,3440,0",
+ "logout": {
+  "attemptId": "1795834582792-0000018008-0000000001",
+  "at": 1795834592557,
+  "sha256": "88bb9821b969a96eb2bf5aa6c8098d5fdc95d2420c5960812d4ba159168146ef"
+ },
+ "screen": false
+}

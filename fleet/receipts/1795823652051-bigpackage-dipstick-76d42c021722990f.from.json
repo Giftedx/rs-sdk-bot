@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795823652051-bigpackage-dipstick-76d42c021722990f",
+ "account": "Bigpackage",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "6cd83cf3-8965-494a-91b7-087d578a3b17",
+ "count": 0,
+ "ok": false,
+ "at": 1795834593308,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795834577357
+ },
+ "logout": {
+  "attemptId": "1795834554058-0000007944-0000000001",
+  "at": 1795834593294,
+  "sha256": "53df26dd371959127a639eee00a8911df16507b436d74fa8d10e0938f8d61b28"
+ },
+ "screen": false
+}
