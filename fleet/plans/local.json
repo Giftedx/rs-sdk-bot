@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795870426344,
+ "at": 1795870442387,
  "jobs": [
   {
    "account": "Balls",
@@ -99,7 +99,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1418",
+    "BATCH_UNITS": "1397",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -170,6 +170,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:43",
+   "role": "army"
+  },
+  {
+   "account": "tossthecaber",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Herblore TARGET_LEVEL=67 TARGET_COUNT=40 CAP=1000 STALL_TICKS=200 -- herblore potions",
+    "scripts/aio-skiller.ts MAX_MAKE=2 CAP=1000 MEMBERS=1 DEMAND_ID=goal:supply_chain:2481 BATCH_UNITS=2 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory identify:lantadyme"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2481",
    "role": "army"
   }
  ],
