@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795859045378-2",
+ "account": "Woodenstaff",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 3,
+ "claim": "15ce9ec8-84f8-4d2c-a6c1-6f22c34fffb0",
+ "count": 0,
+ "ok": false,
+ "at": 1795859725065,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Tin ore",
+   "requested": 3,
+   "count": 0
+  }
+ ]
+}

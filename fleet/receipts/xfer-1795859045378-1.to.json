@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795859045378-1",
+ "account": "SporranBulge",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tin ore",
+ "requested": 4,
+ "claim": "8041aad0-b8c4-49bc-89cf-bdf0b79e756b",
+ "count": 4,
+ "ok": true,
+ "at": 1795859716317,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795859715454
+ },
+ "logout": {
+  "attemptId": "1795859703180-0000009240-0000000001",
+  "at": 1795859716206,
+  "sha256": "c8bd795fa5fca0dd28be0a48a8639beba44ab62e98e45daa7573a506e10c14dd"
+ },
+ "screen": true
+}
