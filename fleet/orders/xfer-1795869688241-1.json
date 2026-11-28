@@ -1,0 +1,41 @@
+{
+  "id": "xfer-1795869688241-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "hocuspokeus",
+  "to": "shaftsinker",
+  "item": "Rune arrow",
+  "count": 97,
+  "itemId": 892,
+  "extra": [
+    {
+      "item": "Ring of dueling(8)",
+      "count": 1,
+      "itemId": 2552
+    },
+    {
+      "item": "Shortbow",
+      "count": 1,
+      "itemId": 841
+    },
+    {
+      "item": "Iron arrow",
+      "count": 12,
+      "itemId": 884
+    }
+  ],
+  "start": 1795869688241,
+  "end": 1795870588241,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

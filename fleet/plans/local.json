@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795869672479,
+ "at": 1795869744528,
  "jobs": [
   {
    "account": "Balls",
@@ -69,20 +69,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "6",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "161",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "6"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "161"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -106,42 +106,25 @@
    ]
   },
   {
-   "account": "shaftsinker",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "orbs",
-    "water",
-    "27",
-    "3000"
-   ],
-   "env": {
-    "ORB_TRIP": "1",
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:shaftsinker",
-    "BATCH_UNITS": "250",
-    "STALL_TICKS": "700"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:shaftsinker",
-   "role": "auto"
-  },
-  {
    "account": "coincock",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Strength TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:coincock BATCH_UNITS=250 -- chicken"
+    "unicorn"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:coincock",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:coincock",
-   "role": "auto"
+   "role": "auto",
+   "resources": [
+    "edgeville-unicorns"
+   ]
   },
   {
    "account": "rearentry",
@@ -151,7 +134,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "753"
+    "BATCH_UNITS": "756"
    },
    "enabled": true,
    "repeat": false,
@@ -159,25 +142,6 @@
    "role": "helper",
    "resources": [
     "chickens"
-   ]
-  },
-  {
-   "account": "sporranbulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "753"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "ardougne-knights"
    ]
   },
   {
@@ -189,7 +153,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "753"
+    "BATCH_UNITS": "756"
    },
    "enabled": true,
    "repeat": false,
@@ -198,6 +162,23 @@
    "resources": [
     "ardougne-knights"
    ]
+  },
+  {
+   "account": "sporranbulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "fletching",
+    "worker"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "2000",
+    "STALL_TICKS": "224"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper"
   },
   {
    "account": "meatntwoveg",
@@ -236,21 +217,6 @@
    "resources": [
     "chickens"
    ]
-  },
-  {
-   "account": "hocuspokeus",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 PRODUCT_TARGET=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=3 CAP=1000 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 ORDER_MODE=best-effort STALL_TICKS=150 -- crafting inventory grind:unicorn_horn"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "army"
   }
  ],
  "army": [
@@ -272,6 +238,7 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
