@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795835953031,
+ "at": 1795836601779,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -205,26 +205,32 @@
    ]
   },
   {
-   "account": "Nockitoff",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Pullmybow",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "mining",
-    "ore"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "238",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "238"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:42",
+   "role": "auto"
   },
   {
-   "account": "Pullmybow",
+   "account": "Nockitoff",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
