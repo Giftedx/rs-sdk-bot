@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823654515-spitroaster-hocuspokeus-43fb152036d8b79e",
+ "account": "Hocuspokeus",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "3dae7934-4b11-4642-8e6d-61602683ef3c",
+ "count": 0,
+ "ok": false,
+ "at": 1795834335946,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Shark",
+   "requested": 23,
+   "count": 0
+  }
+ ]
+}
