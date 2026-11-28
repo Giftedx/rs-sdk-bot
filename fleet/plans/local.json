@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795842676082,
+ "at": 1795842855303,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,88 +185,28 @@
    "role": "pvp"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "206",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "84400",
-    "NO_BUY_TICKS": "5",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "206"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2100 STOCK_TARGET=2100 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
-    "scripts/aio-skiller.ts MODE=headless SHAFT_RESERVE=100 FEATHER_RESERVE=100 DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 MAX_MAKE=2010 STALL_TICKS=150 -- fletching arrows"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "fishing",
-    "shark"
-   ],
-   "env": {
-    "DEMAND_ID": "mission:mission:pk-squad:item:385",
-    "BATCH_UNITS": "400"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "mission:mission:pk-squad:item:385",
-   "role": "army",
-   "resources": [
-    "catherby-sharks"
-   ]
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "gemshop2",
+    "archeryshop2",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "1623",
-    "ITEMS": "Uncut sapphire",
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
     "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
-    "NO_BUY_TICKS": "5",
+    "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1623",
+    "DEMAND_ID": "campaign:haggis:item:44",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1623",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -283,6 +223,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:vampire",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts WC_SITE=draynor TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 --",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
    "role": "auto"
   },
   {
@@ -412,40 +367,43 @@
    "role": "helper"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Bigpackage",
+   "script": "scripts/chain.ts",
    "args": [
-    "smithing",
-    "anvil",
-    "1500"
+    "scripts/aio-market.ts ITEM_ID=1605 ITEMS=Emerald MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=5 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=emerald_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1639 BATCH_UNITS=1 STALL_TICKS=280 -- crafting jewellery-trip"
    ],
    "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "1311",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1311",
-    "BATCH_UNITS": "1",
-    "STALL_TICKS": "280"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "campaign:haggis:item:1639",
    "role": "army"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/magic-order.ts",
-   "args": [],
+   "account": "Woodpecker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
    "env": {
-    "TARGET_LEVEL": "21",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic",
-    "STALL_TICKS": "224"
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "18",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "5",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "18"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -464,58 +422,59 @@
    "role": "helper"
   },
   {
-   "account": "mmtha0205",
+   "account": "MineYourBiz",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
+    "fishing",
+    "shark"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "2",
+    "DEMAND_ID": "mission:mission:pk-squad:item:385",
+    "BATCH_UNITS": "400"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "mission:mission:pk-squad:item:385",
+   "role": "army",
+   "resources": [
+    "catherby-sharks"
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=56 TARGET_COUNT=59 CAP=1000 STALL_TICKS=224 -- magic bones",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=250 STALL_TICKS=700 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250",
     "STALL_TICKS": "280"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "scorpion"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:scorpion",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:scorpion",
-   "role": "helper"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "975"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -531,6 +490,7 @@
   "UnderMyKilt",
   "bowbeforeme",
   "fingerblastr",
+  "mmtha0205",
   "mmthv2350",
   "pocketpython",
   "sausagefest"

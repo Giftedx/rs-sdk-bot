@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842484285-2",
+ "account": "Shaftsinker",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "4494877a-48f8-4978-bf71-ead365e35128",
+ "count": 250,
+ "ok": true,
+ "at": 1795842839336,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795842838586
+ },
+ "logout": {
+  "attemptId": "1795842824550-0000022740-0000000001",
+  "at": 1795842839328,
+  "sha256": "0abcf16615f49bf213f4df3eced0a8f609b135e40a1243744757c402fd19517a"
+ },
+ "screen": true
+}

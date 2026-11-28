@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795842484285-1",
+ "account": "Fingerblastr",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 4,
+ "claim": "e2d0c91e-c27a-444d-a841-cf77ef7195a1",
+ "count": 4,
+ "ok": true,
+ "at": 1795842830942,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795842814595
+ },
+ "logout": {
+  "attemptId": "1795842805513-0000010596-0000000001",
+  "at": 1795842830933,
+  "sha256": "ef962eb7450835acc2943f508d573bf50fec68f11a3246fc5b67a981f98a8083"
+ },
+ "screen": true
+}

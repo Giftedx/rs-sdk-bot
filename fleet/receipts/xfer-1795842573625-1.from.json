@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795842573625-1",
+ "account": "Ballbag",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "c047a9fc-b3ed-4c73-93f1-903269b2c5d2",
+ "count": 0,
+ "ok": false,
+ "at": 1795842830149,
+ "detail": "Error: route to 2618, 3333: precondition walk danger from 3222,3218,0: route danger to 3092,3243,0: Jail guard 3127,3248 needs 0 heal of food (expected damage 8.2)",
+ "logout": {
+  "attemptId": "1795842773420-0000025420-0000000001",
+  "at": 1795842830141,
+  "sha256": "4fb815ec43ac0331c342e3cf7f5136d4e9dcc9e68dbd6b7c997dafee74d6978e"
+ },
+ "screen": false
+}
