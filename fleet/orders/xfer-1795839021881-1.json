@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795839021881-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "DropMyLoad",
+  "item": "Trout",
+  "count": 2,
+  "itemId": 333,
+  "start": 1795839021881,
+  "end": 1795839921881,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

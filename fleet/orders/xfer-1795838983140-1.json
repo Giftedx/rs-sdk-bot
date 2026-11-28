@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795838983140-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Woodenstaff",
+  "item": "Earth rune",
+  "count": 6,
+  "itemId": 557,
+  "start": 1795838983140,
+  "end": 1795839883140,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
