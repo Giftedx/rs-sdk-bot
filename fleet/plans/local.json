@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795824889452,
+ "at": 1795824980752,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -183,6 +183,56 @@
    "enabled": false,
    "goal": "owner hold: gang stack squad, kitting and owner-approved live squad runs (session gang-count, squad of 24); restore with .practice/gang-24/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "WC_SITE": "draynor",
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "RearEntry",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "demon"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:demon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:demon",
+   "role": "helper"
   },
   {
    "account": "MeatNTwoVeg",
