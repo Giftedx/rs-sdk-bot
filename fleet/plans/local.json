@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795856883613,
+ "at": 1795856914152,
  "jobs": [
   {
    "account": "Balls",
@@ -45,31 +45,6 @@
    "role": "pvp"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "lathastrainingstore",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "42",
-    "ITEMS": "Mithril arrowtips",
-    "MAX_ITEMS": "238",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:42",
-    "BATCH_UNITS": "238"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:42",
-   "role": "army"
-  },
-  {
    "account": "ChaosInPants",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -90,6 +65,43 @@
    ]
   },
   {
+   "account": "Mightyrod",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts \"RECOVERY_REASON=stage combat:imp at 2655,3283,0\" STAGE_KIT=333:2 -- walk-to 2655 3283 0",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:1470 BATCH_UNITS=13 -- imp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1470",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "woodcutting",
+    "yews"
+   ],
+   "env": {
+    "REGION": "draynor",
+    "TREE": "normal",
+    "CAP": "3000",
+    "DEMAND_ID": "campaign:lochnessrod:item:1511",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lochnessrod:item:1511",
+   "role": "army",
+   "resources": [
+    "draynor-normal-trees"
+   ]
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -98,7 +110,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "493"
+    "BATCH_UNITS": "724"
    },
    "enabled": true,
    "repeat": false,
@@ -107,22 +119,6 @@
    "resources": [
     "ardougne-knights"
    ]
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "supply"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "506"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "army"
   },
   {
    "account": "Quickhandjob",
