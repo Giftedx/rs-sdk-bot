@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795819924868-mineyourbiz-masterbaiter-d302251c9eb02e2b",
+ "account": "Masterbaiter",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 30,
+ "claim": "06fd544b-6c47-43c2-ba45-7ecd89d1698f",
+ "count": 0,
+ "ok": false,
+ "at": 1795834285693,
+ "detail": "trade claimed"
+}

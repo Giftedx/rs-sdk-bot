@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795834228553,
+ "at": 1795834295197,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -278,18 +278,17 @@
   },
   {
    "account": "WellHung",
-   "script": "scripts/aio-quester.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "sweep",
-    "vampire"
+    "scripts/generated/fishing30.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 --",
+    "scripts/aio-skiller.ts DEMAND_ID=mission:mission:pk-squad:item:385 BATCH_UNITS=400 -- fishing shark"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:vampire",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:vampire",
+   "goal": "mission:mission:pk-squad:item:385",
    "role": "helper"
   },
   {
