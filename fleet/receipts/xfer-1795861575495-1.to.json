@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795861575495-1",
+ "account": "mmsmk1232",
+ "partner": "Ballbag",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "8c8454f1-bafa-4c1f-b5d4-26609adc114b",
+ "count": 0,
+ "ok": false,
+ "at": 1795861968891,
+ "detail": "trade claimed"
+}
