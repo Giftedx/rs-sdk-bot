@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795853413821-2",
+ "account": "Billionaire",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "5a4c93ae-24de-4f3f-af40-e660bcb694fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795854268638,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 10,
+  "at": 1795854267298
+ },
+ "logout": {
+  "attemptId": "1795854237277-0000017636-0000000001",
+  "at": 1795854268077,
+  "sha256": "0755b55306c3ffa728bf96f35575913ac69610b3741664a6b164ea5556a36912"
+ },
+ "screen": false
+}
