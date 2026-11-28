@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795849119413-1",
  "account": "Bigpackage",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 475,
  "claim": "a98c1022-80da-4d4e-95d9-d61a58754320",
- "count": 0,
- "ok": false,
- "at": 1795849253508,
- "detail": "trade claimed"
+ "count": 475,
+ "ok": true,
+ "at": 1795849351459,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 475,
+  "after": 0
+ },
+ "bank": {
+  "count": 475,
+  "at": 1795849317157
+ },
+ "logout": {
+  "attemptId": "1795849253516-0000018088-0000000001",
+  "at": 1795849351449,
+  "sha256": "427f3ca76ab29572ebb085c0f16324241923c95a8e2aed9d3917194d493364c6"
+ },
+ "screen": true
 }

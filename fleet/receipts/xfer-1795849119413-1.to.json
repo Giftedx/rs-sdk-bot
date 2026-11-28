@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795849119413-1",
+ "account": "SporranBulge",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 475,
+ "claim": "f0a6d97f-ed29-45ce-8cd5-04a7302294f0",
+ "count": 475,
+ "ok": true,
+ "at": 1795849353041,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 475
+ },
+ "bank": {
+  "count": 475,
+  "at": 1795849352302
+ },
+ "logout": {
+  "attemptId": "1795849323436-0000024792-0000000001",
+  "at": 1795849353034,
+  "sha256": "c866619c303e574a1f4630d02c2a57cb1bd9301f2577894f3dabdf2a87da4ef2"
+ },
+ "screen": true
+}
