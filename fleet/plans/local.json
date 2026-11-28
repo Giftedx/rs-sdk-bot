@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795849909332,
+ "at": 1795849970790,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -195,7 +195,7 @@
    "env": {
     "CAP": "3000",
     "DEMAND_ID": "goal:supply_chain:377",
-    "BATCH_UNITS": "27"
+    "BATCH_UNITS": "32"
    },
    "enabled": true,
    "repeat": false,
@@ -206,7 +206,7 @@
    ]
   },
   {
-   "account": "YewGotWood",
+   "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
@@ -218,7 +218,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
-   "role": "auto"
+   "role": "helper"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "army"
   },
   {
    "account": "CoinCock",
@@ -254,6 +269,40 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1515",
    "role": "auto"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts REGION=draynor TREE=normal CAP=3000 TRAIN_SKILL=Woodcutting TARGET_LEVEL=60 -- woodcutting yews",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1515 BATCH_UNITS=28 -- woodcutting yews"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1515",
+   "role": "auto"
+  },
+  {
+   "account": "BackdoorMan",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "knights-stable"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1698"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "helper",
+   "resources": [
+    "ardougne-knights"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -351,69 +400,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "auto"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-440-2-o0-p97",
-    "ITEM_ID": "440",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "97",
-    "EXPECTED_OWNED": "0",
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "helper"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
-   ],
-   "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "32",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "32",
-    "STALL_TICKS": "280"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
-  },
-  {
-   "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights-stable"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "1672"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:coin_fund:fleet",
-   "role": "helper",
-   "resources": [
-    "ardougne-knights"
-   ]
   }
  ],
  "army": [
