@@ -35,10 +35,10 @@ export const IRON_ORE_XP_25X = 875;
 export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
 
 const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
-    [2470, 3100, 4], [2505, 3145, 4], [2540, 3185, 4], [2580, 3215, 4], [2603, 3234, 1],
+    [2540, 3185, 4], [2603, 3234, 1],
 ];
 
-// 19 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Ardougne Zoo 3t knife.
+// 18 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Castle Wars -> Ardougne Zoo 3t knife.
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -46,9 +46,8 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_CLAY]: 6,
     [OBJ_COPPER_ORE]: 4,
     [OBJ_IRON_ORE]: 2,
-    [OBJ_COINS]: 150,
-    [OBJ_GLORY_4]: 1,
     [OBJ_GAMES_8]: 1,
+    [OBJ_DUELING_8]: 1,
 };
 
 export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
@@ -195,8 +194,8 @@ if (import.meta.main) {
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;
 
-        const useLiveDueling = isLiveSupplyVariant() && RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0);
-        if (useLiveDueling) {
+        const useDueling = RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0);
+        if (useDueling) {
             await rubTeleport(
                 main,
                 RING_OF_DUELING_IDS,

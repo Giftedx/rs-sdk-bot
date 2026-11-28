@@ -219,10 +219,9 @@ export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 436, name: 'Copper ore', count: 4, stackable: false },
     { id: 440, name: 'Iron ore', count: 2, stackable: false },
     { id: 946, name: 'Knife', count: 1, stackable: false },
-    { id: 995, name: 'Coins', count: 150, stackable: true },
     { id: 1275, name: 'Rune pickaxe', count: 1, stackable: false },
     { id: 1511, name: 'Logs', count: 2, stackable: false },
-    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 3853, name: 'Games necklace(8)', count: 1, stackable: false },
 ] as const;
 
@@ -261,14 +260,14 @@ export const WOODCUTTING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1359, name: 'Rune axe', count: 1, stackable: false },
     { id: 946, name: 'Knife', count: 1, stackable: false },
     { id: 1511, name: 'Logs', count: 1, stackable: false },
-    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false, altIds: [1710, 1708, 1706] },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 542, name: "Monk's robe", count: 1, stackable: false },
     { id: 544, name: "Monk's robe", count: 1, stackable: false },
     { id: 1718, name: 'Holy symbol', count: 1, stackable: false },
     { id: 556, name: 'Air rune', count: 150, stackable: true },
     { id: 558, name: 'Mind rune', count: 150, stackable: true },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 4, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 5, stackable: false },
 ] as const;
 
 export const WOODCUTTING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = WOODCUTTING_SPECIALIST_KIT;
