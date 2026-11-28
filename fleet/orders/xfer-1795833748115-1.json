@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795833748115-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Nockitoff",
+  "to": "Pocketrocket",
+  "item": "Copper ore",
+  "count": 10,
+  "itemId": 436,
+  "extra": [
+    {
+      "item": "Tin ore",
+      "count": 10,
+      "itemId": 438
+    }
+  ],
+  "start": 1795833748115,
+  "end": 1795834648115,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
