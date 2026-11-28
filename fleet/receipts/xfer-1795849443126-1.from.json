@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795849443126-1",
  "account": "SporranBulge",
  "partner": "mmtha0205",
@@ -10,15 +10,37 @@
  "item": "Copper ore",
  "requested": 19,
  "claim": "395f12b8-03dc-4738-936b-2875e34608a2",
- "count": 0,
- "ok": false,
- "at": 1795849517292,
- "detail": "trade claimed",
+ "count": 19,
+ "ok": true,
+ "at": 1795849892632,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Tin ore",
    "requested": 19,
-   "count": 0
+   "count": 19,
+   "inventory": {
+    "before": 19,
+    "after": 0
+   },
+   "bank": {
+    "count": 19,
+    "at": 1795849707880
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 19,
+  "after": 0
+ },
+ "bank": {
+  "count": 19,
+  "at": 1795849707076
+ },
+ "logout": {
+  "attemptId": "1795849517642-0000022900-0000000001",
+  "at": 1795849892622,
+  "sha256": "84526a452f6f086230358b7abd2f773f2a3d16e2ede7ff7fa8601714160a0bc0"
+ },
+ "screen": true
 }
