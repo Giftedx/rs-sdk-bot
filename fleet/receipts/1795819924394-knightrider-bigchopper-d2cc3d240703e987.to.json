@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795819924394-knightrider-bigchopper-d2cc3d240703e987",
  "account": "Bigchopper",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "abf42c47-bb49-4591-9031-b521758dcc65",
- "count": 0,
- "ok": false,
- "at": 1795834039231,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795834078958,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795834078185
+ },
+ "logout": {
+  "attemptId": "1795834039242-0000025480-0000000001",
+  "at": 1795834078949,
+  "sha256": "82253125e9e84b4accde34d081823ebbfda0a1d50038fc8ee2cca5265d0ddeda"
+ },
+ "screen": true
 }

@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795823652463-spitroaster-pocketpool-a0a8112816d7c323",
+ "account": "PocketPool",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "a0d699d9-839b-4a27-989d-f99ba67d0437",
+ "count": 0,
+ "ok": false,
+ "at": 1795834073470,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Shark",
+   "requested": 13,
+   "count": 0
+  }
+ ]
+}
