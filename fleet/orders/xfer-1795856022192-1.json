@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795856022192-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Abracadickra",
+  "item": "Gold bar",
+  "count": 12,
+  "itemId": 2357,
+  "extra": [
+    {
+      "item": "Emerald",
+      "count": 15,
+      "itemId": 1605
+    }
+  ],
+  "start": 1795856022192,
+  "end": 1795856922192,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
