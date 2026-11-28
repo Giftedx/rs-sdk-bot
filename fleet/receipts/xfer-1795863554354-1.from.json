@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795863554354-1",
+ "account": "Mightyrod",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 1,
+ "claim": "0f38644c-50a4-433b-8a27-6828690a34bf",
+ "count": 1,
+ "ok": true,
+ "at": 1795863817502,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795863786362
+ },
+ "logout": {
+  "attemptId": "1795863779217-0000022404-0000000001",
+  "at": 1795863817494,
+  "sha256": "d8708644c7100f9f49dec90c21591655d7cbc184abd6d46f9d1820dbfbc573e4"
+ },
+ "screen": true
+}
