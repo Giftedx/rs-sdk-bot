@@ -5,6 +5,6 @@
  "account": "Mightyrod",
  "partner": "TrouserSnake",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795853603287,
- "detail": "Error: fleet trade: account has an unsettled swarm worker"
+ "at": 1795854066462,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
