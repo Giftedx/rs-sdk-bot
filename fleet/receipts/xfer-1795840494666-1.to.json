@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795840494666-1",
+ "account": "Pullmybow",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant scimitar",
+ "requested": 1,
+ "claim": "2ae286c6-1d91-4cf9-a659-828499758ba6",
+ "count": 1,
+ "ok": true,
+ "at": 1795840969419,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795840968711
+ },
+ "logout": {
+  "attemptId": "1795840955605-0000018176-0000000001",
+  "at": 1795840969410,
+  "sha256": "9601433caa01e439cc0228e518320eac3b9b9a391e4bb5b237ec762bc86767cd"
+ },
+ "screen": true
+}

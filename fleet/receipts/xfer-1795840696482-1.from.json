@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795840696482-1",
+ "account": "DropMyLoad",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "f0e66c18-c6dc-40c0-88e6-0cf1a1215448",
+ "count": 0,
+ "ok": false,
+ "at": 1795840895174,
+ "detail": "fled at low hitpoints: flee_guard id=23 at=2651,3283 ticks=10",
+ "logout": {
+  "attemptId": "1795840877836-0000013132-0000000001",
+  "at": 1795840895004,
+  "sha256": "491645fdcd7e49832e12496a0fe1caeaa930883ceb238042d9b64b12ae081486"
+ },
+ "screen": false
+}

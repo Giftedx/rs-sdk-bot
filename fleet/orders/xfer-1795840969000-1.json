@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795840969000-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "FishAndChips",
+  "item": "Arrow shaft",
+  "count": 484,
+  "itemId": 52,
+  "start": 1795840969000,
+  "end": 1795841869000,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

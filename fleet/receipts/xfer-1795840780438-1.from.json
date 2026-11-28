@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840780438-1",
+ "account": "YewGotWood",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "5d049aa3-8cd8-4aa5-9c11-6ce1bb429a67",
+ "count": 0,
+ "ok": false,
+ "at": 1795841006199,
+ "detail": "trade claimed"
+}

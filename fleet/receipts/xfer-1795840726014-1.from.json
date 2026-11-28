@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795840726014-1",
+ "account": "FishAndChips",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 59,
+ "claim": "4ecf1dc3-1a61-4a1e-9ef4-7b68cc52e60c",
+ "count": 59,
+ "ok": true,
+ "at": 1795840949019,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 59,
+  "after": 0
+ },
+ "bank": {
+  "count": 59,
+  "at": 1795840927920
+ },
+ "logout": {
+  "attemptId": "1795840917073-0000024356-0000000001",
+  "at": 1795840949009,
+  "sha256": "51c0ee8613e1d71cbdc75f9c05e080bcd723e96efb6b1169c8ba507fff685482"
+ },
+ "screen": true
+}

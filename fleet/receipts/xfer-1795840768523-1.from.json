@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795840768523-1",
+ "account": "Woodpecker",
+ "partner": "WellHung",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 1078,
+ "claim": "d419adef-9a7a-4966-b530-af3c491e5c9d",
+ "count": 0,
+ "ok": false,
+ "at": 1795840960114,
+ "detail": "trade claimed"
+}
