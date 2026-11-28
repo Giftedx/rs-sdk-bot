@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795857823379-3",
+ "role": "to",
+ "account": "Wandwaver",
+ "partner": "SporranBulge",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795858396148,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawn git ETIMEDOUT"
+}
