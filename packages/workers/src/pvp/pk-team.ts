@@ -8,7 +8,7 @@
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../../../core/src/inprocess';
 import { RETALIATE_OFF } from '../../../core/src/combat-end';
-import { createNeverSkullGuard, ENEMY_WEAPON_IDS, fightPlayer, getObjNames, isDying, isMulti, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, PRAYER, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
+import { bestFood, createNeverSkullGuard, ENEMY_WEAPON_IDS, fightPlayer, getObjNames, isDying, isMulti, localPlayerSlot, neverSkullOf, nextTick, observePlayer, observeProvocations, ownSkull, PRAYER, protectedStyles, recordKillLoot, skulled, summarizeWeaponLoot, wildernessLevel, type FightOptions, type Kit } from './fight';
 import { TRIBRID_KIT } from './hunt-kits';
 import { kitOptions, kitSwitches } from '../../../core/src/pk-kits/kits';
 import { sparOptions } from './pk-spar';
@@ -360,8 +360,16 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             if (killed && pickup && key === 'a') {
                 const enemiesLeft = foes.some(f => !isOut(f));
                 const stLoot = s.sdk.getState();
-                if (enemiesLeft && stLoot && stLoot.prayers.prayerPoints > 0 && !stLoot.prayers.activePrayers[PRAYER.melee] && typeof s.sdk.sendTogglePrayer === 'function') {
-                    void s.sdk.sendTogglePrayer(PRAYER.melee);
+                if (enemiesLeft && stLoot) {
+                    if (stLoot.prayers.prayerPoints > 0 && !stLoot.prayers.activePrayers[PRAYER.melee] && typeof s.sdk.sendTogglePrayer === 'function') {
+                        void s.sdk.sendTogglePrayer(PRAYER.melee);
+                    }
+                    // Eat once during the 4-tick death animation if HP is below safe looting margin so pickUp never aborts on tick 0.
+                    if ((stLoot.player?.hp ?? 99) < 68 && typeof s.sdk.sendUseItem === 'function') {
+                        const food = bestFood(s.sdk.getInventory?.() ?? stLoot.inventory ?? []);
+                        const eatOp = food?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
+                        if (food && eatOp) void s.sdk.sendUseItem(food.slot, eatOp.opIndex);
+                    }
                 }
                 const lootIds = sideDagger && enemiesLeft ? ENEMY_WEAPON_IDS : pickup;
                 const got = await pickUp(s, lootIds, {
@@ -369,7 +377,7 @@ export async function team(a: readonly Session[], b: readonly Session[], options
                     maxTicks: sideDagger && enemiesLeft ? 12 : 30,
                     wait: 6,
                     stop: () => over || halt()
-                        || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 55)
+                        || (enemiesLeft && (s.sdk.getState()?.player?.hp ?? 99) < 45)
                         || (enemiesLeft && home !== null && !home.multi && (() => { const p = s.sdk.getState()?.player; return !!p && isMulti(p.worldX, p.worldZ); })()),
                 });
                 recordKillLoot(r, got);
